@@ -5,9 +5,13 @@ import android.app.ActivityManager
 import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Bitmap
+import android.media.MediaMetadata
+import android.media.session.MediaSession
+import android.media.session.PlaybackState
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.view.WindowManager
+import android.widget.ScrollView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.*
@@ -18,6 +22,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import app.d2lock.lockscreen.LockScreenActivity
 import app.d2lock.root.RootKiosk
 import app.d2lock.security.PinStore
+import app.d2lock.Prefs
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -61,12 +66,38 @@ class ScreenshotCaptureTest {
         assertFalse("Use a fresh emulator", pinFile.exists())
         context.getSharedPreferences("lock_preferences", 0).edit().clear().commit()
         PinStore(context).create("246810".toCharArray())
+        ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(
+            "cmd notification allow_listener app.d2lock/app.d2lock.notifications.LockNotificationListener"
+        )).use { it.readBytes() }
+        val mediaSession = MediaSession(context, "D2ScreenshotMedia").apply {
+            setMetadata(MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, "Demo track")
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, "Media preview")
+                .build())
+            setPlaybackState(PlaybackState.Builder()
+                .setActions(PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE)
+                .setState(PlaybackState.STATE_PLAYING, 0L, 1f).build())
+            isActive = true
+        }
         try {
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                scenario.onActivity {
+                    it.window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                        WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                }
                 onView(withHint("6-digit D2 PIN")).inRoot(isDialog()).perform(typeText("246810"), closeSoftKeyboard())
                 onView(withText("Unlock")).inRoot(isDialog()).perform(click())
                 waitUntil { runCatching { onView(withText("Change D2 PIN")).check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed())); true }.getOrDefault(false) }
                 capture(scenario, "01-settings")
+                onView(withText("When D2 is locked")).perform(scrollTo())
+                capture(scenario, "05-customization")
+                onView(withText("Right action")).perform(scrollTo())
+                scenario.onActivity { activity ->
+                    // The root content is a ScrollView; advance just enough to show both actions.
+                    val settings = (activity.findViewById<android.view.ViewGroup>(android.R.id.content)).getChildAt(0) as ScrollView
+                    settings.scrollBy(0, (125 * activity.resources.displayMetrics.density).toInt())
+                }
+                capture(scenario, "06-shortcuts")
             }
             ActivityScenario.launch<LockScreenActivity>(Intent(context, LockScreenActivity::class.java).putExtra("preview", true)).use { scenario ->
                 SystemClock.sleep(1500)
@@ -85,6 +116,10 @@ class ScreenshotCaptureTest {
                 scenario.onActivity { task = it.taskId }
                 TestDevice.focusTask(task)
                 waitUntil { context.getSystemService(ActivityManager::class.java).lockTaskModeState == ActivityManager.LOCK_TASK_MODE_LOCKED }
+                waitUntil { runCatching {
+                    onView(withText("Demo track")).check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()))
+                    true
+                }.getOrDefault(false) }
                 capture(scenario, "03-kiosk-lock")
                 onView(withText("PIN")).perform(click())
                 capture(scenario, "04-pin-prompt")
@@ -95,6 +130,7 @@ class ScreenshotCaptureTest {
                 scenario.close()
             }
         } finally {
+            mediaSession.release()
             RootKiosk.testConnect = null
             Prefs.setKiosk(context, false)
             pinFile.delete()
