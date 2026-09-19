@@ -27,7 +27,6 @@ import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.hamcrest.Matchers.equalTo
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -93,7 +92,11 @@ class ScreenshotCaptureTest {
                 onView(withText("When D2 is locked")).perform(scrollTo())
                 capture(scenario, "05-customization")
                 onView(withText("Right action")).perform(scrollTo())
-                onView(withClassName(equalTo(ScrollView::class.java.name))).perform(swipeUp())
+                scenario.onActivity { activity ->
+                    // The root content is a ScrollView; advance just enough to show both actions.
+                    val settings = (activity.findViewById<android.view.ViewGroup>(android.R.id.content)).getChildAt(0) as ScrollView
+                    settings.scrollBy(0, (125 * activity.resources.displayMetrics.density).toInt())
+                }
                 capture(scenario, "06-shortcuts")
             }
             ActivityScenario.launch<LockScreenActivity>(Intent(context, LockScreenActivity::class.java).putExtra("preview", true)).use { scenario ->
