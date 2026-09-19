@@ -1,0 +1,1 @@
+Build the SamsungLockD2 Android Studio project, rename the signed APK to SamsungLockD2.apk, and place it in this folder before packaging a self-contained module.

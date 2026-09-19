@@ -1,0 +1,7 @@
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/d2_widget"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="#E6202030" android:text="D2\nDouble-tap to lock"
+    android:contentDescription="D2: double-tap to open PIN screen"
+    android:gravity="center" android:padding="12dp" android:textSize="18sp"
+    android:textColor="#FFFFFFFF" />

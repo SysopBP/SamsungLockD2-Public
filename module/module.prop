@@ -1,0 +1,6 @@
+id=samsunglock37_ksunext
+name=Samsung Lock D2 - KernelSU Next Bridge
+version=v0.4.0
+versionCode=40
+author=D2 Project
+description=KernelSU Next bridge for the One UI 9-inspired Samsung Lock D2 companion app. Handles APK installation, boot startup, diagnostics, and root-assisted launching without replacing Samsung Keyguard.
