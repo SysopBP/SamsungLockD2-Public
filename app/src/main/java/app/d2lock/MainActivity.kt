@@ -10,12 +10,15 @@ import android.app.NotificationManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ArrayAdapter
+import android.widget.Spinner
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Switch
@@ -69,18 +72,18 @@ class MainActivity : Activity() {
     private fun buildSettings(): ViewGroup {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(56), dp(24), dp(30))
-            setBackgroundColor(Color.rgb(247, 247, 250))
+            setPadding(dp(22), dp(56), dp(22), dp(32))
+            setBackgroundColor(0xff10131c.toInt())
         }
         root.addView(TextView(this).apply {
             text = "Samsung Lock D2"
             textSize = 32f
-            setTextColor(Color.rgb(20, 20, 24))
+            setTextColor(Color.WHITE)
         })
         root.addView(TextView(this).apply {
             text = "Independent 6-digit app PIN"
             textSize = 15f
-            setTextColor(Color.DKGRAY)
+            setTextColor(0xffb6c0d3.toInt())
             setPadding(0, dp(4), 0, dp(24))
         })
 
@@ -106,6 +109,7 @@ class MainActivity : Activity() {
             root.addView(TextView(this).apply {
                 text = "Create a D2 PIN first. D2 does not create, change, or dismiss a Samsung screen lock.\n\nThis is an app privacy screen: Home, Recents, force-stop, uninstall, root, and reboot can bypass it. It is not device encryption or a guarantee against D2 boot errors. If you forget the PIN, clearing D2 app data resets it and its settings."
                 textSize = 16f
+                setTextColor(Color.WHITE)
             })
             return ScrollView(this).apply { addView(root) }
         }
@@ -125,6 +129,7 @@ class MainActivity : Activity() {
         val enabled = Switch(this).apply {
             text = "Show D2 when the screen wakes"
             textSize = 17f
+            setTextColor(Color.WHITE)
             isChecked = Prefs.enabled(this@MainActivity)
             setOnCheckedChangeListener { _, checked ->
                 Prefs.setEnabled(this@MainActivity, checked)
@@ -136,6 +141,7 @@ class MainActivity : Activity() {
         val rootMode = Switch(this).apply {
             text = "Optional KernelSU root mode"
             textSize = 17f
+            setTextColor(Color.WHITE)
             isChecked = Prefs.rootMode(this@MainActivity)
             setOnCheckedChangeListener { _, checked ->
                 if (checked && !RootManager.isAvailable()) {
@@ -149,6 +155,7 @@ class MainActivity : Activity() {
         root.addView(Switch(this).apply {
             text = "Require PIN to leave D2 (root kiosk)"
             textSize = 17f
+            setTextColor(Color.WHITE)
             isChecked = Prefs.kiosk(this@MainActivity)
             setOnCheckedChangeListener { _, checked ->
                 Prefs.setKiosk(this@MainActivity, checked)
@@ -157,10 +164,36 @@ class MainActivity : Activity() {
         root.addView(TextView(this).apply {
             text = "Experimental: grant D2 root access in KernelSU. When kiosk is active, Home and Recents are blocked until your D2 PIN is accepted. Check for ‘Kiosk active’ on the lock screen. Preview stays unlocked.\n\nAndroid kiosk mode interacts with the system keyguard, but D2 never sets a Samsung PIN. A crash or unresponsive app releases kiosk after about 20 seconds; reboot is the fallback recovery. Power/reboot and root remain bypasses. Primary, unmanaged user only."
             textSize = 14f
+            setTextColor(0xffb6c0d3.toInt())
             setPadding(0, dp(4), 0, dp(16))
         })
 
-        addButton(root, "Grant notification access") {
+        section(root, "APPEARANCE")
+        root.addView(Switch(this).apply {
+            text = "Weather in Celsius (off: Fahrenheit)"
+            setTextColor(Color.WHITE)
+            isChecked = Prefs.celsius(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setCelsius(this@MainActivity, checked) }
+        }, rowParams())
+        root.addView(Switch(this).apply {
+            text = "Show media player while D2 is locked"
+            setTextColor(Color.WHITE)
+            isChecked = Prefs.showMedia(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setShowMedia(this@MainActivity, checked) }
+        }, rowParams())
+        section(root, "NOTIFICATION PRIVACY")
+        addChoice(root, "When D2 is locked", listOf("Hide all", "Count only", "App names", "Public previews"),
+            Prefs.notificationPrivacy(this)) { Prefs.setNotificationPrivacy(this, it) }
+        section(root, "FLOATING BAR")
+        val actions = listOf("None", "Camera", "Flashlight")
+        for (side in listOf("left", "right")) {
+            addChoice(root, "${side.replaceFirstChar { it.uppercase() }} action", actions,
+                actions.indexOf(Prefs.shortcut(this, side)).coerceAtLeast(0)) {
+                Prefs.setShortcut(this, side, actions[it])
+            }
+        }
+        section(root, "ACCESS & PREVIEW")
+        addButton(root, "Grant notification and media access") {
             startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
         }
         addButton(root, "Grant optional feature permissions") { requestRuntimePermissions() }
@@ -176,7 +209,7 @@ class MainActivity : Activity() {
         root.addView(TextView(this).apply {
             text = "Double-tap the D2 button or its home-screen widget to open the PIN screen. Taps elsewhere on the home screen are controlled by your launcher.\n\nD2 uses its own PIN and does not turn the display off. Optional kiosk mode uses Android task restrictions and interacts with keyguard internally.\n\nWithout active kiosk, Home/Recents can bypass D2. Root, recovery, and reboot remain bypasses in either mode. D2 cannot repair firmware or guarantee prevention of download-mode errors."
             textSize = 14f
-            setTextColor(Color.DKGRAY)
+            setTextColor(0xffb6c0d3.toInt())
             setPadding(dp(4), dp(28), dp(4), dp(10))
         })
         return ScrollView(this).apply { addView(root) }
@@ -187,10 +220,46 @@ class MainActivity : Activity() {
             text = label
             isAllCaps = false
             textSize = 16f
+            setTextColor(Color.WHITE)
+            background = pillBackground()
             setOnClickListener { action() }
         }, rowParams())
     }
 
+    private fun section(parent: LinearLayout, title: String) {
+        parent.addView(TextView(this).apply {
+            text = title; textSize = 12f; letterSpacing = .1f
+            setTextColor(0xffb6c0d3.toInt())
+            setPadding(dp(6), dp(18), 0, dp(8))
+        })
+    }
+    private fun pillBackground() = GradientDrawable().apply {
+        cornerRadius = dp(22).toFloat()
+        setColor(0xff30384a.toInt())
+    }
+    private fun addChoice(parent: LinearLayout, title: String, choices: List<String>, selected: Int, save: (Int) -> Unit) {
+        parent.addView(TextView(this).apply {
+            text = title; textSize = 16f; setTextColor(Color.WHITE); setPadding(dp(6), dp(7), 0, dp(4))
+        })
+        parent.addView(Spinner(this).apply {
+            adapter = object : ArrayAdapter<String>(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, choices) {
+                override fun getView(position: Int, convertView: android.view.View?, parent: ViewGroup): android.view.View =
+                    (super.getView(position, convertView, parent) as TextView).apply {
+                        setTextColor(Color.WHITE); setPadding(dp(16), 0, dp(10), 0)
+                    }
+                override fun getDropDownView(position: Int, convertView: android.view.View?, parent: ViewGroup): android.view.View =
+                    (super.getDropDownView(position, convertView, parent) as TextView).apply {
+                        setTextColor(Color.WHITE); setBackgroundColor(0xff30384a.toInt())
+                    }
+            }
+            background = pillBackground()
+            setSelection(selected.coerceIn(0, choices.lastIndex))
+            onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+                override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) = save(position)
+            }
+        }, rowParams())
+    }
     private fun rowParams() = LinearLayout.LayoutParams(-1, dp(58)).apply { bottomMargin = dp(10) }
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 

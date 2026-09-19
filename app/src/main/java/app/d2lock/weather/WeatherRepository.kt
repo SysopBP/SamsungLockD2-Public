@@ -3,6 +3,7 @@ package app.d2lock.weather
 import android.annotation.SuppressLint
 import android.content.Context
 import android.location.LocationManager
+import app.d2lock.Prefs
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -22,7 +23,8 @@ object WeatherRepository {
         }.getOrNull() ?: return result(null)
         executor.execute {
             val weather = runCatching {
-                val url = URL("https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,weather_code&temperature_unit=fahrenheit")
+                val unit = if (Prefs.celsius(context)) "celsius" else "fahrenheit"
+                val url = URL("https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,weather_code&temperature_unit=$unit")
                 val connection = (url.openConnection() as HttpURLConnection).apply {
                     connectTimeout = 5000; readTimeout = 5000
                     setRequestProperty("User-Agent", "SamsungLockD2/0.2")
