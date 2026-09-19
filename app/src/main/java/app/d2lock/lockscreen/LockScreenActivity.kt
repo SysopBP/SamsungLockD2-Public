@@ -288,7 +288,7 @@ class LockScreenActivity : Activity() {
             elevation = dp(16).toFloat()
             addView(shortcutButton("left"), LinearLayout.LayoutParams(dp(58), dp(58)))
             addView(TextView(this@LockScreenActivity).apply {
-                text = if (preview) "PREVIEW" else "PIN  •  swipe up"
+                text = "PIN"
                 textSize = 14f
                 gravity = Gravity.CENTER
                 setTextColor(Color.WHITE)
