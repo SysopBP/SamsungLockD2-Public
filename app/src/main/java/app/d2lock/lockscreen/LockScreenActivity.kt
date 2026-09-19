@@ -2,10 +2,13 @@ package app.d2lock.lockscreen
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.Notification
+import android.app.NotificationManager
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.ComponentName
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Color
@@ -38,6 +41,7 @@ import app.d2lock.security.PinUi
 import app.d2lock.widget.DoubleTap
 import app.d2lock.media.MediaControllerBridge
 import app.d2lock.notifications.NotificationStore
+import app.d2lock.notifications.LockNotificationListener
 import app.d2lock.weather.WeatherRepository
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -320,25 +324,36 @@ class LockScreenActivity : Activity() {
 
     private fun renderNotifications() {
         notifications.removeAllViews()
-        val privacy = if (preview) 3 else Prefs.notificationPrivacy(this)
+        val privacy = if (preview) 4 else Prefs.notificationPrivacy(this)
         if (privacy == 0) return
-        if (NotificationStore.items.isEmpty()) {
-            notifications.addView(label("No notifications", 14f, 0xffddddE5.toInt()).apply { gravity = Gravity.CENTER })
-            return
-        }
-        if (privacy == 1) {
-            notifications.addView(label("${NotificationStore.items.size} notifications", 15f, Color.WHITE).apply {
+        val listenerEnabled = getSystemService(NotificationManager::class.java)
+            .isNotificationListenerAccessGranted(ComponentName(this, LockNotificationListener::class.java))
+        if (!listenerEnabled) {
+            notifications.addView(label("Allow notification access in D2 settings", 14f, Color.WHITE).apply {
                 gravity = Gravity.CENTER
             })
             return
         }
-        NotificationStore.items.take(4).forEach { item ->
+        val visibleItems = NotificationStore.items.filter {
+            preview || it.visibility != Notification.VISIBILITY_SECRET
+        }
+        if (visibleItems.isEmpty()) {
+            notifications.addView(label("No visible notifications", 14f, 0xffddddE5.toInt()).apply { gravity = Gravity.CENTER })
+            return
+        }
+        if (privacy == 1) {
+            notifications.addView(label("${visibleItems.size} notifications", 15f, Color.WHITE).apply {
+                gravity = Gravity.CENTER
+            })
+            return
+        }
+        visibleItems.take(4).forEach { item ->
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(16), dp(11), dp(16), dp(11))
                 background = glassPanel()
                 addView(label(item.app, 12f, 0xffd8d5e5.toInt()))
-                if (privacy == 3 && (preview || item.public)) {
+                if (privacy == 4 || (privacy == 3 && item.visibility == Notification.VISIBILITY_PUBLIC)) {
                     addView(label(item.title.ifBlank { item.text }, 16f, Color.WHITE))
                     if (item.title.isNotBlank() && item.text.isNotBlank()) addView(label(item.text, 13f, 0xffe6e3ed.toInt()))
                 }

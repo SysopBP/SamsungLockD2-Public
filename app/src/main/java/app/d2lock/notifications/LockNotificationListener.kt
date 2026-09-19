@@ -5,7 +5,7 @@ import android.service.notification.StatusBarNotification
 import android.app.Notification
 import java.util.concurrent.CopyOnWriteArrayList
 
-data class LockNotification(val key: String, val app: String, val title: String, val text: String, val time: Long, val public: Boolean)
+data class LockNotification(val key: String, val app: String, val title: String, val text: String, val time: Long, val visibility: Int)
 
 object NotificationStore {
     val items = CopyOnWriteArrayList<LockNotification>()
@@ -40,7 +40,7 @@ class LockNotificationListener : NotificationListenerService() {
         }.getOrDefault(sbn.packageName)
         NotificationStore.items.removeAll { it.key == sbn.key }
         NotificationStore.items.add(0, LockNotification(sbn.key, app, title, text, sbn.postTime,
-            sbn.notification.visibility == Notification.VISIBILITY_PUBLIC))
-        while (NotificationStore.items.size > 5) NotificationStore.items.removeAt(NotificationStore.items.lastIndex)
+            sbn.notification.visibility))
+        while (NotificationStore.items.size > 20) NotificationStore.items.removeAt(NotificationStore.items.lastIndex)
     }
 }
