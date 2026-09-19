@@ -68,3 +68,13 @@ Notification content stays in memory. Wallpaper selection stores a persistent im
 Copyright (c) 2026 D2 Project. **All rights reserved.** D2's original code is publicly viewable but is not released under an open-source license. See [LICENSE](LICENSE). Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt) and **Licenses and credits** in the app.
 
 Weather data by [Open-Meteo](https://open-meteo.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). D2 truncates temperatures and maps weather codes to short labels. No affiliation with or endorsement by Samsung, KernelSU, or Open-Meteo is implied.
+# Preview update in progress (0.4.0)
+
+The next build adds a floating action bar, media details and controls while D2 is locked,
+Fahrenheit/Celsius selection, configurable bottom shortcuts, and notification privacy
+choices. The locked media card can show track names and operate playback; choose
+whether to display it in Settings. Public notification previews are shown only for
+notifications marked public by their sending apps. Camera requires the D2 PIN
+while locked; flashlight stays accessible. D2 retains its independent six-digit PIN
+and optional root kiosk behavior. This update is a proposed build until its APK
+and module ZIP pass GitHub Actions.

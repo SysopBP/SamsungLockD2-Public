@@ -52,6 +52,8 @@ class LockScreenActivity : Activity() {
     private lateinit var weather: TextView
     private lateinit var notifications: LinearLayout
     private lateinit var mediaTitle: TextView
+    private lateinit var mediaArtist: TextView
+    private lateinit var playPause: TextView
     private lateinit var media: MediaControllerBridge
     private var torchOn = false
     private var preview = false
@@ -66,7 +68,9 @@ class LockScreenActivity : Activity() {
         override fun run() {
             clock.text = SimpleDateFormat("h:mm", Locale.getDefault()).format(Date())
             date.text = SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
-            mediaTitle.text = if (preview) listOf(media.title(), media.artist()).filter { it.isNotBlank() }.joinToString("  •  ").ifBlank { "No media playing" } else "Media hidden while D2 is locked"
+            mediaTitle.text = media.title().ifBlank { "Media" }
+            mediaArtist.text = media.artist().ifBlank { "Play music to show it here" }
+            playPause.text = if (media.isPlaying()) "Ⅱ" else "▶"
             handler.postDelayed(this, 1000)
         }
     }
@@ -104,7 +108,7 @@ class LockScreenActivity : Activity() {
         NotificationStore.onChanged = { runOnUiThread(::renderNotifications) }
         renderNotifications()
         WeatherRepository.load(this) { value -> runOnUiThread {
-            weather.text = value?.let { "${it.temperature}°  ${it.label}" } ?: "Weather unavailable"
+            weather.text = value?.let { "${it.temperature}°${if (Prefs.celsius(this)) "C" else "F"}  ${it.label}" } ?: "Weather unavailable"
         } }
     }
 
@@ -157,7 +161,10 @@ class LockScreenActivity : Activity() {
     }
 
     private fun buildUi(): View {
-        val frame = FrameLayout(this).apply { setBackgroundColor(Color.rgb(6, 7, 12)) }
+        val frame = FrameLayout(this).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                intArrayOf(0xff202637.toInt(), 0xff0b101b.toInt(), 0xff070910.toInt()))
+        }
         Prefs.wallpaper(this)?.let { saved ->
             frame.addView(ImageView(this).apply {
                 scaleType = ImageView.ScaleType.CENTER_CROP
@@ -190,10 +197,10 @@ class LockScreenActivity : Activity() {
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(dp(20), dp(80), dp(20), dp(28))
+            setPadding(dp(20), dp(72), dp(20), dp(125))
         }
-        clock = label("12:00", 78f, Color.WHITE).apply { letterSpacing = -.045f }
-        date = label("", 18f, 0xffeeeeF4.toInt())
+        clock = label("12:00", 82f, Color.WHITE).apply { letterSpacing = -.05f; gravity = Gravity.CENTER }
+        date = label("", 18f, 0xffeeeeF4.toInt()).apply { gravity = Gravity.CENTER }
         val topInfo = LinearLayout(this).apply {
             gravity = Gravity.CENTER
             weather = label("Loading weather…", 15f, Color.WHITE)
@@ -238,50 +245,103 @@ class LockScreenActivity : Activity() {
         content.addView(notifications, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val mediaPanel = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(dp(16), dp(12), dp(16), dp(10))
-            background = glassPanel()
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(14), dp(12), dp(10), dp(12))
+            background = glassPanel(30f)
         }
-        mediaTitle = label("No media playing", 15f, Color.WHITE).apply { gravity = Gravity.CENTER }
-        val controls = LinearLayout(this).apply {
+        mediaPanel.addView(label("♫", 25f, Color.WHITE).apply {
             gravity = Gravity.CENTER
-            if (preview) {
-                addView(actionButton("◀") { media.previous() })
-                addView(actionButton("▶ / ❚❚") { media.toggle() })
-                addView(actionButton("▶") { media.next() })
+            background = GradientDrawable().apply {
+                cornerRadius = dp(17).toFloat()
+                setColor(0xff41475d.toInt())
             }
+        }, LinearLayout.LayoutParams(dp(62), dp(62)))
+        val mediaDetails = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), 0, 0, 0)
+            mediaTitle = label("Media", 16f, Color.WHITE).apply {
+                maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+            }
+            mediaArtist = label("Play music to show it here", 12f, 0xffd1d4df.toInt()).apply {
+                maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+            }
+            addView(mediaTitle)
+            addView(mediaArtist)
         }
-        mediaPanel.addView(mediaTitle, LinearLayout.LayoutParams(-1, dp(35)))
-        mediaPanel.addView(controls, LinearLayout.LayoutParams(-1, dp(48)))
-        content.addView(mediaPanel, LinearLayout.LayoutParams(-1, dp(96)).apply { bottomMargin = dp(22) })
-
-        val shortcuts = LinearLayout(this).apply {
-            gravity = Gravity.CENTER
-            if (preview) addView(roundButton("📷") { openCamera() }, LinearLayout.LayoutParams(0, dp(64), 1f))
-            addView(roundButton("PIN") { authenticate() }, LinearLayout.LayoutParams(0, dp(64), 1f))
-            addView(roundButton("🔦") { toggleTorch() }, LinearLayout.LayoutParams(0, dp(64), 1f))
+        mediaPanel.addView(mediaDetails, LinearLayout.LayoutParams(0, -2, 1f))
+        val controls = LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(mediaButton("‹") { media.previous() })
+            playPause = mediaButton("▶") { media.toggle() }
+            addView(playPause)
+            addView(mediaButton("›") { media.next() })
         }
-        content.addView(shortcuts, LinearLayout.LayoutParams(-1, dp(68)))
+        mediaPanel.addView(controls)
+        if (Prefs.showMedia(this)) content.addView(mediaPanel,
+            LinearLayout.LayoutParams(-1, dp(88)).apply { bottomMargin = dp(12) })
         frame.addView(content, FrameLayout.LayoutParams(-1, -1))
+        val floatingBar = LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(9), dp(7), dp(9), dp(7))
+            background = glassPanel(38f)
+            elevation = dp(16).toFloat()
+            addView(shortcutButton("left"), LinearLayout.LayoutParams(dp(58), dp(58)))
+            addView(TextView(this@LockScreenActivity).apply {
+                text = "PIN"
+                textSize = 14f
+                gravity = Gravity.CENTER
+                setTextColor(Color.WHITE)
+                contentDescription = "Enter D2 PIN"
+                setOnClickListener { authenticate() }
+                setOnTouchListener(unlockSwipeListener())
+            }, LinearLayout.LayoutParams(0, dp(58), 1f))
+            addView(shortcutButton("right"), LinearLayout.LayoutParams(dp(58), dp(58)))
+        }
+        frame.addView(floatingBar, FrameLayout.LayoutParams(-1, dp(72), Gravity.BOTTOM).apply {
+            setMargins(dp(20), 0, dp(20), dp(30))
+        })
         return frame
+    }
+
+    private fun unlockSwipeListener() = object : View.OnTouchListener {
+        private var startY = 0f
+        override fun onTouch(v: View, event: android.view.MotionEvent): Boolean {
+            when (event.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> { startY = event.y; return true }
+                android.view.MotionEvent.ACTION_UP -> {
+                    if (startY - event.y > dp(36) || kotlin.math.abs(startY - event.y) < dp(12)) authenticate()
+                    return true
+                }
+            }
+            return false
+        }
     }
 
     private fun renderNotifications() {
         notifications.removeAllViews()
+        val privacy = if (preview) 3 else Prefs.notificationPrivacy(this)
+        if (privacy == 0) return
         if (NotificationStore.items.isEmpty()) {
             notifications.addView(label("No notifications", 14f, 0xffddddE5.toInt()).apply { gravity = Gravity.CENTER })
             return
         }
-        val locked = !preview
+        if (privacy == 1) {
+            notifications.addView(label("${NotificationStore.items.size} notifications", 15f, Color.WHITE).apply {
+                gravity = Gravity.CENTER
+            })
+            return
+        }
         NotificationStore.items.take(4).forEach { item ->
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(16), dp(11), dp(16), dp(11))
                 background = glassPanel()
-                addView(label(if (locked) "Notification" else item.app, 12f, 0xffd8d5e5.toInt()))
-                addView(label(if (locked) "Unlock to view notification" else item.title.ifBlank { item.text }, 16f, Color.WHITE))
-                if (!locked && item.title.isNotBlank() && item.text.isNotBlank()) addView(label(item.text, 13f, 0xffe6e3ed.toInt()))
+                addView(label(item.app, 12f, 0xffd8d5e5.toInt()))
+                if (privacy == 3 && (preview || item.public)) {
+                    addView(label(item.title.ifBlank { item.text }, 16f, Color.WHITE))
+                    if (item.title.isNotBlank() && item.text.isNotBlank()) addView(label(item.text, 13f, 0xffe6e3ed.toInt()))
+                }
             }
             notifications.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(9) })
         }
@@ -324,14 +384,28 @@ class LockScreenActivity : Activity() {
     }
 
     private fun roundButton(value: String, click: () -> Unit) = TextView(this).apply {
-        text = value; textSize = 26f; gravity = Gravity.CENTER; background = glassPanel(32f)
+        text = value; textSize = 24f; gravity = Gravity.CENTER; background = glassPanel(32f)
+        setTextColor(Color.WHITE)
         setOnClickListener { click() }
+    }
+
+    private fun mediaButton(value: String, click: () -> Unit) = TextView(this).apply {
+        text = value; textSize = 25f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
+        layoutParams = LinearLayout.LayoutParams(dp(35), dp(48))
+        setOnClickListener { click() }
+    }
+    private fun shortcutButton(side: String): View = when (Prefs.shortcut(this, side)) {
+        "Camera" -> roundButton("📷") {
+            if (preview) openCamera() else authenticate { openCamera() }
+        }.apply { contentDescription = "Camera, D2 PIN required" }
+        "Flashlight" -> roundButton("🔦") { toggleTorch() }.apply { contentDescription = "Flashlight" }
+        else -> View(this)
     }
 
     private fun glassPanel(radius: Float = 28f) = GradientDrawable().apply {
         shape = GradientDrawable.RECTANGLE
         cornerRadius = dp(radius.toInt()).toFloat()
-        setColor(0x663b3b45)
+        setColor(0xa3353b4c.toInt())
         setStroke(dp(1), 0x55ffffff)
     }
 
