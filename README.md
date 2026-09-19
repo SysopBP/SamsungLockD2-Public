@@ -8,7 +8,7 @@ An independent Android app privacy screen with its own six-digit PIN. Version 0.
 
 ## Screenshots
 
-Captured from D2 v0.3.0 in an Android 16 emulator. Samsung/One UI appearance may differ.
+Captured from D2 v0.4.0 in an Android 16 emulator with sample media. These are not Samsung handset captures; One UI appearance may differ.
 
 <table>
   <tr>
@@ -18,6 +18,10 @@ Captured from D2 v0.3.0 in an Android 16 emulator. Samsung/One UI appearance may
   <tr>
     <td align="center"><strong>Independent D2 PIN</strong><br><img src="https://raw.githubusercontent.com/SysopBP/SamsungLockD2-Public/main/docs/screenshots/04-pin-prompt.png" width="270" alt="The six-digit D2 PIN prompt"></td>
     <td align="center"><strong>App settings</strong><br><img src="https://raw.githubusercontent.com/SysopBP/SamsungLockD2-Public/main/docs/screenshots/01-settings.png" width="270" alt="D2 settings with double-tap activation and the optional root kiosk switch"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Appearance and media settings</strong><br><img src="https://raw.githubusercontent.com/SysopBP/SamsungLockD2-Public/main/docs/screenshots/05-customization.png" width="270" alt="Celsius and locked media settings"></td>
+    <td align="center"><strong>Privacy and bottom shortcuts</strong><br><img src="https://raw.githubusercontent.com/SysopBP/SamsungLockD2-Public/main/docs/screenshots/06-shortcuts.png" width="270" alt="Notification privacy and configurable camera and flashlight actions"></td>
   </tr>
 </table>
 
@@ -33,7 +37,7 @@ Captured from D2 v0.3.0 in an Android 16 emulator. Samsung/One UI appearance may
 
 **Show D2 when the screen wakes** is optional. Android may block background launches. Optional KernelSU root mode only requests this app's Activity launch. The bridge module can restart the opted-in service after boot; it does not provide pre-boot protection. Widget/manual activation does not require root.
 
-Notification access, camera, and approximate location are optional. Locked D2 screens hide notification identities/content and media metadata; camera and media controls are available only in authenticated Preview. Settings require the PIN again when returning from the background. PIN changes require the existing PIN.
+Notification access, camera, and approximate location are optional. Locked media metadata and playback controls can be shown through Settings when notification access is granted. Notification privacy can hide all notifications, show a count or app names, or show only content marked public by the sending app. The camera action requires the D2 PIN while locked; the flashlight can work without it. Settings require the PIN again when returning from the background. PIN changes require the existing PIN.
 
 ## Security boundary
 
