@@ -2,7 +2,7 @@
 
 An independent Android app privacy screen with its own six-digit PIN. Version 0.3.0 adds optional root-assisted Android kiosk mode. It does not create or modify system credentials, force the screen off, or change firmware, Knox, Gatekeeper, or boot partitions. Kiosk mode interacts with the Android keyguard internally; this is not a guarantee against Samsung D2 boot errors.
 
-**Public experimental preview.** The current source is v0.4.0. The [successful build](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/35439460185) contains the updated debug APK and optional KernelSU ZIP; the published [release](https://github.com/SysopBP/SamsungLockD2-Public/releases) remains v0.3.1 until a new release is posted.
+**Public experimental preview.** The current source is v0.4.1. The [v0.4.0 build](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/35439460185) contains the previous debug APK and optional KernelSU ZIP; the published [release](https://github.com/SysopBP/SamsungLockD2-Public/releases) remains v0.3.1 until a new release is posted.
 
 **Device testing:** The v0.3.0 kiosk version was user-tested on a Samsung Galaxy S26 Ultra running the latest One UI 9 beta available at the time, including kiosk activation and PIN unlock. The exact beta build was not recorded. Version 0.3.1 adds licensing notices and PIN-gated weather credits; it has not yet been physically retested on that phone.
 
@@ -37,7 +37,7 @@ Captured from D2 v0.4.0 in an Android 16 emulator with sample media. These are n
 
 **Show D2 when the screen wakes** is optional. Android may block background launches. Optional KernelSU root mode only requests this app's Activity launch. The bridge module can restart the opted-in service after boot; it does not provide pre-boot protection. Widget/manual activation does not require root.
 
-Notification access, camera, and approximate location are optional. Locked media metadata and playback controls can be shown through Settings when notification access is granted. Notification privacy can hide all notifications, show a count or app names, or show only content marked public by the sending app. The camera action requires the D2 PIN while locked; the flashlight can work without it. Settings require the PIN again when returning from the background. PIN changes require the existing PIN.
+Notification access, camera, and approximate location are optional. Locked media metadata and playback controls can be shown through Settings when notification access is granted. Notification privacy can hide all notifications, show a count or app names, show public-only content, or explicitly show private content too. Notifications marked secret remain hidden on the locked D2 screen. The camera action requires the D2 PIN while locked; the flashlight can work without it. Settings require the PIN again when returning from the background. PIN changes require the existing PIN.
 
 ## Security boundary
 
@@ -77,7 +77,15 @@ Weather data by [Open-Meteo](https://open-meteo.com/), under [CC BY 4.0](https:/
 Version 0.4.0 adds a floating action bar, media details and controls while D2 is locked,
 Fahrenheit/Celsius selection, configurable bottom shortcuts, and notification privacy
 choices. The locked media card can show track names and operate playback; choose
-whether to display it in Settings. Public notification previews are shown only for
-notifications marked public by their sending apps. Camera requires the D2 PIN
+whether to display it in Settings. The Public only option shows content explicitly marked public by the sending app;
+All previews also shows private notification text before the D2 PIN is entered.
+Notifications marked secret stay hidden while D2 is locked. Camera requires the D2 PIN
 while locked; flashlight stays accessible. D2 retains its independent six-digit PIN
 and optional root kiosk behavior. The APK and module ZIP passed the build, lint, and emulator checks, and a user reported the update working on their device.
+
+## Notification preview fix (0.4.1)
+
+Most Android notifications are marked private by default. Select **All previews (private too)**
+in D2 settings if you want their message text on the locked D2 screen. **Public only**
+shows text only from notifications explicitly marked public by their apps.
+Notification access must be granted for either option. Secret notifications stay hidden.

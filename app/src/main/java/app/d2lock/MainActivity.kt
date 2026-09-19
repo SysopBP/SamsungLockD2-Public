@@ -182,8 +182,14 @@ class MainActivity : Activity() {
             setOnCheckedChangeListener { _, checked -> Prefs.setShowMedia(this@MainActivity, checked) }
         }, rowParams())
         section(root, "NOTIFICATION PRIVACY")
-        addChoice(root, "When D2 is locked", listOf("Hide all", "Count only", "App names", "Public previews"),
+        addChoice(root, "When D2 is locked", listOf("Hide all", "Count only", "App names", "Public only", "All previews (private too)"),
             Prefs.notificationPrivacy(this)) { Prefs.setNotificationPrivacy(this, it) }
+        root.addView(TextView(this).apply {
+            text = "Public only shows text from apps that mark it public. All previews can show private messages before you enter the D2 PIN. Apps marked secret stay hidden."
+            textSize = 13f
+            setTextColor(0xffb6c0d3.toInt())
+            setPadding(dp(8), 0, dp(8), dp(12))
+        })
         section(root, "FLOATING BAR")
         val actions = listOf("None", "Camera", "Flashlight")
         for (side in listOf("left", "right")) {
