@@ -86,6 +86,8 @@ class ScreenshotCaptureTest {
                 capture(scenario, "01-settings")
                 onView(withText("When D2 is locked")).perform(scrollTo())
                 capture(scenario, "05-customization")
+                onView(withText("Right action")).perform(scrollTo())
+                capture(scenario, "06-shortcuts")
             }
             ActivityScenario.launch<LockScreenActivity>(Intent(context, LockScreenActivity::class.java).putExtra("preview", true)).use { scenario ->
                 SystemClock.sleep(1500)
