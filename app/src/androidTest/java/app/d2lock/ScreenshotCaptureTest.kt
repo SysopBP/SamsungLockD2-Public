@@ -11,6 +11,7 @@ import android.media.session.PlaybackState
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.view.WindowManager
+import android.widget.ScrollView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.*
@@ -26,6 +27,7 @@ import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.hamcrest.Matchers.isAssignableFrom
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -80,6 +82,10 @@ class ScreenshotCaptureTest {
         }
         try {
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                scenario.onActivity {
+                    it.window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                        WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                }
                 onView(withHint("6-digit D2 PIN")).inRoot(isDialog()).perform(typeText("246810"), closeSoftKeyboard())
                 onView(withText("Unlock")).inRoot(isDialog()).perform(click())
                 waitUntil { runCatching { onView(withText("Change D2 PIN")).check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed())); true }.getOrDefault(false) }
@@ -87,6 +93,7 @@ class ScreenshotCaptureTest {
                 onView(withText("When D2 is locked")).perform(scrollTo())
                 capture(scenario, "05-customization")
                 onView(withText("Right action")).perform(scrollTo())
+                onView(isAssignableFrom(ScrollView::class.java)).perform(swipeUp())
                 capture(scenario, "06-shortcuts")
             }
             ActivityScenario.launch<LockScreenActivity>(Intent(context, LockScreenActivity::class.java).putExtra("preview", true)).use { scenario ->
