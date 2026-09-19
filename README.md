@@ -2,7 +2,7 @@
 
 An independent Android app privacy screen with its own six-digit PIN. Version 0.3.0 adds optional root-assisted Android kiosk mode. It does not create or modify system credentials, force the screen off, or change firmware, Knox, Gatekeeper, or boot partitions. Kiosk mode interacts with the Android keyguard internally; this is not a guarantee against Samsung D2 boot errors.
 
-**Public experimental preview.** The current source is v0.4.1. The [successful v0.4.1 build](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/35443284342) contains the updated debug APK and optional KernelSU ZIP; the published [release](https://github.com/SysopBP/SamsungLockD2-Public/releases) remains v0.3.1 until a new release is posted.
+**Public experimental preview.** The current source is v0.4.1. The [successful v0.4.1 build](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/35443284342) contains the updated debug APK and optional KernelSU ZIP; the [v0.4.1 public prerelease](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.1-preview.1) has the APK, ZIP, source archive, and checksums.
 
 **Device testing:** The v0.3.0 kiosk version was user-tested on a Samsung Galaxy S26 Ultra running the latest One UI 9 beta available at the time, including kiosk activation and PIN unlock. The exact beta build was not recorded. Version 0.3.1 adds licensing notices and PIN-gated weather credits; it has not yet been physically retested on that phone.
 
