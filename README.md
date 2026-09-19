@@ -2,7 +2,7 @@
 
 An independent Android app privacy screen with its own six-digit PIN. Version 0.3.0 adds optional root-assisted Android kiosk mode. It does not create or modify system credentials, force the screen off, or change firmware, Knox, Gatekeeper, or boot partitions. Kiosk mode interacts with the Android keyguard internally; this is not a guarantee against Samsung D2 boot errors.
 
-**Public experimental preview.** Download the APK and optional KernelSU module from [Releases](https://github.com/SysopBP/SamsungLockD2-Public/releases).
+**Public experimental preview.** The current source is v0.4.0. The [successful build](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/35439460185) contains the updated debug APK and optional KernelSU ZIP; the published [release](https://github.com/SysopBP/SamsungLockD2-Public/releases) remains v0.3.1 until a new release is posted.
 
 **Device testing:** The v0.3.0 kiosk version was user-tested on a Samsung Galaxy S26 Ultra running the latest One UI 9 beta available at the time, including kiosk activation and PIN unlock. The exact beta build was not recorded. Version 0.3.1 adds licensing notices and PIN-gated weather credits; it has not yet been physically retested on that phone.
 
@@ -68,13 +68,12 @@ Notification content stays in memory. Wallpaper selection stores a persistent im
 Copyright (c) 2026 D2 Project. **All rights reserved.** D2's original code is publicly viewable but is not released under an open-source license. See [LICENSE](LICENSE). Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt) and **Licenses and credits** in the app.
 
 Weather data by [Open-Meteo](https://open-meteo.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). D2 truncates temperatures and maps weather codes to short labels. No affiliation with or endorsement by Samsung, KernelSU, or Open-Meteo is implied.
-# Preview update in progress (0.4.0)
+## Current source update (0.4.0)
 
-The next build adds a floating action bar, media details and controls while D2 is locked,
+Version 0.4.0 adds a floating action bar, media details and controls while D2 is locked,
 Fahrenheit/Celsius selection, configurable bottom shortcuts, and notification privacy
 choices. The locked media card can show track names and operate playback; choose
 whether to display it in Settings. Public notification previews are shown only for
 notifications marked public by their sending apps. Camera requires the D2 PIN
 while locked; flashlight stays accessible. D2 retains its independent six-digit PIN
-and optional root kiosk behavior. This update is a proposed build until its APK
-and module ZIP pass GitHub Actions.
+and optional root kiosk behavior. The APK and module ZIP passed the build, lint, and emulator checks, and a user reported the update working on their device.
