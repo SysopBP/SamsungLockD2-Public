@@ -13,8 +13,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      D2_SIGNING_KEYSTORE: ${{ runner.temp }}/d2-original.keystore
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -42,7 +40,9 @@ jobs:
             exit 1
           fi
           umask 077
+          D2_SIGNING_KEYSTORE="$RUNNER_TEMP/d2-original.keystore"
           printf '%s' "$D2_SIGNING_KEYSTORE_BASE64" | base64 --decode > "$D2_SIGNING_KEYSTORE"
+          echo "D2_SIGNING_KEYSTORE=$D2_SIGNING_KEYSTORE" >> "$GITHUB_ENV"
           keytool -exportcert -keystore "$D2_SIGNING_KEYSTORE" -storepass android -alias androiddebugkey -file "$RUNNER_TEMP/d2-signer.der"
           echo '7ce7d3e590520bcd54dfd9760f36e5fdc6243b1b062c46cac4670b65efb0f370  '"$RUNNER_TEMP/d2-signer.der" | sha256sum --check
       - name: Build and lint
