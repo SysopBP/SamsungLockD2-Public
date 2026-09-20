@@ -81,18 +81,21 @@ class ScreenshotCaptureTest {
   TestDevice.wake(); recoverBootDialog()
   assertFalse("Fresh emulator required",File(ctx.noBackupFilesDir,"d2-pin.json").exists())
   PinStore(ctx).create("246810".toCharArray())
-  Prefs.setKiosk(ctx,true); Prefs.setShowMedia(ctx,false)
+  // App-only mode is sufficient to document this appearance-only update.
+  Prefs.setKiosk(ctx,false); Prefs.setShowMedia(ctx,false)
   Prefs.setNotificationPrivacy(ctx,4); Prefs.setLiveNotifications(ctx,true)
   shell("cmd notification allow_listener app.d2lock/app.d2lock.notifications.LockNotificationListener")
   SystemClock.sleep(1500)
-  RootKiosk.testConnect={ connect() }
+
   val scenario=ActivityScenario.launch<LockScreenActivity>(Intent(ctx,LockScreenActivity::class.java))
   try {
    var activity: LockScreenActivity?=null
-   scenario.onActivity { activity=it; shell("am task focus ${it.taskId}") }
+   var taskId = -1
+   scenario.onActivity { activity=it; taskId=it.taskId }
+   TestDevice.wake(); TestDevice.focusTask(taskId)
    recoverBootDialog()
-   waitFor("real root kiosk") { ctx.getSystemService(ActivityManager::class.java).lockTaskModeState==ActivityManager.LOCK_TASK_MODE_LOCKED }
    waitFor("D2 focus") { onMain { activity!!.hasWindowFocus() } }
+   // Appearance captures use app-only mode; the separate 19-test suite verifies kiosk.
    fun pending(id: Int) = PendingIntent.getBroadcast(ctx,id,Intent("app.d2lock.DEMO_CALL_$id").setPackage(ctx.packageName),PendingIntent.FLAG_IMMUTABLE)
    val notification=Notification.Builder(ctx,"screenshot-demo")
     .setSmallIcon(android.R.drawable.sym_call_incoming).setCategory(Notification.CATEGORY_CALL).setOngoing(true)
@@ -107,15 +110,17 @@ class ScreenshotCaptureTest {
     assertEquals(2,CallNotificationStore.items.single().controls.size)
     assertTrue(views(activity!!.window.decorView).filterIsInstance<TextView>().any { it.text.toString()=="Open phone call" })
    }
-   capture(scenario,"08-d2-042-call-controls-demo")
+   capture(scenario,"10-d2-043-call-controls-demo")
    onMain {
     CallNotificationStore.items.clear()
     val message=LockNotification("demo-message","Messages (demo)","Alex · Sample message","The new update is ready. See you soon!",System.currentTimeMillis(),Notification.VISIBILITY_PRIVATE)
     NotificationStore.items.add(message)
+    NotificationStore.items.add(LockNotification("demo-calendar","Calendar (demo)","Tomorrow · Sample event","Coffee at 10:00",System.currentTimeMillis(),Notification.VISIBILITY_PUBLIC))
+    NotificationStore.items.add(LockNotification("demo-mail","Mail (demo)","Sam · Sample email","Your weekend plans",System.currentTimeMillis(),Notification.VISIBILITY_PRIVATE))
     NotificationStore.onChanged?.invoke(); NotificationStore.onPosted?.invoke(message)
     assertTrue(views(activity!!.window.decorView).filterIsInstance<TextView>().any { it.visibility==View.VISIBLE && it.text.toString().contains("Messages (demo)\n") })
    }
-   capture(scenario,"09-d2-042-live-message-demo")
+   capture(scenario,"11-d2-043-soft-notifications-demo")
   } finally {
    val done=CountDownLatch(1)
    scenario.onActivity { RootKiosk.unlock(it) { done.countDown() } }

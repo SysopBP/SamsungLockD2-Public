@@ -6,7 +6,7 @@ import android.app.Notification
 import java.util.concurrent.CopyOnWriteArrayList
 
 data class LockNotification(val key: String, val app: String, val title: String, val text: String, val time: Long, val visibility: Int,
-    val contentIntent: android.app.PendingIntent? = null)
+    val contentIntent: android.app.PendingIntent? = null, val packageName: String = app)
 
 object NotificationStore {
     val items = CopyOnWriteArrayList<LockNotification>()
@@ -57,7 +57,7 @@ class LockNotificationListener : NotificationListenerService() {
             packageManager.getApplicationLabel(packageManager.getApplicationInfo(sbn.packageName, 0)).toString()
         }.getOrDefault(sbn.packageName)
         val item = LockNotification(sbn.key, app, title, text, sbn.postTime,
-            sbn.notification.visibility, sbn.notification.contentIntent)
+            sbn.notification.visibility, sbn.notification.contentIntent, sbn.packageName)
         NotificationStore.items.add(0, item)
         while (NotificationStore.items.size > 20) NotificationStore.items.removeAt(NotificationStore.items.lastIndex)
         return item

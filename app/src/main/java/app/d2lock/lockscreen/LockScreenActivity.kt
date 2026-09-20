@@ -321,7 +321,8 @@ class LockScreenActivity : Activity() {
             maxLines = 3
             ellipsize = android.text.TextUtils.TruncateAt.END
             setPadding(dp(16), dp(12), dp(16), dp(12))
-            background = GradientDrawable().apply { cornerRadius = dp(20).toFloat(); setColor(0xff303a50.toInt()) }
+            background = notificationPanel(null, banner = true)
+            setShadowLayer(dp(2).toFloat(), 0f, dp(1).toFloat(), 0xcc000000.toInt())
             elevation = dp(20).toFloat()
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
@@ -352,6 +353,7 @@ class LockScreenActivity : Activity() {
             if (text == null) hideBanner.run()
             else {
                 liveBanner.text = text
+                liveBanner.background = notificationPanel(if (Prefs.notificationPrivacy(this) == 1) null else current.packageName, banner = true)
                 liveBanner.setOnClickListener { openNotification(current) }
             }
         }
@@ -384,11 +386,11 @@ class LockScreenActivity : Activity() {
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(16), dp(11), dp(16), dp(11))
-                background = glassPanel()
-                addView(label(item.app, 12f, 0xffd8d5e5.toInt()))
+                background = notificationPanel(item.packageName)
+                addView(notificationLabel(item.app, 12f))
                 if (privacy == 4 || (privacy == 3 && item.visibility == Notification.VISIBILITY_PUBLIC)) {
-                    addView(label(item.title.ifBlank { item.text }, 16f, Color.WHITE))
-                    if (item.title.isNotBlank() && item.text.isNotBlank()) addView(label(item.text, 13f, 0xffe6e3ed.toInt()))
+                    addView(notificationLabel(item.title.ifBlank { item.text }, 16f))
+                    if (item.title.isNotBlank() && item.text.isNotBlank()) addView(notificationLabel(item.text, 13f))
                 }
             }
             if (item.contentIntent != null) card.setOnClickListener { openNotification(item) }
@@ -401,8 +403,8 @@ class LockScreenActivity : Activity() {
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(12), dp(8), dp(12), dp(8))
-                background = glassPanel()
-                addView(label("Phone call", 17f, Color.WHITE))
+                background = notificationPanel(null, call = true)
+                addView(notificationLabel("Phone call", 17f))
             }
             fun addControl(title: String, pending: android.app.PendingIntent) {
                 card.addView(actionButton(title) {
@@ -410,7 +412,7 @@ class LockScreenActivity : Activity() {
                     catch (_: Exception) {
                         Toast.makeText(this, "Call control unavailable. Open the phone call or unlock D2.", Toast.LENGTH_LONG).show()
                     }
-                })
+                }.apply { setShadowLayer(dp(2).toFloat(), 0f, dp(1).toFloat(), 0xcc000000.toInt()) })
             }
             call.controls.forEach { addControl(it.label, it.intent) }
             call.open?.let { addControl("Open phone call", it) }
@@ -423,6 +425,7 @@ class LockScreenActivity : Activity() {
         val text = app.d2lock.notifications.NotificationPresentation.banner(item, Prefs.notificationPrivacy(this)) ?: return
         bannerKey = item.key
         liveBanner.text = text
+        liveBanner.background = notificationPanel(if (Prefs.notificationPrivacy(this) == 1) null else item.packageName, banner = true)
         liveBanner.visibility = View.VISIBLE
         liveBanner.setOnClickListener { openNotification(item) }
         handler.removeCallbacks(hideBanner)
@@ -492,6 +495,28 @@ class LockScreenActivity : Activity() {
         }.apply { contentDescription = "Camera, D2 PIN required" }
         "Flashlight" -> roundButton("🔦") { toggleTorch() }.apply { contentDescription = "Flashlight" }
         else -> View(this)
+    }
+
+    private fun notificationLabel(value: String, size: Float) = label(value, size, Color.WHITE).apply {
+        setShadowLayer(dp(2).toFloat(), 0f, dp(1).toFloat(), 0xcc000000.toInt())
+    }
+
+    private fun notificationPanel(app: String?, banner: Boolean = false, call: Boolean = false): GradientDrawable {
+        // Stable package-based tints; a neutral banner must not identify apps in Count only mode.
+        val palette = intArrayOf(0x608ec7, 0x529f9c, 0x9a80be, 0xbd829e)
+        val rgb = when {
+            call -> 0x579c7c
+            app == null -> 0x65738a
+            else -> palette[Math.floorMod(app.hashCode(), palette.size)]
+        }
+        // Dark translucent fills preserve white text; pastel borders make each tint distinct.
+        val fill = Color.argb(if (banner) 194 else 102, Color.red(rgb) / 2, Color.green(rgb) / 2, Color.blue(rgb) / 2)
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(if (banner) 20 else 28).toFloat()
+            setColor(fill)
+            setStroke(dp(1).coerceAtLeast(1), (0x99 shl 24) or rgb)
+        }
     }
 
     private fun glassPanel(radius: Float = 28f) = GradientDrawable().apply {

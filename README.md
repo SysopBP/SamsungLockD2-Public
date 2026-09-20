@@ -2,25 +2,27 @@
 
 An independent Android app privacy screen with its own six-digit PIN. Version 0.3.0 adds optional root-assisted Android kiosk mode. It does not create or modify system credentials, force the screen off, or change firmware, Knox, Gatekeeper, or boot partitions. Kiosk mode interacts with the Android keyguard internally; this is not a guarantee against Samsung D2 boot errors.
 
-**Public experimental preview.** The latest downloadable paired update is **D2 0.4.2 with call support and live notification banners**, with optional KernelSU Next bridge **0.5.4**. [Release notes and downloads](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.2-preview.1). This branch contains the current v0.4.2 paired source; a downloadable source archive is attached as [SamsungLockD2-v0.4.2-source.zip](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/SamsungLockD2-v0.4.2-source.zip).
+**Public experimental preview.** The latest downloadable paired update is **D2 0.4.3 with translucent, per-app notification colors**, with optional KernelSU Next bridge **0.5.5**. [Release notes and downloads](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.3-preview.1). This branch contains the current v0.4.3 paired source; a downloadable source archive is attached as [SamsungLockD2-v0.4.3-source.zip](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.3-preview.1/SamsungLockD2-v0.4.3-source.zip).
 
-- [Install D2 0.4.2 paired APK](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/SamsungLockD2-v0.4.2-paired-calls.apk)
-- [Optional KernelSU Next bridge 0.5.4 ZIP](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/SamsungLockD2-KSUNext-v0.5.4-paired.zip)
-- [Setup and changes](docs/CALLS-AND-LIVE-NOTIFICATIONS.md), [verification](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/D2-v0.4.2-verification.txt), and [checksums](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/Combo-v0.4.2-SHA256SUMS.txt)
+- [Install D2 0.4.3 paired APK](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.3-preview.1/SamsungLockD2-v0.4.3-paired-soft-notifications.apk)
+- [Optional KernelSU Next bridge 0.5.5 ZIP](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.3-preview.1/SamsungLockD2-KSUNext-v0.5.5-paired.zip)
+- [Setup and changes](docs/CALLS-AND-LIVE-NOTIFICATIONS.md), [verification](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.3-preview.1/D2-v0.4.3-verification.txt), and [checksums](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.3-preview.1/Combo-v0.4.3-SHA256SUMS.txt)
 
 Install the APK even when updating the module; the module preserves an existing D2 APK. Enable D2 notification access for call controls and live banners. All 19 Android 16/API 36 emulator tests passed. The new call fix still needs a real incoming-call test on the Galaxy S26 Ultra running Android 17.
 
 **Device testing:** User-reported physical-device testing of the Galaxy Island + Samsung Lock D2 combo was performed on a **Samsung Galaxy S26 Ultra running Android 17** (confirmed September 19, 2026). Earlier v0.3.0 testing included kiosk activation and PIN unlock on One UI 9 beta; the exact beta build was not recorded. Automated tests and the combo screenshot gallery use a separate Android 16 / API 36 emulator.
 
-## New 0.4.2 screenshots
+Notification cards use 40% opacity with consistent soft blue, teal, lavender or rose colors per app. Live banners use 76% opacity; all notification text stays white with a subtle shadow. Calls use a green accent, and Count only stays neutral. Existing privacy, PIN and kiosk behavior is retained.
 
-Real D2 captures with kiosk active on an Android 16/API 36 emulator. The incoming-call notification is simulated; the message is sample content. These are not Samsung handset captures or proof of a real call. Galaxy Island is hidden during D2 lock and was not installed for this D2-only capture.
+## New 0.4.3 screenshots
+
+Real D2 captures in app-only mode on an Android 16/API 36 emulator. The separate regression suite covers kiosk behavior. The incoming-call notification is simulated; the message is sample content. These are not Samsung handset captures or proof of a real call. Galaxy Island is hidden during D2 lock and was not installed for this D2-only capture.
 
 | Call controls (simulation) | Live notification banner (sample) |
 | --- | --- |
-| <img src="https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/08-d2-042-call-controls-demo.png" width="240" alt="Simulated call controls during D2 kiosk"> | <img src="https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/09-d2-042-live-message-demo.png" width="240" alt="Sample message banner during D2 kiosk"> |
+| <img src="https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.3-preview.1/10-d2-043-call-controls-demo.png" width="240" alt="Simulated call controls in D2"> | <img src="https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.3-preview.1/11-d2-043-soft-notifications-demo.png" width="240" alt="Sample message banner in D2"> |
 
-[Capture notes](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/D2-v0.4.2-screenshot-notes.md) · [Earlier paired-app gallery](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.1-preview.1).
+[Capture notes](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.3-preview.1/D2-v0.4.3-screenshot-notes.md) · [Earlier paired-app gallery](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.1-preview.1).
 
 ## Earlier 0.4.0 screenshots
 
