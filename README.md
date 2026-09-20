@@ -1,6 +1,8 @@
 # Samsung Lock D2
 
-An independent Android app privacy screen with its own six-digit PIN. Version 0.3.0 adds optional root-assisted Android kiosk mode. It does not create or modify system credentials, force the screen off, or change firmware, Knox, Gatekeeper, or boot partitions. Kiosk mode interacts with the Android keyguard internally; this is not a guarantee against Samsung D2 boot errors.
+An independent Android app privacy screen with its own six-digit PIN, designed for rooted Samsung devices where the user intentionally runs without Android's standard screen lock or biometrics. Version 0.3.0 adds optional root-assisted Android kiosk mode. It does not create or modify system credentials, force the screen off, or change firmware, Knox, Gatekeeper, or boot partitions.
+
+> **Root / D2 recovery use case:** The project is intended to be used as the phone's app-level lock screen while rooted **after the user has deliberately removed the standard Android/Samsung screen lock and biometrics**. The project author has physically tested recovery from Samsung D2 Download Mode in this configuration and was able to restore firmware with Odin/firmware flashing tools. The purpose is to avoid having an Android credential/biometric configuration become an additional recovery obstacle after a root-related D2 condition. **D2 itself does not repair Download Mode, remove D2 errors, modify firmware integrity checks, or guarantee recovery on every Samsung model/firmware/root configuration.** Keep firmware backups and the correct Odin/firmware files available before experimenting with root.
 
 **Public experimental preview.** The newest paired update is **D2 0.4.4 + Galaxy Island theme controls**, with optional KernelSU Next bridge **0.5.6**. [Release notes and downloads](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.4-preview.1).
 
@@ -69,7 +71,7 @@ The PIN verifier uses PBKDF2-HMAC-SHA256 (210,000 iterations, random 128-bit sal
 
 If the PIN is forgotten, clearing D2 app data resets it and all app settings. There is no default, master, or remotely recoverable PIN.
 
-The D2 name refers to the user's Samsung download-mode concern. This app cannot repair firmware integrity or guarantee that a D2 boot/download-mode error will be prevented. It does not remove any existing Samsung credential. No Samsung S26 Ultra beta or KernelSU hardware behavior has been verified by emulator tests.
+The D2 name refers to the project's Samsung Download Mode recovery use case. The author has physically tested a rooted-device setup with the standard Samsung/Android screen lock and biometrics removed and successfully restored firmware after encountering D2 in Download Mode. D2 provides the independent app PIN/kiosk layer for that setup. It does **not** remove an existing Samsung credential for you, repair firmware integrity, clear a D2 condition by itself, or establish that every Samsung device/firmware/root combination will behave identically. Emulator tests cannot validate Samsung bootloader or Download Mode behavior.
 
 ## Experimental root kiosk and recovery
 
