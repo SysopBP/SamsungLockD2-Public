@@ -15,6 +15,16 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // CI supplies the original key explicitly; never rely on a runner's default debug key.
+    System.getenv("D2_SIGNING_KEYSTORE")?.let { keystorePath ->
+        signingConfigs.getByName("debug") {
+            storeFile = file(keystorePath)
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildFeatures { buildConfig = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
