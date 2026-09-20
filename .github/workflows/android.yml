@@ -1,16 +1,11 @@
-name: Build APK and KernelSU module
+name: Diagnose Galaxy Island released APKs
 on:
   push:
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
-      - '.github/workflows/screenshots.yml'
-      - 'app/src/androidTest/java/app/d2lock/ScreenshotCaptureTest.kt'
-  workflow_dispatch:
+    branches: [diagnostics/galaxy-island-overlay-20260920]
 permissions:
   contents: read
 jobs:
-  build:
+  overlay:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -21,89 +16,34 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools'
+          packages: platform-tools
           log-accepted-android-sdk-licenses: false
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.3.1'
-      - name: Install Android SDK
+      - name: Download published APKs
         run: |
-          sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
-      - name: Generate Gradle wrapper
-        run: gradle wrapper --gradle-version 9.3.1
-      - name: Restore original APK signing key
-        env:
-          D2_SIGNING_KEYSTORE_BASE64: ${{ secrets.D2_SIGNING_KEYSTORE_BASE64 }}
-        run: |
-          if [ -z "$D2_SIGNING_KEYSTORE_BASE64" ]; then
-            echo '::error::D2_SIGNING_KEYSTORE_BASE64 must contain the original APK signing keystore.'
-            exit 1
-          fi
-          umask 077
-          D2_SIGNING_KEYSTORE="$RUNNER_TEMP/d2-original.keystore"
-          printf '%s' "$D2_SIGNING_KEYSTORE_BASE64" | base64 --decode > "$D2_SIGNING_KEYSTORE"
-          echo "D2_SIGNING_KEYSTORE=$D2_SIGNING_KEYSTORE" >> "$GITHUB_ENV"
-          keytool -exportcert -keystore "$D2_SIGNING_KEYSTORE" -storepass android -alias androiddebugkey -file "$RUNNER_TEMP/d2-signer.der"
-          echo '7ce7d3e590520bcd54dfd9760f36e5fdc6243b1b062c46cac4670b65efb0f370  '"$RUNNER_TEMP/d2-signer.der" | sha256sum --check
-      - name: Build and lint
-        run: |
-          ./gradlew :app:dependencies --configuration debugRuntimeClasspath > runtime-dependencies.txt
-          ./gradlew assembleDebug assembleDebugAndroidTest lintDebug --stacktrace
+          mkdir apks
+          curl -fL --retry 3 -o apks/galaxy.apk https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/Galaxy-Island-themed.apk
+          curl -fL --retry 3 -o apks/old-d2.apk https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/SamsungLockD2-v0.4.4-paired-themes.apk
+          curl -fL --retry 3 -o apks/new-d2.apk https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.2/SamsungLockD2-debug.apk
+          echo 'e1ad0c42437fbd0bc714cea56ce1f21e0411a7c67412e4cd89cfb9c7cb8ba526  apks/galaxy.apk' | sha256sum -c
+          echo '41b3cbdbd71965b17830c183087e294d7d53c10469f79a47907a4391b0c19b9d  apks/new-d2.apk' | sha256sum -c
       - name: Enable emulator acceleration
         run: |
-          # This Kotlin-only app does not use the runner's preinstalled native SDKs.
-          sudo rm -rf /usr/local/lib/android/sdk/ndk
-          df -h /home/runner
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: PIN, kiosk, and Preview runtime tests
+      - name: Test actual release upgrade and overlay lifecycle
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 36
           target: google_apis
           arch: x86_64
+          profile: pixel_6
           disk-size: 2048M
           emulator-boot-timeout: 300
           disable-animations: true
-          script: |
-            adb shell input keyevent KEYCODE_WAKEUP
-            adb shell wm dismiss-keyguard
-            adb shell settings put system screen_off_timeout 1800000
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.notClass=app.d2lock.ComboScreenshotTest,app.d2lock.ScreenshotCaptureTest --stacktrace
+          script: python3 tools/galaxy_overlay_smoke.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: preview-test-reports
-          path: |
-            app/build/reports/androidTests/
-            app/build/outputs/androidTest-results/
-      - name: Verify APK signature
-        run: |
-          set -o pipefail
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs app/build/outputs/apk/debug/app-debug.apk | tee "$RUNNER_TEMP/d2-signature.txt"
-          grep -F 'Signer #1 certificate SHA-256 digest: 7ce7d3e590520bcd54dfd9760f36e5fdc6243b1b062c46cac4670b65efb0f370' "$RUNNER_TEMP/d2-signature.txt"
-      - name: Package deliverables
-        run: |
-          mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/SamsungLockD2-debug.apk
-          cp dist/SamsungLockD2-debug.apk module/payload/SamsungLockD2.apk
-          cp LICENSE THIRD_PARTY_NOTICES.txt module/
-          rm module/payload/PLACE_APK_HERE.txt
-          for script in module/*.sh; do bash -n "$script"; done
-          chmod 755 module/*.sh
-          (cd module && zip -r ../dist/SamsungLockD2-KSUNext-v0.5.6-paired.zip .)
-          unzip -t dist/SamsungLockD2-KSUNext-v0.5.6-paired.zip
-          zip -r dist/SamsungLockD2-source.zip app/src app/build.gradle.kts build.gradle.kts settings.gradle.kts gradle.properties gradle gradlew gradlew.bat module README.md LICENSE THIRD_PARTY_NOTICES.txt docs .github
-          cp runtime-dependencies.txt dist/
-          sha256sum dist/*.apk dist/*.zip > dist/SHA256SUMS.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: SamsungLockD2-deliverables
-          path: dist/
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: lint-reports
-          path: app/build/reports/lint-results-debug.*
-
+          name: galaxy-overlay-diagnostics
+          path: diagnostics/
