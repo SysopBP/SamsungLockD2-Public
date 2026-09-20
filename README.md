@@ -6,13 +6,23 @@ An independent Android app privacy screen with its own six-digit PIN. Version 0.
 
 - [Install D2 0.4.2 paired APK](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/SamsungLockD2-v0.4.2-paired-calls.apk)
 - [Optional KernelSU Next bridge 0.5.4 ZIP](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/SamsungLockD2-KSUNext-v0.5.4-paired.zip)
-- [Setup and changes](docs/CALLS-AND-LIVE-NOTIFICATIONS.md), [verification](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/D2-v0.4.2-verification.txt), and [checksums](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/D2-v0.4.2-SHA256SUMS.txt)
+- [Setup and changes](docs/CALLS-AND-LIVE-NOTIFICATIONS.md), [verification](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/D2-v0.4.2-verification.txt), and [checksums](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/Combo-v0.4.2-SHA256SUMS.txt)
 
 Install the APK even when updating the module; the module preserves an existing D2 APK. Enable D2 notification access for call controls and live banners. All 19 Android 16/API 36 emulator tests passed. The new call fix still needs a real incoming-call test on the Galaxy S26 Ultra running Android 17.
 
 **Device testing:** User-reported physical-device testing of the Galaxy Island + Samsung Lock D2 combo was performed on a **Samsung Galaxy S26 Ultra running Android 17** (confirmed September 19, 2026). Earlier v0.3.0 testing included kiosk activation and PIN unlock on One UI 9 beta; the exact beta build was not recorded. Automated tests and the combo screenshot gallery use a separate Android 16 / API 36 emulator.
 
-## Screenshots
+## New 0.4.2 screenshots
+
+Real D2 captures with kiosk active on an Android 16/API 36 emulator. The incoming-call notification is simulated; the message is sample content. These are not Samsung handset captures or proof of a real call. Galaxy Island is hidden during D2 lock and was not installed for this D2-only capture.
+
+| Call controls (simulation) | Live notification banner (sample) |
+| --- | --- |
+| <img src="https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/08-d2-042-call-controls-demo.png" width="240" alt="Simulated call controls during D2 kiosk"> | <img src="https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/09-d2-042-live-message-demo.png" width="240" alt="Sample message banner during D2 kiosk"> |
+
+[Capture notes](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/D2-v0.4.2-screenshot-notes.md) · [Earlier paired-app gallery](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.1-preview.1).
+
+## Earlier 0.4.0 screenshots
 
 Captured from D2 v0.4.0 in an Android 16 emulator with sample media. These are not Samsung handset captures; One UI appearance may differ.
 
@@ -33,7 +43,7 @@ Captured from D2 v0.4.0 in an Android 16 emulator with sample media. These are n
 
 ## Set up
 
-1. Install SamsungLockD2-debug.apk. If an older debug build has a different signing certificate, uninstall it first; uninstalling clears app data.
+1. Exit active kiosk using your PIN and install the current paired D2 APK linked above. If Android reports a signature mismatch, stop: uninstalling clears your PIN and settings. Install Galaxy-Island.apk from the same release for the optional combo.
 2. Open Samsung Lock D2 and create and confirm your six-digit PIN. This PIN belongs only to D2.
 3. Choose a wallpaper. Preview is available after entering your PIN in settings.
 4. Double-tap **Double-tap to lock D2** in settings or Preview to open the D2 PIN screen.
