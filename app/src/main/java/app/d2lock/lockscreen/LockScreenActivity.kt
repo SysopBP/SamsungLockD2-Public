@@ -55,6 +55,12 @@ class LockScreenActivity : Activity() {
     private lateinit var battery: TextView
     private lateinit var weather: TextView
     private lateinit var notifications: LinearLayout
+    private lateinit var liveBanner: TextView
+    private var bannerKey: String? = null
+    private val hideBanner = Runnable {
+        if (::liveBanner.isInitialized) liveBanner.visibility = View.GONE
+        bannerKey = null
+    }
     private lateinit var mediaTitle: TextView
     private lateinit var mediaArtist: TextView
     private lateinit var playPause: TextView
@@ -96,6 +102,7 @@ class LockScreenActivity : Activity() {
             finish()
             return
         }
+        if (!preview) app.d2lock.bridge.IslandBridge.setLocked(this, true)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
         media = MediaControllerBridge(this)
@@ -110,6 +117,7 @@ class LockScreenActivity : Activity() {
             systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
         NotificationStore.onChanged = { runOnUiThread(::renderNotifications) }
+        NotificationStore.onPosted = { item -> runOnUiThread { showLiveNotification(item) } }
         renderNotifications()
         WeatherRepository.load(this) { value -> runOnUiThread {
             weather.text = value?.let { "${it.temperature}°${if (Prefs.celsius(this)) "C" else "F"}  ${it.label}" } ?: "Weather unavailable"
@@ -144,6 +152,8 @@ class LockScreenActivity : Activity() {
     }
 
     override fun onStop() {
+        handler.removeCallbacks(hideBanner)
+        hideBanner.run()
         pinDialog?.dismiss()
         pinDialog = null
         super.onStop()
@@ -161,6 +171,7 @@ class LockScreenActivity : Activity() {
         wallpaperAnimations.clear()
         wallpaperExecutor.shutdownNow()
         if (NotificationStore.onChanged != null) NotificationStore.onChanged = null
+        NotificationStore.onPosted = null
         super.onDestroy()
     }
 
@@ -305,6 +316,18 @@ class LockScreenActivity : Activity() {
         frame.addView(floatingBar, FrameLayout.LayoutParams(-1, dp(72), Gravity.BOTTOM).apply {
             setMargins(dp(20), 0, dp(20), dp(30))
         })
+        liveBanner = label("", 15f, Color.WHITE).apply {
+            visibility = View.GONE
+            maxLines = 3
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            background = GradientDrawable().apply { cornerRadius = dp(20).toFloat(); setColor(0xff303a50.toInt()) }
+            elevation = dp(20).toFloat()
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        }
+        frame.addView(liveBanner, FrameLayout.LayoutParams(-1, -2, Gravity.TOP).apply {
+            setMargins(dp(18), dp(36), dp(18), 0)
+        })
         return frame
     }
 
@@ -323,7 +346,17 @@ class LockScreenActivity : Activity() {
     }
 
     private fun renderNotifications() {
+        bannerKey?.let { key ->
+            val current = NotificationStore.items.firstOrNull { it.key == key }
+            val text = current?.let { app.d2lock.notifications.NotificationPresentation.banner(it, Prefs.notificationPrivacy(this)) }
+            if (text == null) hideBanner.run()
+            else {
+                liveBanner.text = text
+                liveBanner.setOnClickListener { openNotification(current) }
+            }
+        }
         notifications.removeAllViews()
+        renderCallControls()
         val privacy = if (preview) 4 else Prefs.notificationPrivacy(this)
         if (privacy == 0) return
         val listenerEnabled = getSystemService(NotificationManager::class.java)
@@ -358,7 +391,50 @@ class LockScreenActivity : Activity() {
                     if (item.title.isNotBlank() && item.text.isNotBlank()) addView(label(item.text, 13f, 0xffe6e3ed.toInt()))
                 }
             }
+            if (item.contentIntent != null) card.setOnClickListener { openNotification(item) }
             notifications.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(9) })
+        }
+    }
+
+    private fun renderCallControls() {
+        app.d2lock.notifications.CallNotificationStore.items.forEach { call ->
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(12), dp(8), dp(12), dp(8))
+                background = glassPanel()
+                addView(label("Phone call", 17f, Color.WHITE))
+            }
+            fun addControl(title: String, pending: android.app.PendingIntent) {
+                card.addView(actionButton(title) {
+                    try { app.d2lock.notifications.CallNotificationStore.send(this, pending) }
+                    catch (_: Exception) {
+                        Toast.makeText(this, "Call control unavailable. Open the phone call or unlock D2.", Toast.LENGTH_LONG).show()
+                    }
+                })
+            }
+            call.controls.forEach { addControl(it.label, it.intent) }
+            call.open?.let { addControl("Open phone call", it) }
+            notifications.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+        }
+    }
+
+    private fun showLiveNotification(item: app.d2lock.notifications.LockNotification) {
+        if (preview || !hasWindowFocus() || !Prefs.liveNotifications(this)) return
+        val text = app.d2lock.notifications.NotificationPresentation.banner(item, Prefs.notificationPrivacy(this)) ?: return
+        bannerKey = item.key
+        liveBanner.text = text
+        liveBanner.visibility = View.VISIBLE
+        liveBanner.setOnClickListener { openNotification(item) }
+        handler.removeCallbacks(hideBanner)
+        handler.postDelayed(hideBanner, 8000)
+    }
+
+    private fun openNotification(item: app.d2lock.notifications.LockNotification) {
+        val pending = item.contentIntent ?: return
+        // Message intents are never sent while kiosk is locked; verify PIN and release first.
+        authenticate {
+            try { app.d2lock.notifications.CallNotificationStore.send(this, pending) }
+            catch (_: Exception) { Toast.makeText(this, "Notification is no longer available", Toast.LENGTH_SHORT).show() }
         }
     }
 
@@ -368,6 +444,7 @@ class LockScreenActivity : Activity() {
         pinDialog = PinUi.show(this, success = {
             unlocking = true
             RootKiosk.unlock(this) {
+                app.d2lock.bridge.IslandBridge.setLocked(this, false)
                 afterUnlock?.invoke()
                 finish()
             }

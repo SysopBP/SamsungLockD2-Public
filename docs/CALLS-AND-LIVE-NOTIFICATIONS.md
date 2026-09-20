@@ -24,4 +24,3 @@ Exit kiosk with your PIN, install the same-signed paired D2 0.4.2 APK over the p
 In D2, enable **Grant notification and media access**. The optional KernelSU Next bridge 0.5.4 bundles this APK for fresh installations; it preserves an existing installed APK, so updating only the module does not update an existing D2 installation.
 
 On the physical phone, test an incoming call while kiosk is active: answer, end, decline, and miss a call; verify D2 remains locked afterward and Home/Recents stay restricted. Send an SMS with App names, All previews, and Hide all selected in turn, then confirm that opening its app requests the D2 PIN. Samsung Android 17 behavior for this new fix still needs that retest; previous hardware testing does not validate the new code.
-

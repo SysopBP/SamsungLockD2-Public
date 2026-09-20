@@ -34,7 +34,8 @@ object RootKiosk {
     private fun report(value: String) { message = value; observer?.invoke(value) }
     private fun quote(value: String) = "'" + value.replace("'", "'\\''") + "'"
     internal fun command(activity: Activity): String = "CLASSPATH=" + quote(activity.applicationInfo.sourceDir) +
-        " /system/bin/app_process /system/bin app.d2lock.root.KioskBridge " + (Process.myUid() / 100000)
+        " /system/bin/app_process /system/bin app.d2lock.root.KioskBridge " + (Process.myUid() / 100000) +
+        KioskCallApps.resolve(activity).joinToString("") { " " + quote(it) }
 
     fun attach(activity: Activity, status: (String) -> Unit) {
         owner = WeakReference(activity); observer = status; status(message)

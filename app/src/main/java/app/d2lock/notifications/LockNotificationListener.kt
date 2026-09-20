@@ -5,42 +5,61 @@ import android.service.notification.StatusBarNotification
 import android.app.Notification
 import java.util.concurrent.CopyOnWriteArrayList
 
-data class LockNotification(val key: String, val app: String, val title: String, val text: String, val time: Long, val visibility: Int)
+data class LockNotification(val key: String, val app: String, val title: String, val text: String, val time: Long, val visibility: Int,
+    val contentIntent: android.app.PendingIntent? = null)
 
 object NotificationStore {
     val items = CopyOnWriteArrayList<LockNotification>()
     @Volatile var onChanged: (() -> Unit)? = null
+    @Volatile var onPosted: ((LockNotification) -> Unit)? = null
 }
 
 class LockNotificationListener : NotificationListenerService() {
     override fun onListenerConnected() {
         NotificationStore.items.clear()
+        CallNotificationStore.items.clear()
         activeNotifications?.forEach(::put)
         NotificationStore.onChanged?.invoke()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
-        put(sbn)
+        val previous = NotificationStore.items.firstOrNull { it.key == sbn.key }
+        val posted = put(sbn)
         NotificationStore.onChanged?.invoke()
+        if (posted != null && (previous == null || previous.title != posted.title || previous.text != posted.text ||
+            (sbn.notification.category == Notification.CATEGORY_MESSAGE && previous.time != posted.time)))
+            NotificationStore.onPosted?.invoke(posted)
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         NotificationStore.items.removeAll { it.key == sbn.key }
+        CallNotificationStore.items.removeAll { it.key == sbn.key }
         NotificationStore.onChanged?.invoke()
     }
 
-    private fun put(sbn: StatusBarNotification) {
-        if (sbn.packageName == packageName || !sbn.isClearable) return
+    override fun onListenerDisconnected() {
+        CallNotificationStore.items.clear()
+        NotificationStore.items.clear()
+        NotificationStore.onChanged?.invoke()
+    }
+
+    private fun put(sbn: StatusBarNotification): LockNotification? {
+        CallNotificationStore.update(sbn, app.d2lock.root.KioskCallApps.resolve(this))
+        NotificationStore.items.removeAll { it.key == sbn.key }
+        if (sbn.packageName == packageName || sbn.notification.category == Notification.CATEGORY_CALL ||
+            sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 ||
+            (!sbn.isClearable && sbn.notification.category != Notification.CATEGORY_MESSAGE)) return null
         val extras = sbn.notification.extras
         val title = extras.getCharSequence("android.title")?.toString().orEmpty()
         val text = extras.getCharSequence("android.text")?.toString().orEmpty()
-        if (title.isBlank() && text.isBlank()) return
+        if (title.isBlank() && text.isBlank()) return null
         val app = runCatching {
             packageManager.getApplicationLabel(packageManager.getApplicationInfo(sbn.packageName, 0)).toString()
         }.getOrDefault(sbn.packageName)
-        NotificationStore.items.removeAll { it.key == sbn.key }
-        NotificationStore.items.add(0, LockNotification(sbn.key, app, title, text, sbn.postTime,
-            sbn.notification.visibility))
+        val item = LockNotification(sbn.key, app, title, text, sbn.postTime,
+            sbn.notification.visibility, sbn.notification.contentIntent)
+        NotificationStore.items.add(0, item)
         while (NotificationStore.items.size > 20) NotificationStore.items.removeAt(NotificationStore.items.lastIndex)
+        return item
     }
 }

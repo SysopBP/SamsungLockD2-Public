@@ -42,7 +42,14 @@ public final class KioskBridge {
         try {
             if (Process.myUid() != 0) throw new SecurityException("Root permission required");
             // Single-user prototype: do not alter work-profile or another user's policy.
-            if (args.length != 1 || !"0".equals(args[0])) throw new SecurityException("Only primary user supported");
+            if (args.length < 1 || args.length > 17 || !"0".equals(args[0])) throw new SecurityException("Only primary user supported");
+            java.util.Set<String> allowed = new java.util.LinkedHashSet<>();
+            allowed.add(PACKAGE);
+            for (int i = 1; i < args.length; i++) {
+                if (!args[i].matches("[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+"))
+                    throw new SecurityException("Invalid phone package");
+                allowed.add(args[i]);
+            }
             try (RandomAccessFile file = new RandomAccessFile("/data/local/tmp/d2-kiosk-session.lock", "rw");
                  FileLock lock = file.getChannel().tryLock()) {
                 if (lock == null) throw new IllegalStateException("Another D2 session is recovering");
@@ -81,7 +88,9 @@ public final class KioskBridge {
                 // Preserve power-menu recovery and existing keyguard behavior. Home/Recents stay off.
                 changed = true;
                 features(16 | 32);
-                packages(new String[]{PACKAGE});
+                // The app resolves the selected dialer and system in-call UI for this device.
+                // Keep Home/Recents disabled; answering a call must not release D2's lease.
+                packages(allowed.toArray(new String[0]));
                 lastPing = SystemClock.elapsedRealtime();
                 Thread watchdog = new Thread(() -> {
                     while (!released.get()) {

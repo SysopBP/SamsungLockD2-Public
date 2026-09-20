@@ -21,6 +21,8 @@ object Prefs {
     // 0: none, 1: count, 2: app names, 3: public previews.
     fun notificationPrivacy(context: Context) = prefs(context).getInt("notification_privacy", 2)
     fun setNotificationPrivacy(context: Context, value: Int) = prefs(context).edit().putInt("notification_privacy", value).apply()
+    fun liveNotifications(context: Context) = prefs(context).getBoolean("live_notifications", true)
+    fun setLiveNotifications(context: Context, value: Boolean) = prefs(context).edit().putBoolean("live_notifications", value).apply()
     fun shortcut(context: Context, side: String) =
         prefs(context).getString("shortcut_$side", if (side == "left") "Camera" else "Flashlight") ?: "None"
     fun setShortcut(context: Context, side: String, value: String) =

@@ -50,6 +50,7 @@ class MainActivity : Activity() {
             if (PinStore(this).configured()) {
                 pinDialog = PinUi.show(this, success = {
                     authorized = true
+                    app.d2lock.bridge.IslandBridge.setLocked(this, false)
                     setContentView(buildSettings())
                 }, cancel = { finish() })
             } else {
@@ -99,6 +100,16 @@ class MainActivity : Activity() {
                 .setPositiveButton("Close", null).show()
         }
         val configured = PinStore(this).configured()
+        if (configured) {
+            root.addView(Switch(this).apply {
+                text = "Connect Galaxy Island (paired build)"
+                setTextColor(Color.WHITE)
+                isChecked = app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)
+                setOnCheckedChangeListener { _, value ->
+                    app.d2lock.bridge.IslandBridge.setEnabled(this@MainActivity, value)
+                }
+            })
+        }
         addButton(root, if (configured) "Change D2 PIN" else "Create D2 PIN") {
             pinDialog = PinUi.show(this, setup = !configured, change = configured, success = {
                 authorized = true
@@ -168,6 +179,13 @@ class MainActivity : Activity() {
             setPadding(0, dp(4), 0, dp(16))
         })
 
+        root.addView(TextView(this).apply {
+            text = "Phone calls during kiosk: the selected Phone app and system call screen are allowed. Grant notification access below for Answer/Decline controls on D2. Phone-app screens may be accessible without the D2 PIN; other apps and Home/Recents remain restricted. Call controls do not display caller names or numbers on D2, even when message previews are hidden."
+            textSize = 14f
+            setTextColor(0xffb6c0d3.toInt())
+            setPadding(0, 0, 0, dp(16))
+        })
+
         section(root, "APPEARANCE")
         root.addView(Switch(this).apply {
             text = "Weather in Celsius (off: Fahrenheit)"
@@ -182,6 +200,17 @@ class MainActivity : Activity() {
             setOnCheckedChangeListener { _, checked -> Prefs.setShowMedia(this@MainActivity, checked) }
         }, rowParams())
         section(root, "NOTIFICATION PRIVACY")
+        root.addView(Switch(this).apply {
+            text = "Live notification banners while D2 is locked"
+            setTextColor(Color.WHITE)
+            isChecked = Prefs.liveNotifications(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setLiveNotifications(this@MainActivity, checked) }
+        }, rowParams())
+        root.addView(TextView(this).apply {
+            text = "New notifications appear briefly at the top of D2 and stay in the notification list. Banners follow the privacy choice below. Tap a notification and enter your D2 PIN to open it. Your messaging app controls sound and vibration."
+            textSize = 13f
+            setTextColor(0xffb6c0d3.toInt())
+        })
         addChoice(root, "When D2 is locked", listOf("Hide all", "Count only", "App names", "Public only", "All previews (private too)"),
             Prefs.notificationPrivacy(this)) { Prefs.setNotificationPrivacy(this, it) }
         root.addView(TextView(this).apply {

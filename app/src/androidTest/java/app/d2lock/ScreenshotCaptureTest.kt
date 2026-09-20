@@ -1,28 +1,29 @@
 package app.d2lock
 
-import android.app.Activity
 import android.app.ActivityManager
-import android.app.AlertDialog
+import android.app.Notification
+import android.app.PendingIntent
+import android.app.Person
 import android.content.Intent
 import android.graphics.Bitmap
-import android.media.MediaMetadata
-import android.media.session.MediaSession
-import android.media.session.PlaybackState
 import android.os.ParcelFileDescriptor
+import android.os.Process
 import android.os.SystemClock
+import android.service.notification.StatusBarNotification
+import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.ScrollView
+import android.widget.TextView
 import androidx.test.core.app.ActivityScenario
-import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.action.ViewActions.*
-import androidx.test.espresso.matcher.RootMatchers.isDialog
-import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.d2lock.lockscreen.LockScreenActivity
+import app.d2lock.notifications.CallNotificationStore
+import app.d2lock.notifications.LockNotification
+import app.d2lock.notifications.NotificationStore
+import app.d2lock.root.KioskCallApps
 import app.d2lock.root.RootKiosk
 import app.d2lock.security.PinStore
-import app.d2lock.Prefs
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -31,110 +32,96 @@ import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-/** Opt-in emulator documentation capture. No screenshot bypass ships in the app APK. */
+/** Documentation fixtures only: real rendered UI, simulated notification content. */
 @RunWith(AndroidJUnit4::class)
 class ScreenshotCaptureTest {
-    private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
-    private val context get() = instrumentation.targetContext
-    private fun waitUntil(condition: () -> Boolean) {
-        val deadline = SystemClock.elapsedRealtime() + 30000
-        while (!condition() && SystemClock.elapsedRealtime() < deadline) SystemClock.sleep(100)
-        assertTrue("Screenshot state did not become ready", condition())
-    }
-    private fun <T : Activity> capture(scenario: ActivityScenario<T>, name: String) {
-        scenario.onActivity { activity ->
-            // Only this separately installed instrumentation APK clears secure flags.
-            activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
-            val dialog = activity.javaClass.getDeclaredField("pinDialog").apply { isAccessible = true }.get(activity) as? AlertDialog
-            dialog?.window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        }
-        instrumentation.waitForIdleSync()
-        SystemClock.sleep(1000)
-        val bitmap = checkNotNull(instrumentation.uiAutomation.takeScreenshot())
-        // AGP uninstalls the app after tests, deleting its external-files directory.
-        // Write through the instrumentation shell so captures survive that cleanup.
-        ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand("mkdir -p /data/local/tmp/d2-screenshots")).use { it.readBytes() }
-        val pipes = instrumentation.uiAutomation.executeShellCommandRw("dd of=/data/local/tmp/d2-screenshots/$name.png")
-        ParcelFileDescriptor.AutoCloseOutputStream(pipes[1]).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        ParcelFileDescriptor.AutoCloseInputStream(pipes[0]).use { it.readBytes() }
-        bitmap.recycle()
-    }
-    @Test fun captureDocumentation() {
-        assumeTrue(InstrumentationRegistry.getArguments().getString("screenshots") == "true")
-        TestDevice.wake()
-        val pinFile = File(context.noBackupFilesDir, "d2-pin.json")
-        assertFalse("Use a fresh emulator", pinFile.exists())
-        context.getSharedPreferences("lock_preferences", 0).edit().clear().commit()
-        PinStore(context).create("246810".toCharArray())
-        ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(
-            "cmd notification allow_listener app.d2lock/app.d2lock.notifications.LockNotificationListener"
-        )).use { it.readBytes() }
-        val mediaSession = MediaSession(context, "D2ScreenshotMedia").apply {
-            setMetadata(MediaMetadata.Builder()
-                .putString(MediaMetadata.METADATA_KEY_TITLE, "Demo track")
-                .putString(MediaMetadata.METADATA_KEY_ARTIST, "Media preview")
-                .build())
-            setPlaybackState(PlaybackState.Builder()
-                .setActions(PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE)
-                .setState(PlaybackState.STATE_PLAYING, 0L, 1f).build())
-            isActive = true
-        }
-        try {
-            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-                scenario.onActivity {
-                    it.window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                        WindowManager.LayoutParams.FLAG_FULLSCREEN)
-                }
-                onView(withHint("6-digit D2 PIN")).inRoot(isDialog()).perform(typeText("246810"), closeSoftKeyboard())
-                onView(withText("Unlock")).inRoot(isDialog()).perform(click())
-                waitUntil { runCatching { onView(withText("Change D2 PIN")).check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed())); true }.getOrDefault(false) }
-                capture(scenario, "01-settings")
-                onView(withText("When D2 is locked")).perform(scrollTo())
-                capture(scenario, "05-customization")
-                onView(withText("Right action")).perform(scrollTo())
-                scenario.onActivity { activity ->
-                    // The root content is a ScrollView; advance just enough to show both actions.
-                    val settings = (activity.findViewById<android.view.ViewGroup>(android.R.id.content)).getChildAt(0) as ScrollView
-                    settings.scrollBy(0, (125 * activity.resources.displayMetrics.density).toInt())
-                }
-                capture(scenario, "06-shortcuts")
-            }
-            ActivityScenario.launch<LockScreenActivity>(Intent(context, LockScreenActivity::class.java).putExtra("preview", true)).use { scenario ->
-                SystemClock.sleep(1500)
-                capture(scenario, "02-preview")
-            }
-            RootKiosk.testConnect = {
-                val pipes = instrumentation.uiAutomation.executeShellCommandRw("su 0 env CLASSPATH=${context.applicationInfo.sourceDir} /system/bin/app_process /system/bin app.d2lock.root.KioskBridge 0")
-                val input = ParcelFileDescriptor.AutoCloseInputStream(pipes[0])
-                val output = ParcelFileDescriptor.AutoCloseOutputStream(pipes[1])
-                RootKiosk.Channel(input.bufferedReader(), output.bufferedWriter()) { runCatching { output.close() } }
-            }
-            Prefs.setKiosk(context, true)
-            val scenario = ActivityScenario.launch<LockScreenActivity>(Intent(context, LockScreenActivity::class.java))
-            try {
-                var task = -1
-                scenario.onActivity { task = it.taskId }
-                TestDevice.focusTask(task)
-                waitUntil { context.getSystemService(ActivityManager::class.java).lockTaskModeState == ActivityManager.LOCK_TASK_MODE_LOCKED }
-                waitUntil { runCatching {
-                    onView(withText("Demo track")).check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()))
-                    true
-                }.getOrDefault(false) }
-                capture(scenario, "03-kiosk-lock")
-                onView(withText("PIN")).perform(click())
-                capture(scenario, "04-pin-prompt")
-            } finally {
-                val released = CountDownLatch(1)
-                scenario.onActivity { RootKiosk.unlock(it) { released.countDown() } }
-                assertTrue(released.await(15, TimeUnit.SECONDS))
-                scenario.close()
-            }
-        } finally {
-            mediaSession.release()
-            RootKiosk.testConnect = null
-            Prefs.setKiosk(context, false)
-            pinFile.delete()
-            File(pinFile.path + ".bak").delete()
-        }
-    }
+ private val inst get() = InstrumentationRegistry.getInstrumentation()
+ private val ctx get() = inst.targetContext
+ private val ui get() = inst.uiAutomation
+ private fun shell(command: String) = ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand(command)).bufferedReader().use { it.readText() }
+ private fun <T> onMain(block: () -> T): T {
+  var value: Result<T>? = null
+  inst.runOnMainSync { value = runCatching(block) }
+  return value!!.getOrThrow()
+ }
+ private fun views(root: View): Sequence<View> = sequence {
+  yield(root)
+  if(root is ViewGroup) for(i in 0 until root.childCount) yieldAll(views(root.getChildAt(i)))
+ }
+ private fun waitFor(label: String, condition: () -> Boolean) {
+  val deadline=SystemClock.elapsedRealtime()+40000
+  while(SystemClock.elapsedRealtime()<deadline) { if(condition()) return; SystemClock.sleep(200) }
+  fail("Timed out: $label (${RootKiosk.diagnostic})")
+ }
+ private fun recoverBootDialog() {
+  val root=ui.rootInActiveWindow ?: return
+  if(root.findAccessibilityNodeInfosByText("System UI isn't responding").isEmpty()) return
+  var button=root.findAccessibilityNodeInfosByText("Wait").firstOrNull()
+  while(button!=null && !button.isClickable) button=button.parent
+  check(button?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)==true)
+  SystemClock.sleep(10000)
+ }
+ private fun connect(): RootKiosk.Channel {
+  val packages=KioskCallApps.resolve(ctx).joinToString(" ")
+  val pipes=ui.executeShellCommandRw("su 0 env CLASSPATH=${ctx.applicationInfo.sourceDir} /system/bin/app_process /system/bin app.d2lock.root.KioskBridge 0 $packages")
+  val output=ParcelFileDescriptor.AutoCloseOutputStream(pipes[1])
+  return RootKiosk.Channel(ParcelFileDescriptor.AutoCloseInputStream(pipes[0]).bufferedReader(), output.bufferedWriter()) { runCatching { output.close() } }
+ }
+ private fun capture(scenario: ActivityScenario<LockScreenActivity>, name: String) {
+  scenario.onActivity { it.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
+  inst.waitForIdleSync(); SystemClock.sleep(700)
+  val bitmap=checkNotNull(ui.takeScreenshot())
+  val pipes=ui.executeShellCommandRw("dd of=/data/local/tmp/d2-screenshots/$name.png")
+  ParcelFileDescriptor.AutoCloseOutputStream(pipes[1]).use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }
+  ParcelFileDescriptor.AutoCloseInputStream(pipes[0]).use { it.readBytes() }; bitmap.recycle()
+ }
+ @Test fun captureDocumentation() {
+  assumeTrue(InstrumentationRegistry.getArguments().getString("screenshots")=="true")
+  shell("mkdir -p /data/local/tmp/d2-screenshots")
+  TestDevice.wake(); recoverBootDialog()
+  assertFalse("Fresh emulator required",File(ctx.noBackupFilesDir,"d2-pin.json").exists())
+  PinStore(ctx).create("246810".toCharArray())
+  Prefs.setKiosk(ctx,true); Prefs.setShowMedia(ctx,false)
+  Prefs.setNotificationPrivacy(ctx,4); Prefs.setLiveNotifications(ctx,true)
+  shell("cmd notification allow_listener app.d2lock/app.d2lock.notifications.LockNotificationListener")
+  SystemClock.sleep(1500)
+  RootKiosk.testConnect={ connect() }
+  val scenario=ActivityScenario.launch<LockScreenActivity>(Intent(ctx,LockScreenActivity::class.java))
+  try {
+   var activity: LockScreenActivity?=null
+   scenario.onActivity { activity=it; shell("am task focus ${it.taskId}") }
+   recoverBootDialog()
+   waitFor("real root kiosk") { ctx.getSystemService(ActivityManager::class.java).lockTaskModeState==ActivityManager.LOCK_TASK_MODE_LOCKED }
+   waitFor("D2 focus") { onMain { activity!!.hasWindowFocus() } }
+   fun pending(id: Int) = PendingIntent.getBroadcast(ctx,id,Intent("app.d2lock.DEMO_CALL_$id").setPackage(ctx.packageName),PendingIntent.FLAG_IMMUTABLE)
+   val notification=Notification.Builder(ctx,"screenshot-demo")
+    .setSmallIcon(android.R.drawable.sym_call_incoming).setCategory(Notification.CATEGORY_CALL).setOngoing(true)
+    .setStyle(Notification.CallStyle.forIncomingCall(Person.Builder().setName("Demo caller").build(),pending(1),pending(2)))
+    .setContentIntent(pending(3)).build()
+   val sbn=StatusBarNotification(ctx.packageName,ctx.packageName,42,null,Process.myUid(),Process.myPid(),0,notification,Process.myUserHandle(),System.currentTimeMillis())
+   onMain {
+    NotificationStore.items.clear()
+    // Explicit test fixture; production still trusts only actual Phone/system call packages.
+    CallNotificationStore.update(sbn,setOf(ctx.packageName))
+    NotificationStore.onChanged?.invoke()
+    assertEquals(2,CallNotificationStore.items.single().controls.size)
+    assertTrue(views(activity!!.window.decorView).filterIsInstance<TextView>().any { it.text.toString()=="Open phone call" })
+   }
+   capture(scenario,"08-d2-042-call-controls-demo")
+   onMain {
+    CallNotificationStore.items.clear()
+    val message=LockNotification("demo-message","Messages (demo)","Alex · Sample message","The new update is ready. See you soon!",System.currentTimeMillis(),Notification.VISIBILITY_PRIVATE)
+    NotificationStore.items.add(message)
+    NotificationStore.onChanged?.invoke(); NotificationStore.onPosted?.invoke(message)
+    assertTrue(views(activity!!.window.decorView).filterIsInstance<TextView>().any { it.visibility==View.VISIBLE && it.text.toString().contains("Messages (demo)\n") })
+   }
+   capture(scenario,"09-d2-042-live-message-demo")
+  } finally {
+   val done=CountDownLatch(1)
+   scenario.onActivity { RootKiosk.unlock(it) { done.countDown() } }
+   assertTrue(done.await(15,TimeUnit.SECONDS))
+   scenario.close(); RootKiosk.testConnect=null
+   NotificationStore.items.clear(); CallNotificationStore.items.clear()
+  }
+ }
 }

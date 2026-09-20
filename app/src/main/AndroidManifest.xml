@@ -9,11 +9,20 @@
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
+    <permission android:name="app.d2lock.permission.ISLAND" android:protectionLevel="signature" />
+    <queries>
+        <package android:name="app.cutout.ringpreview" />
+        <package android:name="com.samsung.android.incallui" />
+        <intent><action android:name="android.telecom.InCallService" /></intent>
+        <intent><action android:name="android.intent.action.DIAL" /><data android:scheme="tel" /></intent>
+    </queries>
     <application
         android:allowBackup="false"
         android:enableOnBackInvokedCallback="true"
         android:label="Samsung Lock D2"
         android:theme="@style/Theme.SamsungLock">
+        <provider android:name=".bridge.IslandProvider" android:authorities="app.d2lock.island" android:exported="true" android:permission="app.d2lock.permission.ISLAND" />
+        <activity android:name=".bridge.IslandLockActivity" android:exported="false" android:excludeFromRecents="true" />
         <activity
             android:name=".lockscreen.LockScreenActivity"
             android:excludeFromRecents="true"

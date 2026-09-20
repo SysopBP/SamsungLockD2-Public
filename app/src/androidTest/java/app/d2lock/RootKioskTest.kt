@@ -42,7 +42,8 @@ class RootKioskTest {
     }
     private fun connect(dropHeartbeats: AtomicBoolean = AtomicBoolean(false)): RootKiosk.Channel {
         // Emulator-only root, reached through the test harness's shell identity.
-        val command = "su 0 env CLASSPATH=${context.applicationInfo.sourceDir} /system/bin/app_process /system/bin app.d2lock.root.KioskBridge 0"
+        val phonePackages = app.d2lock.root.KioskCallApps.resolve(context).joinToString(" ")
+        val command = "su 0 env CLASSPATH=${context.applicationInfo.sourceDir} /system/bin/app_process /system/bin app.d2lock.root.KioskBridge 0 $phonePackages"
         val pipes = instrumentation.uiAutomation.executeShellCommandRw(command)
         val output = ParcelFileDescriptor.AutoCloseOutputStream(pipes[1])
         val filtered = object : FilterOutputStream(output) {
@@ -119,6 +120,32 @@ class RootKioskTest {
             waitFor("Kiosk must start") { manager.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_LOCKED }
             bridge!!.close()
             waitFor("App death/EOF must release kiosk") { manager.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE }
+        } finally { cleanup(scenario) }
+    }
+
+    @Test fun phoneUiCanOpenWithoutReleasingKiosk() = fixture {
+        RootKiosk.testConnect = { connect() }
+        val scenario = launch()
+        try {
+            waitFor("Kiosk must start") { manager.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_LOCKED }
+            val dialer = context.getSystemService(android.telecom.TelecomManager::class.java).defaultDialerPackage
+            assertNotNull("Emulator must include a phone app", dialer)
+            assertTrue(app.d2lock.root.KioskCallApps.resolve(context).contains(dialer))
+            var task = -1
+            scenario.onActivity {
+                task = it.taskId
+                it.startActivity(Intent(Intent.ACTION_DIAL, android.net.Uri.parse("tel:"))
+                    .setPackage(dialer).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+            waitFor("Phone UI must receive focus while kiosk stays locked") {
+                TestDevice.focusDiagnostic().contains(dialer!!)
+            }
+            assertEquals(ActivityManager.LOCK_TASK_MODE_LOCKED, manager.lockTaskModeState)
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_HOME)
+            assertEquals(ActivityManager.LOCK_TASK_MODE_LOCKED, manager.lockTaskModeState)
+            assertFalse(TestDevice.focusDiagnostic().contains("launcher"))
+            // Restore D2 to let ActivityScenario perform normal verified-release cleanup.
+            TestDevice.focusTask(task)
         } finally { cleanup(scenario) }
     }
     @Test fun rootDeniedDoesNotClaimKiosk() = fixture {

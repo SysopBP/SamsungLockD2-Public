@@ -2,11 +2,11 @@
 
 An independent Android app privacy screen with its own six-digit PIN. Version 0.3.0 adds optional root-assisted Android kiosk mode. It does not create or modify system credentials, force the screen off, or change firmware, Knox, Gatekeeper, or boot partitions. Kiosk mode interacts with the Android keyguard internally; this is not a guarantee against Samsung D2 boot errors.
 
-**Public experimental preview.** The latest downloadable paired update is **D2 0.4.2 with call support and live notification banners**, with optional KernelSU Next bridge **0.5.4**. [Release notes and downloads](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.1-preview.1). The existing release tag and public branch still contain the original v0.4.1 source; the exact updated D2 source is attached as [SamsungLockD2-v0.4.2-source.zip](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.1-preview.1/SamsungLockD2-v0.4.2-source.zip).
+**Public experimental preview.** The latest downloadable paired update is **D2 0.4.2 with call support and live notification banners**, with optional KernelSU Next bridge **0.5.4**. [Release notes and downloads](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.2-preview.1). This branch contains the current v0.4.2 paired source; a downloadable source archive is attached as [SamsungLockD2-v0.4.2-source.zip](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/SamsungLockD2-v0.4.2-source.zip).
 
-- [Install D2 0.4.2 paired APK](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.1-preview.1/SamsungLockD2-v0.4.2-paired-calls.apk)
-- [Optional KernelSU Next bridge 0.5.4 ZIP](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.1-preview.1/SamsungLockD2-KSUNext-v0.5.4-paired.zip)
-- [Setup and changes](docs/CALLS-AND-LIVE-NOTIFICATIONS.md), [verification](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.1-preview.1/D2-v0.4.2-verification.txt), and [checksums](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.1-preview.1/D2-v0.4.2-SHA256SUMS.txt)
+- [Install D2 0.4.2 paired APK](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/SamsungLockD2-v0.4.2-paired-calls.apk)
+- [Optional KernelSU Next bridge 0.5.4 ZIP](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/SamsungLockD2-KSUNext-v0.5.4-paired.zip)
+- [Setup and changes](docs/CALLS-AND-LIVE-NOTIFICATIONS.md), [verification](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/D2-v0.4.2-verification.txt), and [checksums](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.2-preview.1/D2-v0.4.2-SHA256SUMS.txt)
 
 Install the APK even when updating the module; the module preserves an existing D2 APK. Enable D2 notification access for call controls and live banners. All 19 Android 16/API 36 emulator tests passed. The new call fix still needs a real incoming-call test on the Galaxy S26 Ultra running Android 17.
 
@@ -57,7 +57,7 @@ The D2 name refers to the user's Samsung download-mode concern. This app cannot 
 
 ## Experimental root kiosk and recovery
 
-Kiosk mode is off by default and supports the primary, unmanaged user only. It refuses existing task allowlists, device owners, and profile owners. A separate root `app_process` temporarily allowlists only D2 in ActivityTaskManager. No device owner is provisioned, and no system credential or persistent device-policy file is written. The app checks for full `LOCK_TASK_MODE_LOCKED`; ordinary screen pinning is not accepted as success.
+Kiosk mode is off by default and supports the primary, unmanaged user only. It refuses existing task allowlists, device owners, and profile owners. A separate root `app_process` temporarily allowlists D2, the selected Phone app, and system call UI in ActivityTaskManager. No device owner is provisioned, and no system credential or persistent device-policy file is written. The app checks for full `LOCK_TASK_MODE_LOCKED`; ordinary screen pinning is not accepted as success.
 
 The helper enables the kiosk power menu and existing keyguard behavior while Home/Recents remain blocked. On exit it clears its temporary allowlist and returns idle task-feature flags to the unmanaged-device power-menu default. Devices using other root tools to customize runtime kiosk policy are unsupported. Android task APIs are internal and Samsung beta compatibility requires physical testing.
 
