@@ -53,6 +53,9 @@ class MainActivity : Activity() {
                 pinDialog = PinUi.show(this, success = {
                     authorized = true
                     app.d2lock.bridge.IslandBridge.setLocked(this, false)
+                    if (Prefs.enabled(this)) {
+                        runCatching { LockScreenService.start(this) }
+                    }
                     setContentView(buildSettings())
                 }, cancel = { finish() })
             } else {
