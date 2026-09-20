@@ -4,14 +4,14 @@ An independent Android app privacy screen with its own six-digit PIN, designed f
 
 > **Root / D2 recovery use case:** The project is intended to be used as the phone's app-level lock screen while rooted **after the user has deliberately removed the standard Android/Samsung screen lock and biometrics**. The project author has physically tested recovery from Samsung D2 Download Mode in this configuration and was able to restore firmware with Odin/firmware flashing tools. The purpose is to avoid having an Android credential/biometric configuration become an additional recovery obstacle after a root-related D2 condition. **D2 itself does not repair Download Mode, remove D2 errors, modify firmware integrity checks, or guarantee recovery on every Samsung model/firmware/root configuration.** Keep firmware backups and the correct Odin/firmware files available before experimenting with root.
 
-**Public experimental preview.** The current source is **D2 0.4.4**, with optional KernelSU Next bridge **0.5.6**. The newest CI-verified D2 build is available from [successful Actions run #16](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/35520482675) under the **SamsungLockD2-deliverables** artifact. The existing paired Galaxy Island preview remains available from [v0.4.4-preview.1](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.4-preview.1).
+**Public experimental preview.** The current source is **D2 0.4.4**, with optional KernelSU Next bridge **0.5.6**. The newest CI-verified D2 build is published as [v0.4.4-preview.2](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.4-preview.2), built and verified in [Actions run #16](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/35520482675). The existing paired Galaxy Island preview remains available from [v0.4.4-preview.1](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.4-preview.1).
 
-- **Latest CI-verified D2 APK:** download **SamsungLockD2-deliverables** from [Actions run #16](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/35520482675). The artifact includes `SamsungLockD2-debug.apk`, the paired KernelSU ZIP, source archive, dependency report, and SHA-256 checksums.
+- [**Latest CI-verified D2 APK (Preview 2)**](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.2/SamsungLockD2-debug.apk) — includes wake-listener recovery and verified original signing. [Release notes and all files](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.4-preview.2).
 - [Previous D2 0.4.4 paired APK](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/SamsungLockD2-v0.4.4-paired-themes.apk)
 - [Galaxy Island themed APK](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/Galaxy-Island-themed.apk)
-- [Optional KernelSU Next bridge 0.5.6](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/SamsungLockD2-KSUNext-v0.5.6-paired.zip)
-- [Theme and update guide](docs/THEMES.md), [build verification](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/Build-verification.txt), and [checksums](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/SHA256SUMS.txt)
-- [D2 source](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/SamsungLockD2-v0.4.4-source.zip) and [Galaxy Island source](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/Galaxy-Island-themed-source.zip)
+- [Optional KernelSU Next bridge 0.5.6](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.2/SamsungLockD2-KSUNext-v0.5.6-paired.zip)
+- [Theme and update guide](docs/THEMES.md), [build verification](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/Build-verification.txt), [current D2 checksums](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.2/SHA256SUMS.txt), and [runtime dependencies](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.2/runtime-dependencies.txt)
+- [D2 source](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.2/SamsungLockD2-source.zip) and [Galaxy Island source](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/Galaxy-Island-themed-source.zip)
 
 D2's **THEME & COLORS** settings add system/light/dark/AMOLED modes, wallpaper colors, soft accent presets and custom hex colors. Notifications support per-app, accent or neutral colors, adjustable opacity and corner radius. The stack stays centered between the clock/weather and lower controls; longer lists scroll. The floating PIN/shortcut bar has adjustable width, opacity and bottom spacing.
 
@@ -52,7 +52,7 @@ Captured from D2 v0.4.0 in an Android 16 emulator with sample media. These are n
 
 ## Set up
 
-1. Exit active kiosk using your PIN and install the current paired D2 APK linked above. If Android reports a signature mismatch, stop: uninstalling clears your PIN and settings. Install Galaxy-Island.apk from the same release for the optional combo.
+1. Exit active kiosk using your PIN and install the current paired D2 APK linked above. If Android reports a signature mismatch, stop: uninstalling clears your PIN and settings. For the optional combo, install the Galaxy Island themed APK linked above from Preview 1.
 2. Open Samsung Lock D2 and create and confirm your six-digit PIN. This PIN belongs only to D2.
 3. Choose a wallpaper. Preview is available after entering your PIN in settings.
 4. Double-tap **Double-tap to lock D2** in settings or Preview to open the D2 PIN screen.
