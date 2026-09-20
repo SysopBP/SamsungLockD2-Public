@@ -31,6 +31,19 @@ jobs:
           sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
       - name: Generate Gradle wrapper
         run: gradle wrapper --gradle-version 9.3.1
+      - name: Restore original APK signing key
+        env:
+          D2_SIGNING_KEYSTORE_BASE64: ${{ secrets.D2_SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$D2_SIGNING_KEYSTORE_BASE64" ]; then
+            echo '::error::D2_SIGNING_KEYSTORE_BASE64 must contain the original APK signing keystore.'
+            exit 1
+          fi
+          umask 077
+          mkdir -p "$HOME/.android"
+          printf '%s' "$D2_SIGNING_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
+          keytool -exportcert -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -file "$RUNNER_TEMP/d2-signer.der"
+          echo '7ce7d3e590520bcd54dfd9760f36e5fdc6243b1b062c46cac4670b65efb0f370  '"$RUNNER_TEMP/d2-signer.der" | sha256sum --check
       - name: Build and lint
         run: |
           ./gradlew :app:dependencies --configuration debugRuntimeClasspath > runtime-dependencies.txt
@@ -64,6 +77,10 @@ jobs:
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
+      - name: Verify APK signature
+        run: |
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs app/build/outputs/apk/debug/app-debug.apk | tee "$RUNNER_TEMP/d2-signature.txt"
+          grep -F 'Signer #1 certificate SHA-256 digest: 7ce7d3e590520bcd54dfd9760f36e5fdc6243b1b062c46cac4670b65efb0f370' "$RUNNER_TEMP/d2-signature.txt"
       - name: Package deliverables
         run: |
           mkdir -p dist
@@ -87,3 +104,4 @@ jobs:
         with:
           name: lint-reports
           path: app/build/reports/lint-results-debug.*
+
