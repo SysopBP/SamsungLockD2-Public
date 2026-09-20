@@ -2,7 +2,13 @@
 
 An independent Android app privacy screen with its own six-digit PIN. Version 0.3.0 adds optional root-assisted Android kiosk mode. It does not create or modify system credentials, force the screen off, or change firmware, Knox, Gatekeeper, or boot partitions. Kiosk mode interacts with the Android keyguard internally; this is not a guarantee against Samsung D2 boot errors.
 
-**Public experimental preview.** The current source is v0.4.1. The [successful v0.4.1 build](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/35443284342) contains the updated debug APK and optional KernelSU ZIP; the [v0.4.1 public prerelease](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.1-preview.1) has the APK, ZIP, source archive, and checksums.
+**Public experimental preview.** The latest downloadable paired update is **D2 0.4.2 with call support and live notification banners**, with optional KernelSU Next bridge **0.5.4**. [Release notes and downloads](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.1-preview.1). The existing release tag and public branch still contain the original v0.4.1 source; the exact updated D2 source is attached as [SamsungLockD2-v0.4.2-source.zip](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.1-preview.1/SamsungLockD2-v0.4.2-source.zip).
+
+- [Install D2 0.4.2 paired APK](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.1-preview.1/SamsungLockD2-v0.4.2-paired-calls.apk)
+- [Optional KernelSU Next bridge 0.5.4 ZIP](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.1-preview.1/SamsungLockD2-KSUNext-v0.5.4-paired.zip)
+- [Setup and changes](docs/CALLS-AND-LIVE-NOTIFICATIONS.md), [verification](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.1-preview.1/D2-v0.4.2-verification.txt), and [checksums](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.1-preview.1/D2-v0.4.2-SHA256SUMS.txt)
+
+Install the APK even when updating the module; the module preserves an existing D2 APK. Enable D2 notification access for call controls and live banners. All 19 Android 16/API 36 emulator tests passed. The new call fix still needs a real incoming-call test on the Galaxy S26 Ultra running Android 17.
 
 **Device testing:** User-reported physical-device testing of the Galaxy Island + Samsung Lock D2 combo was performed on a **Samsung Galaxy S26 Ultra running Android 17** (confirmed September 19, 2026). Earlier v0.3.0 testing included kiosk activation and PIN unlock on One UI 9 beta; the exact beta build was not recorded. Automated tests and the combo screenshot gallery use a separate Android 16 / API 36 emulator.
 
