@@ -23,7 +23,9 @@ object Prefs {
     fun setNotificationPrivacy(context: Context, value: Int) = prefs(context).edit().putInt("notification_privacy", value).apply()
     fun liveNotifications(context: Context) = prefs(context).getBoolean("live_notifications", true)
     fun setLiveNotifications(context: Context, value: Boolean) = prefs(context).edit().putBoolean("live_notifications", value).apply()
-    fun adbOnBoot(context: Context) = prefs(context).getBoolean("adb_on_boot", false)\n    fun setAdbOnBoot(context: Context, value: Boolean) = prefs(context).edit().putBoolean("adb_on_boot", value).apply()\n    fun shortcut(context: Context, side: String) =
+    fun adbOnBoot(context: Context) = prefs(context).getBoolean("adb_on_boot", false)
+    fun setAdbOnBoot(context: Context, value: Boolean) = prefs(context).edit().putBoolean("adb_on_boot", value).apply()
+    fun shortcut(context: Context, side: String) =
         prefs(context).getString("shortcut_$side", if (side == "left") "Camera" else "Flashlight") ?: "None"
     fun setShortcut(context: Context, side: String, value: String) =
         prefs(context).edit().putString("shortcut_$side", value).apply()
