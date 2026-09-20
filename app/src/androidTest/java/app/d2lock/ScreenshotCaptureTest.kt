@@ -67,7 +67,7 @@ class ScreenshotCaptureTest {
   val output=ParcelFileDescriptor.AutoCloseOutputStream(pipes[1])
   return RootKiosk.Channel(ParcelFileDescriptor.AutoCloseInputStream(pipes[0]).bufferedReader(), output.bufferedWriter()) { runCatching { output.close() } }
  }
- private fun capture(scenario: ActivityScenario<LockScreenActivity>, name: String) {
+ private fun <T: android.app.Activity> capture(scenario: ActivityScenario<T>, name: String) {
   scenario.onActivity { it.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
   inst.waitForIdleSync(); SystemClock.sleep(700)
   val bitmap=checkNotNull(ui.takeScreenshot())
@@ -82,7 +82,7 @@ class ScreenshotCaptureTest {
   assertFalse("Fresh emulator required",File(ctx.noBackupFilesDir,"d2-pin.json").exists())
   PinStore(ctx).create("246810".toCharArray())
   // App-only mode is sufficient to document this appearance-only update.
-  Prefs.setKiosk(ctx,false); Prefs.setShowMedia(ctx,false)
+  Prefs.setKiosk(ctx,false); Prefs.setShowMedia(ctx,true)
   Prefs.setNotificationPrivacy(ctx,4); Prefs.setLiveNotifications(ctx,true)
   shell("cmd notification allow_listener app.d2lock/app.d2lock.notifications.LockNotificationListener")
   SystemClock.sleep(1500)
@@ -110,7 +110,7 @@ class ScreenshotCaptureTest {
     assertEquals(2,CallNotificationStore.items.single().controls.size)
     assertTrue(views(activity!!.window.decorView).filterIsInstance<TextView>().any { it.text.toString()=="Open phone call" })
    }
-   capture(scenario,"10-d2-043-call-controls-demo")
+   capture(scenario,"12-d2-044-call-controls-demo")
    onMain {
     CallNotificationStore.items.clear()
     val message=LockNotification("demo-message","Messages (demo)","Alex · Sample message","The new update is ready. See you soon!",System.currentTimeMillis(),Notification.VISIBILITY_PRIVATE)
@@ -120,13 +120,39 @@ class ScreenshotCaptureTest {
     NotificationStore.onChanged?.invoke(); NotificationStore.onPosted?.invoke(message)
     assertTrue(views(activity!!.window.decorView).filterIsInstance<TextView>().any { it.visibility==View.VISIBLE && it.text.toString().contains("Messages (demo)\n") })
    }
-   capture(scenario,"11-d2-043-soft-notifications-demo")
+   capture(scenario,"13-d2-044-centered-notifications")
+   for ((mode,name) in listOf(1 to "14-d2-044-light",3 to "15-d2-044-amoled-floating-bar")) {
+    Appearance.set(ctx,"mode",mode); Appearance.set(ctx,"accent",if(mode==1) 1 else 2)
+    Appearance.set(ctx,"bar_width",75); Appearance.set(ctx,"bar_opacity",65); Appearance.set(ctx,"bar_gap",40)
+    scenario.recreate()
+    scenario.onActivity { activity=it }
+    waitFor("themed screen focus") { onMain { activity!!.hasWindowFocus() } }
+    capture(scenario,name)
+   }
   } finally {
    val done=CountDownLatch(1)
    scenario.onActivity { RootKiosk.unlock(it) { done.countDown() } }
    assertTrue(done.await(15,TimeUnit.SECONDS))
    scenario.close(); RootKiosk.testConnect=null
    NotificationStore.items.clear(); CallNotificationStore.items.clear()
+  }
+  // Opening settings also verifies theme initialization before its content is attached.
+  ActivityScenario.launch(MainActivity::class.java).use { settings ->
+   SystemClock.sleep(1200)
+   settings.onActivity { a ->
+    val dialog=a.javaClass.getDeclaredField("pinDialog").apply { isAccessible=true }.get(a) as android.app.AlertDialog
+    views(dialog.window!!.decorView).filterIsInstance<android.widget.EditText>().single().setText("246810")
+    dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).performClick()
+   }
+   waitFor("theme settings ready") { onMain { androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).any { a -> views(a.window.decorView).filterIsInstance<TextView>().any { it.text.toString()=="THEME & COLORS" } } } }
+   for ((title,name) in listOf("THEME & COLORS" to "16-d2-044-theme-settings","FLOATING LOCK-SCREEN BAR" to "17-d2-044-bar-settings")) {
+    settings.onActivity { a ->
+     val all=views(a.window.decorView).toList()
+     val target=all.filterIsInstance<TextView>().first { it.text.toString()==title }
+     all.filterIsInstance<android.widget.ScrollView>().first().scrollTo(0,target.top)
+    }
+    capture(settings,name)
+   }
   }
  }
 }

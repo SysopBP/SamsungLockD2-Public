@@ -1,4 +1,4 @@
-name: Capture app screenshots
+name: Capture D2 0.4.4 update screenshots
 on:
   workflow_dispatch:
   push:
@@ -26,6 +26,8 @@ jobs:
           gradle-version: '9.3.1'
       - run: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
       - run: gradle wrapper --gradle-version 9.3.1
+      - name: Build before starting emulator
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --no-daemon
       - name: Enable emulator acceleration
         run: |
           sudo rm -rf /usr/local/lib/android/sdk/ndk
@@ -37,10 +39,13 @@ jobs:
           api-level: 36
           target: google_apis
           arch: x86_64
+          profile: pixel_6
           disk-size: 2048M
           emulator-boot-timeout: 300
           disable-animations: true
           script: |
+            adb shell wm size 720x1600
+            adb shell wm density 280
             adb shell input keyevent KEYCODE_WAKEUP
             adb shell wm dismiss-keyguard
             adb shell settings put system screen_off_timeout 1800000
@@ -48,7 +53,7 @@ jobs:
             adb pull /data/local/tmp/d2-screenshots screenshots
       - uses: actions/upload-artifact@v4
         with:
-          name: D2-screenshots
+          name: D2-044-themes
           path: screenshots/*.png
       - uses: actions/upload-artifact@v4
         if: always()

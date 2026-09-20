@@ -11,6 +11,7 @@ import android.content.Context
 import android.content.ComponentName
 import android.content.Intent
 import android.content.IntentFilter
+import app.d2lock.Appearance
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.hardware.camera2.CameraCharacteristics
@@ -94,6 +95,7 @@ class LockScreenActivity : Activity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(if (Appearance.dark(this, true)) app.d2lock.R.style.Theme_D2_Dark else app.d2lock.R.style.Theme_SamsungLock)
         super.onCreate(savedInstanceState)
         PinUi.protect(this)
         preview = intent.getBooleanExtra("preview", false)
@@ -113,6 +115,8 @@ class LockScreenActivity : Activity() {
             }
         }
         window.insetsController?.apply {
+            val lightBars = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+            setSystemBarsAppearance(if (Appearance.dark(this@LockScreenActivity, true)) 0 else lightBars, lightBars)
             hide(WindowInsets.Type.statusBars())
             systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
@@ -130,7 +134,9 @@ class LockScreenActivity : Activity() {
         wallpaperActive = true
         wallpaperAnimations.forEach { it.resume() }
         renderNotifications()
-        registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))?.let {
+            batteryReceiver.onReceive(this, it)
+        }
         handler.post(ticker)
         if (!preview && !unlocking && Prefs.kiosk(this)) {
             RootKiosk.attach(this) { kioskStatus.text = it }
@@ -178,7 +184,7 @@ class LockScreenActivity : Activity() {
     private fun buildUi(): View {
         val frame = FrameLayout(this).apply {
             background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                intArrayOf(0xff202637.toInt(), 0xff0b101b.toInt(), 0xff070910.toInt()))
+                if (Appearance.mode(this@LockScreenActivity) == 3) intArrayOf(Color.BLACK, Color.BLACK) else intArrayOf(Appearance.blend(Appearance.background(this@LockScreenActivity, true), Appearance.accent(this@LockScreenActivity), .1f), Appearance.background(this@LockScreenActivity, true)))
         }
         Prefs.wallpaper(this)?.let { saved ->
             frame.addView(ImageView(this).apply {
@@ -214,18 +220,18 @@ class LockScreenActivity : Activity() {
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(dp(20), dp(72), dp(20), dp(125))
         }
-        clock = label("12:00", 82f, Color.WHITE).apply { letterSpacing = -.05f; gravity = Gravity.CENTER }
-        date = label("", 18f, 0xffeeeeF4.toInt()).apply { gravity = Gravity.CENTER }
+        clock = label("12:00", 82f, Appearance.text(this, true)).apply { letterSpacing = -.05f; gravity = Gravity.CENTER }
+        date = label("", 18f, Appearance.secondary(this, true)).apply { gravity = Gravity.CENTER }
         val topInfo = LinearLayout(this).apply {
             gravity = Gravity.CENTER
-            weather = label("Loading weather…", 15f, Color.WHITE)
-            battery = label("—%", 15f, Color.WHITE)
+            weather = label("Loading weather…", 15f, Appearance.text(this@LockScreenActivity, true))
+            battery = label("—%", 15f, Appearance.text(this@LockScreenActivity, true))
             addView(weather, LinearLayout.LayoutParams(0, dp(42), 1f))
             addView(battery, LinearLayout.LayoutParams(0, dp(42), 1f))
         }
         content.addView(clock)
         content.addView(date)
-        kioskStatus = label(if (preview) "Preview • unlocked" else if (Prefs.kiosk(this)) "Starting root kiosk…" else "App-only mode • Home/Recents can exit", 12f, Color.WHITE).apply {
+        kioskStatus = label(if (preview) "Preview • unlocked" else if (Prefs.kiosk(this)) "Starting root kiosk…" else "App-only mode • Home/Recents can exit", 12f, Appearance.text(this, true)).apply {
             gravity = Gravity.CENTER
         }
         content.addView(kioskStatus)
@@ -242,7 +248,7 @@ class LockScreenActivity : Activity() {
             content.addView(actionButton("Close preview") { finish() })
         }
         content.addView(topInfo, LinearLayout.LayoutParams(-1, dp(54)))
-        content.addView(label("Weather: Open-Meteo.com · CC BY 4.0", 12f, Color.WHITE).apply {
+        content.addView(label("Weather: Open-Meteo.com · CC BY 4.0", 12f, Appearance.text(this, true)).apply {
             gravity = Gravity.CENTER
             paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG
             setOnClickListener {
@@ -256,8 +262,17 @@ class LockScreenActivity : Activity() {
             }
         })
 
-        notifications = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        content.addView(notifications, LinearLayout.LayoutParams(-1, 0, 1f))
+        notifications = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(12), 0, dp(12))
+        }
+        val notificationScroll = android.widget.ScrollView(this).apply {
+            isFillViewport = true
+            clipToPadding = false
+            addView(notifications, FrameLayout.LayoutParams(-1, -2))
+        }
+        content.addView(notificationScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val mediaPanel = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -299,7 +314,7 @@ class LockScreenActivity : Activity() {
         val floatingBar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(9), dp(7), dp(9), dp(7))
-            background = glassPanel(38f)
+            background = Appearance.floatingBar(this@LockScreenActivity)
             elevation = dp(16).toFloat()
             addView(shortcutButton("left"), LinearLayout.LayoutParams(dp(58), dp(58)))
             addView(TextView(this@LockScreenActivity).apply {
@@ -313,16 +328,29 @@ class LockScreenActivity : Activity() {
             }, LinearLayout.LayoutParams(0, dp(58), 1f))
             addView(shortcutButton("right"), LinearLayout.LayoutParams(dp(58), dp(58)))
         }
-        frame.addView(floatingBar, FrameLayout.LayoutParams(-1, dp(72), Gravity.BOTTOM).apply {
-            setMargins(dp(20), 0, dp(20), dp(30))
-        })
-        liveBanner = label("", 15f, Color.WHITE).apply {
+        val barParams = FrameLayout.LayoutParams(-1, dp(72), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
+        frame.addView(floatingBar, barParams)
+        fun positionBar(width: Int, inset: Int) {
+            val available = (width - dp(32)).coerceAtLeast(1)
+            barParams.width = (available * Appearance.barWidth(this) / 100).coerceAtLeast(dp(190)).coerceAtMost(available)
+            barParams.bottomMargin = dp(Appearance.barGap(this)) + inset
+            floatingBar.layoutParams = barParams
+            content.setPadding(dp(20), dp(72), dp(20), barParams.bottomMargin + dp(96))
+        }
+        frame.addOnLayoutChangeListener { _, left, _, right, _, oldLeft, _, oldRight, _ ->
+            if (right - left != oldRight - oldLeft) positionBar(right - left, frame.rootWindowInsets?.getInsets(WindowInsets.Type.navigationBars())?.bottom ?: 0)
+        }
+        frame.setOnApplyWindowInsetsListener { _, insets ->
+            positionBar(frame.width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels, insets.getInsets(WindowInsets.Type.navigationBars()).bottom)
+            insets
+        }
+        liveBanner = label("", 15f, Appearance.text(this, true)).apply {
             visibility = View.GONE
             maxLines = 3
             ellipsize = android.text.TextUtils.TruncateAt.END
             setPadding(dp(16), dp(12), dp(16), dp(12))
             background = notificationPanel(null, banner = true)
-            setShadowLayer(dp(2).toFloat(), 0f, dp(1).toFloat(), 0xcc000000.toInt())
+            setShadowLayer(if (Appearance.dark(this@LockScreenActivity, true)) dp(2).toFloat() else 0f, 0f, dp(1).toFloat(), 0xcc000000.toInt())
             elevation = dp(20).toFloat()
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
@@ -364,7 +392,7 @@ class LockScreenActivity : Activity() {
         val listenerEnabled = getSystemService(NotificationManager::class.java)
             .isNotificationListenerAccessGranted(ComponentName(this, LockNotificationListener::class.java))
         if (!listenerEnabled) {
-            notifications.addView(label("Allow notification access in D2 settings", 14f, Color.WHITE).apply {
+            notifications.addView(label("Allow notification access in D2 settings", 14f, Appearance.text(this, true)).apply {
                 gravity = Gravity.CENTER
             })
             return
@@ -373,16 +401,16 @@ class LockScreenActivity : Activity() {
             preview || it.visibility != Notification.VISIBILITY_SECRET
         }
         if (visibleItems.isEmpty()) {
-            notifications.addView(label("No visible notifications", 14f, 0xffddddE5.toInt()).apply { gravity = Gravity.CENTER })
+            notifications.addView(label("No visible notifications", 14f, Appearance.secondary(this, true)).apply { gravity = Gravity.CENTER })
             return
         }
         if (privacy == 1) {
-            notifications.addView(label("${visibleItems.size} notifications", 15f, Color.WHITE).apply {
+            notifications.addView(label("${visibleItems.size} notifications", 15f, Appearance.text(this, true)).apply {
                 gravity = Gravity.CENTER
             })
             return
         }
-        visibleItems.take(4).forEach { item ->
+        visibleItems.forEach { item ->
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(16), dp(11), dp(16), dp(11))
@@ -412,7 +440,7 @@ class LockScreenActivity : Activity() {
                     catch (_: Exception) {
                         Toast.makeText(this, "Call control unavailable. Open the phone call or unlock D2.", Toast.LENGTH_LONG).show()
                     }
-                }.apply { setShadowLayer(dp(2).toFloat(), 0f, dp(1).toFloat(), 0xcc000000.toInt()) })
+                }.apply { setShadowLayer(if (Appearance.dark(this@LockScreenActivity, true)) dp(2).toFloat() else 0f, 0f, dp(1).toFloat(), 0xcc000000.toInt()) })
             }
             call.controls.forEach { addControl(it.label, it.intent) }
             call.open?.let { addControl("Open phone call", it) }
@@ -474,7 +502,7 @@ class LockScreenActivity : Activity() {
     }
 
     private fun actionButton(value: String, click: () -> Unit) = Button(this).apply {
-        text = value; isAllCaps = false; setTextColor(Color.WHITE); setBackgroundColor(Color.TRANSPARENT)
+        text = value; isAllCaps = false; setTextColor(Appearance.text(this@LockScreenActivity, true)); setBackgroundColor(Color.TRANSPARENT)
         setOnClickListener { click() }
     }
 
@@ -497,32 +525,17 @@ class LockScreenActivity : Activity() {
         else -> View(this)
     }
 
-    private fun notificationLabel(value: String, size: Float) = label(value, size, Color.WHITE).apply {
-        setShadowLayer(dp(2).toFloat(), 0f, dp(1).toFloat(), 0xcc000000.toInt())
+    private fun notificationLabel(value: String, size: Float) = label(value, size, Appearance.text(this, true)).apply {
+        setShadowLayer(if (Appearance.dark(this@LockScreenActivity, true)) dp(2).toFloat() else 0f, 0f, dp(1).toFloat(), 0xcc000000.toInt())
     }
 
-    private fun notificationPanel(app: String?, banner: Boolean = false, call: Boolean = false): GradientDrawable {
-        // Stable package-based tints; a neutral banner must not identify apps in Count only mode.
-        val palette = intArrayOf(0x608ec7, 0x529f9c, 0x9a80be, 0xbd829e)
-        val rgb = when {
-            call -> 0x579c7c
-            app == null -> 0x65738a
-            else -> palette[Math.floorMod(app.hashCode(), palette.size)]
-        }
-        // Dark translucent fills preserve white text; pastel borders make each tint distinct.
-        val fill = Color.argb(if (banner) 194 else 102, Color.red(rgb) / 2, Color.green(rgb) / 2, Color.blue(rgb) / 2)
-        return GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = dp(if (banner) 20 else 28).toFloat()
-            setColor(fill)
-            setStroke(dp(1).coerceAtLeast(1), (0x99 shl 24) or rgb)
-        }
-    }
+    private fun notificationPanel(app: String?, banner: Boolean = false, call: Boolean = false) =
+        Appearance.panel(this, app, banner, call)
 
     private fun glassPanel(radius: Float = 28f) = GradientDrawable().apply {
         shape = GradientDrawable.RECTANGLE
         cornerRadius = dp(radius.toInt()).toFloat()
-        setColor(0xa3353b4c.toInt())
+        setColor(0xdd000000.toInt() or (Appearance.blend(Color.BLACK, Appearance.accent(this@LockScreenActivity), .3f) and 0xffffff))
         setStroke(dp(1), 0x55ffffff)
     }
 

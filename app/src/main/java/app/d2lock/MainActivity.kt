@@ -38,7 +38,9 @@ class MainActivity : Activity() {
     private var pinDialog: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(if (Appearance.dark(this)) R.style.Theme_D2_Dark else R.style.Theme_SamsungLock)
         super.onCreate(savedInstanceState)
+        Appearance.apply(this)
         PinUi.protect(this)
         window.statusBarColor = Color.TRANSPARENT
         setContentView(TextView(this).apply { text = "Samsung Lock D2" })
@@ -74,17 +76,17 @@ class MainActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(22), dp(56), dp(22), dp(32))
-            setBackgroundColor(0xff10131c.toInt())
+            setBackgroundColor(Appearance.background(this@MainActivity))
         }
         root.addView(TextView(this).apply {
             text = "Samsung Lock D2"
             textSize = 32f
-            setTextColor(Color.WHITE)
+            setTextColor(Appearance.text(this@MainActivity))
         })
         root.addView(TextView(this).apply {
             text = "Independent 6-digit app PIN"
             textSize = 15f
-            setTextColor(0xffb6c0d3.toInt())
+            setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(0, dp(4), 0, dp(24))
         })
 
@@ -102,8 +104,9 @@ class MainActivity : Activity() {
         val configured = PinStore(this).configured()
         if (configured) {
             root.addView(Switch(this).apply {
+                thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
                 text = "Connect Galaxy Island (paired build)"
-                setTextColor(Color.WHITE)
+                setTextColor(Appearance.text(this@MainActivity))
                 isChecked = app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)
                 setOnCheckedChangeListener { _, value ->
                     app.d2lock.bridge.IslandBridge.setEnabled(this@MainActivity, value)
@@ -120,9 +123,9 @@ class MainActivity : Activity() {
             root.addView(TextView(this).apply {
                 text = "Create a D2 PIN first. D2 does not create, change, or dismiss a Samsung screen lock.\n\nThis is an app privacy screen: Home, Recents, force-stop, uninstall, root, and reboot can bypass it. It is not device encryption or a guarantee against D2 boot errors. If you forget the PIN, clearing D2 app data resets it and its settings."
                 textSize = 16f
-                setTextColor(Color.WHITE)
+                setTextColor(Appearance.text(this@MainActivity))
             })
-            return ScrollView(this).apply { addView(root) }
+            return settingsScroll(root)
         }
         val taps = DoubleTap()
         addButton(root, "Double-tap to lock D2") {
@@ -138,9 +141,10 @@ class MainActivity : Activity() {
         }
 
         val enabled = Switch(this).apply {
+                thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Show D2 when the screen wakes"
             textSize = 17f
-            setTextColor(Color.WHITE)
+            setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.enabled(this@MainActivity)
             setOnCheckedChangeListener { _, checked ->
                 Prefs.setEnabled(this@MainActivity, checked)
@@ -150,9 +154,10 @@ class MainActivity : Activity() {
         root.addView(enabled, rowParams())
 
         val rootMode = Switch(this).apply {
+                thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Optional KernelSU root mode"
             textSize = 17f
-            setTextColor(Color.WHITE)
+            setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.rootMode(this@MainActivity)
             setOnCheckedChangeListener { _, checked ->
                 if (checked && !RootManager.isAvailable()) {
@@ -164,9 +169,10 @@ class MainActivity : Activity() {
         root.addView(rootMode, rowParams())
 
         root.addView(Switch(this).apply {
+                thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Require PIN to leave D2 (root kiosk)"
             textSize = 17f
-            setTextColor(Color.WHITE)
+            setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.kiosk(this@MainActivity)
             setOnCheckedChangeListener { _, checked ->
                 Prefs.setKiosk(this@MainActivity, checked)
@@ -175,48 +181,53 @@ class MainActivity : Activity() {
         root.addView(TextView(this).apply {
             text = "Experimental: grant D2 root access in KernelSU. When kiosk is active, Home and Recents are blocked until your D2 PIN is accepted. Check for ‘Kiosk active’ on the lock screen. Preview stays unlocked.\n\nAndroid kiosk mode interacts with the system keyguard, but D2 never sets a Samsung PIN. A crash or unresponsive app releases kiosk after about 20 seconds; reboot is the fallback recovery. Power/reboot and root remain bypasses. Primary, unmanaged user only."
             textSize = 14f
-            setTextColor(0xffb6c0d3.toInt())
+            setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(0, dp(4), 0, dp(16))
         })
 
         root.addView(TextView(this).apply {
             text = "Phone calls during kiosk: the selected Phone app and system call screen are allowed. Grant notification access below for Answer/Decline controls on D2. Phone-app screens may be accessible without the D2 PIN; other apps and Home/Recents remain restricted. Call controls do not display caller names or numbers on D2, even when message previews are hidden."
             textSize = 14f
-            setTextColor(0xffb6c0d3.toInt())
+            setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(0, 0, 0, dp(16))
         })
 
+        section(root, "THEME & COLORS")
+        ThemeOptions.add(this, root, ::refreshAppearance)
         section(root, "APPEARANCE")
         root.addView(Switch(this).apply {
+                thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Weather in Celsius (off: Fahrenheit)"
-            setTextColor(Color.WHITE)
+            setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.celsius(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setCelsius(this@MainActivity, checked) }
         }, rowParams())
         root.addView(Switch(this).apply {
+                thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Show media player while D2 is locked"
-            setTextColor(Color.WHITE)
+            setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.showMedia(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setShowMedia(this@MainActivity, checked) }
         }, rowParams())
         section(root, "NOTIFICATION PRIVACY")
         root.addView(Switch(this).apply {
+                thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Live notification banners while D2 is locked"
-            setTextColor(Color.WHITE)
+            setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.liveNotifications(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setLiveNotifications(this@MainActivity, checked) }
         }, rowParams())
         root.addView(TextView(this).apply {
             text = "New notifications appear briefly at the top of D2 and stay in the notification list. Banners follow the privacy choice below. Tap a notification and enter your D2 PIN to open it. Your messaging app controls sound and vibration."
             textSize = 13f
-            setTextColor(0xffb6c0d3.toInt())
+            setTextColor(Appearance.secondary(this@MainActivity))
         })
         addChoice(root, "When D2 is locked", listOf("Hide all", "Count only", "App names", "Public only", "All previews (private too)"),
             Prefs.notificationPrivacy(this)) { Prefs.setNotificationPrivacy(this, it) }
         root.addView(TextView(this).apply {
             text = "Public only shows text from apps that mark it public. All previews can show private messages before you enter the D2 PIN. Apps marked secret stay hidden."
             textSize = 13f
-            setTextColor(0xffb6c0d3.toInt())
+            setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(8), 0, dp(8), dp(12))
         })
         section(root, "FLOATING BAR")
@@ -244,10 +255,29 @@ class MainActivity : Activity() {
         root.addView(TextView(this).apply {
             text = "Double-tap the D2 button or its home-screen widget to open the PIN screen. Taps elsewhere on the home screen are controlled by your launcher.\n\nD2 uses its own PIN and does not turn the display off. Optional kiosk mode uses Android task restrictions and interacts with keyguard internally.\n\nWithout active kiosk, Home/Recents can bypass D2. Root, recovery, and reboot remain bypasses in either mode. D2 cannot repair firmware or guarantee prevention of download-mode errors."
             textSize = 14f
-            setTextColor(0xffb6c0d3.toInt())
+            setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(4), dp(28), dp(4), dp(10))
         })
-        return ScrollView(this).apply { addView(root) }
+        return settingsScroll(root)
+    }
+
+    private fun settingsScroll(root: LinearLayout) = ScrollView(this).apply {
+        addView(root)
+        setBackgroundColor(Appearance.background(this@MainActivity))
+        setOnApplyWindowInsetsListener { view, insets ->
+            val bars = insets.getInsets(android.view.WindowInsets.Type.systemBars())
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
+    }
+
+    private fun refreshAppearance() {
+        val host = findViewById<ViewGroup>(android.R.id.content)
+        val y = (host.getChildAt(0) as? ScrollView)?.scrollY ?: 0
+        Appearance.apply(this)
+        val settings = buildSettings()
+        setContentView(settings)
+        settings.post { (settings as? ScrollView)?.scrollTo(0, y) }
     }
 
     private fun addButton(parent: LinearLayout, label: String, action: () -> Unit) {
@@ -255,7 +285,7 @@ class MainActivity : Activity() {
             text = label
             isAllCaps = false
             textSize = 16f
-            setTextColor(Color.WHITE)
+            setTextColor(Appearance.text(this@MainActivity))
             background = pillBackground()
             setOnClickListener { action() }
         }, rowParams())
@@ -264,27 +294,27 @@ class MainActivity : Activity() {
     private fun section(parent: LinearLayout, title: String) {
         parent.addView(TextView(this).apply {
             text = title; textSize = 12f; letterSpacing = .1f
-            setTextColor(0xffb6c0d3.toInt())
+            setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(6), dp(18), 0, dp(8))
         })
     }
     private fun pillBackground() = GradientDrawable().apply {
         cornerRadius = dp(22).toFloat()
-        setColor(0xff30384a.toInt())
+        setColor(Appearance.surface(this@MainActivity))
     }
     private fun addChoice(parent: LinearLayout, title: String, choices: List<String>, selected: Int, save: (Int) -> Unit) {
         parent.addView(TextView(this).apply {
-            text = title; textSize = 16f; setTextColor(Color.WHITE); setPadding(dp(6), dp(7), 0, dp(4))
+            text = title; textSize = 16f; setTextColor(Appearance.text(this@MainActivity)); setPadding(dp(6), dp(7), 0, dp(4))
         })
         parent.addView(Spinner(this).apply {
             adapter = object : ArrayAdapter<String>(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, choices) {
                 override fun getView(position: Int, convertView: android.view.View?, parent: ViewGroup): android.view.View =
                     (super.getView(position, convertView, parent) as TextView).apply {
-                        setTextColor(Color.WHITE); setPadding(dp(16), 0, dp(10), 0)
+                        setTextColor(Appearance.text(this@MainActivity)); setPadding(dp(16), 0, dp(10), 0)
                     }
                 override fun getDropDownView(position: Int, convertView: android.view.View?, parent: ViewGroup): android.view.View =
                     (super.getDropDownView(position, convertView, parent) as TextView).apply {
-                        setTextColor(Color.WHITE); setBackgroundColor(0xff30384a.toInt())
+                        setTextColor(Appearance.text(this@MainActivity)); setBackgroundColor(Appearance.surface(this@MainActivity))
                     }
             }
             background = pillBackground()

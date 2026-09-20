@@ -73,8 +73,8 @@ jobs:
           rm module/payload/PLACE_APK_HERE.txt
           for script in module/*.sh; do bash -n "$script"; done
           chmod 755 module/*.sh
-          (cd module && zip -r ../dist/SamsungLockD2-KSUNext-v0.5.5-paired.zip .)
-          unzip -t dist/SamsungLockD2-KSUNext-v0.5.5-paired.zip
+          (cd module && zip -r ../dist/SamsungLockD2-KSUNext-v0.5.6-paired.zip .)
+          unzip -t dist/SamsungLockD2-KSUNext-v0.5.6-paired.zip
           zip -r dist/SamsungLockD2-source.zip app/src app/build.gradle.kts build.gradle.kts settings.gradle.kts gradle.properties gradle gradlew gradlew.bat module README.md LICENSE THIRD_PARTY_NOTICES.txt docs .github
           cp runtime-dependencies.txt dist/
           sha256sum dist/*.apk dist/*.zip > dist/SHA256SUMS.txt

@@ -2,27 +2,31 @@
 
 An independent Android app privacy screen with its own six-digit PIN. Version 0.3.0 adds optional root-assisted Android kiosk mode. It does not create or modify system credentials, force the screen off, or change firmware, Knox, Gatekeeper, or boot partitions. Kiosk mode interacts with the Android keyguard internally; this is not a guarantee against Samsung D2 boot errors.
 
-**Public experimental preview.** The latest downloadable paired update is **D2 0.4.3 with translucent, per-app notification colors**, with optional KernelSU Next bridge **0.5.5**. [Release notes and downloads](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.3-preview.1). This branch contains the current v0.4.3 paired source; a downloadable source archive is attached as [SamsungLockD2-v0.4.3-source.zip](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.3-preview.1/SamsungLockD2-v0.4.3-source.zip).
+**Public experimental preview.** The newest paired update is **D2 0.4.4 + Galaxy Island theme controls**, with optional KernelSU Next bridge **0.5.6**. [Release notes and downloads](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.4-preview.1).
 
-- [Install D2 0.4.3 paired APK](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.3-preview.1/SamsungLockD2-v0.4.3-paired-soft-notifications.apk)
-- [Optional KernelSU Next bridge 0.5.5 ZIP](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.3-preview.1/SamsungLockD2-KSUNext-v0.5.5-paired.zip)
-- [Setup and changes](docs/CALLS-AND-LIVE-NOTIFICATIONS.md), [verification](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.3-preview.1/D2-v0.4.3-verification.txt), and [checksums](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.3-preview.1/Combo-v0.4.3-SHA256SUMS.txt)
+- [D2 0.4.4 paired APK](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/SamsungLockD2-v0.4.4-paired-themes.apk)
+- [Galaxy Island themed APK](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/Galaxy-Island-themed.apk)
+- [Optional KernelSU Next bridge 0.5.6](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/SamsungLockD2-KSUNext-v0.5.6-paired.zip)
+- [Theme and update guide](docs/THEMES.md), [build verification](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/Build-verification.txt), and [checksums](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/SHA256SUMS.txt)
+- [D2 source](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/SamsungLockD2-v0.4.4-source.zip) and [Galaxy Island source](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/Galaxy-Island-themed-source.zip)
 
-Install the APK even when updating the module; the module preserves an existing D2 APK. Enable D2 notification access for call controls and live banners. All 19 Android 16/API 36 emulator tests passed. The new call fix still needs a real incoming-call test on the Galaxy S26 Ultra running Android 17.
+D2's **THEME & COLORS** settings add system/light/dark/AMOLED modes, wallpaper colors, soft accent presets and custom hex colors. Notifications support per-app, accent or neutral colors, adjustable opacity and corner radius. The stack stays centered between the clock/weather and lower controls; longer lists scroll. The floating PIN/shortcut bar has adjustable width, opacity and bottom spacing.
 
-**Device testing:** User-reported physical-device testing of the Galaxy Island + Samsung Lock D2 combo was performed on a **Samsung Galaxy S26 Ultra running Android 17** (confirmed September 19, 2026). Earlier v0.3.0 testing included kiosk activation and PIN unlock on One UI 9 beta; the exact beta build was not recorded. Automated tests and the combo screenshot gallery use a separate Android 16 / API 36 emulator.
+Galaxy Island's **Profile** now includes AMOLED and matching accent choices, plus **Copy current accent to island**. Each app saves its theme independently. Existing island layout controls remain available. Galaxy Island retains version label 0.2.0-beta; use this release's filename and checksum to identify the themed build.
 
-Notification cards use 40% opacity with consistent soft blue, teal, lavender or rose colors per app. Live banners use 76% opacity; all notification text stays white with a subtle shadow. Calls use a green accent, and Count only stays neutral. Existing privacy, PIN and kiosk behavior is retained.
+Exit kiosk with your PIN before updating both APKs. Install the D2 APK even when updating the module: the bridge preserves an already-installed app. Notification privacy, phone controls and PIN requirements are retained. [Call and live notification setup](docs/CALLS-AND-LIVE-NOTIFICATIONS.md).
 
-## New 0.4.3 screenshots
+**Device testing:** The user reported testing the earlier combo on a **Samsung Galaxy S26 Ultra running Android 17**. This update has separate Android 16/API 36 emulator checks; it has not been physically tested on that handset. Theme options were inspired by [KernelSU Next's Material 3/dynamic-color/AMOLED approach](https://github.com/KernelSU-Next/KernelSU-Next/blob/dev/manager/app/src/main/java/com/rifsxd/ksunext/ui/theme/Theme.kt), with an independent implementation.
 
-Real D2 captures in app-only mode on an Android 16/API 36 emulator. The separate regression suite covers kiosk behavior. The incoming-call notification is simulated; the message is sample content. These are not Samsung handset captures or proof of a real call. Galaxy Island is hidden during D2 lock and was not installed for this D2-only capture.
+## Theme screenshots
 
-| Call controls (simulation) | Live notification banner (sample) |
-| --- | --- |
-| <img src="https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.3-preview.1/10-d2-043-call-controls-demo.png" width="240" alt="Simulated call controls in D2"> | <img src="https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.3-preview.1/11-d2-043-soft-notifications-demo.png" width="240" alt="Sample message banner in D2"> |
+Real emulator captures with sample notifications, not Samsung handset photos. D2 captures use app-only mode; they do not demonstrate a real incoming call. Galaxy Island settings are captured separately.
 
-[Capture notes](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.3-preview.1/D2-v0.4.3-screenshot-notes.md) · [Earlier paired-app gallery](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.1-preview.1).
+| Centered D2 notifications | D2 AMOLED and floating bar | Galaxy Island theme controls |
+| --- | --- | --- |
+| <img src="https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/13-d2-044-centered-notifications.png" width="240" alt="Centered sample D2 notifications"> | <img src="https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/15-d2-044-amoled-floating-bar.png" width="240" alt="D2 AMOLED theme and adjustable floating bar"> | <img src="https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/18-galaxy-amoled-teal.png" width="240" alt="Galaxy Island AMOLED theme controls"> |
+
+Earlier galleries: [0.4.3 notification colors](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.3-preview.1) · [paired-app captures](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.1-preview.1).
 
 ## Earlier 0.4.0 screenshots
 
