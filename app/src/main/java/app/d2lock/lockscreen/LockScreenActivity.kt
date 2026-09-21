@@ -25,6 +25,7 @@ import android.provider.MediaStore
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.MotionEvent
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.widget.Button
@@ -475,7 +476,7 @@ class LockScreenActivity : Activity() {
         visibleItems.forEach { item ->
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(16), dp(11), dp(16), dp(11))
+                setPadding(dp(18), dp(13), dp(18), dp(13))
                 background = notificationPanel(item.packageName)
                 addView(notificationLabel(item.app, 12f))
                 if (privacy == 4 || (privacy == 3 && item.visibility == Notification.VISIBILITY_PUBLIC)) {
@@ -484,7 +485,46 @@ class LockScreenActivity : Activity() {
                 }
             }
             if (item.contentIntent != null) card.setOnClickListener { openNotification(item) }
-            notifications.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(9) })
+            card.elevation = dp(5).toFloat()
+            card.setOnTouchListener(object : View.OnTouchListener {
+                private var downX = 0f
+                private var downY = 0f
+                override fun onTouch(v: View, event: MotionEvent): Boolean {
+                    when (event.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> {
+                            downX = event.x
+                            downY = event.y
+                            v.animate().scaleX(.985f).scaleY(.985f).setDuration(90).start()
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            val dx = event.x - downX
+                            if (kotlin.math.abs(dx) > dp(10)) {
+                                v.translationX = dx * .35f
+                                v.alpha = (1f - kotlin.math.abs(dx) / (v.width.coerceAtLeast(1) * 1.6f)).coerceAtLeast(.55f)
+                            }
+                        }
+                        MotionEvent.ACTION_UP -> {
+                            val dx = event.x - downX
+                            val dy = event.y - downY
+                            v.animate().scaleX(1f).scaleY(1f).setDuration(100).start()
+                            if (kotlin.math.abs(dx) > v.width * .32f && kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
+                                v.animate().translationX(if (dx > 0) v.width.toFloat() else -v.width.toFloat())
+                                    .alpha(0f).setDuration(180).withEndAction { v.visibility = View.GONE }.start()
+                                true
+                            } else {
+                                v.animate().translationX(0f).alpha(1f).setDuration(160).start()
+                                if (kotlin.math.abs(dx) < dp(12) && kotlin.math.abs(dy) < dp(12)) v.performClick()
+                                true
+                            }
+                        }
+                        MotionEvent.ACTION_CANCEL -> {
+                            v.animate().translationX(0f).alpha(1f).scaleX(1f).scaleY(1f).setDuration(140).start()
+                        }
+                    }
+                    return true
+                }
+            })
+            notifications.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(7) })
         }
     }
 
