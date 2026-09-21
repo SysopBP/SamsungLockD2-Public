@@ -17,6 +17,10 @@ object Prefs {
     fun celsius(context: Context) = prefs(context).getBoolean("celsius", false)
     fun setCelsius(context: Context, value: Boolean) = prefs(context).edit().putBoolean("celsius", value).apply()
     fun showMedia(context: Context) = prefs(context).getBoolean("show_media", true)
+    fun showWeatherWidget(context: Context) = prefs(context).getBoolean("widget_weather", true)
+    fun setShowWeatherWidget(context: Context, value: Boolean) = prefs(context).edit().putBoolean("widget_weather", value).apply()
+    fun showBatteryWidget(context: Context) = prefs(context).getBoolean("widget_battery", true)
+    fun setShowBatteryWidget(context: Context, value: Boolean) = prefs(context).edit().putBoolean("widget_battery", value).apply()
     fun setShowMedia(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_media", value).apply()
     // 0: none, 1: count, 2: app names, 3: public previews.
     fun notificationPrivacy(context: Context) = prefs(context).getInt("notification_privacy", 2)
