@@ -100,14 +100,14 @@ class RootKioskTest {
             TestDevice.focusTask(task)
             SystemClock.sleep(500)
             onView(withText("PIN")).inRoot(withDecorView(sameInstance(decor))).perform(click())
-            onView(withHint("6-digit D2 PIN")).inRoot(isDialog()).perform(typeText("111111"), closeSoftKeyboard())
+            onView(withId(app.d2lock.R.id.d2_pin_input)).inRoot(isDialog()).perform(typeText("111111"), closeSoftKeyboard())
             onView(withText("Unlock")).inRoot(isDialog()).perform(click())
             waitFor("Wrong PIN must visibly be rejected") { runCatching {
                 onView(withText("PIN incorrect.")).inRoot(isDialog()).check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()))
                 true
             }.getOrDefault(false) }
             assertEquals(ActivityManager.LOCK_TASK_MODE_LOCKED, manager.lockTaskModeState)
-            onView(withHint("6-digit D2 PIN")).inRoot(isDialog()).perform(replaceText("246810"), closeSoftKeyboard())
+            onView(withId(app.d2lock.R.id.d2_pin_input)).inRoot(isDialog()).perform(replaceText("246810"), closeSoftKeyboard())
             onView(withText("Unlock")).inRoot(isDialog()).perform(click())
             waitFor("Correct PIN must restore navigation", 25000) { scenario.state == Lifecycle.State.DESTROYED && manager.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE }
         } finally { cleanup(scenario) }
