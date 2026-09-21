@@ -283,7 +283,25 @@ class MainActivity : Activity() {
             isChecked = Prefs.celsius(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setCelsius(this@MainActivity, checked) }
         }, rowParams())
-        section(root, "LOCK SCREEN WIDGETS")
+        root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "OLED protection (subtle clock shift)"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.oledShift(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setOledShift(this@MainActivity, checked) }
+        }, rowParams())
+        val clockStyles = arrayOf("One UI Large", "One UI Compact", "Minimal")
+        root.addView(Spinner(this).apply {
+            adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, clockStyles)
+            setSelection(Prefs.clockStyle(this@MainActivity))
+            onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                    Prefs.setClockStyle(this@MainActivity, position)
+                }
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+            }
+        }, rowParams())
+                section(root, "LOCK SCREEN WIDGETS")
         root.addView(Switch(this).apply {
             thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Weather"
@@ -297,6 +315,13 @@ class MainActivity : Activity() {
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.showBatteryWidget(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setShowBatteryWidget(this@MainActivity, checked) }
+        }, rowParams())
+        root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Battery details (source + temperature)"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.detailedBattery(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setDetailedBattery(this@MainActivity, checked) }
         }, rowParams())
         root.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
