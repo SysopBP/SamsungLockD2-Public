@@ -26,6 +26,15 @@ class MediaControllerBridge(context: Context) {
             ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)
             ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
     }
+    fun durationMs(): Long = controller()?.metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
+    fun positionMs(): Long {
+        val state = controller()?.playbackState ?: return 0L
+        val base = state.position.coerceAtLeast(0L)
+        if (state.state != android.media.session.PlaybackState.STATE_PLAYING) return base
+        val elapsed = (android.os.SystemClock.elapsedRealtime() - state.lastPositionUpdateTime).coerceAtLeast(0L)
+        return (base + (elapsed * state.playbackSpeed).toLong()).coerceAtLeast(0L)
+    }
+    fun seekTo(positionMs: Long) = controller()?.transportControls?.seekTo(positionMs.coerceAtLeast(0L))
     fun previous() = controller()?.transportControls?.skipToPrevious()
     fun toggle() = controller()?.let {
         if (it.playbackState?.state == android.media.session.PlaybackState.STATE_PLAYING) it.transportControls.pause()
