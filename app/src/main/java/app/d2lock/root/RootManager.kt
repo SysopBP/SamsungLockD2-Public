@@ -40,6 +40,11 @@ object RootManager {
         "settings put global block_usb_lock 0; stop adbd; setprop sys.usb.config none; sleep 1; setprop persist.sys.usb.config adb; setprop sys.usb.config adb; start adbd"
     )
 
+    /** Android userspace restart; faster than a full hardware reboot. */
+    fun softReboot(): Boolean = runRoot("(setprop ctl.restart zygote || setprop ctl.restart zygote_secondary || killall zygote) >/dev/null 2>&1 &")
+
+    fun restartSystemUi(): Boolean = runRoot("(pkill -TERM -f com.android.systemui || killall com.android.systemui) >/dev/null 2>&1 &")
+
     private fun rootOutput(command: String): String = runCatching {
         val process = ProcessBuilder("su", "-c", command).redirectErrorStream(true).start()
         if (!process.waitFor(4, TimeUnit.SECONDS)) { process.destroyForcibly(); "" }
