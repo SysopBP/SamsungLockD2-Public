@@ -104,7 +104,7 @@ class MainActivity : Activity() {
             setTextColor(Appearance.text(this@MainActivity))
         })
         root.addView(TextView(this).apply {
-            text = "Independent 6-digit app PIN"
+            text = "D2 Security Session · Independent 6-digit app PIN"
             textSize = 15f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(0, dp(4), 0, dp(24))
@@ -173,6 +173,9 @@ class MainActivity : Activity() {
         }
         root.addView(enabled, rowParams())
 
+        root.addView(android.view.View(this).apply {
+            setBackgroundColor((0x22 shl 24) or (Appearance.text(this@MainActivity) and 0xffffff))
+        }, LinearLayout.LayoutParams(-1, dp(1)).apply { topMargin = dp(8); bottomMargin = dp(10) })
         section(root, "SHIZUKU")
         root.addView(shizukuCard(), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
 
@@ -305,7 +308,8 @@ class MainActivity : Activity() {
 
     private fun addButton(parent: LinearLayout, label: String, action: () -> Unit) {
         parent.addView(Button(this).apply {
-            text = label
+            text = "$label   ›"
+            gravity = Gravity.CENTER_VERTICAL or Gravity.CENTER_HORIZONTAL
             isAllCaps = false
             textSize = 16f
             setTextColor(Appearance.text(this@MainActivity))
@@ -316,9 +320,9 @@ class MainActivity : Activity() {
 
     private fun section(parent: LinearLayout, title: String) {
         parent.addView(TextView(this).apply {
-            text = title; textSize = 12f; letterSpacing = .1f
+            text = title; textSize = 12f; letterSpacing = .12f
             setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(dp(6), dp(18), 0, dp(8))
+            setPadding(dp(10), dp(22), 0, dp(10))
         })
     }
     private fun pillBackground() = Appearance.glass(this, 22f, if (Appearance.dark(this)) 38 else 62, true)
@@ -335,12 +339,12 @@ class MainActivity : Activity() {
             background = Appearance.glass(this@MainActivity, 28f, 34, true)
             addView(TextView(this@MainActivity).apply {
                 text = when {
-                    granted -> "Shizuku connected"
+                    granted -> "●  Shizuku connected"
                     running -> "Shizuku running · permission required"
                     else -> "Shizuku not running"
                 }
                 textSize = 17f
-                setTextColor(Appearance.text(this@MainActivity))
+                setTextColor(if (granted) Color.rgb(102, 220, 132) else Appearance.text(this@MainActivity))
             })
             addView(TextView(this@MainActivity).apply {
                 text = when {
@@ -353,7 +357,7 @@ class MainActivity : Activity() {
                 setPadding(0, dp(3), 0, dp(8))
             })
             addView(Button(this@MainActivity).apply {
-                text = when { granted -> "Reconnect Shizuku"; running -> "Authorize Shizuku"; else -> "Connect Shizuku" }
+                text = when { granted -> "Revoke / Reconnect Shizuku   ›"; running -> "Authorize Shizuku   ›"; else -> "Connect Shizuku   ›" }
                 isAllCaps = false
                 setTextColor(Appearance.text(this@MainActivity))
                 background = Appearance.glass(this@MainActivity, 22f, 30, true)
