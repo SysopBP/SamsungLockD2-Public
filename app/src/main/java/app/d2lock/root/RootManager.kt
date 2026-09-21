@@ -22,9 +22,9 @@ object RootManager {
     }.getOrDefault(false)
     fun setAdbUsbEnabled(enabled: Boolean): Boolean = runRoot(
         if (enabled)
-            "settings put global block_usb_lock 0; setprop persist.sys.usb.config adb; setprop sys.usb.config adb"
+            "settings put global block_usb_lock 0; cfg=$(getprop persist.sys.usb.config); [ -z \"$cfg\" ] && cfg=$(getprop sys.usb.config); cfg=$(echo \"$cfg\" | sed 's/^none$//; s/,*adb,*//g; s/^,//; s/,$//'); [ -n \"$cfg\" ] && cfg=\"$cfg,adb\" || cfg=adb; setprop persist.sys.usb.config \"$cfg\"; setprop sys.usb.config \"$cfg\""
         else
-            "settings put global block_usb_lock 1; setprop persist.sys.usb.config none; setprop sys.usb.config none"
+            "settings put global block_usb_lock 1; cfg=$(getprop persist.sys.usb.config); [ -z \"$cfg\" ] && cfg=$(getprop sys.usb.config); cfg=$(echo \"$cfg\" | sed 's/,*adb,*//g; s/^,//; s/,$//'); [ -n \"$cfg\" ] || cfg=none; setprop persist.sys.usb.config \"$cfg\"; setprop sys.usb.config \"$cfg\""
     )
 
     fun adbUsbEnabled(): Boolean = runCatching {
