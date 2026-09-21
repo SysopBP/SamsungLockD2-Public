@@ -65,6 +65,7 @@ class LockScreenActivity : Activity() {
         bannerKey = null
     }
     private lateinit var mediaTitle: TextView
+    private lateinit var mediaArt: ImageView
     private lateinit var mediaArtist: TextView
     private lateinit var playPause: TextView
     private lateinit var media: MediaControllerBridge
@@ -84,6 +85,7 @@ class LockScreenActivity : Activity() {
             mediaTitle.text = media.title().ifBlank { "Media" }
             mediaArtist.text = media.artist().ifBlank { "Play music to show it here" }
             playPause.text = if (media.isPlaying()) "Ⅱ" else "▶"
+            media.albumArt()?.let { mediaArt.setImageBitmap(it) } ?: mediaArt.setImageDrawable(null)
             handler.postDelayed(this, 1000)
         }
     }
@@ -283,13 +285,21 @@ class LockScreenActivity : Activity() {
             background = glassPanel(32f)
             elevation = dp(8).toFloat()
         }
-        mediaPanel.addView(label("♫", 25f, Color.WHITE).apply {
-            gravity = Gravity.CENTER
+        mediaArt = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            contentDescription = "Album artwork"
             background = GradientDrawable().apply {
-                cornerRadius = dp(17).toFloat()
+                cornerRadius = dp(18).toFloat()
                 setColor(0xff41475d.toInt())
             }
-        }, LinearLayout.LayoutParams(dp(62), dp(62)))
+            clipToOutline = true
+            outlineProvider = object : android.view.ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: android.graphics.Outline) {
+                    outline.setRoundRect(0, 0, view.width, view.height, dp(18).toFloat())
+                }
+            }
+        }
+        mediaPanel.addView(mediaArt, LinearLayout.LayoutParams(dp(62), dp(62)))
         val mediaDetails = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), 0, 0, 0)
