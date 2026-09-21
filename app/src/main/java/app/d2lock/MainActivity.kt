@@ -352,7 +352,7 @@ class MainActivity : Activity() {
             setPadding(dp(8), 0, dp(8), dp(12))
         })
         section(root, "FLOATING BAR")
-        val actions = listOf("None", "Camera", "Flashlight")
+        val actions = listOf("None", "Camera", "Flashlight", "Calculator", "Silent / Vibrate", "Do Not Disturb")
         for (side in listOf("left", "right")) {
             addChoice(root, "${side.replaceFirstChar { it.uppercase() }} action", actions,
                 actions.indexOf(Prefs.shortcut(this, side)).coerceAtLeast(0)) {
