@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.ColorDrawable
 import android.text.InputFilter
 import android.text.InputType
 import android.view.Gravity
@@ -90,11 +91,11 @@ object PinUi {
         dialog.setOnShowListener {
             dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             // One UI 9-style rounded D2 security sheet. Keep authentication behavior unchanged.
-            dialog.window?.setBackgroundDrawable(GradientDrawable().apply {
-                cornerRadius = dp(32).toFloat()
-                setColor(Appearance.surface(activity))
-                setStroke(dp(1), Appearance.secondary(activity))
-            })
+            dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            dialog.window?.decorView?.background = Appearance.glass(
+                activity, 32f, if (Appearance.dark(activity)) 88 else 94, true
+            )
+            dialog.window?.decorView?.setPadding(dp(4), dp(4), dp(4), dp(4))
             dialog.window?.decorView?.clipToOutline = true
             val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             val negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
