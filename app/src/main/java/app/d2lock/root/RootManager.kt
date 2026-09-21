@@ -20,4 +20,21 @@ object RootManager {
             process.exitValue() == 0 && !output.contains("Error", ignoreCase = true)
         }
     }.getOrDefault(false)
+    fun setAdbUsbEnabled(enabled: Boolean): Boolean = runRoot(
+        if (enabled)
+            "settings put global block_usb_lock 0; setprop persist.sys.usb.config adb; setprop sys.usb.config adb"
+        else
+            "settings put global block_usb_lock 1; setprop persist.sys.usb.config none; setprop sys.usb.config none"
+    )
+
+    fun adbUsbEnabled(): Boolean = runCatching {
+        val process = ProcessBuilder("su", "-c", "settings get global block_usb_lock").redirectErrorStream(true).start()
+        process.waitFor(2, TimeUnit.SECONDS) && process.inputStream.bufferedReader().use { it.readText().trim() } == "0"
+    }.getOrDefault(false)
+
+    private fun runRoot(command: String): Boolean = runCatching {
+        val process = ProcessBuilder("su", "-c", command).redirectErrorStream(true).start()
+        val finished = process.waitFor(4, TimeUnit.SECONDS)
+        if (!finished) { process.destroyForcibly(); false } else process.exitValue() == 0
+    }.getOrDefault(false)
 }
