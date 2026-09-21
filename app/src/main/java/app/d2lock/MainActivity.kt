@@ -283,6 +283,21 @@ class MainActivity : Activity() {
             isChecked = Prefs.celsius(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setCelsius(this@MainActivity, checked) }
         }, rowParams())
+        section(root, "LOCK SCREEN WIDGETS")
+        root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Weather"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.showWeatherWidget(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setShowWeatherWidget(this@MainActivity, checked) }
+        }, rowParams())
+        root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Battery"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.showBatteryWidget(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setShowBatteryWidget(this@MainActivity, checked) }
+        }, rowParams())
         root.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Show media player while D2 is locked"
