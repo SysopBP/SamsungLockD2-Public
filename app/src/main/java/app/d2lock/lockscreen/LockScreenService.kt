@@ -10,6 +10,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.IBinder
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import app.d2lock.MainActivity
 import app.d2lock.Prefs
 import app.d2lock.R
@@ -17,9 +20,31 @@ import app.d2lock.root.RootManager
 import app.d2lock.security.PinStore
 
 class LockScreenService : Service() {
+    private val watchdog = Handler(Looper.getMainLooper())
+    private var receiverRegistered = false
+    private var lastScreenEvent = 0L
+    private val watchdogTask = object : Runnable {
+        override fun run() {
+            if (Prefs.enabled(this@LockScreenService) && PinStore(this@LockScreenService).configured()) {
+                ensureScreenReceiver()
+            }
+            watchdog.postDelayed(this, WATCHDOG_MS)
+        }
+    }
+
+    private fun ensureScreenReceiver() {
+        if (receiverRegistered) return
+        runCatching {
+            ensureScreenReceiver()
+        watchdog.removeCallbacks(watchdogTask)
+        watchdog.postDelayed(watchdogTask, WATCHDOG_MS)
+            receiverRegistered = true
+        }
+    }
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == Intent.ACTION_SCREEN_ON && Prefs.enabled(context) && PinStore(context).configured()) {
+                lastScreenEvent = SystemClock.elapsedRealtime()
                 // Ringing/proximity wake must not put D2 in front of an active phone call.
                 if (app.d2lock.notifications.CallNotificationStore.items.isNotEmpty()) return
                 if (Prefs.rootMode(context) && RootManager.launchCompanion()) return
@@ -49,7 +74,9 @@ class LockScreenService : Service() {
     }
 
     override fun onDestroy() {
-        runCatching { unregisterReceiver(screenReceiver) }
+        watchdog.removeCallbacks(watchdogTask)
+        if (receiverRegistered) runCatching { unregisterReceiver(screenReceiver) }
+        receiverRegistered = false
         super.onDestroy()
     }
 
@@ -66,6 +93,7 @@ class LockScreenService : Service() {
     companion object {
         private const val CHANNEL = "lock_companion"
         private const val ID = 3701
+        private const val WATCHDOG_MS = 30_000L
         fun start(context: Context) = context.startForegroundService(Intent(context, LockScreenService::class.java))
         fun stop(context: Context) = context.stopService(Intent(context, LockScreenService::class.java))
     }
