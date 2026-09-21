@@ -89,7 +89,24 @@ object PinUi {
         dialog.setOnDismissListener { pin.text.clear(); old?.text?.clear(); confirm?.text?.clear() }
         dialog.setOnShowListener {
             dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            // One UI 9-style rounded D2 security sheet. Keep authentication behavior unchanged.
+            dialog.window?.setBackgroundDrawable(GradientDrawable().apply {
+                cornerRadius = dp(32).toFloat()
+                setColor(Appearance.surface(activity))
+                setStroke(dp(1), Appearance.secondary(activity))
+            })
+            dialog.window?.decorView?.clipToOutline = true
             val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            val negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+            listOf(button, negative).forEach { action ->
+                action.isAllCaps = false
+                action.setPadding(dp(18), 0, dp(18), 0)
+                action.background = GradientDrawable().apply {
+                    cornerRadius = dp(22).toFloat()
+                    setColor(Color.TRANSPARENT)
+                    setStroke(dp(1), Appearance.secondary(activity))
+                }
+            }
             button.filterTouchesWhenObscured = true
             button.setOnClickListener {
                 val entered = pin.text.toString().toCharArray()
