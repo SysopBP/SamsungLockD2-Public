@@ -21,6 +21,12 @@ object Prefs {
     fun setShowWeatherWidget(context: Context, value: Boolean) = prefs(context).edit().putBoolean("widget_weather", value).apply()
     fun showBatteryWidget(context: Context) = prefs(context).getBoolean("widget_battery", true)
     fun setShowBatteryWidget(context: Context, value: Boolean) = prefs(context).edit().putBoolean("widget_battery", value).apply()
+    fun detailedBattery(context: Context) = prefs(context).getBoolean("battery_details", true)
+    fun setDetailedBattery(context: Context, value: Boolean) = prefs(context).edit().putBoolean("battery_details", value).apply()
+    fun oledShift(context: Context) = prefs(context).getBoolean("oled_shift", true)
+    fun setOledShift(context: Context, value: Boolean) = prefs(context).edit().putBoolean("oled_shift", value).apply()
+    fun clockStyle(context: Context) = prefs(context).getInt("clock_style", 0).coerceIn(0, 2)
+    fun setClockStyle(context: Context, value: Int) = prefs(context).edit().putInt("clock_style", value.coerceIn(0, 2)).apply()
     fun setShowMedia(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_media", value).apply()
     // 0: none, 1: count, 2: app names, 3: public previews.
     fun notificationPrivacy(context: Context) = prefs(context).getInt("notification_privacy", 2)
