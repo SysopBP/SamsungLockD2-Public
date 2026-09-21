@@ -196,6 +196,32 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, dp(16))
         })
 
+        section(root, "RECOVERY CENTER")
+        addButton(root, "Run D2 health check") {
+            val rootOk = RootManager.isAvailable()
+            val usb = if (rootOk) RootManager.usbDiagnostics() else "Root unavailable"
+            AlertDialog.Builder(this)
+                .setTitle("D2 health check")
+                .setMessage("Root: " + if (rootOk) "OK" else "Unavailable" +
+                    "\nWake service: " + if (Prefs.enabled(this)) "Enabled" else "Disabled" +
+                    "\nRoot kiosk: " + if (Prefs.kiosk(this)) "Enabled" else "Disabled" +
+                    "\n\nUSB / ADB\n" + usb)
+                .setPositiveButton("Close", null)
+                .show()
+        }
+        addButton(root, "Reset USB / restart ADB") {
+            if (!Prefs.rootMode(this) || !RootManager.isAvailable()) {
+                Toast.makeText(this, "KernelSU root mode is required", Toast.LENGTH_LONG).show()
+            } else {
+                val ok = RootManager.resetAdbUsb()
+                Toast.makeText(this, if (ok) "USB / ADB recovery command completed" else "USB / ADB reset failed", Toast.LENGTH_LONG).show()
+            }
+        }
+        addButton(root, "Show USB diagnostics") {
+            val report = if (RootManager.isAvailable()) RootManager.usbDiagnostics() else "Root unavailable"
+            AlertDialog.Builder(this).setTitle("USB diagnostics").setMessage(report).setPositiveButton("Close", null).show()
+        }
+
         root.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Require PIN to leave D2 (root kiosk)"
