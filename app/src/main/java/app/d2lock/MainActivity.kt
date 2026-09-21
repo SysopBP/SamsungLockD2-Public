@@ -87,7 +87,7 @@ class MainActivity : Activity() {
             setTextColor(Appearance.text(this@MainActivity))
         })
         root.addView(TextView(this).apply {
-            text = "Independent 6-digit app PIN"
+            text = "D2 Security Session · Independent 6-digit app PIN"
             textSize = 15f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(0, dp(4), 0, dp(24))
