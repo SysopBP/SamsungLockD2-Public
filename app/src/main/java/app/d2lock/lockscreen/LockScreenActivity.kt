@@ -37,6 +37,7 @@ import android.widget.Toast
 import app.d2lock.Prefs
 import app.d2lock.MainActivity
 import app.d2lock.root.RootKiosk
+import app.d2lock.root.RootManager
 import app.d2lock.security.PinStore
 import app.d2lock.security.PinUi
 import app.d2lock.widget.DoubleTap
@@ -327,6 +328,15 @@ class LockScreenActivity : Activity() {
                 setOnTouchListener(unlockSwipeListener())
             }, LinearLayout.LayoutParams(0, dp(58), 1f))
             addView(shortcutButton("right"), LinearLayout.LayoutParams(dp(58), dp(58)))
+            setOnLongClickListener {
+                if (preview) showRecoveryDrawer() else if (pinDialog?.isShowing != true) {
+                    pinDialog = PinUi.show(this@LockScreenActivity, success = {
+                        pinDialog = null
+                        showRecoveryDrawer()
+                    }, cancel = { pinDialog = null })
+                }
+                true
+            }
         }
         val barParams = FrameLayout.LayoutParams(-1, dp(72), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
         frame.addView(floatingBar, barParams)
@@ -358,6 +368,58 @@ class LockScreenActivity : Activity() {
             setMargins(dp(18), dp(36), dp(18), 0)
         })
         return frame
+    }
+
+    private fun showRecoveryDrawer() {
+        if (!RootManager.isAvailable()) {
+            Toast.makeText(this, "Recovery Drawer requires KernelSU/root.", Toast.LENGTH_LONG).show()
+            return
+        }
+        val body = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(8), dp(22), dp(14))
+            addView(label("ROOT • KIOSK • ADB", 13f, Appearance.secondary(this@LockScreenActivity, true)).apply {
+                gravity = Gravity.CENTER
+                setPadding(0, 0, 0, dp(10))
+            })
+            addView(label(RootManager.usbDiagnostics(), 13f, Appearance.text(this@LockScreenActivity, true)).apply {
+                setPadding(dp(12), dp(10), dp(12), dp(10))
+                background = glassPanel(20f)
+            }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+        }
+        fun addAction(title: String, action: () -> Boolean) {
+            body.addView(actionButton(title) {
+                if (action()) Toast.makeText(this, title + " requested", Toast.LENGTH_SHORT).show()
+                else Toast.makeText(this, title + " failed", Toast.LENGTH_LONG).show()
+            })
+        }
+        val adb = RootManager.adbUsbEnabled()
+        addAction(if (adb) "Block ADB / USB" else "Allow ADB / USB") { RootManager.setAdbUsbEnabled(!adb) }
+        addAction("Reset USB / restart ADB") { RootManager.resetAdbUsb() }
+        addAction("Restart System UI") { RootManager.restartSystemUi() }
+        body.addView(actionButton("Soft reboot Android") {
+            AlertDialog.Builder(this)
+                .setTitle("Soft reboot Android?")
+                .setMessage("Android userspace will restart and unsaved work can be lost.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Soft reboot") { _, _ -> RootManager.softReboot() }
+                .show()
+        })
+        lateinit var dialog: AlertDialog
+        dialog = AlertDialog.Builder(this)
+            .setTitle("D2 Recovery Drawer")
+            .setMessage("Root-only recovery controls. Long-press the bottom D2 bar to return here.")
+            .setView(body)
+            .setNegativeButton("Close", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.window?.setBackgroundDrawable(GradientDrawable().apply {
+                cornerRadius = dp(32).toFloat()
+                setColor(Appearance.surface(this@LockScreenActivity))
+                setStroke(dp(1), Appearance.secondary(this@LockScreenActivity))
+            })
+        }
+        dialog.show()
     }
 
     private fun unlockSwipeListener() = object : View.OnTouchListener {
