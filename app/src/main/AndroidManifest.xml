@@ -23,6 +23,13 @@
         android:enableOnBackInvokedCallback="true"
         android:label="Samsung Lock D2"
         android:theme="@style/Theme.SamsungLock">
+        <!-- Shizuku server delivers its Binder through this exported provider. Keep this explicit: on Android 17/Samsung builds relying only on the dependency manifest can leave Shizuku.pingBinder() permanently false. -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
         <provider android:name=".bridge.IslandProvider" android:authorities="app.d2lock.island" android:exported="true" android:permission="app.d2lock.permission.ISLAND" />
         <activity android:name=".bridge.IslandLockActivity" android:exported="false" android:excludeFromRecents="true" />
         <activity
