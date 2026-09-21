@@ -1,13 +1,26 @@
 package app.d2lock
 
 import android.content.Context
+import android.os.UserManager
 
 object Prefs {
     private const val FILE = "lock_preferences"
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+    private fun bootPrefs(context: Context) =
+        context.createDeviceProtectedStorageContext().getSharedPreferences("d2_boot", Context.MODE_PRIVATE)
 
-    fun enabled(context: Context) = prefs(context).getBoolean("enabled", false)
-    fun setEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean("enabled", value).apply()
+    fun enabled(context: Context): Boolean {
+        val unlocked = context.getSystemService(UserManager::class.java)?.isUserUnlocked != false
+        return if (unlocked) prefs(context).getBoolean("enabled", false)
+        else bootPrefs(context).getBoolean("enabled", false)
+    }
+    fun setEnabled(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean("enabled", value).apply()
+        bootPrefs(context).edit().putBoolean("enabled", value).apply()
+    }
+    fun setBootPinConfigured(context: Context, value: Boolean) =
+        bootPrefs(context).edit().putBoolean("pin_configured", value).apply()
+    fun bootPinConfigured(context: Context) = bootPrefs(context).getBoolean("pin_configured", false)
     fun shizukuMode(context: Context) = prefs(context).getBoolean("shizuku_mode", false)
     fun setShizukuMode(context: Context, value: Boolean) = prefs(context).edit().putBoolean("shizuku_mode", value).apply()
     fun rootMode(context: Context) = prefs(context).getBoolean("root_mode", false)
