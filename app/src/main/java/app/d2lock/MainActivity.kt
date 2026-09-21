@@ -38,8 +38,15 @@ class MainActivity : Activity() {
     private var authorized = false
     private var pinDialog: AlertDialog? = null
     private val shizukuRequestCode = 910
-    private val shizukuBinderReceived = Shizuku.OnBinderReceivedListener { refreshShizukuUi() }
-    private val shizukuBinderDead = Shizuku.OnBinderDeadListener { refreshShizukuUi() }
+    @Volatile private var shizukuBinderAlive = false
+    private val shizukuBinderReceived = Shizuku.OnBinderReceivedListener {
+        shizukuBinderAlive = true
+        refreshShizukuUi()
+    }
+    private val shizukuBinderDead = Shizuku.OnBinderDeadListener {
+        shizukuBinderAlive = false
+        refreshShizukuUi()
+    }
     private val shizukuPermission = Shizuku.OnRequestPermissionResultListener { requestCode, _ ->
         if (requestCode == shizukuRequestCode) refreshShizukuUi()
     }
@@ -329,7 +336,11 @@ class MainActivity : Activity() {
     private fun pillBackground() = Appearance.glass(this, 22f, if (Appearance.dark(this)) 38 else 62, true)
 
     private fun shizukuCard(): ViewGroup {
-        val running = runCatching { Shizuku.getBinder() != null || Shizuku.pingBinder() }.getOrDefault(false)
+        // The sticky binder callback is authoritative. On some Samsung builds pingBinder() can
+        // briefly return false while Shizuku has already delivered a live binder to the app.
+        val binder = runCatching { Shizuku.getBinder() }.getOrNull()
+        val running = shizukuBinderAlive || binder?.isBinderAlive == true ||
+            runCatching { Shizuku.pingBinder() }.getOrDefault(false)
         val granted = running && runCatching {
             Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
         }.getOrDefault(false)
@@ -363,7 +374,9 @@ class MainActivity : Activity() {
                 setTextColor(Appearance.text(this@MainActivity))
                 background = Appearance.glass(this@MainActivity, 22f, 30, true)
                 setOnClickListener {
-                    if (runCatching { Shizuku.getBinder() == null && !Shizuku.pingBinder() }.getOrDefault(true)) {
+                    val binderReady = shizukuBinderAlive ||
+                        runCatching { Shizuku.getBinder()?.isBinderAlive == true || Shizuku.pingBinder() }.getOrDefault(false)
+                    if (!binderReady) {
                         Toast.makeText(this@MainActivity, "Start Shizuku first, then return to D2.", Toast.LENGTH_LONG).show()
                     } else if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
                         Shizuku.requestPermission(shizukuRequestCode)
