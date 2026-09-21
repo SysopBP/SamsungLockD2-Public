@@ -56,7 +56,6 @@ class LockScreenActivity : Activity() {
     private lateinit var clock: TextView
     private lateinit var date: TextView
     private lateinit var battery: TextView
-    private lateinit var chargingStatus: TextView
     private lateinit var weather: TextView
     private lateinit var notifications: LinearLayout
     private lateinit var liveBanner: TextView
@@ -93,11 +92,7 @@ class LockScreenActivity : Activity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
             val charging = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) in listOf(BatteryManager.BATTERY_STATUS_CHARGING, BatteryManager.BATTERY_STATUS_FULL)
-            battery.text = "$level%"
-            if (::chargingStatus.isInitialized) {
-                chargingStatus.text = if (charging) "Charging • $level%" else "Battery • $level%"
-                chargingStatus.visibility = if (charging) View.VISIBLE else View.GONE
-            }
+            battery.text = if (charging) "Charging • $level%" else "$level%"
         }
     }
 
@@ -255,15 +250,6 @@ class LockScreenActivity : Activity() {
             content.addView(actionButton("Close preview") { finish() })
         }
         content.addView(topInfo, LinearLayout.LayoutParams(-1, dp(54)))
-        chargingStatus = label("", 14f, Color.WHITE).apply {
-            gravity = Gravity.CENTER
-            visibility = View.GONE
-            setPadding(dp(16), dp(8), dp(16), dp(8))
-            background = glassPanel(22f)
-        }
-        content.addView(chargingStatus, LinearLayout.LayoutParams(-1, dp(42)).apply {
-            leftMargin = dp(34); rightMargin = dp(34); bottomMargin = dp(6)
-        })
         content.addView(label("Weather: Open-Meteo.com · CC BY 4.0", 12f, Appearance.text(this, true)).apply {
             gravity = Gravity.CENTER
             paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG
