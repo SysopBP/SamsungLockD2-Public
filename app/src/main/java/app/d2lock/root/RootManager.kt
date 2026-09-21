@@ -20,12 +20,70 @@ object RootManager {
             process.exitValue() == 0 && !output.contains("Error", ignoreCase = true)
         }
     }.getOrDefault(false)
-    fun setAdbUsbEnabled(enabled: Boolean): Boolean = runRoot(
-        if (enabled)
-            "settings put global block_usb_lock 0; cfg=$(getprop persist.sys.usb.config); [ -z \"${'\" ] && cfg=$(getprop sys.usb.config); cfg=$(echo \"$cfg\" | sed 's/^none$//; s/,*adb,*//g; s/^,//; s/,$//'); [ -n \"$cfg\" ] && cfg=\"${'\" || cfg=adb; setprop persist.sys.usb.config \"$cfg\"; setprop sys.usb.config \"$cfg\""
-        else
-            "settings put global block_usb_lock 1; cfg=$(getprop persist.sys.usb.config); [ -z \"$cfg\" ] && cfg=$(getprop sys.usb.config); cfg=$(echo \"$cfg\" | sed 's/,*adb,*//g; s/^,//; s/,$//'); [ -n \"$cfg\" ] || cfg=none; setprop persist.sys.usb.config \"$cfg\"; setprop sys.usb.config \"$cfg\""
-    )
+    fun setAdbUsbEnabled(enabled: Boolean): Boolean {
+        val command = if (enabled) {
+            """settings put global block_usb_lock 0; cfg=$(getprop persist.sys.usb.config); [ -z "${'" ] && cfg=$(getprop sys.usb.config); cfg=$(echo "$cfg" | sed 's/^none$//; s/,*adb,*//g; s/^,//; s/,$//'); [ -n "$cfg" ] && cfg="$cfg,adb" || cfg=adb; setprop persist.sys.usb.config "$cfg"; setprop sys.usb.config "$cfg""""
+        } else {
+            """settings put global block_usb_lock 1; cfg=$(getprop persist.sys.usb.config); [ -z "$cfg" ] && cfg=$(getprop sys.usb.config); cfg=$(echo "$cfg" | sed 's/,*adb,*//g; s/^,//; s/,$//'); [ -n "$cfg" ] || cfg=none; setprop persist.sys.usb.config "$cfg"; setprop sys.usb.config "$cfg""""
+        }
+        return runRoot(command)
+    }
+}cfg" ] && cfg=$(getprop sys.usb.config); cfg=$(echo "${'" | sed 's/^none$//; s/,*adb,*//g; s/^,//; s/,$//'); [ -n "$cfg" ] && cfg="$cfg,adb" || cfg=adb; setprop persist.sys.usb.config "$cfg"; setprop sys.usb.config "$cfg""""
+        } else {
+            """settings put global block_usb_lock 1; cfg=$(getprop persist.sys.usb.config); [ -z "$cfg" ] && cfg=$(getprop sys.usb.config); cfg=$(echo "$cfg" | sed 's/,*adb,*//g; s/^,//; s/,$//'); [ -n "$cfg" ] || cfg=none; setprop persist.sys.usb.config "$cfg"; setprop sys.usb.config "$cfg""""
+        }
+        return runRoot(command)
+    }
+}cfg" | sed 's/^none$//; s/,*adb,*//g; s/^,//; s/,$//'); [ -n "${'" ] && cfg="$cfg,adb" || cfg=adb; setprop persist.sys.usb.config "$cfg"; setprop sys.usb.config "$cfg""""
+        } else {
+            """settings put global block_usb_lock 1; cfg=$(getprop persist.sys.usb.config); [ -z "$cfg" ] && cfg=$(getprop sys.usb.config); cfg=$(echo "$cfg" | sed 's/,*adb,*//g; s/^,//; s/,$//'); [ -n "$cfg" ] || cfg=none; setprop persist.sys.usb.config "$cfg"; setprop sys.usb.config "$cfg""""
+        }
+        return runRoot(command)
+    }
+}cfg" ] && cfg="${',adb" || cfg=adb; setprop persist.sys.usb.config "$cfg"; setprop sys.usb.config "$cfg""""
+        } else {
+            """settings put global block_usb_lock 1; cfg=$(getprop persist.sys.usb.config); [ -z "$cfg" ] && cfg=$(getprop sys.usb.config); cfg=$(echo "$cfg" | sed 's/,*adb,*//g; s/^,//; s/,$//'); [ -n "$cfg" ] || cfg=none; setprop persist.sys.usb.config "$cfg"; setprop sys.usb.config "$cfg""""
+        }
+        return runRoot(command)
+    }
+}cfg,adb" || cfg=adb; setprop persist.sys.usb.config "${'"; setprop sys.usb.config "$cfg""""
+        } else {
+            """settings put global block_usb_lock 1; cfg=$(getprop persist.sys.usb.config); [ -z "$cfg" ] && cfg=$(getprop sys.usb.config); cfg=$(echo "$cfg" | sed 's/,*adb,*//g; s/^,//; s/,$//'); [ -n "$cfg" ] || cfg=none; setprop persist.sys.usb.config "$cfg"; setprop sys.usb.config "$cfg""""
+        }
+        return runRoot(command)
+    }
+}cfg"; setprop sys.usb.config "${'""""
+        } else {
+            """settings put global block_usb_lock 1; cfg=$(getprop persist.sys.usb.config); [ -z "$cfg" ] && cfg=$(getprop sys.usb.config); cfg=$(echo "$cfg" | sed 's/,*adb,*//g; s/^,//; s/,$//'); [ -n "$cfg" ] || cfg=none; setprop persist.sys.usb.config "$cfg"; setprop sys.usb.config "$cfg""""
+        }
+        return runRoot(command)
+    }
+}cfg""""
+        } else {
+            """settings put global block_usb_lock 1; cfg=$(getprop persist.sys.usb.config); [ -z "${'" ] && cfg=$(getprop sys.usb.config); cfg=$(echo "$cfg" | sed 's/,*adb,*//g; s/^,//; s/,$//'); [ -n "$cfg" ] || cfg=none; setprop persist.sys.usb.config "$cfg"; setprop sys.usb.config "$cfg""""
+        }
+        return runRoot(command)
+    }
+}cfg" ] && cfg=$(getprop sys.usb.config); cfg=$(echo "${'" | sed 's/,*adb,*//g; s/^,//; s/,$//'); [ -n "$cfg" ] || cfg=none; setprop persist.sys.usb.config "$cfg"; setprop sys.usb.config "$cfg""""
+        }
+        return runRoot(command)
+    }
+}cfg" | sed 's/,*adb,*//g; s/^,//; s/,$//'); [ -n "${'" ] || cfg=none; setprop persist.sys.usb.config "$cfg"; setprop sys.usb.config "$cfg""""
+        }
+        return runRoot(command)
+    }
+}cfg" ] || cfg=none; setprop persist.sys.usb.config "${'"; setprop sys.usb.config "$cfg""""
+        }
+        return runRoot(command)
+    }
+}cfg"; setprop sys.usb.config "${'""""
+        }
+        return runRoot(command)
+    }
+}cfg""""
+        }
+        return runRoot(command)
+    }
 
     fun adbUsbEnabled(): Boolean = runCatching {
         val process = ProcessBuilder("su", "-c", "settings get global block_usb_lock").redirectErrorStream(true).start()
