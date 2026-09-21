@@ -34,6 +34,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.SeekBar
 import android.widget.Toast
 import app.d2lock.Prefs
 import app.d2lock.MainActivity
@@ -68,6 +69,8 @@ class LockScreenActivity : Activity() {
     private lateinit var mediaArt: ImageView
     private lateinit var mediaArtist: TextView
     private lateinit var playPause: TextView
+    private lateinit var mediaProgress: SeekBar
+    private lateinit var mediaTime: TextView
     private lateinit var media: MediaControllerBridge
     private var torchOn = false
     private var preview = false
@@ -86,6 +89,13 @@ class LockScreenActivity : Activity() {
             mediaArtist.text = media.artist().ifBlank { "Play music to show it here" }
             playPause.text = if (media.isPlaying()) "Ⅱ" else "▶"
             media.albumArt()?.let { mediaArt.setImageBitmap(it) } ?: mediaArt.setImageDrawable(null)
+            val duration = media.durationMs()
+            val position = media.positionMs().coerceAtMost(duration.coerceAtLeast(0L))
+            if (::mediaProgress.isInitialized && !mediaProgress.isPressed) {
+                mediaProgress.max = duration.coerceAtMost(Int.MAX_VALUE.toLong()).toInt().coerceAtLeast(1)
+                mediaProgress.progress = position.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            }
+            if (::mediaTime.isInitialized) mediaTime.text = mediaTime(position, duration)
             handler.postDelayed(this, 1000)
         }
     }
@@ -333,6 +343,20 @@ class LockScreenActivity : Activity() {
             }
             addView(mediaTitle)
             addView(mediaArtist)
+            mediaProgress = SeekBar(this@LockScreenActivity).apply {
+                maxHeight = dp(3)
+                setPadding(0, dp(2), 0, 0)
+                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                        if (fromUser && ::mediaTime.isInitialized) mediaTime.text = mediaTime(progress.toLong(), media.durationMs())
+                    }
+                    override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                    override fun onStopTrackingTouch(seekBar: SeekBar?) { seekBar?.let { media.seekTo(it.progress.toLong()) } }
+                })
+            }
+            addView(mediaProgress, LinearLayout.LayoutParams(-1, dp(24)))
+            mediaTime = label("0:00", 10f, 0xffbfc3cf.toInt()).apply { gravity = Gravity.END }
+            addView(mediaTime)
         }
         mediaPanel.addView(mediaDetails, LinearLayout.LayoutParams(0, -2, 1f))
         mediaPanel.contentDescription = "Now Playing media controls"
@@ -345,7 +369,7 @@ class LockScreenActivity : Activity() {
         }
         mediaPanel.addView(controls)
         if (Prefs.showMedia(this)) content.addView(mediaPanel,
-            LinearLayout.LayoutParams(-1, dp(92)).apply { bottomMargin = dp(12) })
+            LinearLayout.LayoutParams(-1, dp(112)).apply { bottomMargin = dp(12) })
         frame.addView(content, FrameLayout.LayoutParams(-1, -1))
         val floatingBar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
@@ -403,6 +427,14 @@ class LockScreenActivity : Activity() {
             setMargins(dp(18), dp(36), dp(18), 0)
         })
         return frame
+    }
+
+    private fun mediaTime(position: Long, duration: Long): String {
+        fun format(ms: Long): String {
+            val total = (ms.coerceAtLeast(0L) / 1000)
+            return "${total / 60}:${(total % 60).toString().padStart(2, '0')}"
+        }
+        return if (duration > 0) "${format(position)} / ${format(duration)}" else format(position)
     }
 
     private fun showRecoveryDrawer() {
