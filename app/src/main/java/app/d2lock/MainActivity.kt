@@ -228,6 +228,26 @@ class MainActivity : Activity() {
             val report = if (RootManager.isAvailable()) RootManager.usbDiagnostics() else "Root unavailable"
             AlertDialog.Builder(this).setTitle("USB diagnostics").setMessage(report).setPositiveButton("Close", null).show()
         }
+        addButton(root, "Restart System UI") {
+            if (!Prefs.rootMode(this) || !RootManager.isAvailable()) {
+                Toast.makeText(this, "KernelSU root mode is required", Toast.LENGTH_LONG).show()
+            } else AlertDialog.Builder(this)
+                .setTitle("Restart System UI?")
+                .setMessage("System UI will disappear briefly and Android should restart it automatically. D2 settings remain unchanged.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Restart") { _, _ -> RootManager.restartSystemUi() }
+                .show()
+        }
+        addButton(root, "Soft reboot Android") {
+            if (!Prefs.rootMode(this) || !RootManager.isAvailable()) {
+                Toast.makeText(this, "KernelSU root mode is required", Toast.LENGTH_LONG).show()
+            } else AlertDialog.Builder(this)
+                .setTitle("Soft reboot Android?")
+                .setMessage("This restarts Android userspace without a full hardware reboot. Unsaved work can be lost. Use a normal reboot if Android does not recover cleanly.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Soft reboot") { _, _ -> RootManager.softReboot() }
+                .show()
+        }
 
         root.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
