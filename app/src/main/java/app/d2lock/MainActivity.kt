@@ -29,6 +29,7 @@ import app.d2lock.lockscreen.LockScreenService
 import app.d2lock.root.RootManager
 import app.d2lock.security.PinStore
 import app.d2lock.security.PinUi
+import app.d2lock.shizuku.ShizukuBridge
 import app.d2lock.widget.DoubleTap
 import app.d2lock.widget.D2Widget
 
@@ -87,7 +88,7 @@ class MainActivity : Activity() {
             setTextColor(Appearance.text(this@MainActivity))
         })
         root.addView(TextView(this).apply {
-            text = "Independent 6-digit app PIN"
+            text = "D2 Security Session · Independent 6-digit app PIN"
             textSize = 15f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(0, dp(4), 0, dp(24))
@@ -155,6 +156,23 @@ class MainActivity : Activity() {
             }
         }
         root.addView(enabled, rowParams())
+
+        section(root, "SHIZUKU")
+        root.addView(TextView(this).apply {
+            text = ShizukuBridge.status()
+            textSize = 14f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(6), 0, dp(6), dp(8))
+        })
+        addButton(root, if (ShizukuBridge.isAuthorized()) "Shizuku connected" else "Connect Shizuku") {
+            when {
+                !ShizukuBridge.isRunning() ->
+                    Toast.makeText(this, "Start Shizuku first, then return to D2.", Toast.LENGTH_LONG).show()
+                ShizukuBridge.isAuthorized() ->
+                    Toast.makeText(this, "Shizuku is running and D2 is authorized.", Toast.LENGTH_SHORT).show()
+                else -> ShizukuBridge.requestPermission()
+            }
+        }
 
         val rootMode = Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
@@ -337,6 +355,13 @@ class MainActivity : Activity() {
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) missing += Manifest.permission.CAMERA
         if (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) missing += Manifest.permission.ACCESS_COARSE_LOCATION
         if (missing.isNotEmpty()) requestPermissions(missing.toTypedArray(), 81)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == ShizukuBridge.REQUEST_CODE && authorized) {
+            setContentView(buildSettings())
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

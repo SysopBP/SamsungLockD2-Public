@@ -10,6 +10,7 @@ import android.text.InputType
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
+import android.graphics.drawable.InsetDrawable
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -89,7 +90,22 @@ object PinUi {
         dialog.setOnDismissListener { pin.text.clear(); old?.text?.clear(); confirm?.text?.clear() }
         dialog.setOnShowListener {
             dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            dialog.window?.setBackgroundDrawable(InsetDrawable(GradientDrawable().apply {
+                cornerRadius = dp(32).toFloat()
+                setColor(Appearance.background(activity))
+                setStroke(dp(1), Appearance.blend(Appearance.secondary(activity), Appearance.background(activity), .55f))
+            }, dp(12)))
             val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            val negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+            listOf(button, negative).forEach { action ->
+                action.isAllCaps = false
+                action.setTextColor(Appearance.text(activity))
+                action.background = GradientDrawable().apply {
+                    cornerRadius = dp(18).toFloat()
+                    setColor(Appearance.surface(activity))
+                }
+                action.setPadding(dp(18), 0, dp(18), 0)
+            }
             button.filterTouchesWhenObscured = true
             button.setOnClickListener {
                 val entered = pin.text.toString().toCharArray()

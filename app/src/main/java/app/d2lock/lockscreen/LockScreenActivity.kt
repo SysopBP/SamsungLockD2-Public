@@ -90,7 +90,7 @@ class LockScreenActivity : Activity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
             val charging = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) in listOf(BatteryManager.BATTERY_STATUS_CHARGING, BatteryManager.BATTERY_STATUS_FULL)
-            battery.text = if (charging) "⚡ $level%" else "$level%"
+            battery.text = if (charging) "⚡ ▰  $level%" else "▰  $level%"
         }
     }
 
@@ -223,9 +223,15 @@ class LockScreenActivity : Activity() {
         clock = label("12:00", 82f, Appearance.text(this, true)).apply { letterSpacing = -.05f; gravity = Gravity.CENTER }
         date = label("", 18f, Appearance.secondary(this, true)).apply { gravity = Gravity.CENTER }
         val topInfo = LinearLayout(this).apply {
-            gravity = Gravity.CENTER
-            weather = label("Loading weather…", 15f, Appearance.text(this@LockScreenActivity, true))
-            battery = label("—%", 15f, Appearance.text(this@LockScreenActivity, true))
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(20), 0, dp(20), 0)
+            background = glassPanel(30f)
+            weather = label("Loading weather…", 15f, Appearance.text(this@LockScreenActivity, true)).apply {
+                gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            }
+            battery = label("▰  —%", 15f, Appearance.text(this@LockScreenActivity, true)).apply {
+                gravity = Gravity.CENTER_VERTICAL or Gravity.END
+            }
             addView(weather, LinearLayout.LayoutParams(0, dp(42), 1f))
             addView(battery, LinearLayout.LayoutParams(0, dp(42), 1f))
         }
