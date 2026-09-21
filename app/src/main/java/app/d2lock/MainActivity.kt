@@ -58,6 +58,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        if (authorized) refreshShizukuUi()
         if (!authorized && pinDialog?.isShowing != true) {
             if (PinStore(this).configured()) {
                 pinDialog = PinUi.show(this, success = {
@@ -328,7 +329,7 @@ class MainActivity : Activity() {
     private fun pillBackground() = Appearance.glass(this, 22f, if (Appearance.dark(this)) 38 else 62, true)
 
     private fun shizukuCard(): ViewGroup {
-        val running = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+        val running = runCatching { Shizuku.getBinder() != null || Shizuku.pingBinder() }.getOrDefault(false)
         val granted = running && runCatching {
             Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
         }.getOrDefault(false)
@@ -357,12 +358,12 @@ class MainActivity : Activity() {
                 setPadding(0, dp(3), 0, dp(8))
             })
             addView(Button(this@MainActivity).apply {
-                text = when { granted -> "Revoke / Reconnect Shizuku   ›"; running -> "Authorize Shizuku   ›"; else -> "Connect Shizuku   ›" }
+                text = when { granted -> "Reconnect Shizuku   ›"; running -> "Authorize Shizuku   ›"; else -> "Connect Shizuku   ›" }
                 isAllCaps = false
                 setTextColor(Appearance.text(this@MainActivity))
                 background = Appearance.glass(this@MainActivity, 22f, 30, true)
                 setOnClickListener {
-                    if (!Shizuku.pingBinder()) {
+                    if (runCatching { Shizuku.getBinder() == null && !Shizuku.pingBinder() }.getOrDefault(true)) {
                         Toast.makeText(this@MainActivity, "Start Shizuku first, then return to D2.", Toast.LENGTH_LONG).show()
                     } else if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
                         Shizuku.requestPermission(shizukuRequestCode)
