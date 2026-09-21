@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import android.os.UserManager
 import app.d2lock.Prefs
 import app.d2lock.security.PinStore
 
@@ -11,8 +12,11 @@ import app.d2lock.security.PinStore
 class CompanionStartupReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED &&
+            intent.action != Intent.ACTION_LOCKED_BOOT_COMPLETED &&
             intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
-        if (!Prefs.enabled(context) || !PinStore(context).configured()) return
+        val unlocked = context.getSystemService(UserManager::class.java)?.isUserUnlocked != false
+        val pinReady = if (unlocked) PinStore(context).configured() else Prefs.bootPinConfigured(context)
+        if (!Prefs.enabled(context) || !pinReady) return
         try {
             LockScreenService.start(context)
         } catch (error: RuntimeException) {

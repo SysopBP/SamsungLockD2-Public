@@ -40,6 +40,12 @@ class RootKioskTest {
         val ok = condition()
         assertTrue("$message (${RootKiosk.diagnostic}) ${if (!ok) TestDevice.focusDiagnostic() else ""}", ok)
     }
+    private fun awaitCleanKioskState() {
+        waitFor("Previous kiosk session must be fully released") {
+            manager.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE
+        }
+        SystemClock.sleep(1000)
+    }
     private fun connect(dropHeartbeats: AtomicBoolean = AtomicBoolean(false)): RootKiosk.Channel {
         // Emulator-only root, reached through the test harness's shell identity.
         val phonePackages = app.d2lock.root.KioskCallApps.resolve(context).joinToString(" ")
@@ -158,6 +164,7 @@ class RootKioskTest {
         } finally { cleanup(scenario) }
     }
     @Test fun missingUiHeartbeatsTriggersIndependentRecovery() = fixture {
+        awaitCleanKioskState()
         val drop = AtomicBoolean(false)
         RootKiosk.testConnect = { connect(drop) }
         val scenario = launch()

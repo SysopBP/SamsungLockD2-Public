@@ -18,6 +18,7 @@
         <intent><action android:name="android.intent.action.DIAL" /><data android:scheme="tel" /></intent>
     </queries>
     <application
+        android:directBootAware="true"
         android:allowBackup="false"
         android:enableOnBackInvokedCallback="true"
         android:label="Samsung Lock D2"
@@ -50,9 +51,10 @@
             android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-enabled companion lock-screen experience" />
         </service>
-        <receiver android:name=".lockscreen.CompanionStartupReceiver" android:exported="false">
+        <receiver android:name=".lockscreen.CompanionStartupReceiver" android:exported="false" android:directBootAware="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>

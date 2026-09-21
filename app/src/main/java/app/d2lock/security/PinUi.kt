@@ -32,7 +32,7 @@ object PinUi {
 
         val form = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(8), dp(24), dp(8))
+            setPadding(dp(24), dp(12), dp(24), dp(14))
         }
         form.addView(TextView(activity).apply {
             id = app.d2lock.R.id.d2_pin_prompt
@@ -58,7 +58,7 @@ object PinUi {
             filterTouchesWhenObscured = true
             setPadding(dp(18), 0, dp(18), 0)
             background = GradientDrawable().apply {
-                cornerRadius = dp(20).toFloat()
+                cornerRadius = dp(24).toFloat()
                 setColor(Appearance.surface(activity))
                 setStroke(dp(1), Appearance.secondary(activity))
             }
@@ -79,7 +79,7 @@ object PinUi {
 
         val dialog = AlertDialog.Builder(activity)
             .setTitle(if (setup) "Create D2 PIN" else if (change) "Change D2 PIN" else "Unlock D2")
-            .setMessage("This PIN belongs only to D2. It does not set or change your Samsung screen lock.")
+            .setMessage("D2 PIN only • Samsung screen lock is unchanged.")
             .setView(form)
             .setPositiveButton(if (setup || change) "Save PIN" else "Unlock", null)
             .setNegativeButton("Cancel") { _, _ -> cancel() }
@@ -89,6 +89,11 @@ object PinUi {
         dialog.setOnDismissListener { pin.text.clear(); old?.text?.clear(); confirm?.text?.clear() }
         dialog.setOnShowListener {
             dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            dialog.window?.setBackgroundDrawable(GradientDrawable().apply {
+                cornerRadius = dp(32).toFloat()
+                setColor(Appearance.surface(activity))
+                setStroke(dp(1), Appearance.secondary(activity))
+            })
             val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             button.filterTouchesWhenObscured = true
             button.setOnClickListener {

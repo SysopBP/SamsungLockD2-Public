@@ -4,6 +4,8 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.app.Notification
 import android.app.NotificationManager
+import android.app.AlarmManager
+import android.media.AudioManager
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.content.BroadcastReceiver
@@ -25,6 +27,7 @@ import android.provider.MediaStore
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.MotionEvent
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.widget.Button
@@ -33,10 +36,12 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.SeekBar
 import android.widget.Toast
 import app.d2lock.Prefs
 import app.d2lock.MainActivity
 import app.d2lock.root.RootKiosk
+import app.d2lock.root.RootManager
 import app.d2lock.security.PinStore
 import app.d2lock.security.PinUi
 import app.d2lock.widget.DoubleTap
@@ -55,6 +60,7 @@ class LockScreenActivity : Activity() {
     private lateinit var date: TextView
     private lateinit var battery: TextView
     private lateinit var weather: TextView
+    private lateinit var nextAlarm: TextView
     private lateinit var notifications: LinearLayout
     private lateinit var liveBanner: TextView
     private var bannerKey: String? = null
@@ -63,8 +69,11 @@ class LockScreenActivity : Activity() {
         bannerKey = null
     }
     private lateinit var mediaTitle: TextView
+    private lateinit var mediaArt: ImageView
     private lateinit var mediaArtist: TextView
     private lateinit var playPause: TextView
+    private lateinit var mediaProgress: SeekBar
+    private lateinit var mediaTime: TextView
     private lateinit var media: MediaControllerBridge
     private var torchOn = false
     private var preview = false
@@ -77,11 +86,27 @@ class LockScreenActivity : Activity() {
 
     private val ticker = object : Runnable {
         override fun run() {
-            clock.text = SimpleDateFormat("h:mm", Locale.getDefault()).format(Date())
+            clock.text = SimpleDateFormat(if (Prefs.clockStyle(this@LockScreenActivity) == 2) "HH:mm" else "h:mm", Locale.getDefault()).format(Date())
+            if (Prefs.oledShift(this@LockScreenActivity)) {
+                val slot = (System.currentTimeMillis() / 60000L % 5L).toInt()
+                clock.translationX = dp(slot - 2).toFloat()
+                clock.translationY = dp((slot % 3) - 1).toFloat()
+                date.translationX = clock.translationX
+            } else {
+                clock.translationX = 0f; clock.translationY = 0f; date.translationX = 0f
+            }
             date.text = SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
             mediaTitle.text = media.title().ifBlank { "Media" }
             mediaArtist.text = media.artist().ifBlank { "Play music to show it here" }
             playPause.text = if (media.isPlaying()) "Ⅱ" else "▶"
+            media.albumArt()?.let { mediaArt.setImageBitmap(it) } ?: mediaArt.setImageDrawable(null)
+            val duration = media.durationMs()
+            val position = media.positionMs().coerceAtMost(duration.coerceAtLeast(0L))
+            if (::mediaProgress.isInitialized && !mediaProgress.isPressed) {
+                mediaProgress.max = duration.coerceAtMost(Int.MAX_VALUE.toLong()).toInt().coerceAtLeast(1)
+                mediaProgress.progress = position.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            }
+            if (::mediaTime.isInitialized) mediaTime.text = formatMediaTime(position, duration)
             handler.postDelayed(this, 1000)
         }
     }
@@ -90,7 +115,22 @@ class LockScreenActivity : Activity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
             val charging = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) in listOf(BatteryManager.BATTERY_STATUS_CHARGING, BatteryManager.BATTERY_STATUS_FULL)
-            battery.text = if (charging) "⚡ $level%" else "$level%"
+            val plugged = intent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
+            val source = when (plugged) {
+                BatteryManager.BATTERY_PLUGGED_AC -> "AC"
+                BatteryManager.BATTERY_PLUGGED_USB -> "USB"
+                BatteryManager.BATTERY_PLUGGED_WIRELESS -> "Wireless"
+                else -> "Battery"
+            }
+            val tempC = (intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
+            val temp = if (Prefs.celsius(this@LockScreenActivity)) String.format(Locale.getDefault(), "%.1f°C", tempC)
+                else String.format(Locale.getDefault(), "%.1f°F", tempC * 9f / 5f + 32f)
+            battery.text = when {
+                charging && Prefs.detailedBattery(this@LockScreenActivity) -> "$source • $level% • $temp"
+                charging -> "Charging • $level%"
+                Prefs.detailedBattery(this@LockScreenActivity) -> "$level% • $temp"
+                else -> "$level%"
+            }
         }
     }
 
@@ -220,14 +260,37 @@ class LockScreenActivity : Activity() {
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(dp(20), dp(72), dp(20), dp(125))
         }
-        clock = label("12:00", 82f, Appearance.text(this, true)).apply { letterSpacing = -.05f; gravity = Gravity.CENTER }
-        date = label("", 18f, Appearance.secondary(this, true)).apply { gravity = Gravity.CENTER }
+        val clockSize = when (Prefs.clockStyle(this)) { 1 -> 64f; 2 -> 56f; else -> 84f }
+        clock = label("12:00", clockSize, Appearance.text(this, true)).apply {
+            letterSpacing = if (Prefs.clockStyle(this@LockScreenActivity) == 2) -.02f else -.055f
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+        }
+        date = label("", 17f, Appearance.secondary(this, true)).apply { gravity = Gravity.CENTER; includeFontPadding = false; setPadding(0, dp(2), 0, dp(5)) }
         val topInfo = LinearLayout(this).apply {
             gravity = Gravity.CENTER
-            weather = label("Loading weather…", 15f, Appearance.text(this@LockScreenActivity, true))
-            battery = label("—%", 15f, Appearance.text(this@LockScreenActivity, true))
-            addView(weather, LinearLayout.LayoutParams(0, dp(42), 1f))
-            addView(battery, LinearLayout.LayoutParams(0, dp(42), 1f))
+            setPadding(dp(12), dp(4), dp(12), dp(4))
+            background = glassPanel(24f)
+            weather = label("Loading weather…", 14f, Appearance.text(this@LockScreenActivity, true)).apply {
+                gravity = Gravity.CENTER
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            }
+            battery = label("—%", 14f, Appearance.text(this@LockScreenActivity, true)).apply {
+                gravity = Gravity.CENTER
+                maxLines = 1
+            }
+            if (Prefs.showWeatherWidget(this@LockScreenActivity)) {
+                addView(weather, LinearLayout.LayoutParams(0, dp(42), 1f))
+            }
+            if (Prefs.showWeatherWidget(this@LockScreenActivity) && Prefs.showBatteryWidget(this@LockScreenActivity)) {
+                addView(View(this@LockScreenActivity).apply {
+                    background = GradientDrawable().apply { setColor(0x33ffffff) }
+                }, LinearLayout.LayoutParams(dp(1), dp(22)))
+            }
+            if (Prefs.showBatteryWidget(this@LockScreenActivity)) {
+                addView(battery, LinearLayout.LayoutParams(0, dp(42), 1f))
+            }
         }
         content.addView(clock)
         content.addView(date)
@@ -235,6 +298,9 @@ class LockScreenActivity : Activity() {
             gravity = Gravity.CENTER
         }
         content.addView(kioskStatus)
+        val alarmClock = getSystemService(AlarmManager::class.java).nextAlarmClock
+        nextAlarm = label(alarmClock?.let { "Next alarm • " + SimpleDateFormat("EEE h:mm a", Locale.getDefault()).format(Date(it.triggerTime)) } ?: "", 12f, Appearance.secondary(this, true)).apply { gravity = Gravity.CENTER }
+        if (alarmClock != null) content.addView(nextAlarm)
         if (preview) {
             val taps = DoubleTap()
             content.addView(actionButton("Double-tap to lock D2") {
@@ -247,7 +313,11 @@ class LockScreenActivity : Activity() {
             })
             content.addView(actionButton("Close preview") { finish() })
         }
-        content.addView(topInfo, LinearLayout.LayoutParams(-1, dp(54)))
+        if (Prefs.showWeatherWidget(this) || Prefs.showBatteryWidget(this)) {
+            content.addView(topInfo, LinearLayout.LayoutParams(-1, dp(50)).apply {
+                leftMargin = dp(18); rightMargin = dp(18); topMargin = dp(6); bottomMargin = dp(4)
+            })
+        }
         content.addView(label("Weather: Open-Meteo.com · CC BY 4.0", 12f, Appearance.text(this, true)).apply {
             gravity = Gravity.CENTER
             paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG
@@ -277,16 +347,25 @@ class LockScreenActivity : Activity() {
         val mediaPanel = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(14), dp(12), dp(10), dp(12))
-            background = glassPanel(30f)
+            setPadding(dp(14), dp(8), dp(10), dp(8))
+            background = glassPanel(32f)
+            elevation = dp(8).toFloat()
         }
-        mediaPanel.addView(label("♫", 25f, Color.WHITE).apply {
-            gravity = Gravity.CENTER
+        mediaArt = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            contentDescription = "Album artwork"
             background = GradientDrawable().apply {
-                cornerRadius = dp(17).toFloat()
+                cornerRadius = dp(18).toFloat()
                 setColor(0xff41475d.toInt())
             }
-        }, LinearLayout.LayoutParams(dp(62), dp(62)))
+            clipToOutline = true
+            outlineProvider = object : android.view.ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: android.graphics.Outline) {
+                    outline.setRoundRect(0, 0, view.width, view.height, dp(18).toFloat())
+                }
+            }
+        }
+        mediaPanel.addView(mediaArt, LinearLayout.LayoutParams(dp(56), dp(56)))
         val mediaDetails = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), 0, 0, 0)
@@ -298,8 +377,23 @@ class LockScreenActivity : Activity() {
             }
             addView(mediaTitle)
             addView(mediaArtist)
+            mediaProgress = SeekBar(this@LockScreenActivity).apply {
+                maxHeight = dp(3)
+                setPadding(0, dp(2), 0, 0)
+                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                        if (fromUser && ::mediaTime.isInitialized) mediaTime.text = formatMediaTime(progress.toLong(), media.durationMs())
+                    }
+                    override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                    override fun onStopTrackingTouch(seekBar: SeekBar?) { seekBar?.let { media.seekTo(it.progress.toLong()) } }
+                })
+            }
+            addView(mediaProgress, LinearLayout.LayoutParams(-1, dp(16)))
+            mediaTime = label("0:00", 9f, 0xffbfc3cf.toInt()).apply { gravity = Gravity.END; includeFontPadding = false }
+            addView(mediaTime)
         }
         mediaPanel.addView(mediaDetails, LinearLayout.LayoutParams(0, -2, 1f))
+        mediaPanel.contentDescription = "Now Playing media controls"
         val controls = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             addView(mediaButton("‹") { media.previous() })
@@ -309,7 +403,7 @@ class LockScreenActivity : Activity() {
         }
         mediaPanel.addView(controls)
         if (Prefs.showMedia(this)) content.addView(mediaPanel,
-            LinearLayout.LayoutParams(-1, dp(88)).apply { bottomMargin = dp(12) })
+            LinearLayout.LayoutParams(-1, dp(92)).apply { bottomMargin = dp(8) })
         frame.addView(content, FrameLayout.LayoutParams(-1, -1))
         val floatingBar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
@@ -327,6 +421,15 @@ class LockScreenActivity : Activity() {
                 setOnTouchListener(unlockSwipeListener())
             }, LinearLayout.LayoutParams(0, dp(58), 1f))
             addView(shortcutButton("right"), LinearLayout.LayoutParams(dp(58), dp(58)))
+            setOnLongClickListener {
+                if (preview) showRecoveryDrawer() else if (pinDialog?.isShowing != true) {
+                    pinDialog = PinUi.show(this@LockScreenActivity, success = {
+                        pinDialog = null
+                        showRecoveryDrawer()
+                    }, cancel = { pinDialog = null })
+                }
+                true
+            }
         }
         val barParams = FrameLayout.LayoutParams(-1, dp(72), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
         frame.addView(floatingBar, barParams)
@@ -358,6 +461,71 @@ class LockScreenActivity : Activity() {
             setMargins(dp(18), dp(36), dp(18), 0)
         })
         return frame
+    }
+
+    private fun formatMediaTime(position: Long, duration: Long): String {
+        fun format(ms: Long): String {
+            val total = (ms.coerceAtLeast(0L) / 1000)
+            return "${total / 60}:${(total % 60).toString().padStart(2, '0')}"
+        }
+        return if (duration > 0) "${format(position)} / ${format(duration)}" else format(position)
+    }
+
+    private fun showRecoveryDrawer() {
+        if (!RootManager.isAvailable()) {
+            Toast.makeText(this, "Recovery Drawer requires KernelSU/root.", Toast.LENGTH_LONG).show()
+            return
+        }
+        val body = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(8), dp(22), dp(14))
+            addView(label("ROOT • KIOSK • ADB", 13f, Appearance.secondary(this@LockScreenActivity, true)).apply {
+                gravity = Gravity.CENTER
+                setPadding(0, 0, 0, dp(10))
+            })
+            addView(label(RootManager.usbDiagnostics(), 13f, Appearance.text(this@LockScreenActivity, true)).apply {
+                setPadding(dp(12), dp(10), dp(12), dp(10))
+                background = glassPanel(20f)
+            }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+        }
+        fun addAction(title: String, action: () -> Boolean) {
+            body.addView(actionButton(title) {
+                if (action()) Toast.makeText(this, title + " requested", Toast.LENGTH_SHORT).show()
+                else Toast.makeText(this, title + " failed", Toast.LENGTH_LONG).show()
+            })
+        }
+        val adb = RootManager.adbUsbEnabled()
+        addAction(if (adb) "Block ADB / USB" else "Allow ADB / USB") { RootManager.setAdbUsbEnabled(!adb) }
+        addAction("Reset USB / restart ADB") { RootManager.resetAdbUsb() }
+        addAction("Restart D2 wake service") {
+            LockScreenService.stop(this)
+            if (Prefs.enabled(this)) LockScreenService.start(this)
+            true
+        }
+        addAction("Restart System UI") { RootManager.restartSystemUi() }
+        body.addView(actionButton("Soft reboot Android") {
+            AlertDialog.Builder(this)
+                .setTitle("Soft reboot Android?")
+                .setMessage("Android userspace will restart and unsaved work can be lost.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Soft reboot") { _, _ -> RootManager.softReboot() }
+                .show()
+        })
+        lateinit var dialog: AlertDialog
+        dialog = AlertDialog.Builder(this)
+            .setTitle("D2 Recovery Drawer")
+            .setMessage("Root-only recovery controls. Long-press the bottom D2 bar to return here.")
+            .setView(body)
+            .setNegativeButton("Close", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.window?.setBackgroundDrawable(GradientDrawable().apply {
+                cornerRadius = dp(32).toFloat()
+                setColor(Appearance.surface(this@LockScreenActivity))
+                setStroke(dp(1), Appearance.secondary(this@LockScreenActivity))
+            })
+        }
+        dialog.show()
     }
 
     private fun unlockSwipeListener() = object : View.OnTouchListener {
@@ -413,7 +581,7 @@ class LockScreenActivity : Activity() {
         visibleItems.forEach { item ->
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(16), dp(11), dp(16), dp(11))
+                setPadding(dp(18), dp(13), dp(18), dp(13))
                 background = notificationPanel(item.packageName)
                 addView(notificationLabel(item.app, 12f))
                 if (privacy == 4 || (privacy == 3 && item.visibility == Notification.VISIBILITY_PUBLIC)) {
@@ -422,7 +590,46 @@ class LockScreenActivity : Activity() {
                 }
             }
             if (item.contentIntent != null) card.setOnClickListener { openNotification(item) }
-            notifications.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(9) })
+            card.elevation = dp(5).toFloat()
+            card.setOnTouchListener(object : View.OnTouchListener {
+                private var downX = 0f
+                private var downY = 0f
+                override fun onTouch(v: View, event: MotionEvent): Boolean {
+                    when (event.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> {
+                            downX = event.x
+                            downY = event.y
+                            v.animate().scaleX(.985f).scaleY(.985f).setDuration(90).start()
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            val dx = event.x - downX
+                            if (kotlin.math.abs(dx) > dp(10)) {
+                                v.translationX = dx * .35f
+                                v.alpha = (1f - kotlin.math.abs(dx) / (v.width.coerceAtLeast(1) * 1.6f)).coerceAtLeast(.55f)
+                            }
+                        }
+                        MotionEvent.ACTION_UP -> {
+                            val dx = event.x - downX
+                            val dy = event.y - downY
+                            v.animate().scaleX(1f).scaleY(1f).setDuration(100).start()
+                            if (kotlin.math.abs(dx) > v.width * .32f && kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
+                                v.animate().translationX(if (dx > 0) v.width.toFloat() else -v.width.toFloat())
+                                    .alpha(0f).setDuration(180).withEndAction { v.visibility = View.GONE }.start()
+                                true
+                            } else {
+                                v.animate().translationX(0f).alpha(1f).setDuration(160).start()
+                                if (kotlin.math.abs(dx) < dp(12) && kotlin.math.abs(dy) < dp(12)) v.performClick()
+                                true
+                            }
+                        }
+                        MotionEvent.ACTION_CANCEL -> {
+                            v.animate().translationX(0f).alpha(1f).scaleX(1f).scaleY(1f).setDuration(140).start()
+                        }
+                    }
+                    return true
+                }
+            })
+            notifications.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(7) })
         }
     }
 
@@ -522,6 +729,28 @@ class LockScreenActivity : Activity() {
             if (preview) openCamera() else authenticate { openCamera() }
         }.apply { contentDescription = "Camera, D2 PIN required" }
         "Flashlight" -> roundButton("🔦") { toggleTorch() }.apply { contentDescription = "Flashlight" }
+        "Calculator" -> roundButton("⌗") {
+            val open = {
+                val launch = packageManager.getLaunchIntentForPackage("com.sec.android.app.popupcalculator")
+                    ?: packageManager.getLaunchIntentForPackage("com.google.android.calculator")
+                if (launch != null) startActivity(launch) else Toast.makeText(this, "Calculator unavailable", Toast.LENGTH_SHORT).show()
+            }
+            if (preview) open() else authenticate(open)
+        }.apply { contentDescription = "Calculator, D2 PIN required" }
+        "Silent / Vibrate" -> roundButton("♬") {
+            val audio = getSystemService(AudioManager::class.java)
+            audio.ringerMode = if (audio.ringerMode == AudioManager.RINGER_MODE_NORMAL) AudioManager.RINGER_MODE_VIBRATE else AudioManager.RINGER_MODE_NORMAL
+            Toast.makeText(this, if (audio.ringerMode == AudioManager.RINGER_MODE_VIBRATE) "Vibrate" else "Sound", Toast.LENGTH_SHORT).show()
+        }.apply { contentDescription = "Toggle sound and vibrate" }
+        "Do Not Disturb" -> roundButton("☾") {
+            val nm = getSystemService(NotificationManager::class.java)
+            if (!nm.isNotificationPolicyAccessGranted) {
+                startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+            } else {
+                val enabled = nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
+                nm.setInterruptionFilter(if (enabled) NotificationManager.INTERRUPTION_FILTER_ALL else NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+            }
+        }.apply { contentDescription = "Toggle Do Not Disturb" }
         else -> View(this)
     }
 

@@ -35,7 +35,9 @@ import app.d2lock.widget.D2Widget
 class MainActivity : Activity() {
     private val wallpaperPicker = 701
     private var authorized = false
+    private var authorizedUntil = 0L
     private var pinDialog: AlertDialog? = null
+    private val adminSessionMs = 3 * 60 * 1000L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(if (Appearance.dark(this)) R.style.Theme_D2_Dark else R.style.Theme_SamsungLock)
@@ -48,10 +50,13 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        if (authorized && SystemClock.elapsedRealtime() >= authorizedUntil) authorized = false
         if (!authorized && pinDialog?.isShowing != true) {
             if (PinStore(this).configured()) {
                 pinDialog = PinUi.show(this, success = {
                     authorized = true
+                    authorizedUntil = SystemClock.elapsedRealtime() + adminSessionMs
+                    Prefs.setBootPinConfigured(this, true)
                     app.d2lock.bridge.IslandBridge.setLocked(this, false)
                     if (Prefs.enabled(this)) {
                         runCatching { LockScreenService.start(this) }
@@ -69,7 +74,7 @@ class MainActivity : Activity() {
 
     override fun onStop() {
         super.onStop()
-        authorized = false
+        if (SystemClock.elapsedRealtime() >= authorizedUntil) authorized = false
         pinDialog?.dismiss()
         pinDialog = null
         setContentView(TextView(this).apply { text = "D2 settings locked" })
@@ -85,6 +90,13 @@ class MainActivity : Activity() {
             text = "Samsung Lock D2"
             textSize = 32f
             setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(18), dp(14), dp(18), dp(6))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(30).toFloat()
+                setColor(Appearance.surface(this@MainActivity))
+                setStroke(dp(1), Appearance.secondary(this@MainActivity))
+            }
+            elevation = dp(4).toFloat()
         })
         root.addView(TextView(this).apply {
             text = "Independent 6-digit app PIN"
@@ -119,6 +131,8 @@ class MainActivity : Activity() {
         addButton(root, if (configured) "Change D2 PIN" else "Create D2 PIN") {
             pinDialog = PinUi.show(this, setup = !configured, change = configured, success = {
                 authorized = true
+                authorizedUntil = SystemClock.elapsedRealtime() + adminSessionMs
+                Prefs.setBootPinConfigured(this, true)
                 setContentView(buildSettings())
             })
         }
@@ -156,7 +170,32 @@ class MainActivity : Activity() {
         }
         root.addView(enabled, rowParams())
 
-        val rootMode = Switch(this).apply {
+        section(root, "PRIVILEGED ACCESS")
+        root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Use Shizuku when available"
+            textSize = 17f
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.shizukuMode(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                if (!checked) {
+                    Prefs.setShizukuMode(this@MainActivity, false)
+                } else if (!app.d2lock.shizuku.ShizukuManager.isRunning()) {
+                    isChecked = false
+                    Toast.makeText(this@MainActivity, "Shizuku is not running", Toast.LENGTH_LONG).show()
+                } else {
+                    Prefs.setShizukuMode(this@MainActivity, true)
+                    if (!app.d2lock.shizuku.ShizukuManager.isGranted()) app.d2lock.shizuku.ShizukuManager.requestPermission()
+                }
+            }
+        }, rowParams())
+        root.addView(TextView(this).apply {
+            text = "Shizuku: " + app.d2lock.shizuku.ShizukuManager.status() + "\nD2 uses normal Android APIs first. Shizuku is optional; KernelSU/root remains available for recovery operations that require root."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(0, 0, 0, dp(12))
+        })
+                val rootMode = Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Optional KernelSU root mode"
             textSize = 17f
@@ -170,6 +209,77 @@ class MainActivity : Activity() {
             }
         }
         root.addView(rootMode, rowParams())
+
+        root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Allow ADB / USB while D2 is locked (root)"
+            textSize = 17f
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = RootManager.adbUsbEnabled()
+            setOnCheckedChangeListener { _, checked ->
+                if (!Prefs.rootMode(this@MainActivity) || !RootManager.isAvailable()) {
+                    isChecked = false
+                    Toast.makeText(this@MainActivity, "Enable KernelSU root mode first", Toast.LENGTH_LONG).show()
+                } else if (!RootManager.setAdbUsbEnabled(checked)) {
+                    isChecked = !checked
+                    Toast.makeText(this@MainActivity, "Could not change ADB / USB state", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this@MainActivity, if (checked) "ADB / USB allowed" else "ADB / USB blocked", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }, rowParams())
+        root.addView(TextView(this).apply {
+            text = "Root-only recovery option. This changes Samsung's USB lock setting and USB gadget state; behavior can vary by firmware. Keep USB debugging authorized before relying on it."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(0, 0, 0, dp(16))
+        })
+
+        section(root, "RECOVERY CENTER")
+        addButton(root, "Run D2 health check") {
+            val rootOk = RootManager.isAvailable()
+            val usb = if (rootOk) RootManager.usbDiagnostics() else "Root unavailable"
+            AlertDialog.Builder(this)
+                .setTitle("D2 health check")
+                .setMessage("Root: " + if (rootOk) "OK" else "Unavailable" +
+                    "\nWake service: " + if (Prefs.enabled(this)) "Enabled" else "Disabled" +
+                    "\nRoot kiosk: " + if (Prefs.kiosk(this)) "Enabled" else "Disabled" +
+                    "\n\nUSB / ADB\n" + usb)
+                .setPositiveButton("Close", null)
+                .show()
+        }
+        addButton(root, "Reset USB / restart ADB") {
+            if (!Prefs.rootMode(this) || !RootManager.isAvailable()) {
+                Toast.makeText(this, "KernelSU root mode is required", Toast.LENGTH_LONG).show()
+            } else {
+                val ok = RootManager.resetAdbUsb()
+                Toast.makeText(this, if (ok) "USB / ADB recovery command completed" else "USB / ADB reset failed", Toast.LENGTH_LONG).show()
+            }
+        }
+        addButton(root, "Show USB diagnostics") {
+            val report = if (RootManager.isAvailable()) RootManager.usbDiagnostics() else "Root unavailable"
+            AlertDialog.Builder(this).setTitle("USB diagnostics").setMessage(report).setPositiveButton("Close", null).show()
+        }
+        addButton(root, "Restart System UI") {
+            if (!Prefs.rootMode(this) || !RootManager.isAvailable()) {
+                Toast.makeText(this, "KernelSU root mode is required", Toast.LENGTH_LONG).show()
+            } else AlertDialog.Builder(this)
+                .setTitle("Restart System UI?")
+                .setMessage("System UI will disappear briefly and Android should restart it automatically. D2 settings remain unchanged.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Restart") { _, _ -> RootManager.restartSystemUi() }
+                .show()
+        }
+        addButton(root, "Soft reboot Android") {
+            if (!Prefs.rootMode(this) || !RootManager.isAvailable()) {
+                Toast.makeText(this, "KernelSU root mode is required", Toast.LENGTH_LONG).show()
+            } else AlertDialog.Builder(this)
+                .setTitle("Soft reboot Android?")
+                .setMessage("This restarts Android userspace without a full hardware reboot. Unsaved work can be lost. Use a normal reboot if Android does not recover cleanly.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Soft reboot") { _, _ -> RootManager.softReboot() }
+                .show()
+        }
 
         root.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
@@ -206,6 +316,46 @@ class MainActivity : Activity() {
             setOnCheckedChangeListener { _, checked -> Prefs.setCelsius(this@MainActivity, checked) }
         }, rowParams())
         root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "OLED protection (subtle clock shift)"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.oledShift(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setOledShift(this@MainActivity, checked) }
+        }, rowParams())
+        val clockStyles = arrayOf("One UI Large", "One UI Compact", "Minimal")
+        root.addView(Spinner(this).apply {
+            adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, clockStyles)
+            setSelection(Prefs.clockStyle(this@MainActivity))
+            onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                    Prefs.setClockStyle(this@MainActivity, position)
+                }
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+            }
+        }, rowParams())
+                section(root, "LOCK SCREEN WIDGETS")
+        root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Weather"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.showWeatherWidget(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setShowWeatherWidget(this@MainActivity, checked) }
+        }, rowParams())
+        root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Battery"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.showBatteryWidget(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setShowBatteryWidget(this@MainActivity, checked) }
+        }, rowParams())
+        root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Battery details (source + temperature)"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.detailedBattery(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setDetailedBattery(this@MainActivity, checked) }
+        }, rowParams())
+        root.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Show media player while D2 is locked"
             setTextColor(Appearance.text(this@MainActivity))
@@ -234,7 +384,7 @@ class MainActivity : Activity() {
             setPadding(dp(8), 0, dp(8), dp(12))
         })
         section(root, "FLOATING BAR")
-        val actions = listOf("None", "Camera", "Flashlight")
+        val actions = listOf("None", "Camera", "Flashlight", "Calculator", "Silent / Vibrate", "Do Not Disturb")
         for (side in listOf("left", "right")) {
             addChoice(root, "${side.replaceFirstChar { it.uppercase() }} action", actions,
                 actions.indexOf(Prefs.shortcut(this, side)).coerceAtLeast(0)) {
