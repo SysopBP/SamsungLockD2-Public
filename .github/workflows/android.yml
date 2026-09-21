@@ -1,4 +1,4 @@
-name: Build APK and KernelSU module
+name: D2 CI - Fast Check, Runtime, Release
 on:
   push:
     paths-ignore:
@@ -9,8 +9,47 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+
 jobs:
-  build:
+  fast-check:
+    name: Fast check and source integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+          log-accepted-android-sdk-licenses: false
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+      - name: Install Android SDK
+        run: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
+      - name: Generate Gradle wrapper
+        run: gradle wrapper --gradle-version 9.3.1
+      - name: Source integrity
+        run: |
+          git diff --check
+          test "$(grep -c '^package app.d2lock.root$' app/src/main/java/app/d2lock/root/RootManager.kt)" -eq 1
+          test "$(grep -c '^object RootManager' app/src/main/java/app/d2lock/root/RootManager.kt)" -eq 1
+          ! grep -n '}cfg' app/src/main/java/app/d2lock/root/RootManager.kt
+          for script in module/*.sh; do bash -n "$script"; done
+      - name: Compile and lint
+        run: ./gradlew compileDebugKotlin compileDebugAndroidTestKotlin lintDebug --stacktrace
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-reports
+          path: app/build/reports/lint-results-debug.*
+
+  runtime-tests:
+    name: Lock screen runtime tests
+    needs: fast-check
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -26,38 +65,17 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
-      - name: Install Android SDK
-        run: |
-          sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
-      - name: Generate Gradle wrapper
-        run: gradle wrapper --gradle-version 9.3.1
-      - name: Restore original APK signing key
-        env:
-          D2_SIGNING_KEYSTORE_BASE64: ${{ secrets.D2_SIGNING_KEYSTORE_BASE64 }}
-        run: |
-          if [ -z "$D2_SIGNING_KEYSTORE_BASE64" ]; then
-            echo '::error::D2_SIGNING_KEYSTORE_BASE64 must contain the original APK signing keystore.'
-            exit 1
-          fi
-          umask 077
-          D2_SIGNING_KEYSTORE="$RUNNER_TEMP/d2-original.keystore"
-          printf '%s' "$D2_SIGNING_KEYSTORE_BASE64" | base64 --decode > "$D2_SIGNING_KEYSTORE"
-          echo "D2_SIGNING_KEYSTORE=$D2_SIGNING_KEYSTORE" >> "$GITHUB_ENV"
-          keytool -exportcert -keystore "$D2_SIGNING_KEYSTORE" -storepass android -alias androiddebugkey -file "$RUNNER_TEMP/d2-signer.der"
-          echo '7ce7d3e590520bcd54dfd9760f36e5fdc6243b1b062c46cac4670b65efb0f370  '"$RUNNER_TEMP/d2-signer.der" | sha256sum --check
-      - name: Build and lint
-        run: |
-          ./gradlew :app:dependencies --configuration debugRuntimeClasspath > runtime-dependencies.txt
-          ./gradlew assembleDebug assembleDebugAndroidTest lintDebug --stacktrace
+      - run: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
+      - run: gradle wrapper --gradle-version 9.3.1
+      - name: Build runtime test APKs
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace
       - name: Enable emulator acceleration
         run: |
-          # This Kotlin-only app does not use the runner's preinstalled native SDKs.
           sudo rm -rf /usr/local/lib/android/sdk/ndk
-          df -h /home/runner
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: PIN, kiosk, and Preview runtime tests
+      - name: PIN, kiosk, wake, and Preview tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 36
@@ -78,6 +96,45 @@ jobs:
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
+
+  release:
+    name: Signed APK and deliverables
+    needs: runtime-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+          log-accepted-android-sdk-licenses: false
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+      - run: sdkmanager 'platforms;android-37.0' 'build-tools;36.0.0'
+      - run: gradle wrapper --gradle-version 9.3.1
+      - name: Restore original APK signing key
+        env:
+          D2_SIGNING_KEYSTORE_BASE64: ${{ secrets.D2_SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$D2_SIGNING_KEYSTORE_BASE64" ]; then
+            echo '::error::D2_SIGNING_KEYSTORE_BASE64 must contain the original APK signing keystore.'
+            exit 1
+          fi
+          umask 077
+          D2_SIGNING_KEYSTORE="$RUNNER_TEMP/d2-original.keystore"
+          printf '%s' "$D2_SIGNING_KEYSTORE_BASE64" | base64 --decode > "$D2_SIGNING_KEYSTORE"
+          echo "D2_SIGNING_KEYSTORE=$D2_SIGNING_KEYSTORE" >> "$GITHUB_ENV"
+          keytool -exportcert -keystore "$D2_SIGNING_KEYSTORE" -storepass android -alias androiddebugkey -file "$RUNNER_TEMP/d2-signer.der"
+          echo '7ce7d3e590520bcd54dfd9760f36e5fdc6243b1b062c46cac4670b65efb0f370  '"$RUNNER_TEMP/d2-signer.der" | sha256sum --check
+      - name: Build signed APK
+        run: |
+          ./gradlew :app:dependencies --configuration debugRuntimeClasspath > runtime-dependencies.txt
+          ./gradlew assembleDebug --stacktrace
       - name: Verify APK signature
         run: |
           set -o pipefail
@@ -101,9 +158,3 @@ jobs:
         with:
           name: SamsungLockD2-deliverables
           path: dist/
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: lint-reports
-          path: app/build/reports/lint-results-debug.*
-
