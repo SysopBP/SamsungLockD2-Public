@@ -85,6 +85,13 @@ class MainActivity : Activity() {
             text = "Samsung Lock D2"
             textSize = 32f
             setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(18), dp(14), dp(18), dp(6))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(30).toFloat()
+                setColor(Appearance.surface(this@MainActivity))
+                setStroke(dp(1), Appearance.secondary(this@MainActivity))
+            }
+            elevation = dp(4).toFloat()
         })
         root.addView(TextView(this).apply {
             text = "Independent 6-digit app PIN"
