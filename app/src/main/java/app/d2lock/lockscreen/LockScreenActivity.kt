@@ -299,8 +299,8 @@ class LockScreenActivity : Activity() {
         }
         content.addView(kioskStatus)
         val alarmClock = getSystemService(AlarmManager::class.java).nextAlarmClock
-        nextAlarm = label(alarmClock?.let { "Next alarm • " + SimpleDateFormat("EEE h:mm a", Locale.getDefault()).format(Date(it.triggerTime)) } ?: "No alarm set", 12f, Appearance.secondary(this, true)).apply { gravity = Gravity.CENTER }
-        content.addView(nextAlarm)
+        nextAlarm = label(alarmClock?.let { "Next alarm • " + SimpleDateFormat("EEE h:mm a", Locale.getDefault()).format(Date(it.triggerTime)) } ?: "", 12f, Appearance.secondary(this, true)).apply { gravity = Gravity.CENTER }
+        if (alarmClock != null) content.addView(nextAlarm)
         if (preview) {
             val taps = DoubleTap()
             content.addView(actionButton("Double-tap to lock D2") {
