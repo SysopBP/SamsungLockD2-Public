@@ -77,11 +77,12 @@ object Appearance {
             else -> palette[Math.floorMod(app!!.hashCode(), palette.size)]
         }
         val fill = if(dark(c,true)) blend(Color.BLACK, rgb, .5f) else blend(Color.WHITE, rgb, .24f)
-        val alpha = ((if(banner) bannerOpacity(c) else cardOpacity(c)) * 255 / 100)
+        val opacity = (if (banner) bannerOpacity(c) else cardOpacity(c)).coerceAtMost(58)
+        val alpha = opacity * 255 / 100
         return GradientDrawable().apply {
             cornerRadius = radius(c) * c.resources.displayMetrics.density
             // Keep wallpaper visible: glass fill + subtle app/accent edge instead of an opaque card.
-            setColor(((alpha.coerceAtMost(58)) shl 24) or (fill and 0xffffff))
+            setColor((alpha shl 24) or (fill and 0xffffff))
             setStroke(c.resources.displayMetrics.density.toInt().coerceAtLeast(1), (0x66 shl 24) or (rgb and 0xffffff))
         }
     }
