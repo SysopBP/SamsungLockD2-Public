@@ -1,6 +1,7 @@
 package app.d2lock.lockscreen
 
 import android.app.Activity
+import android.app.AlarmManager
 import android.app.AlertDialog
 import android.app.Notification
 import android.app.NotificationManager
@@ -54,6 +55,7 @@ class LockScreenActivity : Activity() {
     private lateinit var clock: TextView
     private lateinit var date: TextView
     private lateinit var battery: TextView
+    private lateinit var nextAlarm: TextView
     private lateinit var weather: TextView
     private lateinit var notifications: LinearLayout
     private lateinit var liveBanner: TextView
@@ -79,6 +81,11 @@ class LockScreenActivity : Activity() {
         override fun run() {
             clock.text = SimpleDateFormat("h:mm", Locale.getDefault()).format(Date())
             date.text = SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
+            if (::nextAlarm.isInitialized) {
+                val alarm = getSystemService(AlarmManager::class.java).nextAlarmClock
+                nextAlarm.text = alarm?.let { "Next alarm · " + SimpleDateFormat("EEE h:mm a", Locale.getDefault()).format(Date(it.triggerTime)) } ?: ""
+                nextAlarm.visibility = if (alarm == null) View.GONE else View.VISIBLE
+            }
             mediaTitle.text = media.title().ifBlank { "Media" }
             mediaArtist.text = media.artist().ifBlank { "Play music to show it here" }
             playPause.text = if (media.isPlaying()) "Ⅱ" else "▶"
@@ -90,7 +97,7 @@ class LockScreenActivity : Activity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
             val charging = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) in listOf(BatteryManager.BATTERY_STATUS_CHARGING, BatteryManager.BATTERY_STATUS_FULL)
-            battery.text = if (charging) "⚡ $level%" else "$level%"
+            battery.text = if (charging) "⚡  ▰  $level%" else "▰  $level%"
         }
     }
 
@@ -233,6 +240,11 @@ class LockScreenActivity : Activity() {
         }
         content.addView(clock)
         content.addView(date)
+        nextAlarm = label("", 12f, Appearance.secondary(this, true)).apply {
+            gravity = Gravity.CENTER
+            visibility = View.GONE
+        }
+        content.addView(nextAlarm)
         kioskStatus = label(if (preview) "Preview • unlocked" else if (Prefs.kiosk(this)) "Starting root kiosk…" else "App-only mode • Home/Recents can exit", 12f, Appearance.text(this, true)).apply {
             gravity = Gravity.CENTER
         }
