@@ -143,14 +143,14 @@ jobs:
       - name: Package deliverables
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/SamsungLockD2-debug.apk
-          cp dist/SamsungLockD2-debug.apk module/payload/SamsungLockD2.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/SamsungLockD2-v2.0.0-rc1.apk
+          cp dist/SamsungLockD2-v2.0.0-rc1.apk module/payload/SamsungLockD2.apk
           cp LICENSE THIRD_PARTY_NOTICES.txt module/
           rm module/payload/PLACE_APK_HERE.txt
           for script in module/*.sh; do bash -n "$script"; done
           chmod 755 module/*.sh
-          (cd module && zip -r ../dist/SamsungLockD2-KSUNext-v0.5.6-paired.zip .)
-          unzip -t dist/SamsungLockD2-KSUNext-v0.5.6-paired.zip
+          (cd module && zip -r ../dist/SamsungLockD2-KSUNext-v2.0.0-rc1.zip .)
+          unzip -t dist/SamsungLockD2-KSUNext-v2.0.0-rc1.zip
           zip -r dist/SamsungLockD2-source.zip app/src app/build.gradle.kts build.gradle.kts settings.gradle.kts gradle.properties gradle gradlew gradlew.bat module README.md LICENSE THIRD_PARTY_NOTICES.txt docs .github
           cp runtime-dependencies.txt dist/
           sha256sum dist/*.apk dist/*.zip > dist/SHA256SUMS.txt
