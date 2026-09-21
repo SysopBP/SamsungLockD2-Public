@@ -158,13 +158,7 @@ class RootKioskTest {
         } finally { cleanup(scenario) }
     }
     @Test fun missingUiHeartbeatsTriggersIndependentRecovery() = fixture {
-        // The previous recovery test can leave the asynchronous root-helper release
-        // finishing for a moment. Wait for the device to be fully unlocked before
-        // starting a fresh independent-watchdog lease.
-        waitFor("Previous kiosk session must be fully released") {
-            manager.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE
-        }
-        SystemClock.sleep(1000)
+        awaitCleanKioskState()
         val drop = AtomicBoolean(false)
         RootKiosk.testConnect = { connect(drop) }
         val scenario = launch()
