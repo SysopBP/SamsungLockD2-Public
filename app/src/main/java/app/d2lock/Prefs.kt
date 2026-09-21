@@ -8,6 +8,8 @@ object Prefs {
 
     fun enabled(context: Context) = prefs(context).getBoolean("enabled", false)
     fun setEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean("enabled", value).apply()
+    fun shizukuMode(context: Context) = prefs(context).getBoolean("shizuku_mode", false)
+    fun setShizukuMode(context: Context, value: Boolean) = prefs(context).edit().putBoolean("shizuku_mode", value).apply()
     fun rootMode(context: Context) = prefs(context).getBoolean("root_mode", false)
     fun setRootMode(context: Context, value: Boolean) = prefs(context).edit().putBoolean("root_mode", value).apply()
     fun kiosk(context: Context) = prefs(context).getBoolean("root_kiosk", false)
