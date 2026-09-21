@@ -40,7 +40,13 @@ class RootKioskTest {
         val ok = condition()
         assertTrue("$message (${RootKiosk.diagnostic}) ${if (!ok) TestDevice.focusDiagnostic() else ""}", ok)
     }
-    private fun awaitCleanKioskState() {\n        waitFor("Previous kiosk session must be fully released") {\n            manager.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE\n        }\n        SystemClock.sleep(1000)\n    }\n    private fun connect(dropHeartbeats: AtomicBoolean = AtomicBoolean(false)): RootKiosk.Channel {
+    private fun awaitCleanKioskState() {
+        waitFor("Previous kiosk session must be fully released") {
+            manager.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE
+        }
+        SystemClock.sleep(1000)
+    }
+    private fun connect(dropHeartbeats: AtomicBoolean = AtomicBoolean(false)): RootKiosk.Channel {
         // Emulator-only root, reached through the test harness's shell identity.
         val phonePackages = app.d2lock.root.KioskCallApps.resolve(context).joinToString(" ")
         val command = "su 0 env CLASSPATH=${context.applicationInfo.sourceDir} /system/bin/app_process /system/bin app.d2lock.root.KioskBridge 0 $phonePackages"
