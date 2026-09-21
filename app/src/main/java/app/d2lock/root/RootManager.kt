@@ -30,21 +30,32 @@ object RootManager {
         }
     }.getOrDefault(false)
 
-    fun setAdbUsbEnabled(enabled: Boolean): Boolean = runRoot(
-        if (enabled) {
-            "settings put global block_usb_lock 0; setprop persist.sys.usb.config adb; setprop sys.usb.config adb"
-        } else {
-            "settings put global block_usb_lock 1; setprop persist.sys.usb.config none; setprop sys.usb.config none"
+    private fun currentUsbFunctions(): List<String> {
+        val raw = rootOutput("getprop persist.sys.usb.config").ifBlank {
+            rootOutput("getprop sys.usb.config")
         }
-    )
+        return raw.split(',').map { it.trim() }
+            .filter { it.matches(Regex("[A-Za-z0-9_.-]+")) && it != "none" && it != "adb" }
+            .distinct()
+    }
 
-    fun adbUsbEnabled(): Boolean = runCatching {
-        val process = ProcessBuilder(
-            "su", "-c", "settings get global block_usb_lock"
-        ).redirectErrorStream(true).start()
-        process.waitFor(2, TimeUnit.SECONDS) &&
-            process.inputStream.bufferedReader().use { it.readText().trim() } == "0"
-    }.getOrDefault(false)
+    fun setAdbUsbEnabled(enabled: Boolean): Boolean {
+        val functions = currentUsbFunctions().toMutableList()
+        if (enabled) functions += "adb"
+        val config = functions.distinct().joinToString(",").ifBlank { "none" }
+        if (!config.matches(Regex("[A-Za-z0-9_,.-]+"))) return false
+        val block = if (enabled) 0 else 1
+        return runRoot(
+            "settings put global block_usb_lock $block; " +
+                "setprop persist.sys.usb.config $config; setprop sys.usb.config $config"
+        )
+    }
+
+    fun adbUsbEnabled(): Boolean {
+        val block = rootOutput("settings get global block_usb_lock")
+        val config = rootOutput("getprop sys.usb.config")
+        return block == "0" && config.split(',').any { it.trim() == "adb" }
+    }
 
     fun usbDiagnostics(): String = rootOutput(
         "echo BLOCK=$(settings get global block_usb_lock); " +
@@ -54,11 +65,15 @@ object RootManager {
             "echo STATE=$(getprop sys.usb.state)"
     ).ifBlank { "USB diagnostics unavailable" }
 
-    fun resetAdbUsb(): Boolean = runRoot(
-        "settings put global block_usb_lock 0; stop adbd; " +
-            "setprop sys.usb.config none; sleep 1; " +
-            "setprop persist.sys.usb.config adb; setprop sys.usb.config adb; start adbd"
-    )
+    fun resetAdbUsb(): Boolean {
+        val functions = currentUsbFunctions().toMutableList().apply { add("adb") }
+        val config = functions.distinct().joinToString(",").ifBlank { "adb" }
+        if (!config.matches(Regex("[A-Za-z0-9_,.-]+"))) return false
+        return runRoot(
+            "settings put global block_usb_lock 0; stop adbd; setprop sys.usb.config none; sleep 1; " +
+                "setprop persist.sys.usb.config $config; setprop sys.usb.config $config; start adbd"
+        )
+    }
 
     /** Android userspace restart; faster than a full hardware reboot. */
     fun softReboot(): Boolean = runRoot(
