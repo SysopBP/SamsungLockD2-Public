@@ -172,6 +172,31 @@ class MainActivity : Activity() {
         root.addView(rootMode, rowParams())
 
         root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Allow ADB / USB while D2 is locked (root)"
+            textSize = 17f
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = RootManager.adbUsbEnabled()
+            setOnCheckedChangeListener { _, checked ->
+                if (!Prefs.rootMode(this@MainActivity) || !RootManager.isAvailable()) {
+                    isChecked = false
+                    Toast.makeText(this@MainActivity, "Enable KernelSU root mode first", Toast.LENGTH_LONG).show()
+                } else if (!RootManager.setAdbUsbEnabled(checked)) {
+                    isChecked = !checked
+                    Toast.makeText(this@MainActivity, "Could not change ADB / USB state", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this@MainActivity, if (checked) "ADB / USB allowed" else "ADB / USB blocked", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }, rowParams())
+        root.addView(TextView(this).apply {
+            text = "Root-only recovery option. This changes Samsung's USB lock setting and USB gadget state; behavior can vary by firmware. Keep USB debugging authorized before relying on it."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(0, 0, 0, dp(16))
+        })
+
+        root.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Require PIN to leave D2 (root kiosk)"
             textSize = 17f
