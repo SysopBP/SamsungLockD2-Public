@@ -313,7 +313,7 @@ class LockScreenActivity : Activity() {
         val mediaPanel = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(13), dp(12), dp(13))
+            setPadding(dp(14), dp(8), dp(10), dp(8))
             background = glassPanel(32f)
             elevation = dp(8).toFloat()
         }
@@ -331,7 +331,7 @@ class LockScreenActivity : Activity() {
                 }
             }
         }
-        mediaPanel.addView(mediaArt, LinearLayout.LayoutParams(dp(62), dp(62)))
+        mediaPanel.addView(mediaArt, LinearLayout.LayoutParams(dp(56), dp(56)))
         val mediaDetails = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), 0, 0, 0)
@@ -354,8 +354,8 @@ class LockScreenActivity : Activity() {
                     override fun onStopTrackingTouch(seekBar: SeekBar?) { seekBar?.let { media.seekTo(it.progress.toLong()) } }
                 })
             }
-            addView(mediaProgress, LinearLayout.LayoutParams(-1, dp(24)))
-            mediaTime = label("0:00", 10f, 0xffbfc3cf.toInt()).apply { gravity = Gravity.END }
+            addView(mediaProgress, LinearLayout.LayoutParams(-1, dp(16)))
+            mediaTime = label("0:00", 9f, 0xffbfc3cf.toInt()).apply { gravity = Gravity.END; includeFontPadding = false }
             addView(mediaTime)
         }
         mediaPanel.addView(mediaDetails, LinearLayout.LayoutParams(0, -2, 1f))
@@ -369,7 +369,7 @@ class LockScreenActivity : Activity() {
         }
         mediaPanel.addView(controls)
         if (Prefs.showMedia(this)) content.addView(mediaPanel,
-            LinearLayout.LayoutParams(-1, dp(112)).apply { bottomMargin = dp(12) })
+            LinearLayout.LayoutParams(-1, dp(92)).apply { bottomMargin = dp(8) })
         frame.addView(content, FrameLayout.LayoutParams(-1, -1))
         val floatingBar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
