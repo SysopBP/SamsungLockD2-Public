@@ -43,6 +43,7 @@ class MainActivity : Activity() {
         setTheme(if (Appearance.dark(this)) R.style.Theme_D2_Dark else R.style.Theme_SamsungLock)
         super.onCreate(savedInstanceState)
         Appearance.apply(this)
+        app.d2lock.shizuku.ShizukuManager.initialize()
         PinUi.protect(this)
         window.statusBarColor = Color.TRANSPARENT
         setContentView(TextView(this).apply { text = "Samsung Lock D2" })
