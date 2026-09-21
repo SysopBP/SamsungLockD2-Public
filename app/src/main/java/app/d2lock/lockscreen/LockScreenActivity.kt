@@ -83,7 +83,15 @@ class LockScreenActivity : Activity() {
 
     private val ticker = object : Runnable {
         override fun run() {
-            clock.text = SimpleDateFormat("h:mm", Locale.getDefault()).format(Date())
+            clock.text = SimpleDateFormat(if (Prefs.clockStyle(this@LockScreenActivity) == 2) "HH:mm" else "h:mm", Locale.getDefault()).format(Date())
+            if (Prefs.oledShift(this@LockScreenActivity)) {
+                val slot = (System.currentTimeMillis() / 60000L % 5L).toInt()
+                clock.translationX = dp(slot - 2).toFloat()
+                clock.translationY = dp((slot % 3) - 1).toFloat()
+                date.translationX = clock.translationX
+            } else {
+                clock.translationX = 0f; clock.translationY = 0f; date.translationX = 0f
+            }
             date.text = SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
             mediaTitle.text = media.title().ifBlank { "Media" }
             mediaArtist.text = media.artist().ifBlank { "Play music to show it here" }
@@ -104,7 +112,22 @@ class LockScreenActivity : Activity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
             val charging = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) in listOf(BatteryManager.BATTERY_STATUS_CHARGING, BatteryManager.BATTERY_STATUS_FULL)
-            battery.text = if (charging) "Charging • $level%" else "$level%"
+            val plugged = intent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
+            val source = when (plugged) {
+                BatteryManager.BATTERY_PLUGGED_AC -> "AC"
+                BatteryManager.BATTERY_PLUGGED_USB -> "USB"
+                BatteryManager.BATTERY_PLUGGED_WIRELESS -> "Wireless"
+                else -> "Battery"
+            }
+            val tempC = (intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
+            val temp = if (Prefs.celsius(this@LockScreenActivity)) String.format(Locale.getDefault(), "%.1f°C", tempC)
+                else String.format(Locale.getDefault(), "%.1f°F", tempC * 9f / 5f + 32f)
+            battery.text = when {
+                charging && Prefs.detailedBattery(this@LockScreenActivity) -> "$source • $level% • $temp"
+                charging -> "Charging • $level%"
+                Prefs.detailedBattery(this@LockScreenActivity) -> "$level% • $temp"
+                else -> "$level%"
+            }
         }
     }
 
@@ -234,7 +257,12 @@ class LockScreenActivity : Activity() {
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(dp(20), dp(72), dp(20), dp(125))
         }
-        clock = label("12:00", 84f, Appearance.text(this, true)).apply { letterSpacing = -.055f; gravity = Gravity.CENTER; includeFontPadding = false }
+        val clockSize = when (Prefs.clockStyle(this)) { 1 -> 64f; 2 -> 56f; else -> 84f }
+        clock = label("12:00", clockSize, Appearance.text(this, true)).apply {
+            letterSpacing = if (Prefs.clockStyle(this@LockScreenActivity) == 2) -.02f else -.055f
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+        }
         date = label("", 17f, Appearance.secondary(this, true)).apply { gravity = Gravity.CENTER; includeFontPadding = false; setPadding(0, dp(2), 0, dp(5)) }
         val topInfo = LinearLayout(this).apply {
             gravity = Gravity.CENTER
