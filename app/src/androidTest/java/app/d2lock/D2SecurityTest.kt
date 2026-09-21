@@ -91,12 +91,12 @@ class D2SecurityTest {
                 // External credit links must use the same PIN gate as normal exit.
                 onView(withText("Weather: Open-Meteo.com · CC BY 4.0")).perform(click())
                 InstrumentationRegistry.getInstrumentation().waitForIdleSync()
-                onView(withText("Enter D2 PIN")).inRoot(isDialog()).check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()))
+                onView(withId(app.d2lock.R.id.d2_pin_prompt)).inRoot(isDialog()).check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()))
                 scenario.onActivity { assertFalse(it.isFinishing) }
                 onView(withText("Cancel")).inRoot(isDialog()).perform(click())
                 scenario.onActivity { assertFalse("Cancel must leave D2 locked", it.isFinishing) }
                 InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
-                onView(withText("Enter D2 PIN")).inRoot(isDialog()).check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()))
+                onView(withId(app.d2lock.R.id.d2_pin_prompt)).inRoot(isDialog()).check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()))
                 scenario.recreate()
                 TestDevice.focusTask(task)
                 SystemClock.sleep(500)
@@ -104,7 +104,7 @@ class D2SecurityTest {
                 var decor: View? = null
                 scenario.onActivity { decor = it.window.decorView }
                 onView(withText("PIN")).inRoot(withDecorView(sameInstance(decor))).perform(click())
-                onView(withHint("6-digit D2 PIN")).inRoot(isDialog()).perform(typeText("246810"), closeSoftKeyboard())
+                onView(withId(app.d2lock.R.id.d2_pin_input)).inRoot(isDialog()).perform(typeText("246810"), closeSoftKeyboard())
                 onView(withText("Unlock")).inRoot(isDialog()).perform(click())
                 val deadline = SystemClock.elapsedRealtime() + 15000
                 while (scenario.state != Lifecycle.State.DESTROYED && SystemClock.elapsedRealtime() < deadline) SystemClock.sleep(100)
