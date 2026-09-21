@@ -35,7 +35,9 @@ import app.d2lock.widget.D2Widget
 class MainActivity : Activity() {
     private val wallpaperPicker = 701
     private var authorized = false
+    private var authorizedUntil = 0L
     private var pinDialog: AlertDialog? = null
+    private val adminSessionMs = 3 * 60 * 1000L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(if (Appearance.dark(this)) R.style.Theme_D2_Dark else R.style.Theme_SamsungLock)
@@ -48,10 +50,12 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        if (authorized && SystemClock.elapsedRealtime() >= authorizedUntil) authorized = false
         if (!authorized && pinDialog?.isShowing != true) {
             if (PinStore(this).configured()) {
                 pinDialog = PinUi.show(this, success = {
                     authorized = true
+                    authorizedUntil = SystemClock.elapsedRealtime() + adminSessionMs
                     app.d2lock.bridge.IslandBridge.setLocked(this, false)
                     if (Prefs.enabled(this)) {
                         runCatching { LockScreenService.start(this) }
@@ -69,7 +73,7 @@ class MainActivity : Activity() {
 
     override fun onStop() {
         super.onStop()
-        authorized = false
+        if (SystemClock.elapsedRealtime() >= authorizedUntil) authorized = false
         pinDialog?.dismiss()
         pinDialog = null
         setContentView(TextView(this).apply { text = "D2 settings locked" })
@@ -126,6 +130,7 @@ class MainActivity : Activity() {
         addButton(root, if (configured) "Change D2 PIN" else "Create D2 PIN") {
             pinDialog = PinUi.show(this, setup = !configured, change = configured, success = {
                 authorized = true
+                authorizedUntil = SystemClock.elapsedRealtime() + adminSessionMs
                 setContentView(buildSettings())
             })
         }
