@@ -218,6 +218,37 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, dp(16))
         })
 
+        section(root, "ADB / USB RECOVERY")
+        root.addView(TextView(this).apply {
+            text = RootManager.usbAdbState()?.summary ?: "Root access is required to inspect Samsung USB/ADB state."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(6), 0, dp(6), dp(10))
+        })
+        root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "ADB / USB recovery mode"
+            textSize = 17f
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.adbRecovery(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                if (!RootManager.isAvailable()) {
+                    isChecked = false
+                    Toast.makeText(this@MainActivity, "KernelSU/root access is required", Toast.LENGTH_LONG).show()
+                    return@setOnCheckedChangeListener
+                }
+                val result = if (checked) RootManager.enableUsbAdbRecovery() else RootManager.disableUsbAdbRecovery()
+                if (result.first) Prefs.setAdbRecovery(this@MainActivity, checked) else isChecked = !checked
+                Toast.makeText(this@MainActivity, result.second, Toast.LENGTH_LONG).show()
+            }
+        }, rowParams())
+        root.addView(TextView(this).apply {
+            text = "Root-only recovery option. When enabled, D2 requests block_usb_lock=0 and enables the ADB USB function. Samsung firmware can still override USB policy, and an untrusted computer still requires ADB authorization. Disable this option when recovery access is not needed."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(6), 0, dp(6), dp(14))
+        })
+
         section(root, "THEME & COLORS")
         ThemeOptions.add(this, root, ::refreshAppearance)
         section(root, "APPEARANCE")
