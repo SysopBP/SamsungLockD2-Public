@@ -60,6 +60,7 @@ class LockScreenActivity : Activity() {
     private lateinit var date: TextView
     private lateinit var battery: TextView
     private lateinit var weather: TextView
+    private lateinit var nextAlarm: TextView
     private lateinit var notifications: LinearLayout
     private lateinit var liveBanner: TextView
     private var bannerKey: String? = null
@@ -297,6 +298,9 @@ class LockScreenActivity : Activity() {
             gravity = Gravity.CENTER
         }
         content.addView(kioskStatus)
+        val alarmClock = getSystemService(AlarmManager::class.java).nextAlarmClock
+        nextAlarm = label(alarmClock?.let { "Next alarm • " + SimpleDateFormat("EEE h:mm a", Locale.getDefault()).format(Date(it.triggerTime)) } ?: "No alarm set", 12f, Appearance.secondary(this, true)).apply { gravity = Gravity.CENTER }
+        content.addView(nextAlarm)
         if (preview) {
             val taps = DoubleTap()
             content.addView(actionButton("Double-tap to lock D2") {
@@ -493,6 +497,11 @@ class LockScreenActivity : Activity() {
         val adb = RootManager.adbUsbEnabled()
         addAction(if (adb) "Block ADB / USB" else "Allow ADB / USB") { RootManager.setAdbUsbEnabled(!adb) }
         addAction("Reset USB / restart ADB") { RootManager.resetAdbUsb() }
+        addAction("Restart D2 wake service") {
+            LockScreenService.stop(this)
+            if (Prefs.enabled(this)) LockScreenService.start(this)
+            true
+        }
         addAction("Restart System UI") { RootManager.restartSystemUi() }
         body.addView(actionButton("Soft reboot Android") {
             AlertDialog.Builder(this)
