@@ -239,11 +239,17 @@ class LockScreenActivity : Activity() {
                 gravity = Gravity.CENTER
                 maxLines = 1
             }
-            addView(weather, LinearLayout.LayoutParams(0, dp(42), 1f))
-            addView(View(this@LockScreenActivity).apply {
-                background = GradientDrawable().apply { setColor(0x33ffffff) }
-            }, LinearLayout.LayoutParams(dp(1), dp(22)))
-            addView(battery, LinearLayout.LayoutParams(0, dp(42), 1f))
+            if (Prefs.showWeatherWidget(this@LockScreenActivity)) {
+                addView(weather, LinearLayout.LayoutParams(0, dp(42), 1f))
+            }
+            if (Prefs.showWeatherWidget(this@LockScreenActivity) && Prefs.showBatteryWidget(this@LockScreenActivity)) {
+                addView(View(this@LockScreenActivity).apply {
+                    background = GradientDrawable().apply { setColor(0x33ffffff) }
+                }, LinearLayout.LayoutParams(dp(1), dp(22)))
+            }
+            if (Prefs.showBatteryWidget(this@LockScreenActivity)) {
+                addView(battery, LinearLayout.LayoutParams(0, dp(42), 1f))
+            }
         }
         content.addView(clock)
         content.addView(date)
@@ -263,9 +269,11 @@ class LockScreenActivity : Activity() {
             })
             content.addView(actionButton("Close preview") { finish() })
         }
-        content.addView(topInfo, LinearLayout.LayoutParams(-1, dp(50)).apply {
-            leftMargin = dp(18); rightMargin = dp(18); topMargin = dp(6); bottomMargin = dp(4)
-        })
+        if (Prefs.showWeatherWidget(this) || Prefs.showBatteryWidget(this)) {
+            content.addView(topInfo, LinearLayout.LayoutParams(-1, dp(50)).apply {
+                leftMargin = dp(18); rightMargin = dp(18); topMargin = dp(6); bottomMargin = dp(4)
+            })
+        }
         content.addView(label("Weather: Open-Meteo.com · CC BY 4.0", 12f, Appearance.text(this, true)).apply {
             gravity = Gravity.CENTER
             paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG
