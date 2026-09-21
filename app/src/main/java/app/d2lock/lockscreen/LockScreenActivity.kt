@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.app.Notification
 import android.app.NotificationManager
+import android.app.KeyguardManager
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.content.BroadcastReceiver
@@ -131,6 +132,12 @@ class LockScreenActivity : Activity() {
     override fun onResume() {
         super.onResume()
         if (!::clock.isInitialized) return
+        // If Android has already dismissed the device keyguard while this D2 window
+        // is still in the foreground, do not leave a stale/blank lock Activity on top.
+        if (!preview && unlocking && !getSystemService(KeyguardManager::class.java).isKeyguardLocked) {
+            completeUnlock()
+            return
+        }
         wallpaperActive = true
         wallpaperAnimations.forEach { it.resume() }
         renderNotifications()
@@ -477,9 +484,21 @@ class LockScreenActivity : Activity() {
             RootKiosk.unlock(this) {
                 app.d2lock.bridge.IslandBridge.setLocked(this, false)
                 afterUnlock?.invoke()
-                finish()
+                completeUnlock()
             }
         })
+    }
+
+    private fun completeUnlock() {
+        if (isFinishing || isDestroyed) return
+        pinDialog?.dismiss()
+        pinDialog = null
+        handler.removeCallbacks(ticker)
+        handler.removeCallbacks(hideBanner)
+        // Remove this task from the foreground immediately after a verified D2 unlock.
+        // finishAndRemoveTask prevents Samsung from revealing a stale D2 activity snapshot.
+        finishAndRemoveTask()
+        overridePendingTransition(0, 0)
     }
 
     private fun openCamera() = runCatching {
