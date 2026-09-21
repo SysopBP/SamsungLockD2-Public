@@ -36,6 +36,7 @@ class LockScreenService : Service() {
         if (receiverRegistered) return
         runCatching {
             ensureScreenReceiver()
+        watchdog.removeCallbacks(watchdogTask)
         watchdog.postDelayed(watchdogTask, WATCHDOG_MS)
             receiverRegistered = true
         }
