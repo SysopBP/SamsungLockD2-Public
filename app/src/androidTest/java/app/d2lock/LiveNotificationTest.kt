@@ -46,7 +46,7 @@ class LiveNotificationTest {
                     NotificationStore.onPosted?.invoke(message)
                 }
                 onView(withText("Messages\nNew notification")).check(matches(isDisplayed())).perform(click())
-                onView(withHint("6-digit D2 PIN")).check(matches(isDisplayed()))
+                onView(withId(app.d2lock.R.id.d2_pin_input)).check(matches(isDisplayed()))
                 onView(withText("Cancel")).perform(click())
                 // Changing visibility on an existing notification must remove stale banner text.
                 scenario.onActivity {
