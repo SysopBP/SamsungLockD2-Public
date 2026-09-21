@@ -4,6 +4,8 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.app.Notification
 import android.app.NotificationManager
+import android.app.AlarmManager
+import android.media.AudioManager
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.content.BroadcastReceiver
@@ -718,6 +720,28 @@ class LockScreenActivity : Activity() {
             if (preview) openCamera() else authenticate { openCamera() }
         }.apply { contentDescription = "Camera, D2 PIN required" }
         "Flashlight" -> roundButton("🔦") { toggleTorch() }.apply { contentDescription = "Flashlight" }
+        "Calculator" -> roundButton("⌗") {
+            val open = {
+                val launch = packageManager.getLaunchIntentForPackage("com.sec.android.app.popupcalculator")
+                    ?: packageManager.getLaunchIntentForPackage("com.google.android.calculator")
+                if (launch != null) startActivity(launch) else Toast.makeText(this, "Calculator unavailable", Toast.LENGTH_SHORT).show()
+            }
+            if (preview) open() else authenticate(open)
+        }.apply { contentDescription = "Calculator, D2 PIN required" }
+        "Silent / Vibrate" -> roundButton("♬") {
+            val audio = getSystemService(AudioManager::class.java)
+            audio.ringerMode = if (audio.ringerMode == AudioManager.RINGER_MODE_NORMAL) AudioManager.RINGER_MODE_VIBRATE else AudioManager.RINGER_MODE_NORMAL
+            Toast.makeText(this, if (audio.ringerMode == AudioManager.RINGER_MODE_VIBRATE) "Vibrate" else "Sound", Toast.LENGTH_SHORT).show()
+        }.apply { contentDescription = "Toggle sound and vibrate" }
+        "Do Not Disturb" -> roundButton("☾") {
+            val nm = getSystemService(NotificationManager::class.java)
+            if (!nm.isNotificationPolicyAccessGranted) {
+                startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+            } else {
+                val enabled = nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
+                nm.setInterruptionFilter(if (enabled) NotificationManager.INTERRUPTION_FILTER_ALL else NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+            }
+        }.apply { contentDescription = "Toggle Do Not Disturb" }
         else -> View(this)
     }
 
