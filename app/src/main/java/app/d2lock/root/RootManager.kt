@@ -32,6 +32,20 @@ object RootManager {
         process.waitFor(2, TimeUnit.SECONDS) && process.inputStream.bufferedReader().use { it.readText().trim() } == "0"
     }.getOrDefault(false)
 
+    fun usbDiagnostics(): String = rootOutput(
+        "echo BLOCK=$(settings get global block_usb_lock); echo ADB=$(settings get global adb_enabled); echo PERSIST=$(getprop persist.sys.usb.config); echo CURRENT=$(getprop sys.usb.config); echo STATE=$(getprop sys.usb.state)"
+    ).ifBlank { "USB diagnostics unavailable" }
+
+    fun resetAdbUsb(): Boolean = runRoot(
+        "settings put global block_usb_lock 0; stop adbd; setprop sys.usb.config none; sleep 1; setprop persist.sys.usb.config adb; setprop sys.usb.config adb; start adbd"
+    )
+
+    private fun rootOutput(command: String): String = runCatching {
+        val process = ProcessBuilder("su", "-c", command).redirectErrorStream(true).start()
+        if (!process.waitFor(4, TimeUnit.SECONDS)) { process.destroyForcibly(); "" }
+        else process.inputStream.bufferedReader().use { it.readText().trim() }
+    }.getOrDefault("")
+
     private fun runRoot(command: String): Boolean = runCatching {
         val process = ProcessBuilder("su", "-c", command).redirectErrorStream(true).start()
         val finished = process.waitFor(4, TimeUnit.SECONDS)
