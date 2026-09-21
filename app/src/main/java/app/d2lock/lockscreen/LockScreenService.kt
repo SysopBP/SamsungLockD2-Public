@@ -35,9 +35,7 @@ class LockScreenService : Service() {
     private fun ensureScreenReceiver() {
         if (receiverRegistered) return
         runCatching {
-            ensureScreenReceiver()
-        watchdog.removeCallbacks(watchdogTask)
-        watchdog.postDelayed(watchdogTask, WATCHDOG_MS)
+            registerReceiver(screenReceiver, IntentFilter(Intent.ACTION_SCREEN_ON))
             receiverRegistered = true
         }
     }
@@ -70,7 +68,9 @@ class LockScreenService : Service() {
             .setOngoing(true)
             .build()
         startForeground(ID, notification)
-        registerReceiver(screenReceiver, IntentFilter(Intent.ACTION_SCREEN_ON))
+        ensureScreenReceiver()
+        watchdog.removeCallbacks(watchdogTask)
+        watchdog.postDelayed(watchdogTask, WATCHDOG_MS)
     }
 
     override fun onDestroy() {
