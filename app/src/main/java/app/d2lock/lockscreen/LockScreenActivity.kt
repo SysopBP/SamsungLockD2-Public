@@ -56,6 +56,7 @@ class LockScreenActivity : Activity() {
     private lateinit var clock: TextView
     private lateinit var date: TextView
     private lateinit var battery: TextView
+    private lateinit var chargingStatus: TextView
     private lateinit var weather: TextView
     private lateinit var notifications: LinearLayout
     private lateinit var liveBanner: TextView
@@ -92,7 +93,11 @@ class LockScreenActivity : Activity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
             val charging = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) in listOf(BatteryManager.BATTERY_STATUS_CHARGING, BatteryManager.BATTERY_STATUS_FULL)
-            battery.text = if (charging) "⚡ $level%" else "$level%"
+            battery.text = "$level%"
+            if (::chargingStatus.isInitialized) {
+                chargingStatus.text = if (charging) "Charging • $level%" else "Battery • $level%"
+                chargingStatus.visibility = if (charging) View.VISIBLE else View.GONE
+            }
         }
     }
 
@@ -250,6 +255,15 @@ class LockScreenActivity : Activity() {
             content.addView(actionButton("Close preview") { finish() })
         }
         content.addView(topInfo, LinearLayout.LayoutParams(-1, dp(54)))
+        chargingStatus = label("", 14f, Color.WHITE).apply {
+            gravity = Gravity.CENTER
+            visibility = View.GONE
+            setPadding(dp(16), dp(8), dp(16), dp(8))
+            background = glassPanel(22f)
+        }
+        content.addView(chargingStatus, LinearLayout.LayoutParams(-1, dp(42)).apply {
+            leftMargin = dp(34); rightMargin = dp(34); bottomMargin = dp(6)
+        })
         content.addView(label("Weather: Open-Meteo.com · CC BY 4.0", 12f, Appearance.text(this, true)).apply {
             gravity = Gravity.CENTER
             paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG
@@ -279,8 +293,9 @@ class LockScreenActivity : Activity() {
         val mediaPanel = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(14), dp(12), dp(10), dp(12))
-            background = glassPanel(30f)
+            setPadding(dp(16), dp(13), dp(12), dp(13))
+            background = glassPanel(32f)
+            elevation = dp(8).toFloat()
         }
         mediaPanel.addView(label("♫", 25f, Color.WHITE).apply {
             gravity = Gravity.CENTER
@@ -302,6 +317,7 @@ class LockScreenActivity : Activity() {
             addView(mediaArtist)
         }
         mediaPanel.addView(mediaDetails, LinearLayout.LayoutParams(0, -2, 1f))
+        mediaPanel.contentDescription = "Now Playing media controls"
         val controls = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             addView(mediaButton("‹") { media.previous() })
@@ -311,7 +327,7 @@ class LockScreenActivity : Activity() {
         }
         mediaPanel.addView(controls)
         if (Prefs.showMedia(this)) content.addView(mediaPanel,
-            LinearLayout.LayoutParams(-1, dp(88)).apply { bottomMargin = dp(12) })
+            LinearLayout.LayoutParams(-1, dp(92)).apply { bottomMargin = dp(12) })
         frame.addView(content, FrameLayout.LayoutParams(-1, -1))
         val floatingBar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
