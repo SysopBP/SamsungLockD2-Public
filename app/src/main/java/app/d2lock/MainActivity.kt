@@ -163,7 +163,32 @@ class MainActivity : Activity() {
         }
         root.addView(enabled, rowParams())
 
-        val rootMode = Switch(this).apply {
+        section(root, "PRIVILEGED ACCESS")
+        root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Use Shizuku when available"
+            textSize = 17f
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.shizukuMode(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                if (!checked) {
+                    Prefs.setShizukuMode(this@MainActivity, false)
+                } else if (!app.d2lock.shizuku.ShizukuManager.isRunning()) {
+                    isChecked = false
+                    Toast.makeText(this@MainActivity, "Shizuku is not running", Toast.LENGTH_LONG).show()
+                } else {
+                    Prefs.setShizukuMode(this@MainActivity, true)
+                    if (!app.d2lock.shizuku.ShizukuManager.isGranted()) app.d2lock.shizuku.ShizukuManager.requestPermission()
+                }
+            }
+        }, rowParams())
+        root.addView(TextView(this).apply {
+            text = "Shizuku: " + app.d2lock.shizuku.ShizukuManager.status() + "\nD2 uses normal Android APIs first. Shizuku is optional; KernelSU/root remains available for recovery operations that require root."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(0, 0, 0, dp(12))
+        })
+                val rootMode = Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Optional KernelSU root mode"
             textSize = 17f
