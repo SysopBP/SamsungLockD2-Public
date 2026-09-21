@@ -95,7 +95,7 @@ class LockScreenActivity : Activity() {
                 mediaProgress.max = duration.coerceAtMost(Int.MAX_VALUE.toLong()).toInt().coerceAtLeast(1)
                 mediaProgress.progress = position.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
             }
-            if (::mediaTime.isInitialized) mediaTime.text = mediaTime(position, duration)
+            if (::mediaTime.isInitialized) mediaTime.text = formatMediaTime(position, duration)
             handler.postDelayed(this, 1000)
         }
     }
@@ -348,7 +348,7 @@ class LockScreenActivity : Activity() {
                 setPadding(0, dp(2), 0, 0)
                 setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                        if (fromUser && ::mediaTime.isInitialized) mediaTime.text = mediaTime(progress.toLong(), media.durationMs())
+                        if (fromUser && ::mediaTime.isInitialized) mediaTime.text = formatMediaTime(progress.toLong(), media.durationMs())
                     }
                     override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                     override fun onStopTrackingTouch(seekBar: SeekBar?) { seekBar?.let { media.seekTo(it.progress.toLong()) } }
@@ -429,7 +429,7 @@ class LockScreenActivity : Activity() {
         return frame
     }
 
-    private fun mediaTime(position: Long, duration: Long): String {
+    private fun formatMediaTime(position: Long, duration: Long): String {
         fun format(ms: Long): String {
             val total = (ms.coerceAtLeast(0L) / 1000)
             return "${total / 60}:${(total % 60).toString().padStart(2, '0')}"
