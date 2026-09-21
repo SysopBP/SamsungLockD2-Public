@@ -56,6 +56,7 @@ class MainActivity : Activity() {
                 pinDialog = PinUi.show(this, success = {
                     authorized = true
                     authorizedUntil = SystemClock.elapsedRealtime() + adminSessionMs
+                    Prefs.setBootPinConfigured(this, true)
                     app.d2lock.bridge.IslandBridge.setLocked(this, false)
                     if (Prefs.enabled(this)) {
                         runCatching { LockScreenService.start(this) }
@@ -131,6 +132,7 @@ class MainActivity : Activity() {
             pinDialog = PinUi.show(this, setup = !configured, change = configured, success = {
                 authorized = true
                 authorizedUntil = SystemClock.elapsedRealtime() + adminSessionMs
+                Prefs.setBootPinConfigured(this, true)
                 setContentView(buildSettings())
             })
         }
