@@ -67,10 +67,17 @@ class RootKioskTest {
         }
     }
     private fun cleanup(scenario: ActivityScenario<LockScreenActivity>) {
-        if (scenario.state != Lifecycle.State.DESTROYED) {
+        // Recovery may release lock task and destroy the Activity asynchronously.
+        // Only ask the Activity to unlock when kiosk mode is still active; otherwise
+        // ActivityScenario cleanup must tolerate the Activity already being gone.
+        if (manager.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE &&
+            scenario.state != Lifecycle.State.DESTROYED) {
             val done = CountDownLatch(1)
-            scenario.onActivity { RootKiosk.unlock(it) { done.countDown() } }
-            assertTrue(done.await(15, TimeUnit.SECONDS))
+            val requested = runCatching {
+                scenario.onActivity { RootKiosk.unlock(it) { done.countDown() } }
+                true
+            }.getOrDefault(false)
+            if (requested) assertTrue(done.await(15, TimeUnit.SECONDS))
         }
         scenario.close()
     }
