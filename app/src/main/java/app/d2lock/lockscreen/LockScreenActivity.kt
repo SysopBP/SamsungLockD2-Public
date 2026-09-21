@@ -224,8 +224,10 @@ class LockScreenActivity : Activity() {
         date = label("", 18f, Appearance.secondary(this, true)).apply { gravity = Gravity.CENTER }
         val topInfo = LinearLayout(this).apply {
             gravity = Gravity.CENTER
-            weather = label("Loading weather…", 15f, Appearance.text(this@LockScreenActivity, true))
-            battery = label("—%", 15f, Appearance.text(this@LockScreenActivity, true))
+            weather = label("Loading weather…", 15f, Appearance.text(this@LockScreenActivity, true)).apply { gravity = Gravity.CENTER }
+            battery = label("—%", 15f, Appearance.text(this@LockScreenActivity, true)).apply { gravity = Gravity.CENTER }
+            // One continuous transparent weather/battery pill, matching the AMOLED glass design.
+            background = Appearance.glass(this@LockScreenActivity, 30f, 32, true)
             addView(weather, LinearLayout.LayoutParams(0, dp(42), 1f))
             addView(battery, LinearLayout.LayoutParams(0, dp(42), 1f))
         }
@@ -532,12 +534,8 @@ class LockScreenActivity : Activity() {
     private fun notificationPanel(app: String?, banner: Boolean = false, call: Boolean = false) =
         Appearance.panel(this, app, banner, call)
 
-    private fun glassPanel(radius: Float = 28f) = GradientDrawable().apply {
-        shape = GradientDrawable.RECTANGLE
-        cornerRadius = dp(radius.toInt()).toFloat()
-        setColor(0xdd000000.toInt() or (Appearance.blend(Color.BLACK, Appearance.accent(this@LockScreenActivity), .3f) and 0xffffff))
-        setStroke(dp(1), 0x55ffffff)
-    }
+    private fun glassPanel(radius: Float = 28f) =
+        Appearance.glass(this, radius, 36, true)
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 }

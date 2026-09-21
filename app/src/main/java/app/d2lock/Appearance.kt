@@ -18,12 +18,17 @@ object Appearance {
     fun barWidth(c: Context) = prefs(c).getInt("bar_width", 90).coerceIn(65, 100)
     fun barOpacity(c: Context) = prefs(c).getInt("bar_opacity", 85).coerceIn(40, 100)
     fun barGap(c: Context) = prefs(c).getInt("bar_gap", 24).coerceIn(8, 72)
-    fun floatingBar(c: Context) = GradientDrawable().apply {
-        cornerRadius = 38 * c.resources.displayMetrics.density
-        val fill = blend(Color.BLACK, accent(c), .25f)
-        setColor(((barOpacity(c) * 255 / 100) shl 24) or (fill and 0xffffff))
-        setStroke(c.resources.displayMetrics.density.toInt().coerceAtLeast(1), (0x99 shl 24) or (accent(c) and 0xffffff))
-    }
+    fun floatingBar(c: Context) = glass(c, 38f, barOpacity(c).coerceAtMost(58), true)
+    /** One UI 9-inspired transparent glass surface shared by settings and lock screen. */
+    fun glass(c: Context, radiusDp: Float = 28f, opacity: Int = 42, accentEdge: Boolean = false): GradientDrawable =
+        GradientDrawable().apply {
+            cornerRadius = radiusDp * c.resources.displayMetrics.density
+            val fill = blend(Color.BLACK, accent(c), if (accentEdge) .12f else .06f)
+            setColor(((opacity.coerceIn(0, 100) * 255 / 100) shl 24) or (fill and 0xffffff))
+            setStroke(c.resources.displayMetrics.density.toInt().coerceAtLeast(1),
+                (0x55 shl 24) or ((if (accentEdge) blend(Color.WHITE, accent(c), .35f) else Color.WHITE) and 0xffffff))
+        }
+
     fun custom(c: Context) = prefs(c).getInt("custom", 0xff9a80be.toInt())
     fun set(c: Context, key: String, value: Int) { prefs(c).edit().putInt(key, value).apply() }
     fun reset(c: Context) { prefs(c).edit().clear().apply() }
@@ -75,8 +80,9 @@ object Appearance {
         val alpha = ((if(banner) bannerOpacity(c) else cardOpacity(c)) * 255 / 100)
         return GradientDrawable().apply {
             cornerRadius = radius(c) * c.resources.displayMetrics.density
-            setColor((alpha shl 24) or (fill and 0xffffff))
-            setStroke(c.resources.displayMetrics.density.toInt().coerceAtLeast(1), (0x99 shl 24) or (rgb and 0xffffff))
+            // Keep wallpaper visible: glass fill + subtle app/accent edge instead of an opaque card.
+            setColor(((alpha.coerceAtMost(58)) shl 24) or (fill and 0xffffff))
+            setStroke(c.resources.displayMetrics.density.toInt().coerceAtLeast(1), (0x66 shl 24) or (rgb and 0xffffff))
         }
     }
 }
