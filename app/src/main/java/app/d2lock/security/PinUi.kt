@@ -35,6 +35,7 @@ object PinUi {
             setPadding(dp(24), dp(8), dp(24), dp(8))
         }
         form.addView(TextView(activity).apply {
+            id = app.d2lock.R.id.d2_pin_prompt
             text = when {
                 setup -> "Create a 6-digit PIN for D2"
                 change -> "Verify your current PIN, then choose a new one"
@@ -45,7 +46,8 @@ object PinUi {
             setPadding(dp(4), 0, dp(4), dp(16))
         })
 
-        fun field(label: String) = EditText(activity).apply {
+        fun field(label: String, viewId: Int = View.NO_ID) = EditText(activity).apply {
+            if (viewId != View.NO_ID) id = viewId
             hint = label
             textSize = 18f
             gravity = Gravity.CENTER_VERTICAL
@@ -64,7 +66,7 @@ object PinUi {
         }
 
         val old = if (change) field("Current D2 PIN") else null
-        val pin = field(if (setup || change) "New 6-digit D2 PIN" else "D2 PIN")
+        val pin = field(if (setup || change) "New 6-digit D2 PIN" else "D2 PIN", app.d2lock.R.id.d2_pin_input)
         val confirm = if (setup || change) field("Confirm new PIN") else null
         val error = TextView(activity).apply {
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
