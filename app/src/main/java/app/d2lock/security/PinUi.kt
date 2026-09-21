@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.ColorDrawable
 import android.text.InputFilter
 import android.text.InputType
 import android.view.Gravity
@@ -89,6 +90,9 @@ object PinUi {
         dialog.setOnDismissListener { pin.text.clear(); old?.text?.clear(); confirm?.text?.clear() }
         dialog.setOnShowListener {
             dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            dialog.window?.decorView?.background = Appearance.glass(activity, 30f, if (Appearance.dark(activity)) 88 else 94, true)
+            dialog.window?.decorView?.setPadding(dp(4), dp(4), dp(4), dp(4))
             val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             button.filterTouchesWhenObscured = true
             button.setOnClickListener {
