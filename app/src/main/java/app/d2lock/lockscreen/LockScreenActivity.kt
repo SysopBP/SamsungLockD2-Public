@@ -224,13 +224,25 @@ class LockScreenActivity : Activity() {
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(dp(20), dp(72), dp(20), dp(125))
         }
-        clock = label("12:00", 82f, Appearance.text(this, true)).apply { letterSpacing = -.05f; gravity = Gravity.CENTER }
-        date = label("", 18f, Appearance.secondary(this, true)).apply { gravity = Gravity.CENTER }
+        clock = label("12:00", 84f, Appearance.text(this, true)).apply { letterSpacing = -.055f; gravity = Gravity.CENTER; includeFontPadding = false }
+        date = label("", 17f, Appearance.secondary(this, true)).apply { gravity = Gravity.CENTER; includeFontPadding = false; setPadding(0, dp(2), 0, dp(5)) }
         val topInfo = LinearLayout(this).apply {
             gravity = Gravity.CENTER
-            weather = label("Loading weather…", 15f, Appearance.text(this@LockScreenActivity, true))
-            battery = label("—%", 15f, Appearance.text(this@LockScreenActivity, true))
+            setPadding(dp(12), dp(4), dp(12), dp(4))
+            background = glassPanel(24f)
+            weather = label("Loading weather…", 14f, Appearance.text(this@LockScreenActivity, true)).apply {
+                gravity = Gravity.CENTER
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            }
+            battery = label("—%", 14f, Appearance.text(this@LockScreenActivity, true)).apply {
+                gravity = Gravity.CENTER
+                maxLines = 1
+            }
             addView(weather, LinearLayout.LayoutParams(0, dp(42), 1f))
+            addView(View(this@LockScreenActivity).apply {
+                background = GradientDrawable().apply { setColor(0x33ffffff) }
+            }, LinearLayout.LayoutParams(dp(1), dp(22)))
             addView(battery, LinearLayout.LayoutParams(0, dp(42), 1f))
         }
         content.addView(clock)
@@ -251,7 +263,9 @@ class LockScreenActivity : Activity() {
             })
             content.addView(actionButton("Close preview") { finish() })
         }
-        content.addView(topInfo, LinearLayout.LayoutParams(-1, dp(54)))
+        content.addView(topInfo, LinearLayout.LayoutParams(-1, dp(50)).apply {
+            leftMargin = dp(18); rightMargin = dp(18); topMargin = dp(6); bottomMargin = dp(4)
+        })
         content.addView(label("Weather: Open-Meteo.com · CC BY 4.0", 12f, Appearance.text(this, true)).apply {
             gravity = Gravity.CENTER
             paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG
