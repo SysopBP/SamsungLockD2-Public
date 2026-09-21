@@ -31,11 +31,18 @@ import app.d2lock.security.PinStore
 import app.d2lock.security.PinUi
 import app.d2lock.widget.DoubleTap
 import app.d2lock.widget.D2Widget
+import rikka.shizuku.Shizuku
 
 class MainActivity : Activity() {
     private val wallpaperPicker = 701
     private var authorized = false
     private var pinDialog: AlertDialog? = null
+    private val shizukuRequestCode = 910
+    private val shizukuBinderReceived = Shizuku.OnBinderReceivedListener { refreshShizukuUi() }
+    private val shizukuBinderDead = Shizuku.OnBinderDeadListener { refreshShizukuUi() }
+    private val shizukuPermission = Shizuku.OnRequestPermissionResultListener { requestCode, _ ->
+        if (requestCode == shizukuRequestCode) refreshShizukuUi()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(if (Appearance.dark(this)) R.style.Theme_D2_Dark else R.style.Theme_SamsungLock)
@@ -44,6 +51,9 @@ class MainActivity : Activity() {
         PinUi.protect(this)
         window.statusBarColor = Color.TRANSPARENT
         setContentView(TextView(this).apply { text = "Samsung Lock D2" })
+        Shizuku.addBinderReceivedListenerSticky(shizukuBinderReceived)
+        Shizuku.addBinderDeadListener(shizukuBinderDead)
+        Shizuku.addRequestPermissionResultListener(shizukuPermission)
     }
 
     override fun onResume() {
@@ -65,6 +75,13 @@ class MainActivity : Activity() {
                 setContentView(buildSettings())
             }
         }
+    }
+
+    override fun onDestroy() {
+        Shizuku.removeBinderReceivedListener(shizukuBinderReceived)
+        Shizuku.removeBinderDeadListener(shizukuBinderDead)
+        Shizuku.removeRequestPermissionResultListener(shizukuPermission)
+        super.onDestroy()
     }
 
     override fun onStop() {
@@ -155,6 +172,9 @@ class MainActivity : Activity() {
             }
         }
         root.addView(enabled, rowParams())
+
+        section(root, "SHIZUKU")
+        root.addView(shizukuCard(), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
 
         val rootMode = Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
@@ -301,9 +321,67 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(18), 0, dp(8))
         })
     }
-    private fun pillBackground() = GradientDrawable().apply {
-        cornerRadius = dp(22).toFloat()
-        setColor(Appearance.surface(this@MainActivity))
+    private fun pillBackground() = Appearance.glass(this, 22f, if (Appearance.dark(this)) 38 else 62, true)
+
+    private fun shizukuCard(): ViewGroup {
+        val running = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+        val granted = running && runCatching {
+            Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+        }.getOrDefault(false)
+        return LinearLayout(this).apply {
+            tag = "shizuku_card"
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(14), dp(18), dp(14))
+            background = Appearance.glass(this@MainActivity, 28f, 34, true)
+            addView(TextView(this@MainActivity).apply {
+                text = when {
+                    granted -> "Shizuku connected"
+                    running -> "Shizuku running · permission required"
+                    else -> "Shizuku not running"
+                }
+                textSize = 17f
+                setTextColor(Appearance.text(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = when {
+                    granted -> "Service running · Authorized"
+                    running -> "Tap below to authorize Samsung Lock D2."
+                    else -> "Start Shizuku, then return here. D2 reconnects automatically."
+                }
+                textSize = 13f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0, dp(3), 0, dp(8))
+            })
+            addView(Button(this@MainActivity).apply {
+                text = when { granted -> "Reconnect Shizuku"; running -> "Authorize Shizuku"; else -> "Connect Shizuku" }
+                isAllCaps = false
+                setTextColor(Appearance.text(this@MainActivity))
+                background = Appearance.glass(this@MainActivity, 22f, 30, true)
+                setOnClickListener {
+                    if (!Shizuku.pingBinder()) {
+                        Toast.makeText(this@MainActivity, "Start Shizuku first, then return to D2.", Toast.LENGTH_LONG).show()
+                    } else if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                        Shizuku.requestPermission(shizukuRequestCode)
+                    } else {
+                        refreshShizukuUi()
+                        Toast.makeText(this@MainActivity, "Shizuku is connected and authorized", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }, LinearLayout.LayoutParams(-1, dp(50)))
+        }
+    }
+
+    private fun refreshShizukuUi() {
+        runOnUiThread {
+            if (!isFinishing && !isDestroyed && authorized) {
+                val host = findViewById<ViewGroup>(android.R.id.content)
+                val scroll = host.getChildAt(0) as? ScrollView
+                val y = scroll?.scrollY ?: 0
+                val settings = buildSettings()
+                setContentView(settings)
+                settings.post { (settings as? ScrollView)?.scrollTo(0, y) }
+            }
+        }
     }
     private fun addChoice(parent: LinearLayout, title: String, choices: List<String>, selected: Int, save: (Int) -> Unit) {
         parent.addView(TextView(this).apply {
