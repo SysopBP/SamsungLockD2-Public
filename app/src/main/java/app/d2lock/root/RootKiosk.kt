@@ -31,6 +31,7 @@ object RootKiosk {
     private var lastPulse = 0L
     private var detachedAt = 0L
     private fun mode(activity: Activity) = activity.getSystemService(ActivityManager::class.java).lockTaskModeState
+    private fun credentialName(activity: Activity) = if (app.d2lock.Prefs.unlockMethod(activity) == "pattern") "Pattern" else "PIN"
     private fun report(value: String) { message = value; observer?.invoke(value) }
     private fun quote(value: String) = "'" + value.replace("'", "'\\''") + "'"
     internal fun command(activity: Activity): String = "CLASSPATH=" + quote(activity.applicationInfo.sourceDir) +
@@ -47,7 +48,7 @@ object RootKiosk {
         starting = true
         val ticket = ++generation
         val command = command(activity)
-        report("Starting kiosk… PIN protection is not active yet")
+        report("Starting kiosk… ${credentialName(activity)} protection is not active yet")
         worker.execute {
             var opened: Channel? = null
             try {
@@ -100,7 +101,7 @@ object RootKiosk {
         if (ticket != generation) return
         val activity = owner.get() ?: return fail("D2 window closed")
         if (mode(activity) == ActivityManager.LOCK_TASK_MODE_LOCKED) {
-            starting = false; active = true; report("Kiosk active • PIN required to leave")
+            starting = false; active = true; report("Kiosk active • ${credentialName(activity)} required to leave")
         } else if (SystemClock.elapsedRealtime() < deadline) main.postDelayed({ confirm(ticket, deadline) }, 100)
         else fail("Android did not enter full kiosk mode")
     }
@@ -118,7 +119,7 @@ object RootKiosk {
                 fail("D2 window closed; recovery released kiosk"); return
             }
             if (active && activity != null && mode(activity) != ActivityManager.LOCK_TASK_MODE_LOCKED) {
-                fail("Kiosk ended; PIN-only exit is no longer enforced"); return
+                fail("Kiosk ended; ${activity?.let { credentialName(it) } ?: "D2 authentication"} exit is no longer enforced"); return
             }
             worker.execute { runCatching { lease.writer.write("PING\n"); lease.writer.flush() } }
             main.postDelayed(this, 1000)
@@ -128,7 +129,7 @@ object RootKiosk {
         owner.get()?.let { runCatching { if (active) it.stopLockTask() } }
         release { report("Kiosk unavailable: $reason") }
     }
-    /** Call only from the verified PIN callback. Recovery is a deliberately separate escape path. */
+    /** Call only from a verified D2 authentication callback. Recovery is a deliberately separate escape path. */
     fun unlock(activity: Activity, done: () -> Unit) {
         if (active) {
             try { activity.stopLockTask() }
@@ -136,7 +137,7 @@ object RootKiosk {
         }
         release {
             if (mode(activity) == ActivityManager.LOCK_TASK_MODE_NONE) done()
-            else report("Could not release kiosk. Retry PIN, or reboot for recovery.")
+            else report("Could not release kiosk. Retry ${credentialName(activity)}, or reboot for recovery.")
         }
     }
     private fun release(done: () -> Unit) {
