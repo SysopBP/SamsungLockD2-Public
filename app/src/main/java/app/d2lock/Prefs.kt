@@ -20,6 +20,8 @@ object Prefs {
     fun setUnlockMethod(context: Context, value: String) = prefs(context).edit().putString("unlock_method", value).apply()
     fun wallpaper(context: Context): String? = prefs(context).getString("wallpaper", null)
     fun setWallpaper(context: Context, value: String) = prefs(context).edit().putString("wallpaper", value).apply()
+    fun wallpaperDim(context: Context) = prefs(context).getInt("wallpaper_dim", 30).coerceIn(0, 80)
+    fun setWallpaperDim(context: Context, value: Int) = prefs(context).edit().putInt("wallpaper_dim", value.coerceIn(0, 80)).apply()
     fun celsius(context: Context) = prefs(context).getBoolean("celsius", false)
     fun setCelsius(context: Context, value: Boolean) = prefs(context).edit().putBoolean("celsius", value).apply()
     fun showMedia(context: Context) = prefs(context).getBoolean("show_media", true)
