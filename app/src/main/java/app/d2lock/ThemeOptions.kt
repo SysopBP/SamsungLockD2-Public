@@ -13,15 +13,18 @@ object ThemeOptions {
     fun add(activity: Activity, parent: LinearLayout, refresh: () -> Unit) {
         val c = activity
         fun dp(v: Int) = (v*c.resources.displayMetrics.density).toInt()
-        fun label(value: String) = TextView(c).apply { text=value; textSize=15f; setTextColor(Appearance.text(c)); setPadding(0,dp(12),0,dp(6)) }
+        fun label(value: String) = TextView(c).apply { text=value; textSize=15f; setTextColor(Appearance.text(c)); setPadding(dp(8),dp(12),dp(8),dp(6)) }
+        fun ui9Card() = Appearance.glass(c, 28f, 34, true)
         fun choice(title: String, values: List<String>, selected: Int, key: String) {
             parent.addView(label(title))
             parent.addView(Spinner(c).apply {
                 contentDescription=title
                 adapter=object: ArrayAdapter<String>(c,android.R.layout.simple_spinner_dropdown_item,values) {
-                    override fun getView(p:Int,v:View?,g:ViewGroup):View = (super.getView(p,v,g) as TextView).apply { setTextColor(Appearance.text(c)); setBackgroundColor(Appearance.surface(c)) }
-                    override fun getDropDownView(p:Int,v:View?,g:ViewGroup):View = (super.getDropDownView(p,v,g) as TextView).apply { setTextColor(Appearance.text(c)); setBackgroundColor(Appearance.surface(c)) }
+                    override fun getView(p:Int,v:View?,g:ViewGroup):View = (super.getView(p,v,g) as TextView).apply { setTextColor(Appearance.text(c)); setPadding(dp(18),0,dp(12),0); background=ui9Card() }
+                    override fun getDropDownView(p:Int,v:View?,g:ViewGroup):View = (super.getDropDownView(p,v,g) as TextView).apply { setTextColor(Appearance.text(c)); setPadding(dp(18),dp(14),dp(18),dp(14)); background=ui9Card() }
                 }
+                background=ui9Card()
+                setPadding(dp(10),0,dp(10),0)
                 setSelection(selected)
                 onItemSelectedListener=object: AdapterView.OnItemSelectedListener {
                     override fun onNothingSelected(p:AdapterView<*>?) {}
@@ -29,11 +32,11 @@ object ThemeOptions {
                         if(position!=selected) { Appearance.set(c,key,position); refresh() }
                     }
                 }
-            },LinearLayout.LayoutParams(-1,dp(52)))
+            },LinearLayout.LayoutParams(-1,dp(60)).apply { bottomMargin=dp(8) })
         }
-        choice("App theme",listOf("Follow system","Light","Dark","AMOLED black"),Appearance.mode(c),"mode")
-        choice("Accent color",listOf("System wallpaper","Blue","Teal","Lavender","Rose","Amber","Sage","Custom hex"),Appearance.accentChoice(c),"accent")
-        if(Appearance.accentChoice(c)==7) parent.addView(Button(c).apply {
+        choice("App theme",listOf("Follow system","Light","Dark","AMOLED Black","One UI Dark","Graphite","Frosted Glass","Smoke","Wine Red","System (Dynamic)"),Appearance.mode(c),"mode")
+        choice("Accent color",listOf("System wallpaper","Blue","Teal","Lavender","Rose","Amber","Sage","Wine Red","Deep Blue","Emerald","Purple","Custom color"),Appearance.accentChoice(c),"accent")
+        if(Appearance.accentChoice(c)==11) parent.addView(Button(c).apply {
             text="Custom accent: #%06X".format(Appearance.custom(c) and 0xffffff)
             setTextColor(Appearance.text(c))
             setOnClickListener {
@@ -49,7 +52,7 @@ object ThemeOptions {
                 }; dialog.show()
             }
         },LinearLayout.LayoutParams(-1,dp(56)))
-        choice("Notification colors",listOf("Different colors per app","Use accent color","Neutral"),Appearance.notificationStyle(c),"notifications")
+        choice("Notification colors",listOf("Different colors per app","Use accent color","Monochrome","System colors","Custom color"),Appearance.notificationStyle(c),"notifications")
         val preview=TextView(c).apply {
             text="Notification preview\nA sample message in your chosen style"
             textSize=16f; setTextColor(Appearance.text(c,true)); setPadding(dp(16),dp(16),dp(16),dp(16))
@@ -82,7 +85,7 @@ object ThemeOptions {
         slider("Card opacity","cards",20,100,Appearance.cardOpacity(c),"%")
         slider("Banner opacity","banners",40,100,Appearance.bannerOpacity(c),"%")
         slider("Corner radius","radius",8,36,Appearance.radius(c)," dp")
-        parent.addView(preview,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12); bottomMargin=dp(12) })
+        parent.addView(preview,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(14); bottomMargin=dp(14) })
         parent.addView(label("Lower opacity shows more of the background. Wallpaper colors use Android's system palette. A custom lock wallpaper keeps light text for readability."))
         parent.addView(label("FLOATING LOCK-SCREEN BAR"))
         slider("Bar width","bar_width",65,100,Appearance.barWidth(c),"%")
