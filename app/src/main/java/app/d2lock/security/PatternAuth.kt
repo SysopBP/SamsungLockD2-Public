@@ -123,7 +123,7 @@ private class PatternView(context: Context) : View(context) {
                 ),
                 floatArrayOf(0f, .52f, 1f), Shader.TileMode.CLAMP
             )
-            glass.color = (if (active) 0x70 else 0x48 shl 24) or (orbBase and 0x00ffffff)
+            glass.color = ((if (active) 0x70 else 0x48) shl 24) or (orbBase and 0x00ffffff)
             canvas.drawCircle(x, y, radius, glass)
             canvas.drawCircle(x, y, radius, glow)
             glow.shader = null
