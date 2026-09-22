@@ -65,6 +65,13 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+        <activity
+            android:name=".passkeys.D2PasskeyActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.SamsungLock"
+            tools:targetApi="34" />
         <service
             android:name=".passkeys.D2CredentialProviderService"
             android:enabled="true"
