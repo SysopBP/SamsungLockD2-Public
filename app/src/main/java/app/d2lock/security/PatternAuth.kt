@@ -76,7 +76,10 @@ class PatternStore(context: Context, private val now: () -> Long = System::curre
 private class PatternView(context: Context) : View(context) {
     private val selected = mutableListOf<Int>()
     private val dot = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth = 8f; style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
+    private val rim = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val highlight = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val lineGlow = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
+    private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
     var hideTrail = false
     var onComplete: ((List<Int>) -> Unit)? = null
     private var fingerX = 0f
@@ -95,20 +98,39 @@ private class PatternView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val accent = Appearance.accent(context)
-        dot.color = Appearance.secondary(context)
-        line.color = accent
+        val density = resources.displayMetrics.density
+        val selectedSet = selected.toHashSet()
+        lineGlow.color = Color.argb(58, Color.red(accent), Color.green(accent), Color.blue(accent))
+        lineGlow.strokeWidth = 12f * density
+        line.color = Color.argb(190, Color.red(accent), Color.green(accent), Color.blue(accent))
+        line.strokeWidth = 4f * density
         if (!hideTrail && selected.isNotEmpty()) {
             val path = Path()
             selected.forEachIndexed { i, n ->
                 val (x,y)=point(n); if(i==0) path.moveTo(x,y) else path.lineTo(x,y)
             }
             path.lineTo(fingerX, fingerY)
+            canvas.drawPath(path, lineGlow)
             canvas.drawPath(path, line)
         }
         for (i in 0..8) {
             val (x,y)=point(i)
-            dot.color = if (i in selected) accent else Appearance.secondary(context)
-            canvas.drawCircle(x,y, if (i in selected) 17f else 13f, dot)
+            val active = i in selectedSet
+            val radius = (if (active) 18f else 15f) * density
+            // Layered translucent node: glass fill, fine rim, and a small specular highlight.
+            dot.color = if (active)
+                Color.argb(105, Color.red(accent), Color.green(accent), Color.blue(accent))
+            else Color.argb(34, 255, 255, 255)
+            canvas.drawCircle(x, y, radius, dot)
+
+            rim.strokeWidth = 1.15f * density
+            rim.color = if (active)
+                Color.argb(220, Color.red(accent), Color.green(accent), Color.blue(accent))
+            else Color.argb(145, 255, 255, 255)
+            canvas.drawCircle(x, y, radius, rim)
+
+            highlight.color = Color.argb(if (active) 180 else 125, 255, 255, 255)
+            canvas.drawCircle(x - radius * .28f, y - radius * .30f, radius * .18f, highlight)
         }
     }
     override fun onTouchEvent(event: MotionEvent): Boolean {
