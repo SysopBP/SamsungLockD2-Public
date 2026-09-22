@@ -116,7 +116,7 @@ class MainActivity : Activity() {
         addButton(root, "Licenses and credits") {
             val notice = assets.open("THIRD_PARTY_NOTICES.txt").bufferedReader().use { it.readText() }
             val text = TextView(this).apply {
-                this.text = "D2 Project — All rights reserved.\\n\\n$notice"
+                this.text = "D2 Project — All rights reserved.\n\nWeather data: NOAA / National Weather Service. NWS information is public domain unless otherwise noted.\\n\\n$notice"
                 setPadding(dp(20), dp(12), dp(20), dp(12))
                 setTextIsSelectable(true)
             }
