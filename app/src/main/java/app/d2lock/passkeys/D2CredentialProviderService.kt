@@ -14,6 +14,8 @@ import androidx.credentials.provider.BeginCreatePublicKeyCredentialRequest
 import androidx.credentials.provider.CreateEntry
 import androidx.credentials.provider.BeginGetCredentialRequest
 import androidx.credentials.provider.BeginGetCredentialResponse
+import androidx.credentials.provider.BeginGetPublicKeyCredentialOption
+import androidx.credentials.provider.PublicKeyCredentialEntry
 import androidx.credentials.provider.CredentialProviderService
 import androidx.credentials.provider.ProviderClearCredentialStateRequest
 import androidx.credentials.provider.ProviderCreateCredentialRequest
@@ -34,7 +36,38 @@ class D2CredentialProviderService : CredentialProviderService() {
         cancellationSignal: CancellationSignal,
         callback: OutcomeReceiver<BeginGetCredentialResponse, GetCredentialException>
     ) {
-        callback.onResult(BeginGetCredentialResponse.Builder().build())
+        val builder = BeginGetCredentialResponse.Builder()
+        val store = runCatching { D2PasskeyStore(this) }.getOrNull()
+        if (store != null) {
+            request.beginGetCredentialOptions
+                .filterIsInstance<BeginGetPublicKeyCredentialOption>()
+                .forEach { option ->
+                    val rpId = runCatching {
+                        org.json.JSONObject(option.requestJson).getString("rpId")
+                    }.getOrNull() ?: return@forEach
+                    store.list().filter { it.rpId == rpId }.forEach { record ->
+                        val intent = Intent(this, D2PasskeyActivity::class.java)
+                            .putExtra("d2_passkey_id", record.id)
+                        val pendingIntent = PendingIntent.getActivity(
+                            this,
+                            record.id.hashCode(),
+                            intent,
+                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+                        )
+                        builder.addCredentialEntry(
+                            PublicKeyCredentialEntry(
+                                this,
+                                record.userName.ifBlank { record.displayName.ifBlank { "D2 passkey" } },
+                                pendingIntent,
+                                option,
+                                record.displayName.ifBlank { null },
+                                java.time.Instant.ofEpochMilli(record.createdAt)
+                            )
+                        )
+                    }
+                }
+        }
+        callback.onResult(builder.build())
     }
 
     override fun onBeginCreateCredentialRequest(
