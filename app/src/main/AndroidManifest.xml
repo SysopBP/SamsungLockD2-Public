@@ -41,7 +41,10 @@
             android:resizeableActivity="false"
             android:supportsPictureInPicture="false"
             android:screenOrientation="portrait" />
-        <activity android:name=".widget.WidgetConfigActivity" android:exported="true" android:theme="@style/Theme.SamsungLock">\n            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>\n        </activity>\n        <activity android:name=".widget.WidgetTapActivity" android:exported="false"
+        <activity android:name=".widget.WidgetConfigActivity" android:exported="true" android:theme="@style/Theme.SamsungLock">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
+        </activity>
+        <activity android:name=".widget.WidgetTapActivity" android:exported="false"
             android:excludeFromRecents="true" android:noHistory="true"
             android:taskAffinity="app.d2lock.widget"
             android:theme="@style/Theme.D2.WidgetTap" />
