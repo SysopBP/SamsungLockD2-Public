@@ -38,7 +38,9 @@ import app.d2lock.Prefs
 import app.d2lock.MainActivity
 import app.d2lock.root.RootKiosk
 import app.d2lock.security.PinStore
-import app.d2lock.security.PinUi\nimport app.d2lock.security.PatternStore\nimport app.d2lock.security.PatternUi
+import app.d2lock.security.PinUi
+import app.d2lock.security.PatternStore
+import app.d2lock.security.PatternUi
 import app.d2lock.widget.DoubleTap
 import app.d2lock.media.MediaControllerBridge
 import app.d2lock.notifications.NotificationStore
