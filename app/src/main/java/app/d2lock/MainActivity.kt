@@ -32,6 +32,7 @@ import app.d2lock.security.PinStore
 import app.d2lock.security.PinUi
 import app.d2lock.security.PatternStore
 import app.d2lock.security.PatternUi
+import app.d2lock.passkeys.D2PasskeyStore
 import app.d2lock.widget.DoubleTap
 import app.d2lock.widget.D2Widget
 import rikka.shizuku.Shizuku
@@ -164,6 +165,43 @@ class MainActivity : Activity() {
                     Toast.makeText(this, "To replace the pattern, switch to PIN first. Pattern reset support is coming next.", Toast.LENGTH_LONG).show()
                 }
             }
+            section(root, "PASSKEY MANAGER")
+            val passkeys = runCatching { D2PasskeyStore(this).list() }.getOrDefault(emptyList())
+            root.addView(TextView(this).apply {
+                text = if (passkeys.isEmpty()) "No D2 passkeys saved yet." else "${passkeys.size} D2 passkey${if (passkeys.size == 1) "" else "s"} saved."
+                textSize = 14f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(dp(6), 0, dp(6), dp(8))
+            })
+            passkeys.forEach { record ->
+                addButton(root, "${record.userName.ifBlank { record.displayName.ifBlank { "Passkey" } }} · ${record.rpId}") {
+                    AlertDialog.Builder(this)
+                        .setTitle(record.userName.ifBlank { "D2 passkey" })
+                        .setMessage("Site / app: ${record.rpId}\nDisplay name: ${record.displayName.ifBlank { "Not provided" }}")
+                        .setNegativeButton("Close", null)
+                        .setPositiveButton("Delete") { _, _ ->
+                            runCatching { D2PasskeyStore(this).delete(record.id) }
+                            setContentView(buildSettings())
+                        }
+                        .show()
+                }
+            }
+            addButton(root, "Credential provider settings") {
+                val intents = listOf(
+                    Intent("android.settings.CREDENTIAL_PROVIDER"),
+                    Intent(Settings.ACTION_SECURITY_SETTINGS)
+                )
+                val target = intents.firstOrNull { it.resolveActivity(packageManager) != null }
+                if (target != null) startActivity(target)
+                else Toast.makeText(this, "Credential provider settings are unavailable on this build.", Toast.LENGTH_LONG).show()
+            }
+            root.addView(TextView(this).apply {
+                text = "New passkeys are created when a compatible app or website asks Android Credential Manager to save one with D2."
+                textSize = 13f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(dp(6), 0, dp(6), dp(12))
+            })
+
             root.addView(TextView(this).apply {
                 text = "Pattern is independent of Samsung Keyguard. Your 6-digit D2 PIN remains available as the recovery unlock method."
                 textSize = 13f
