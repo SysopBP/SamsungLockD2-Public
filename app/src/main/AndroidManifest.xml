@@ -65,19 +65,6 @@
             </intent-filter>
         </receiver>
         <service
-            android:name=".passkeys.D2CredentialProviderService"
-            android:enabled="true"
-            android:exported="true"
-            android:label="Samsung Lock D2"
-            android:permission="android.permission.BIND_CREDENTIAL_PROVIDER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.credentials.CredentialProviderService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.credentials.provider"
-                android:resource="@xml/d2_credential_provider" />
-        </service>
-        <service
             android:name=".notifications.LockNotificationListener"
             android:exported="true"
             android:label="Samsung Lock notification access"
