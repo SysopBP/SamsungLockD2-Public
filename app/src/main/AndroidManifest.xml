@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -69,7 +70,8 @@
             android:enabled="true"
             android:exported="true"
             android:label="Samsung Lock D2"
-            android:permission="android.permission.BIND_CREDENTIAL_PROVIDER_SERVICE">
+            android:permission="android.permission.BIND_CREDENTIAL_PROVIDER_SERVICE"
+            tools:targetApi="34">
             <intent-filter>
                 <action android:name="android.service.credentials.CredentialProviderService" />
             </intent-filter>
