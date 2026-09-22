@@ -14,6 +14,8 @@ object Prefs {
     fun setKiosk(context: Context, value: Boolean) = prefs(context).edit().putBoolean("root_kiosk", value).apply()
     fun adbRecovery(context: Context) = prefs(context).getBoolean("adb_recovery", false)
     fun setAdbRecovery(context: Context, value: Boolean) = prefs(context).edit().putBoolean("adb_recovery", value).apply()
+    fun quickSettingsGuard(context: Context) = prefs(context).getBoolean("quick_settings_guard", false)
+    fun setQuickSettingsGuard(context: Context, value: Boolean) = prefs(context).edit().putBoolean("quick_settings_guard", value).apply()
     fun shizukuEnabled(context: Context) = prefs(context).getBoolean("shizuku_enabled", true)
     fun setShizukuEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean("shizuku_enabled", value).apply()
     fun unlockMethod(context: Context) = prefs(context).getString("unlock_method", "pin") ?: "pin"
