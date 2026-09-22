@@ -6,7 +6,6 @@ import android.os.Bundle
 import androidx.annotation.RequiresApi
 import androidx.credentials.CreatePublicKeyCredentialRequest
 import androidx.credentials.CreatePublicKeyCredentialResponse
-import androidx.credentials.provider.ProviderCreateCredentialResponse
 import androidx.credentials.provider.PendingIntentHandler
 
 /**
@@ -49,9 +48,7 @@ class D2PasskeyActivity : Activity() {
                             record,
                             store.ecPublicKey(record)
                         )
-                        val response = ProviderCreateCredentialResponse(
-                            CreatePublicKeyCredentialResponse(responseJson)
-                        )
+                        val response = CreatePublicKeyCredentialResponse(responseJson)
                         PendingIntentHandler.setCreateCredentialResponse(intent, response)
                         setResult(RESULT_OK, intent)
                     } catch (error: Exception) {
