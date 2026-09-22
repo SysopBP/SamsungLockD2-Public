@@ -38,6 +38,12 @@ class D2TileService : TileService() {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        startActivityAndCollapse(pending)
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            startActivityAndCollapse(pending)
+        } else {
+            // Android 12/13 require the legacy Intent overload. It is deprecated only on newer APIs.
+            @Suppress("DEPRECATION")
+            startActivityAndCollapse(intent)
+        }
     }
 }
