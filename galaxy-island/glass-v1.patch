@@ -1,0 +1,125 @@
+diff -ru a/app/src/main/java/com/ekoehler/expressivecutout/data/AppearancePreferences.kt b/app/src/main/java/com/ekoehler/expressivecutout/data/AppearancePreferences.kt
+--- a/app/src/main/java/com/ekoehler/expressivecutout/data/AppearancePreferences.kt
++++ b/app/src/main/java/com/ekoehler/expressivecutout/data/AppearancePreferences.kt
+@@ -26,6 +26,7 @@
+  * reply field shown in the expanded cutout; whether they appear at all is [BehaviourSettings.showActionButtons].
+  */
+ data class AppearanceSettings(
++    val glassEnabled: Boolean = DEFAULT_GLASS_ENABLED,
+     val shadowEnabled: Boolean = DEFAULT_SHADOW_ENABLED,
+@@ -50,6 +51,7 @@
+ ) {
+     companion object {
++        const val DEFAULT_GLASS_ENABLED = false
+         const val DEFAULT_SHADOW_ENABLED = true
+@@ -96,6 +98,7 @@
+     val settings: Flow<AppearanceSettings> = context.appearanceDataStore.data.map { prefs ->
+         AppearanceSettings(
++            glassEnabled = prefs[GLASS_ENABLED] ?: AppearanceSettings.DEFAULT_GLASS_ENABLED,
+             shadowEnabled = prefs[SHADOW_ENABLED] ?: AppearanceSettings.DEFAULT_SHADOW_ENABLED,
+@@ -137,6 +140,7 @@
+         val s = settings.first()
+         return JSONObject().apply {
++            put("glassEnabled", s.glassEnabled)
+             put("shadowEnabled", s.shadowEnabled)
+@@ -170,6 +174,7 @@
+         val obj = JSONObject(json)
+         context.appearanceDataStore.edit {
++            if (obj.has("glassEnabled")) it[GLASS_ENABLED] = obj.getBoolean("glassEnabled")
+             if (obj.has("shadowEnabled")) it[SHADOW_ENABLED] = obj.getBoolean("shadowEnabled")
+@@ -229,6 +234,10 @@
+         if (color == null) remove(key) else this[key] = color.serialize()
+     }
+ 
++    suspend fun setGlassEnabled(enabled: Boolean) = context.appearanceDataStore.edit {
++        it[GLASS_ENABLED] = enabled
++    }
++
+     suspend fun setShadowEnabled(enabled: Boolean) = context.appearanceDataStore.edit {
+@@ -337,6 +346,7 @@
+     }
+ 
+     private companion object {
++        val GLASS_ENABLED = booleanPreferencesKey("glass_enabled")
+         val SHADOW_ENABLED = booleanPreferencesKey("shadow_enabled")
+diff -ru a/app/src/main/java/com/ekoehler/expressivecutout/overlay/DynamicIsland.kt b/app/src/main/java/com/ekoehler/expressivecutout/overlay/DynamicIsland.kt
+--- a/app/src/main/java/com/ekoehler/expressivecutout/overlay/DynamicIsland.kt
++++ b/app/src/main/java/com/ekoehler/expressivecutout/overlay/DynamicIsland.kt
+@@ -1220,26 +1220,35 @@
+ 
+     val autoContentColor = if (repColor.luminance() > 0.5f) PILL_TEXT_COLOR_DARK else PILL_TEXT_COLOR
+     val contentColor = appearance.textColor?.resolve(appColor, adaptiveColor) ?: autoContentColor
+-    val border = if (appearance.strokeEnabled) {
++    val border = if (appearance.glassEnabled) {
++        // A restrained One UI-style highlight edge. User stroke settings still apply in Classic mode.
++        BorderStroke(1.dp, Color.White.copy(alpha = 0.24f))
++    } else if (appearance.strokeEnabled) {
+         val baseColor = appearance.strokeColor.resolve(appColor, adaptiveColor)
+         val strokeFinalColor = baseColor.copy(alpha = (baseColor.alpha * appearance.strokeOpacity).coerceIn(0f, 1f))
+         BorderStroke(appearance.strokeWidthDp.dp, strokeFinalColor)
+     } else {
+         null
+     }
++    val surfaceColor = if (appearance.glassEnabled) currentBaseColor.copy(alpha = 0.72f) else currentBaseColor
++    val surfaceModifier = if (appearance.glassEnabled) modifier else modifier.background(currentBaseColor, shape)
+ 
+     Surface(
+-        modifier = modifier.background(currentBaseColor, shape),
++        modifier = surfaceModifier,
+         shape = shape,
+-        color = currentBaseColor,
++        color = surfaceColor,
+         contentColor = contentColor,
+-        shadowElevation = if (appearance.shadowEnabled) 6.dp else 0.dp,
++        shadowElevation = if (appearance.glassEnabled) 12.dp else if (appearance.shadowEnabled) 6.dp else 0.dp,
+         tonalElevation = 0.dp,
+         border = border,
+     ) {
+         CompositionLocalProvider(LocalContentColor provides contentColor) {
+-            Box(modifier = Modifier.fillMaxSize().background(currentBaseColor)) {
+-                Box(modifier = Modifier.fillMaxSize().background(normalBrush))
++            Box(modifier = Modifier.fillMaxSize().then(if (appearance.glassEnabled) Modifier else Modifier.background(currentBaseColor))) {
++                Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (appearance.glassEnabled) 0.72f else 1f }.background(normalBrush))
++                if (appearance.glassEnabled) {
++                    // Internal sheen gives the floating island depth without obscuring content.
++                    Box(modifier = Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.045f)))
++                }
+                 if (progress > 0f) {
+diff -ru a/app/src/main/java/com/ekoehler/expressivecutout/ui/AppViewModel.kt b/app/src/main/java/com/ekoehler/expressivecutout/ui/AppViewModel.kt
+--- a/app/src/main/java/com/ekoehler/expressivecutout/ui/AppViewModel.kt
++++ b/app/src/main/java/com/ekoehler/expressivecutout/ui/AppViewModel.kt
+@@ -756,6 +756,10 @@
+         behaviourPreferences.setSatellitePosition(position)
+     }
+ 
++    fun setGlassEnabled(enabled: Boolean) = viewModelScope.launch {
++        appearancePreferences.setGlassEnabled(enabled)
++    }
++
+     fun setShadowEnabled(enabled: Boolean) = viewModelScope.launch {
+diff -ru a/app/src/main/java/com/ekoehler/expressivecutout/ui/screen/SettingScreens/AppearanceScreen.kt b/app/src/main/java/com/ekoehler/expressivecutout/ui/screen/SettingScreens/AppearanceScreen.kt
+--- a/app/src/main/java/com/ekoehler/expressivecutout/ui/screen/SettingScreens/AppearanceScreen.kt
++++ b/app/src/main/java/com/ekoehler/expressivecutout/ui/screen/SettingScreens/AppearanceScreen.kt
+@@ -116,6 +116,14 @@
+     ) {
+         SettingsToggleCard(
+             shape = RoundedCornerShape(24.dp),
++            title = stringResource(R.string.appearance_glass_title),
++            description = stringResource(R.string.appearance_glass_desc),
++            checked = appearance.glassEnabled,
++            onCheckedChange = viewModel::setGlassEnabled,
++        )
++
++        SettingsToggleCard(
++            shape = RoundedCornerShape(24.dp),
+             title = stringResource(R.string.appearance_shadow_title),
+diff -ru a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -235,6 +235,8 @@
+ 
+     <!-- Appearance tab -->
+     <string name="appearance_section_title">Appearance</string>
++    <string name="appearance_glass_title">One UI 9 glass island</string>
++    <string name="appearance_glass_desc">Use translucent glass surfaces, a soft highlight edge and deeper floating shadow for compact and expanded islands.</string>
+     <string name="appearance_shadow_title">Shadow</string>
