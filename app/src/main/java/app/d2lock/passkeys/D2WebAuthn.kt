@@ -76,6 +76,48 @@ object D2WebAuthn {
             .toString()
     }
 
+    data class GetOptions(val rpId: String, val challenge: String)
+
+    fun parseGetRequest(json: String): GetOptions {
+        val root = JSONObject(json)
+        return GetOptions(root.getString("rpId"), root.getString("challenge"))
+            .also { require(it.rpId.isNotBlank() && it.challenge.isNotBlank()) }
+    }
+
+    fun authenticationResponse(
+        requestJson: String,
+        record: D2PasskeyStore.Record,
+        store: D2PasskeyStore
+    ): String {
+        val options = parseGetRequest(requestJson)
+        require(record.rpId == options.rpId) { "Passkey RP mismatch" }
+        val clientData = JSONObject()
+            .put("type", "webauthn.get")
+            .put("challenge", options.challenge)
+            .put("origin", "android:apk-key-hash:SamsungLockD2")
+            .toString().toByteArray(Charsets.UTF_8)
+        val rpHash = MessageDigest.getInstance("SHA-256")
+            .digest(options.rpId.toByteArray(Charsets.UTF_8))
+        val authData = ByteArrayOutputStream().apply {
+            write(rpHash)
+            write(byteArrayOf(0x05)) // UP + UV after D2 authentication.
+            write(byteArrayOf(0, 0, 0, 0)) // counter unsupported: always zero.
+        }.toByteArray()
+        val clientHash = MessageDigest.getInstance("SHA-256").digest(clientData)
+        val signature = store.sign(record, authData + clientHash)
+        return JSONObject()
+            .put("id", record.id)
+            .put("rawId", record.id)
+            .put("type", "public-key")
+            .put("authenticatorAttachment", "platform")
+            .put("response", JSONObject()
+                .put("clientDataJSON", b64(clientData))
+                .put("authenticatorData", b64(authData))
+                .put("signature", b64(signature))
+                .put("userHandle", record.userId))
+            .toString()
+    }
+
     private fun coseEc2(key: ECPublicKey): ByteArray {
         fun coord(v: java.math.BigInteger): ByteArray {
             val raw = v.toByteArray()
