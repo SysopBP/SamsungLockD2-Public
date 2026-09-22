@@ -76,6 +76,8 @@ class PatternStore(context: Context, private val now: () -> Long = System::curre
 private class PatternView(context: Context) : View(context) {
     private val selected = mutableListOf<Int>()
     private val dot = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val glass = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 2f }
     private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth = 8f; style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
     var hideTrail = false
     var onComplete: ((List<Int>) -> Unit)? = null
@@ -105,10 +107,20 @@ private class PatternView(context: Context) : View(context) {
             path.lineTo(fingerX, fingerY)
             canvas.drawPath(path, line)
         }
+        val density = resources.displayMetrics.density
         for (i in 0..8) {
             val (x,y)=point(i)
-            dot.color = if (i in selected) accent else Appearance.secondary(context)
-            canvas.drawCircle(x,y, if (i in selected) 17f else 13f, dot)
+            val active = i in selected
+            // One UI 9 glass node: a translucent touch target, bright edge and compact center dot.
+            glass.color = if (active) (accent and 0x00ffffff) or (0x38 shl 24)
+                else (Appearance.surface(context) and 0x00ffffff) or (0x42 shl 24)
+            ring.color = if (active) accent else (Appearance.secondary(context) and 0x00ffffff) or (0x90 shl 24)
+            ring.strokeWidth = if (active) 2.4f * density else 1.2f * density
+            val radius = 30f * density
+            canvas.drawCircle(x, y, radius, glass)
+            canvas.drawCircle(x, y, radius, ring)
+            dot.color = if (active) accent else Appearance.text(context)
+            canvas.drawCircle(x, y, if (active) 7f * density else 5f * density, dot)
         }
     }
     override fun onTouchEvent(event: MotionEvent): Boolean {
