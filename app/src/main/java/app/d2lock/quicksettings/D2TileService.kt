@@ -1,5 +1,6 @@
 package app.d2lock.quicksettings
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
 import android.service.quicksettings.Tile
@@ -42,7 +43,7 @@ class D2TileService : TileService() {
             startActivityAndCollapse(pending)
         } else {
             // Android 12/13 require the legacy Intent overload. It is deprecated only on newer APIs.
-            @Suppress("DEPRECATION")
+            @SuppressLint("StartActivityAndCollapseDeprecated")
             startActivityAndCollapse(intent)
         }
     }
