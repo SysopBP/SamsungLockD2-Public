@@ -26,6 +26,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.MotionEvent
 import android.view.ViewGroup
+import android.view.VelocityTracker
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.widget.Button
@@ -154,6 +155,20 @@ class LockScreenActivity : Activity() {
         if (!preview && Prefs.quickSettingsGuard(this)) handler.post(quickSettingsGuard)
         if (!preview && !unlocking && Prefs.kiosk(this)) {
             RootKiosk.attach(this) { kioskStatus.text = it }
+        }
+    }
+
+    override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: android.content.res.Configuration) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        if (isInMultiWindowMode && !preview && Prefs.kiosk(this)) {
+            // A kiosk lock screen must never remain usable as one pane of multi-window.
+            // Reassert the task/window immediately; RootKiosk continues verifying LOCK_TASK_MODE_LOCKED.
+            window.decorView.post {
+                if (!isDestroyed && !isFinishing) {
+                    runCatching { startLockTask() }
+                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                }
+            }
         }
     }
 
@@ -288,7 +303,8 @@ class LockScreenActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(14), dp(12), dp(10), dp(12))
-            background = glassPanel(30f)
+            background = Appearance.glass(this@LockScreenActivity, 34f, 42, true)
+            elevation = dp(8).toFloat()
         }
         mediaPanel.addView(label("♫", 25f, Color.WHITE).apply {
             gravity = Gravity.CENTER
@@ -313,13 +329,13 @@ class LockScreenActivity : Activity() {
         val controls = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             addView(mediaButton("‹") { media.previous() })
-            playPause = mediaButton("▶") { media.toggle() }
+            playPause = mediaButton("▶", true) { media.toggle() }
             addView(playPause)
             addView(mediaButton("›") { media.next() })
         }
         mediaPanel.addView(controls)
         if (Prefs.showMedia(this)) content.addView(mediaPanel,
-            LinearLayout.LayoutParams(-1, dp(88)).apply { bottomMargin = dp(12) })
+            LinearLayout.LayoutParams(-1, dp(94)).apply { bottomMargin = dp(12) })
         frame.addView(content, FrameLayout.LayoutParams(-1, -1))
         val floatingBar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
@@ -440,22 +456,28 @@ class LockScreenActivity : Activity() {
     private fun notificationDismissListener(item: app.d2lock.notifications.LockNotification, card: View) = object : View.OnTouchListener {
         private var downX = 0f
         private var downY = 0f
+        private var tracker: VelocityTracker? = null
         override fun onTouch(v: View, event: MotionEvent): Boolean {
             when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> { downX = event.x; downY = event.y; return true }
+                MotionEvent.ACTION_DOWN -> { downX = event.x; downY = event.y; tracker?.recycle(); tracker = VelocityTracker.obtain().also { it.addMovement(event) }; return true }
                 MotionEvent.ACTION_MOVE -> {
+                    tracker?.addMovement(event)
                     val dx = event.x - downX
-                    if (kotlin.math.abs(dx) > dp(8)) {
+                    if (dx > dp(4)) {
                         card.translationX = dx
-                        card.alpha = (1f - kotlin.math.abs(dx) / (card.width.coerceAtLeast(1) * .9f)).coerceIn(.35f, 1f)
-                    }
+                        card.alpha = (1f - dx / (card.width.coerceAtLeast(1) * .8f)).coerceIn(.28f, 1f)
+                    } else if (dx < 0f) card.translationX = dx * .12f
                     return true
                 }
                 MotionEvent.ACTION_UP -> {
+                    tracker?.addMovement(event)
+                    tracker?.computeCurrentVelocity(1000)
+                    val velocityX = tracker?.xVelocity ?: 0f
+                    tracker?.recycle(); tracker = null
                     val dx = event.x - downX
                     val dy = event.y - downY
-                    if (kotlin.math.abs(dx) > card.width * .32f) {
-                        card.animate().translationX(if (dx >= 0) card.width.toFloat() else -card.width.toFloat()).alpha(0f).setDuration(180).withEndAction {
+                    if (dx > card.width * .20f || (dx > dp(18) && velocityX > dp(650))) {
+                        card.animate().translationX(card.width.toFloat()).alpha(0f).setDuration(150).withEndAction {
                             NotificationStore.listener?.dismiss(item.key)
                             NotificationStore.items.removeAll { it.key == item.key }
                             renderNotifications()
@@ -466,7 +488,7 @@ class LockScreenActivity : Activity() {
                     }
                     return true
                 }
-                MotionEvent.ACTION_CANCEL -> { card.animate().translationX(0f).alpha(1f).setDuration(120).start(); return true }
+                MotionEvent.ACTION_CANCEL -> { tracker?.recycle(); tracker = null; card.animate().translationX(0f).alpha(1f).setDuration(120).start(); return true }
             }
             return false
         }
@@ -564,9 +586,10 @@ class LockScreenActivity : Activity() {
         setOnClickListener { click() }
     }
 
-    private fun mediaButton(value: String, click: () -> Unit) = TextView(this).apply {
-        text = value; textSize = 25f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
-        layoutParams = LinearLayout.LayoutParams(dp(35), dp(48))
+    private fun mediaButton(value: String, primary: Boolean = false, click: () -> Unit) = TextView(this).apply {
+        text = value; textSize = if (primary) 27f else 25f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
+        if (primary) background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x32ffffff); setStroke(dp(1), 0x66ffffff) }
+        layoutParams = LinearLayout.LayoutParams(if (primary) dp(58) else dp(35), if (primary) dp(58) else dp(48))
         setOnClickListener { click() }
     }
     private fun shortcutButton(side: String): View = when (Prefs.shortcut(this, side)) {

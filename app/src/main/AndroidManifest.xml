@@ -38,6 +38,8 @@
             android:excludeFromRecents="true"
             android:exported="false"
             android:launchMode="singleTask"
+            android:resizeableActivity="false"
+            android:supportsPictureInPicture="false"
             android:screenOrientation="portrait" />
         <activity android:name=".widget.WidgetTapActivity" android:exported="false"
             android:excludeFromRecents="true" android:noHistory="true"
