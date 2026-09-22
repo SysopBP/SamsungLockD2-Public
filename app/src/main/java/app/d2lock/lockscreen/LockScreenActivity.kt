@@ -38,7 +38,7 @@ import app.d2lock.Prefs
 import app.d2lock.MainActivity
 import app.d2lock.root.RootKiosk
 import app.d2lock.security.PinStore
-import app.d2lock.security.PinUi
+import app.d2lock.security.PinUi\nimport app.d2lock.security.PatternStore\nimport app.d2lock.security.PatternUi
 import app.d2lock.widget.DoubleTap
 import app.d2lock.media.MediaControllerBridge
 import app.d2lock.notifications.NotificationStore
@@ -320,11 +320,11 @@ class LockScreenActivity : Activity() {
             elevation = dp(16).toFloat()
             addView(shortcutButton("left"), LinearLayout.LayoutParams(dp(58), dp(58)))
             addView(TextView(this@LockScreenActivity).apply {
-                text = "PIN"
+                text = if (Prefs.unlockMethod(this@LockScreenActivity) == "pattern") "PATTERN" else "PIN"
                 textSize = 14f
                 gravity = Gravity.CENTER
                 setTextColor(Color.WHITE)
-                contentDescription = "Enter D2 PIN"
+                contentDescription = "Unlock D2"
                 setOnClickListener { authenticate() }
                 setOnTouchListener(unlockSwipeListener())
             }, LinearLayout.LayoutParams(0, dp(58), 1f))
@@ -474,14 +474,21 @@ class LockScreenActivity : Activity() {
     private fun authenticate(afterUnlock: (() -> Unit)? = null) {
         if (preview) { finish(); return }
         if (pinDialog?.isShowing == true) return
-        pinDialog = PinUi.show(this, success = {
+        val unlocked = {
             unlocking = true
             RootKiosk.unlock(this) {
                 app.d2lock.bridge.IslandBridge.setLocked(this, false)
                 afterUnlock?.invoke()
                 finish()
             }
-        })
+        }
+        if (Prefs.unlockMethod(this) == "pattern" && PatternStore(this).configured()) {
+            pinDialog = PatternUi.show(this, success = unlocked, usePin = {
+                pinDialog = PinUi.show(this, success = unlocked)
+            })
+        } else {
+            pinDialog = PinUi.show(this, success = unlocked)
+        }
     }
 
     private fun openCamera() = runCatching {
