@@ -9,9 +9,9 @@ import android.graphics.drawable.GradientDrawable
 /** D2-owned theme implementation using Android's public wallpaper color resources. */
 object Appearance {
     private fun prefs(c: Context) = c.getSharedPreferences("d2_appearance", Context.MODE_PRIVATE)
-    fun mode(c: Context) = prefs(c).getInt("mode", 2).coerceIn(0, 3)
-    fun accentChoice(c: Context) = prefs(c).getInt("accent", 3).coerceIn(0, 7)
-    fun notificationStyle(c: Context) = prefs(c).getInt("notifications", 0).coerceIn(0, 2)
+    fun mode(c: Context) = prefs(c).getInt("mode", 2).coerceIn(0, 9)
+    fun accentChoice(c: Context) = prefs(c).getInt("accent", 3).coerceIn(0, 11)
+    fun notificationStyle(c: Context) = prefs(c).getInt("notifications", 0).coerceIn(0, 4)
     fun cardOpacity(c: Context) = prefs(c).getInt("cards", 40).coerceIn(20, 100)
     fun bannerOpacity(c: Context) = prefs(c).getInt("banners", 76).coerceIn(40, 100)
     fun radius(c: Context) = prefs(c).getInt("radius", 28).coerceIn(8, 36)
@@ -46,6 +46,10 @@ object Appearance {
         4 -> 0xffbd829e.toInt()
         5 -> 0xffc69a53.toInt()
         6 -> 0xff829286.toInt()
+        7 -> 0xffa43b55.toInt()
+        8 -> 0xff0b66b2.toInt()
+        9 -> 0xff198754.toInt()
+        10 -> 0xff7137a8.toInt()
         else -> custom(c) or 0xff000000.toInt()
     }
     fun blend(a: Int, b: Int, amount: Float): Int = Color.rgb(
@@ -54,6 +58,12 @@ object Appearance {
         (Color.blue(a)*(1-amount)+Color.blue(b)*amount).toInt())
     fun background(c: Context, lock: Boolean = false): Int = when {
         mode(c) == 3 -> Color.BLACK
+        mode(c) == 4 -> 0xff0d1016.toInt()
+        mode(c) == 5 -> 0xff171a20.toInt()
+        mode(c) == 6 -> blend(0xff111722.toInt(), accent(c), .16f)
+        mode(c) == 7 -> 0xff101419.toInt()
+        mode(c) == 8 -> blend(0xff16080d.toInt(), 0xffa43b55.toInt(), .18f)
+        mode(c) == 9 -> blend(0xff08131f.toInt(), c.getColor(android.R.color.system_accent1_400), .12f)
         dark(c, lock) -> blend(0xff10131c.toInt(), accent(c), .06f)
         else -> blend(0xfffaf9ff.toInt(), accent(c), .04f)
     }
@@ -72,6 +82,8 @@ object Appearance {
         val rgb = when {
             app == null && !call -> 0x65738a // Never identify an app in Count only mode.
             notificationStyle(c) == 2 -> 0x65738a
+            notificationStyle(c) == 3 -> c.getColor(android.R.color.system_accent1_400) and 0xffffff
+            notificationStyle(c) == 4 -> custom(c) and 0xffffff
             notificationStyle(c) == 1 -> accent(c)
             call -> 0x579c7c
             else -> palette[Math.floorMod(app!!.hashCode(), palette.size)]
