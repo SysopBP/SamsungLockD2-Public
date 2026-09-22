@@ -92,6 +92,7 @@ class LockScreenActivity : Activity() {
     private val quickSettingsGuard = object : Runnable {
         override fun run() {
             if (!preview && Prefs.quickSettingsGuard(this@LockScreenActivity) && hasWindowFocus()) {
+                @Suppress("MissingPermission")
                 runCatching { sendBroadcast(Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)) }
             }
             handler.postDelayed(this, 350)
@@ -455,7 +456,8 @@ class LockScreenActivity : Activity() {
                     val dy = event.y - downY
                     if (kotlin.math.abs(dx) > card.width * .32f) {
                         card.animate().translationX(if (dx >= 0) card.width.toFloat() else -card.width.toFloat()).alpha(0f).setDuration(180).withEndAction {
-                            LockNotificationListener.dismiss(item.key)
+                            NotificationStore.listener?.dismiss(item.key)
+                            NotificationStore.items.removeAll { it.key == item.key }
                             renderNotifications()
                         }.start()
                     } else {
