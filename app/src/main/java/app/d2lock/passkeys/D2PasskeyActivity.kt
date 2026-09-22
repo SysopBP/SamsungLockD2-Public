@@ -5,6 +5,8 @@ import android.os.Build
 import android.os.Bundle
 import androidx.annotation.RequiresApi
 import androidx.credentials.CreatePublicKeyCredentialRequest
+import androidx.credentials.CreatePublicKeyCredentialResponse
+import androidx.credentials.provider.ProviderCreateCredentialResponse
 import androidx.credentials.provider.PendingIntentHandler
 
 /**
@@ -32,9 +34,33 @@ class D2PasskeyActivity : Activity() {
         D2PasskeyAuth.authorize(
             this,
             success = {
-                // Do not create a credential until the WebAuthn response can be
-                // completed atomically and returned to Credential Manager.
-                setResult(RESULT_CANCELED)
+                runCatching {
+                    val options = D2WebAuthn.parseCreateRequest(request.requestJson)
+                    val store = D2PasskeyStore(this)
+                    val record = store.create(
+                        options.rpId,
+                        options.userId,
+                        options.userName,
+                        options.displayName
+                    )
+                    try {
+                        val responseJson = D2WebAuthn.registrationResponse(
+                            request.requestJson,
+                            record,
+                            store.ecPublicKey(record)
+                        )
+                        val response = ProviderCreateCredentialResponse(
+                            CreatePublicKeyCredentialResponse(responseJson)
+                        )
+                        PendingIntentHandler.setCreateCredentialResponse(intent, response)
+                        setResult(RESULT_OK, intent)
+                    } catch (error: Exception) {
+                        store.delete(record.id)
+                        throw error
+                    }
+                }.onFailure {
+                    setResult(RESULT_CANCELED)
+                }
                 finish()
             },
             cancel = {
