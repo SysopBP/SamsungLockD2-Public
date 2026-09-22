@@ -442,22 +442,28 @@ class LockScreenActivity : Activity() {
     private fun notificationDismissListener(item: app.d2lock.notifications.LockNotification, card: View) = object : View.OnTouchListener {
         private var downX = 0f
         private var downY = 0f
+        private var tracker: VelocityTracker? = null
         override fun onTouch(v: View, event: MotionEvent): Boolean {
             when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> { downX = event.x; downY = event.y; return true }
+                MotionEvent.ACTION_DOWN -> { downX = event.x; downY = event.y; tracker?.recycle(); tracker = VelocityTracker.obtain().also { it.addMovement(event) }; return true }
                 MotionEvent.ACTION_MOVE -> {
+                    tracker?.addMovement(event)
                     val dx = event.x - downX
-                    if (kotlin.math.abs(dx) > dp(8)) {
+                    if (dx > dp(4)) {
                         card.translationX = dx
-                        card.alpha = (1f - kotlin.math.abs(dx) / (card.width.coerceAtLeast(1) * .9f)).coerceIn(.35f, 1f)
-                    }
+                        card.alpha = (1f - dx / (card.width.coerceAtLeast(1) * .8f)).coerceIn(.28f, 1f)
+                    } else if (dx < 0f) card.translationX = dx * .12f
                     return true
                 }
                 MotionEvent.ACTION_UP -> {
+                    tracker?.addMovement(event)
+                    tracker?.computeCurrentVelocity(1000)
+                    val velocityX = tracker?.xVelocity ?: 0f
+                    tracker?.recycle(); tracker = null
                     val dx = event.x - downX
                     val dy = event.y - downY
-                    if (kotlin.math.abs(dx) > card.width * .32f) {
-                        card.animate().translationX(if (dx >= 0) card.width.toFloat() else -card.width.toFloat()).alpha(0f).setDuration(180).withEndAction {
+                    if (dx > card.width * .20f || (dx > dp(18) && velocityX > dp(650))) {
+                        card.animate().translationX(card.width.toFloat()).alpha(0f).setDuration(150).withEndAction {
                             NotificationStore.listener?.dismiss(item.key)
                             NotificationStore.items.removeAll { it.key == item.key }
                             renderNotifications()
@@ -468,7 +474,7 @@ class LockScreenActivity : Activity() {
                     }
                     return true
                 }
-                MotionEvent.ACTION_CANCEL -> { card.animate().translationX(0f).alpha(1f).setDuration(120).start(); return true }
+                MotionEvent.ACTION_CANCEL -> { tracker?.recycle(); tracker = null; card.animate().translationX(0f).alpha(1f).setDuration(120).start(); return true }
             }
             return false
         }
