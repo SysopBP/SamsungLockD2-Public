@@ -223,6 +223,10 @@ class MainActivity : Activity() {
         }, rowParams())
         root.addView(shizukuCard(), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
 
+        section(root, "D2 SYSTEM HEALTH")
+        root.addView(systemHealthCard(), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+        addButton(root, "Refresh system health") { refreshShizukuUi() }
+
         val rootMode = Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Optional KernelSU root mode"
@@ -474,6 +478,52 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun systemHealthCard(): ViewGroup {
+        val rootReady = RootManager.isAvailable()
+        val shizukuRunning = Prefs.shizukuEnabled(this) && runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+        val shizukuGranted = shizukuRunning && runCatching { Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED }.getOrDefault(false)
+        val notificationsReady = runCatching {
+            getSystemService(NotificationManager::class.java).isNotificationListenerAccessGranted(
+                ComponentName(this, app.d2lock.notifications.LockNotificationListener::class.java)
+            )
+        }.getOrDefault(false)
+        val adbState = if (rootReady) RootManager.usbAdbState() else null
+        val rows = listOf(
+            "ROOT" to rootReady,
+            "SHIZUKU SERVICE" to shizukuRunning,
+            "SHIZUKU AUTHORIZED" to shizukuGranted,
+            "NOTIFICATION ACCESS" to notificationsReady,
+            "D2 WAKE SERVICE" to Prefs.enabled(this),
+            "ADB RECOVERY" to (Prefs.adbRecovery(this) && adbState?.adbEnabled == "1"),
+            "GALAXY ISLAND" to app.d2lock.bridge.IslandBridge.enabled(this)
+        )
+        val ready = rows.count { it.second }
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(15), dp(18), dp(15))
+            background = Appearance.glass(this@MainActivity, 28f, 34, true)
+            addView(TextView(this@MainActivity).apply {
+                text = "D2 Ready — $ready/${rows.size} checks active"
+                textSize = 18f
+                setTextColor(Appearance.text(this@MainActivity))
+                setPadding(0, 0, 0, dp(8))
+            })
+            rows.forEach { (name, ok) ->
+                addView(TextView(this@MainActivity).apply {
+                    text = (if (ok) "✓  " else "○  ") + name
+                    textSize = 14f
+                    setTextColor(if (ok) Color.rgb(102, 220, 132) else Appearance.secondary(this@MainActivity))
+                    setPadding(0, dp(3), 0, dp(3))
+                })
+            }
+            addView(TextView(this@MainActivity).apply {
+                text = "Status only. Optional features may remain off by choice; a hollow check does not necessarily indicate an error."
+                textSize = 12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0, dp(8), 0, 0)
+            })
+        }
+    }
     private fun refreshShizukuUi() {
         runOnUiThread {
             if (!isFinishing && !isDestroyed && authorized) {
