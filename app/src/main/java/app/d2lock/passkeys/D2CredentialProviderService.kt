@@ -1,6 +1,8 @@
 package app.d2lock.passkeys
 
+import android.os.Build
 import android.os.CancellationSignal
+import androidx.annotation.RequiresApi
 import androidx.credentials.exceptions.CreateCredentialException
 import androidx.credentials.exceptions.ClearCredentialException
 import androidx.credentials.exceptions.GetCredentialException
@@ -21,6 +23,7 @@ import android.os.OutcomeReceiver
  * Storage, D2 PIN/pattern authorization and WebAuthn signing are added only after
  * this provider skeleton is proven by CI and Android's provider discovery UI.
  */
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 class D2CredentialProviderService : CredentialProviderService() {
     override fun onBeginGetCredentialRequest(
         request: BeginGetCredentialRequest,
