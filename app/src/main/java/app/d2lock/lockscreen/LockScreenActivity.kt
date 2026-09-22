@@ -24,6 +24,7 @@ import android.os.Looper
 import android.provider.MediaStore
 import android.view.Gravity
 import android.view.View
+import android.view.MotionEvent
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowInsetsController
@@ -430,10 +431,44 @@ class LockScreenActivity : Activity() {
                 }
             }
             if (item.contentIntent != null) card.setOnClickListener { openNotification(item) }
+            card.setOnTouchListener(notificationDismissListener(item, card))
             notifications.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(9) })
         }
     }
 
+    private fun notificationDismissListener(item: app.d2lock.notifications.LockNotification, card: View) = object : View.OnTouchListener {
+        private var downX = 0f
+        private var downY = 0f
+        override fun onTouch(v: View, event: MotionEvent): Boolean {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> { downX = event.x; downY = event.y; return true }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = event.x - downX
+                    if (kotlin.math.abs(dx) > dp(8)) {
+                        card.translationX = dx
+                        card.alpha = (1f - kotlin.math.abs(dx) / (card.width.coerceAtLeast(1) * .9f)).coerceIn(.35f, 1f)
+                    }
+                    return true
+                }
+                MotionEvent.ACTION_UP -> {
+                    val dx = event.x - downX
+                    val dy = event.y - downY
+                    if (kotlin.math.abs(dx) > card.width * .32f) {
+                        card.animate().translationX(if (dx >= 0) card.width.toFloat() else -card.width.toFloat()).alpha(0f).setDuration(180).withEndAction {
+                            LockNotificationListener.dismiss(item.key)
+                            renderNotifications()
+                        }.start()
+                    } else {
+                        card.animate().translationX(0f).alpha(1f).setDuration(140).start()
+                        if (kotlin.math.abs(dx) < dp(12) && kotlin.math.abs(dy) < dp(12) && item.contentIntent != null) openNotification(item)
+                    }
+                    return true
+                }
+                MotionEvent.ACTION_CANCEL -> { card.animate().translationX(0f).alpha(1f).setDuration(120).start(); return true }
+            }
+            return false
+        }
+    }
     private fun renderCallControls() {
         app.d2lock.notifications.CallNotificationStore.items.forEach { call ->
             val card = LinearLayout(this).apply {
