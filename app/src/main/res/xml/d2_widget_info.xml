@@ -1,5 +1,11 @@
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="140dp" android:minHeight="60dp"
-    android:targetCellWidth="2" android:targetCellHeight="1"
-    android:updatePeriodMillis="0" android:initialLayout="@layout/d2_widget"\n    android:configure="app.d2lock.widget.WidgetConfigActivity"\n    android:widgetFeatures="reconfigurable|configuration_optional"
-    android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen" />
+    android:minWidth="140dp"
+    android:minHeight="60dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="1"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/d2_widget"
+    android:configure="app.d2lock.widget.WidgetConfigActivity"
+    android:widgetFeatures="reconfigurable|configuration_optional"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen" />
