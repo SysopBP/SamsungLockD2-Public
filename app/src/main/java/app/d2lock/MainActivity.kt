@@ -21,6 +21,7 @@ import android.widget.ArrayAdapter
 import android.widget.Spinner
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
@@ -295,6 +296,26 @@ class MainActivity : Activity() {
         section(root, "THEME & COLORS")
         ThemeOptions.add(this, root, ::refreshAppearance)
         section(root, "APPEARANCE")
+        root.addView(TextView(this).apply {
+            text = "Dim wallpaper: ${Prefs.wallpaperDim(this@MainActivity)}%"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "wallpaper_dim_label"
+        })
+        root.addView(SeekBar(this).apply {
+            max = 80
+            progress = Prefs.wallpaperDim(this@MainActivity)
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    Prefs.setWallpaperDim(this@MainActivity, value)
+                    (root.findViewWithTag<TextView>("wallpaper_dim_label"))?.text = "Dim wallpaper: $value%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
         root.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Weather in Celsius (off: Fahrenheit)"

@@ -215,6 +215,11 @@ class LockScreenActivity : Activity() {
                     }
                 }
             }, FrameLayout.LayoutParams(-1, -1))
+            val dim = Prefs.wallpaperDim(this)
+            if (dim > 0) frame.addView(View(this).apply {
+                setBackgroundColor(Color.argb((255f * dim / 100f).toInt(), 0, 0, 0))
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, FrameLayout.LayoutParams(-1, -1))
         }
 
         val content = LinearLayout(this).apply {
