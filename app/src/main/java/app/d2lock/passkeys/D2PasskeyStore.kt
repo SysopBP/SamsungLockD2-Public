@@ -167,6 +167,10 @@ class D2PasskeyStore(context: Context) {
     fun publicKey(record: Record): ByteArray =
         requireNotNull(keyStore.getCertificate(record.keyAlias)) { "Missing D2 passkey key" }.publicKey.encoded
 
+    fun ecPublicKey(record: Record): java.security.interfaces.ECPublicKey =
+        requireNotNull(keyStore.getCertificate(record.keyAlias)) { "Missing D2 passkey key" }
+            .publicKey as java.security.interfaces.ECPublicKey
+
     fun sign(record: Record, payload: ByteArray): ByteArray {
         val privateKey = requireNotNull(keyStore.getKey(record.keyAlias, null)) { "Missing D2 passkey key" }
         return java.security.Signature.getInstance("SHA256withECDSA").run {
