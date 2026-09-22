@@ -227,6 +227,22 @@ class MainActivity : Activity() {
         root.addView(systemHealthCard(), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
         addButton(root, "Refresh system health") { refreshShizukuUi() }
 
+        section(root, "LOCK-SCREEN QUICK SETTINGS")
+        root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Guard Quick Settings while D2 is locked"
+            textSize = 17f
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.quickSettingsGuard(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setQuickSettingsGuard(this@MainActivity, checked) }
+        }, rowParams())
+        root.addView(TextView(this).apply {
+            text = "Experimental Samsung/Android guard. D2 keeps the notification shade collapsed while its lock screen has focus. This does not modify SystemUI or disable emergency/recovery controls, and firmware behavior may vary."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(6), 0, dp(6), dp(14))
+        })
+
         val rootMode = Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Optional KernelSU root mode"
