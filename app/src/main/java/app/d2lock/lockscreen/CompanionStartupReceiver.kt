@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import app.d2lock.Prefs
+import app.d2lock.root.AdbManager
 import app.d2lock.security.PinStore
 
 /** Restores the user-enabled wake listener after reboot or an app update. */
@@ -12,6 +13,11 @@ class CompanionStartupReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED &&
             intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
+
+        if (Prefs.rootMode(context) && Prefs.adbOnBoot(context)) {
+            runCatching { AdbManager.setEnabled(true) }
+        }
+
         if (!Prefs.enabled(context) || !PinStore(context).configured()) return
         try {
             LockScreenService.start(context)

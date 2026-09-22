@@ -417,6 +417,38 @@ class MainActivity : Activity() {
                 Prefs.setShortcut(this, side, actions[it])
             }
         }
+        section(root, "ADB / USB DEBUGGING")
+        val adbStatus = app.d2lock.root.AdbManager.status()
+        root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "USB debugging (root)"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = adbStatus.enabled
+            isEnabled = Prefs.rootMode(this@MainActivity) && RootManager.isAvailable()
+            setOnCheckedChangeListener { _, checked ->
+                if (!app.d2lock.root.AdbManager.setEnabled(checked)) {
+                    Toast.makeText(this@MainActivity, "Unable to change ADB state", Toast.LENGTH_LONG).show()
+                }
+            }
+        }, rowParams())
+        root.addView(TextView(this).apply {
+            text = "ADB: " + (if (adbStatus.enabled) "enabled" else "disabled") +
+                "  •  USB: " + (if (adbStatus.connected) "connected" else "not connected") +
+                "\nUSB state: " + (adbStatus.state.ifBlank { "unknown" }) +
+                "\n\nNew computers still require Android RSA authorization. D2 does not silently approve or bypass that trust prompt. Authorize a trusted computer once and choose Always allow from this computer."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(8), 0, dp(8), dp(12))
+        })
+        root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Enable ADB after boot"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.adbOnBoot(this@MainActivity)
+            isEnabled = Prefs.rootMode(this@MainActivity) && RootManager.isAvailable()
+            setOnCheckedChangeListener { _, checked -> Prefs.setAdbOnBoot(this@MainActivity, checked) }
+        }, rowParams())
+
         section(root, "ACCESS & PREVIEW")
         addButton(root, "Grant notification and media access") {
             startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
