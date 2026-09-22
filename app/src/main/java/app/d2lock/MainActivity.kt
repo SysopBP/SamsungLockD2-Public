@@ -223,12 +223,19 @@ class MainActivity : Activity() {
                 startActivity(Intent(this, LockScreenActivity::class.java))
             }
         }
-        addButton(root, "Add home-screen double-tap widget") {
+        section(root, "HOME SCREEN WIDGET")
+        addButton(root, "Add customizable D2 widget") {
             val manager = getSystemService(AppWidgetManager::class.java)
             if (manager.isRequestPinAppWidgetSupported) {
                 manager.requestPinAppWidget(ComponentName(this, D2Widget::class.java), null, null)
-            } else Toast.makeText(this, "On your home screen, open Widgets and add D2 double-tap lock.", Toast.LENGTH_LONG).show()
+            } else Toast.makeText(this, "On your home screen, open Widgets and add the Samsung Lock D2 widget.", Toast.LENGTH_LONG).show()
         }
+        root.addView(TextView(this).apply {
+            text = "Each widget has its own settings for style, tap action and label. Long-press a placed widget and choose its widget settings when your launcher supports reconfiguration."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(6), 0, dp(6), dp(12))
+        })
 
         val enabled = Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
@@ -599,27 +606,36 @@ class MainActivity : Activity() {
         }
     }
     private fun addChoice(parent: LinearLayout, title: String, choices: List<String>, selected: Int, save: (Int) -> Unit) {
-        parent.addView(TextView(this).apply {
-            text = title; textSize = 16f; setTextColor(Appearance.text(this@MainActivity)); setPadding(dp(6), dp(7), 0, dp(4))
-        })
-        parent.addView(Spinner(this).apply {
-            adapter = object : ArrayAdapter<String>(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, choices) {
-                override fun getView(position: Int, convertView: android.view.View?, parent: ViewGroup): android.view.View =
-                    (super.getView(position, convertView, parent) as TextView).apply {
-                        setTextColor(Appearance.text(this@MainActivity)); setPadding(dp(16), 0, dp(10), 0)
-                    }
-                override fun getDropDownView(position: Int, convertView: android.view.View?, parent: ViewGroup): android.view.View =
-                    (super.getDropDownView(position, convertView, parent) as TextView).apply {
-                        setTextColor(Appearance.text(this@MainActivity)); setBackgroundColor(Appearance.surface(this@MainActivity))
-                    }
-            }
-            background = pillBackground()
-            setSelection(selected.coerceIn(0, choices.lastIndex))
-            onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
-                override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) = save(position)
-            }
-        }, rowParams())
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(12), dp(18), dp(12))
+            background = Appearance.glass(this@MainActivity, 28f, 34, true)
+        }
+        val titleView = TextView(this).apply {
+            text = title
+            textSize = 16f
+            setTextColor(Appearance.text(this@MainActivity))
+        }
+        val valueView = TextView(this).apply {
+            text = choices[selected.coerceIn(0, choices.lastIndex)] + "   ›"
+            textSize = 14f
+            setTextColor(Appearance.accent(this@MainActivity))
+            setPadding(0, dp(4), 0, 0)
+        }
+        card.addView(titleView)
+        card.addView(valueView)
+        card.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle(title)
+                .setSingleChoiceItems(choices.toTypedArray(), choices.indexOf(valueView.text.toString().substringBefore("   ›"))) { dialog, which ->
+                    valueView.text = choices[which] + "   ›"
+                    save(which)
+                    dialog.dismiss()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+        parent.addView(card, LinearLayout.LayoutParams(-1, dp(72)).apply { bottomMargin = dp(8) })
     }
     private fun rowParams() = LinearLayout.LayoutParams(-1, dp(64)).apply { bottomMargin = dp(8) }
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
