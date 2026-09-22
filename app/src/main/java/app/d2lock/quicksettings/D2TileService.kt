@@ -6,7 +6,7 @@ import android.service.quicksettings.TileService
 import app.d2lock.lockscreen.LockScreenActivity
 import app.d2lock.security.PinStore
 
-class D2TileService : TileService() {
+// Rebuild marker: validates PendingIntent-only tile launch.\nclass D2TileService : TileService() {
     override fun onStartListening() {
         super.onStartListening()
         qsTile?.apply {
