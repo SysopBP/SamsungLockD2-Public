@@ -9,6 +9,7 @@ data class LockNotification(val key: String, val app: String, val title: String,
     val contentIntent: android.app.PendingIntent? = null, val packageName: String = app)
 
 object NotificationStore {
+    @Volatile var listener: LockNotificationListener? = null
     val items = CopyOnWriteArrayList<LockNotification>()
     @Volatile var onChanged: (() -> Unit)? = null
     @Volatile var onPosted: ((LockNotification) -> Unit)? = null
@@ -16,6 +17,7 @@ object NotificationStore {
 
 class LockNotificationListener : NotificationListenerService() {
     override fun onListenerConnected() {
+        NotificationStore.listener = this
         NotificationStore.items.clear()
         CallNotificationStore.items.clear()
         activeNotifications?.forEach(::put)
@@ -38,9 +40,14 @@ class LockNotificationListener : NotificationListenerService() {
     }
 
     override fun onListenerDisconnected() {
+        NotificationStore.listener = null
         CallNotificationStore.items.clear()
         NotificationStore.items.clear()
         NotificationStore.onChanged?.invoke()
+    }
+
+    fun dismiss(key: String) {
+        cancelNotification(key)
     }
 
     private fun put(sbn: StatusBarNotification): LockNotification? {
