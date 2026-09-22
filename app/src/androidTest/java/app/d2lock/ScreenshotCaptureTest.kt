@@ -24,6 +24,7 @@ import app.d2lock.notifications.NotificationStore
 import app.d2lock.root.KioskCallApps
 import app.d2lock.root.RootKiosk
 import app.d2lock.security.PinStore
+import app.d2lock.security.PatternUi
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -136,6 +137,22 @@ class ScreenshotCaptureTest {
    scenario.close(); RootKiosk.testConnect=null
    NotificationStore.items.clear(); CallNotificationStore.items.clear()
   }
+  // Capture the actual D2 pattern dialog from the built app.
+  ActivityScenario.launch<MainActivity>(Intent(ctx,MainActivity::class.java)).use { patternHost ->
+   SystemClock.sleep(1000)
+   patternHost.onActivity { a ->
+    a.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+    val d=PatternUi.show(a, setup=true, success={})
+    d.window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+   }
+   SystemClock.sleep(900)
+   capture(patternHost,"18-d2-glass-pattern-create")
+   // Draw a representative in-progress gesture so the selected orb and glass trail are visible.
+   shell("input swipe 245 720 475 945 900")
+   SystemClock.sleep(250)
+   capture(patternHost,"19-d2-glass-pattern-trail")
+  }
+
   // Opening settings also verifies theme initialization before its content is attached.
   ActivityScenario.launch(MainActivity::class.java).use { settings ->
    SystemClock.sleep(1200)
