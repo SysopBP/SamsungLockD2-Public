@@ -28,7 +28,9 @@ import app.d2lock.lockscreen.LockScreenActivity
 import app.d2lock.lockscreen.LockScreenService
 import app.d2lock.root.RootManager
 import app.d2lock.security.PinStore
-import app.d2lock.security.PinUi\nimport app.d2lock.security.PatternStore\nimport app.d2lock.security.PatternUi
+import app.d2lock.security.PinUi
+import app.d2lock.security.PatternStore
+import app.d2lock.security.PatternUi
 import app.d2lock.widget.DoubleTap
 import app.d2lock.widget.D2Widget
 import rikka.shizuku.Shizuku
@@ -113,7 +115,9 @@ class MainActivity : Activity() {
         addButton(root, "Licenses and credits") {
             val notice = assets.open("THIRD_PARTY_NOTICES.txt").bufferedReader().use { it.readText() }
             val text = TextView(this).apply {
-                this.text = "D2 Project — All rights reserved.\n\n$notice"
+                this.text = "D2 Project — All rights reserved.
+
+$notice"
                 setPadding(dp(20), dp(12), dp(20), dp(12))
                 setTextIsSelectable(true)
             }
@@ -170,7 +174,9 @@ class MainActivity : Activity() {
         }
         if (!configured) {
             root.addView(TextView(this).apply {
-                text = "Create a D2 PIN first. D2 does not create, change, or dismiss a Samsung screen lock.\n\nThis is an app privacy screen: Home, Recents, force-stop, uninstall, root, and reboot can bypass it. It is not device encryption or a guarantee against D2 boot errors. If you forget the PIN, clearing D2 app data resets it and its settings."
+                text = "Create a D2 PIN first. D2 does not create, change, or dismiss a Samsung screen lock.
+
+This is an app privacy screen: Home, Recents, force-stop, uninstall, root, and reboot can bypass it. It is not device encryption or a guarantee against D2 boot errors. If you forget the PIN, clearing D2 app data resets it and its settings."
                 textSize = 16f
                 setTextColor(Appearance.text(this@MainActivity))
             })
@@ -246,7 +252,9 @@ class MainActivity : Activity() {
             }
         }, rowParams())
         root.addView(TextView(this).apply {
-            text = "Experimental: grant D2 root access in KernelSU. When kiosk is active, Home and Recents are blocked until your D2 PIN is accepted. Check for ‘Kiosk active’ on the lock screen. Preview stays unlocked.\n\nAndroid kiosk mode interacts with the system keyguard, but D2 never sets a Samsung PIN. A crash or unresponsive app releases kiosk after about 20 seconds; reboot is the fallback recovery. Power/reboot and root remain bypasses. Primary, unmanaged user only."
+            text = "Experimental: grant D2 root access in KernelSU. When kiosk is active, Home and Recents are blocked until your D2 PIN is accepted. Check for ‘Kiosk active’ on the lock screen. Preview stays unlocked.
+
+Android kiosk mode interacts with the system keyguard, but D2 never sets a Samsung PIN. A crash or unresponsive app releases kiosk after about 20 seconds; reboot is the fallback recovery. Power/reboot and root remain bypasses. Primary, unmanaged user only."
             textSize = 14f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(0, dp(4), 0, dp(16))
@@ -351,7 +359,11 @@ class MainActivity : Activity() {
             startActivity(Intent(this, LockScreenActivity::class.java).putExtra("preview", true))
         }
         root.addView(TextView(this).apply {
-            text = "Double-tap the D2 button or its home-screen widget to open the PIN screen. Taps elsewhere on the home screen are controlled by your launcher.\n\nD2 uses its own PIN and does not turn the display off. Optional kiosk mode uses Android task restrictions and interacts with keyguard internally.\n\nWithout active kiosk, Home/Recents can bypass D2. Root, recovery, and reboot remain bypasses in either mode. D2 cannot repair firmware or guarantee prevention of download-mode errors."
+            text = "Double-tap the D2 button or its home-screen widget to open the PIN screen. Taps elsewhere on the home screen are controlled by your launcher.
+
+D2 uses its own PIN and does not turn the display off. Optional kiosk mode uses Android task restrictions and interacts with keyguard internally.
+
+Without active kiosk, Home/Recents can bypass D2. Root, recovery, and reboot remain bypasses in either mode. D2 cannot repair firmware or guarantee prevention of download-mode errors."
             textSize = 14f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(4), dp(28), dp(4), dp(10))
