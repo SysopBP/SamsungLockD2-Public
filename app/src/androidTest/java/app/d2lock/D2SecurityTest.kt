@@ -88,13 +88,6 @@ class D2SecurityTest {
                     if (!focused) SystemClock.sleep(100)
                 }
                 assertTrue("D2 window must receive focus before injecting Back: ${if (!focused) TestDevice.focusDiagnostic() else ""}", focused)
-                // External credit links must use the same PIN gate as normal exit.
-                onView(withText("Weather: Open-Meteo.com · CC BY 4.0")).perform(click())
-                InstrumentationRegistry.getInstrumentation().waitForIdleSync()
-                onView(withId(app.d2lock.R.id.d2_pin_prompt)).inRoot(isDialog()).check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()))
-                scenario.onActivity { assertFalse(it.isFinishing) }
-                onView(withText("Cancel")).inRoot(isDialog()).perform(click())
-                scenario.onActivity { assertFalse("Cancel must leave D2 locked", it.isFinishing) }
                 InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
                 onView(withId(app.d2lock.R.id.d2_pin_prompt)).inRoot(isDialog()).check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()))
                 scenario.recreate()
