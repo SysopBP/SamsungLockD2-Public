@@ -90,11 +90,9 @@ object PinUi {
         dialog.setOnShowListener {
             dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             // One UI 9-style rounded D2 security sheet. Keep authentication behavior unchanged.
-            dialog.window?.setBackgroundDrawable(GradientDrawable().apply {
-                cornerRadius = dp(32).toFloat()
-                setColor(Appearance.surface(activity))
-                setStroke(dp(1), Appearance.secondary(activity))
-            })
+            // Match the lock-screen glass cards: translucent accent-tinted surface with a soft edge.
+            // The wallpaper remains visible behind the PIN sheet while FLAG_SECURE stays in force.
+            dialog.window?.setBackgroundDrawable(Appearance.glass(activity, 32f, 54, true))
             dialog.window?.decorView?.clipToOutline = true
             val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             val negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
