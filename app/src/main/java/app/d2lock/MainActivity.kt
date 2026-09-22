@@ -366,6 +366,8 @@ class MainActivity : Activity() {
         appearanceCard.addView(SeekBar(this).apply {
             max = 80
             progress = Prefs.wallpaperDim(this@MainActivity)
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -619,7 +621,7 @@ class MainActivity : Activity() {
             }
         }, rowParams())
     }
-    private fun rowParams() = LinearLayout.LayoutParams(-1, dp(58)).apply { bottomMargin = dp(10) }
+    private fun rowParams() = LinearLayout.LayoutParams(-1, dp(64)).apply { bottomMargin = dp(8) }
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
     private fun requestRuntimePermissions() {
