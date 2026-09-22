@@ -7,6 +7,8 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.RadialGradient
+import android.graphics.Shader
 import android.graphics.drawable.GradientDrawable
 import android.util.AtomicFile
 import android.util.Base64
@@ -77,6 +79,7 @@ private class PatternView(context: Context) : View(context) {
     private val selected = mutableListOf<Int>()
     private val dot = Paint(Paint.ANTI_ALIAS_FLAG)
     private val glass = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 2f }
     private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth = 5f; style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
     var hideTrail = false
@@ -98,7 +101,8 @@ private class PatternView(context: Context) : View(context) {
         super.onDraw(canvas)
         val accent = Appearance.accent(context)
         dot.color = Appearance.secondary(context)
-        line.color = (0xc8 shl 24) or (accent and 0x00ffffff)\n        line.strokeWidth = 4.5f * resources.displayMetrics.density
+        line.color = (0xc8 shl 24) or (accent and 0x00ffffff)
+        line.strokeWidth = 4.5f * resources.displayMetrics.density
         if (!hideTrail && selected.isNotEmpty()) {
             val path = Path()
             selected.forEachIndexed { i, n ->
