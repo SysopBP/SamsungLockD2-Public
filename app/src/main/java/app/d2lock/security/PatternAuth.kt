@@ -78,7 +78,7 @@ private class PatternView(context: Context) : View(context) {
     private val dot = Paint(Paint.ANTI_ALIAS_FLAG)
     private val glass = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 2f }
-    private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth = 8f; style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
+    private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth = 5f; style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
     var hideTrail = false
     var onComplete: ((List<Int>) -> Unit)? = null
     private var fingerX = 0f
@@ -98,7 +98,7 @@ private class PatternView(context: Context) : View(context) {
         super.onDraw(canvas)
         val accent = Appearance.accent(context)
         dot.color = Appearance.secondary(context)
-        line.color = accent
+        line.color = (0xc8 shl 24) or (accent and 0x00ffffff)\n        line.strokeWidth = 4.5f * resources.displayMetrics.density
         if (!hideTrail && selected.isNotEmpty()) {
             val path = Path()
             selected.forEachIndexed { i, n ->
@@ -111,16 +111,28 @@ private class PatternView(context: Context) : View(context) {
         for (i in 0..8) {
             val (x,y)=point(i)
             val active = i in selected
-            // One UI 9 glass node: a translucent touch target, bright edge and compact center dot.
-            glass.color = if (active) (accent and 0x00ffffff) or (0x38 shl 24)
-                else (Appearance.surface(context) and 0x00ffffff) or (0x42 shl 24)
-            ring.color = if (active) accent else (Appearance.secondary(context) and 0x00ffffff) or (0x90 shl 24)
-            ring.strokeWidth = if (active) 2.4f * density else 1.2f * density
-            val radius = 30f * density
+            // One UI 9 glass orb: layered radial highlight, translucent body and luminous edge.
+            val radius = 32f * density
+            val orbBase = Appearance.blend(Color.BLACK, accent, if (active) .34f else .14f)
+            glow.shader = RadialGradient(
+                x - radius * .28f, y - radius * .32f, radius * 1.35f,
+                intArrayOf(
+                    (0x58 shl 24) or (Color.WHITE and 0x00ffffff),
+                    (0x34 shl 24) or (accent and 0x00ffffff),
+                    (0x0a shl 24) or (Color.BLACK and 0x00ffffff)
+                ),
+                floatArrayOf(0f, .52f, 1f), Shader.TileMode.CLAMP
+            )
+            glass.color = ((if (active) 0x70 else 0x48) shl 24) or (orbBase and 0x00ffffff)
             canvas.drawCircle(x, y, radius, glass)
+            canvas.drawCircle(x, y, radius, glow)
+            glow.shader = null
+            ring.color = if (active) accent
+                else (Appearance.blend(Color.WHITE, accent, .22f) and 0x00ffffff) or (0xa8 shl 24)
+            ring.strokeWidth = if (active) 2.2f * density else 1.15f * density
             canvas.drawCircle(x, y, radius, ring)
-            dot.color = if (active) accent else Appearance.text(context)
-            canvas.drawCircle(x, y, if (active) 7f * density else 5f * density, dot)
+            dot.color = if (active) Color.WHITE else Appearance.text(context)
+            canvas.drawCircle(x, y, if (active) 6.5f * density else 5.5f * density, dot)
         }
     }
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -158,14 +170,14 @@ object PatternUi {
         val density = activity.resources.displayMetrics.density
         fun dp(v:Int)=(v*density).toInt()
         var first: List<Int>? = null
-        val root = LinearLayout(activity).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(24),dp(8),dp(24),dp(8)) }
+        val root = LinearLayout(activity).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(24),dp(14),dp(24),dp(10)); background = Appearance.glass(activity, 30f, 30, true) }
         val prompt = TextView(activity).apply {
             text=if(setup) "Draw a pattern using at least 4 dots" else "Draw your D2 pattern"
             textSize=15f; setTextColor(Appearance.secondary(activity))
         }
         val pattern = PatternView(activity)
         val error = TextView(activity).apply { textSize=14f; setTextColor(Color.rgb(220,70,70)) }
-        root.addView(prompt); root.addView(pattern, LinearLayout.LayoutParams(-1,dp(310))); root.addView(error)
+        root.addView(prompt); root.addView(pattern, LinearLayout.LayoutParams(-1,dp(330))); root.addView(error)
         val dialog = AlertDialog.Builder(activity)
             .setTitle(if(setup) "Create D2 pattern" else "Unlock D2")
             .setMessage("This pattern belongs only to D2 and does not change your Samsung screen lock.")
@@ -195,7 +207,7 @@ object PatternUi {
         dialog.setOnShowListener {
             dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             dialog.window?.setBackgroundDrawable(GradientDrawable().apply {
-                cornerRadius=dp(32).toFloat(); setColor(Appearance.surface(activity)); setStroke(dp(1),Appearance.secondary(activity))
+                cornerRadius=dp(34).toFloat(); setColor((0xB8 shl 24) or (Appearance.blend(Color.BLACK, Appearance.accent(activity), .16f) and 0x00ffffff)); setStroke(dp(1), (0x99 shl 24) or (Appearance.blend(Color.WHITE, Appearance.accent(activity), .30f) and 0x00ffffff))
             })
         }
         dialog.show()
