@@ -26,6 +26,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.MotionEvent
 import android.view.ViewGroup
+import android.view.VelocityTracker
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.widget.Button
@@ -288,7 +289,8 @@ class LockScreenActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(14), dp(12), dp(10), dp(12))
-            background = glassPanel(30f)
+            background = Appearance.glass(this@LockScreenActivity, 34f, 42, true)
+            elevation = dp(8).toFloat()
         }
         mediaPanel.addView(label("♫", 25f, Color.WHITE).apply {
             gravity = Gravity.CENTER
@@ -313,13 +315,13 @@ class LockScreenActivity : Activity() {
         val controls = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             addView(mediaButton("‹") { media.previous() })
-            playPause = mediaButton("▶") { media.toggle() }
+            playPause = mediaButton("▶", true) { media.toggle() }
             addView(playPause)
             addView(mediaButton("›") { media.next() })
         }
         mediaPanel.addView(controls)
         if (Prefs.showMedia(this)) content.addView(mediaPanel,
-            LinearLayout.LayoutParams(-1, dp(88)).apply { bottomMargin = dp(12) })
+            LinearLayout.LayoutParams(-1, dp(94)).apply { bottomMargin = dp(12) })
         frame.addView(content, FrameLayout.LayoutParams(-1, -1))
         val floatingBar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
@@ -564,9 +566,10 @@ class LockScreenActivity : Activity() {
         setOnClickListener { click() }
     }
 
-    private fun mediaButton(value: String, click: () -> Unit) = TextView(this).apply {
-        text = value; textSize = 25f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
-        layoutParams = LinearLayout.LayoutParams(dp(35), dp(48))
+    private fun mediaButton(value: String, primary: Boolean = false, click: () -> Unit) = TextView(this).apply {
+        text = value; textSize = if (primary) 27f else 25f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
+        if (primary) background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x32ffffff); setStroke(dp(1), 0x66ffffff) }
+        layoutParams = LinearLayout.LayoutParams(if (primary) dp(58) else dp(35), if (primary) dp(58) else dp(48))
         setOnClickListener { click() }
     }
     private fun shortcutButton(side: String): View = when (Prefs.shortcut(this, side)) {
