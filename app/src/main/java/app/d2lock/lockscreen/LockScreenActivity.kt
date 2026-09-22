@@ -158,6 +158,20 @@ class LockScreenActivity : Activity() {
         }
     }
 
+    override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: android.content.res.Configuration) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        if (isInMultiWindowMode && !preview && Prefs.kiosk(this)) {
+            // A kiosk lock screen must never remain usable as one pane of multi-window.
+            // Reassert the task/window immediately; RootKiosk continues verifying LOCK_TASK_MODE_LOCKED.
+            window.decorView.post {
+                if (!isDestroyed && !isFinishing) {
+                    runCatching { startLockTask() }
+                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                }
+            }
+        }
+    }
+
     override fun onNewIntent(newIntent: Intent) {
         super.onNewIntent(newIntent)
         intent = newIntent
