@@ -260,7 +260,7 @@ class MainActivity : Activity() {
 
         root.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
-            text = "Require PIN to leave D2 (root kiosk)"
+            text = "Require D2 authentication to leave (root kiosk)"
             textSize = 17f
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.kiosk(this@MainActivity)
@@ -269,14 +269,14 @@ class MainActivity : Activity() {
             }
         }, rowParams())
         root.addView(TextView(this).apply {
-            text = "Experimental: grant D2 root access in KernelSU. When kiosk is active, Home and Recents are blocked until your D2 PIN is accepted. Check for ‘Kiosk active’ on the lock screen. Preview stays unlocked.\\n\\nAndroid kiosk mode interacts with the system keyguard, but D2 never sets a Samsung PIN. A crash or unresponsive app releases kiosk after about 20 seconds; reboot is the fallback recovery. Power/reboot and root remain bypasses. Primary, unmanaged user only."
+            text = "Experimental: grant D2 root access in KernelSU. When kiosk is active, Home and Recents are blocked until your selected D2 unlock method is accepted. Check for ‘Kiosk active’ on the lock screen. Preview stays unlocked.\\n\\nAndroid kiosk mode interacts with the system keyguard, but D2 never sets a Samsung PIN. A crash or unresponsive app releases kiosk after about 20 seconds; reboot is the fallback recovery. Power/reboot and root remain bypasses. Primary, unmanaged user only."
             textSize = 14f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(0, dp(4), 0, dp(16))
         })
 
         root.addView(TextView(this).apply {
-            text = "Phone calls during kiosk: the selected Phone app and system call screen are allowed. Grant notification access below for Answer/Decline controls on D2. Phone-app screens may be accessible without the D2 PIN; other apps and Home/Recents remain restricted. Call controls do not display caller names or numbers on D2, even when message previews are hidden."
+            text = "Phone calls during kiosk: the selected Phone app and system call screen are allowed. Grant notification access below for Answer/Decline controls on D2. Phone-app screens may be accessible without completing D2 authentication; other apps and Home/Recents remain restricted. Call controls do not display caller names or numbers on D2, even when message previews are hidden."
             textSize = 14f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(0, 0, 0, dp(16))
@@ -359,14 +359,14 @@ class MainActivity : Activity() {
             setOnCheckedChangeListener { _, checked -> Prefs.setLiveNotifications(this@MainActivity, checked) }
         }, rowParams())
         root.addView(TextView(this).apply {
-            text = "New notifications appear briefly at the top of D2 and stay in the notification list. Banners follow the privacy choice below. Tap a notification and enter your D2 PIN to open it. Your messaging app controls sound and vibration."
+            text = "New notifications appear briefly at the top of D2 and stay in the notification list. Banners follow the privacy choice below. Tap a notification and authenticate with D2 to open it. Your messaging app controls sound and vibration."
             textSize = 13f
             setTextColor(Appearance.secondary(this@MainActivity))
         })
         addChoice(root, "When D2 is locked", listOf("Hide all", "Count only", "App names", "Public only", "All previews (private too)"),
             Prefs.notificationPrivacy(this)) { Prefs.setNotificationPrivacy(this, it) }
         root.addView(TextView(this).apply {
-            text = "Public only shows text from apps that mark it public. All previews can show private messages before you enter the D2 PIN. Apps marked secret stay hidden."
+            text = "Public only shows text from apps that mark it public. All previews can show private messages before you authenticate with D2. Apps marked secret stay hidden."
             textSize = 13f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(8), 0, dp(8), dp(12))
