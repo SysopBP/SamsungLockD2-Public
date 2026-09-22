@@ -28,7 +28,7 @@ import app.d2lock.lockscreen.LockScreenActivity
 import app.d2lock.lockscreen.LockScreenService
 import app.d2lock.root.RootManager
 import app.d2lock.security.PinStore
-import app.d2lock.security.PinUi
+import app.d2lock.security.PinUi\nimport app.d2lock.security.PatternStore\nimport app.d2lock.security.PatternUi
 import app.d2lock.widget.DoubleTap
 import app.d2lock.widget.D2Widget
 import rikka.shizuku.Shizuku
@@ -104,7 +104,7 @@ class MainActivity : Activity() {
             setTextColor(Appearance.text(this@MainActivity))
         })
         root.addView(TextView(this).apply {
-            text = "D2 Security Session · Independent 6-digit app PIN"
+            text = "D2 Security Session · Independent app authentication"
             textSize = 15f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(0, dp(4), 0, dp(24))
@@ -137,6 +137,35 @@ class MainActivity : Activity() {
             pinDialog = PinUi.show(this, setup = !configured, change = configured, success = {
                 authorized = true
                 setContentView(buildSettings())
+            })
+        }
+        if (configured) {
+            section(root, "UNLOCK METHOD")
+            val methods = listOf("PIN", "Pattern")
+            addChoice(root, "D2 unlock method", methods, if (Prefs.unlockMethod(this) == "pattern") 1 else 0) { selected ->
+                if (selected == 0) {
+                    Prefs.setUnlockMethod(this, "pin")
+                } else if (PatternStore(this).configured()) {
+                    Prefs.setUnlockMethod(this, "pattern")
+                } else {
+                    PatternUi.show(this, setup = true, success = {
+                        Prefs.setUnlockMethod(this, "pattern")
+                        setContentView(buildSettings())
+                    })
+                }
+            }
+            if (PatternStore(this).configured()) {
+                addButton(root, "Replace D2 pattern") {
+                    // Keep the existing PIN as the recovery method. A new pattern file is created after app-data reset;
+                    // changing an existing pattern is intentionally deferred rather than weakening verification.
+                    Toast.makeText(this, "To replace the pattern, switch to PIN first. Pattern reset support is coming next.", Toast.LENGTH_LONG).show()
+                }
+            }
+            root.addView(TextView(this).apply {
+                text = "Pattern is independent of Samsung Keyguard. Your 6-digit D2 PIN remains available as the recovery unlock method."
+                textSize = 13f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(dp(6), 0, dp(6), dp(12))
             })
         }
         if (!configured) {
@@ -177,6 +206,18 @@ class MainActivity : Activity() {
             setBackgroundColor((0x22 shl 24) or (Appearance.text(this@MainActivity) and 0xffffff))
         }, LinearLayout.LayoutParams(-1, dp(1)).apply { topMargin = dp(8); bottomMargin = dp(10) })
         section(root, "SHIZUKU")
+        root.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Use Shizuku in Samsung Lock D2"
+            textSize = 17f
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.shizukuEnabled(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                Prefs.setShizukuEnabled(this@MainActivity, checked)
+                Toast.makeText(this@MainActivity, if (checked) "D2 Shizuku integration enabled" else "D2 Shizuku integration disabled", Toast.LENGTH_SHORT).show()
+                refreshShizukuUi()
+            }
+        }, rowParams())
         root.addView(shizukuCard(), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
 
         val rootMode = Switch(this).apply {
@@ -359,8 +400,9 @@ class MainActivity : Activity() {
     private fun pillBackground() = Appearance.glass(this, 22f, if (Appearance.dark(this)) 38 else 62, true)
 
     private fun shizukuCard(): ViewGroup {
-        val running = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
-        val granted = running && runCatching {
+        val enabled = Prefs.shizukuEnabled(this)
+        val running = enabled && runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+        val granted = enabled && running && runCatching {
             Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
         }.getOrDefault(false)
         return LinearLayout(this).apply {
@@ -370,6 +412,7 @@ class MainActivity : Activity() {
             background = Appearance.glass(this@MainActivity, 28f, 34, true)
             addView(TextView(this@MainActivity).apply {
                 text = when {
+                    !enabled -> "Shizuku disabled in D2"
                     granted -> "●  Shizuku connected"
                     running -> "Shizuku running · permission required"
                     else -> "Shizuku not running"
@@ -379,6 +422,7 @@ class MainActivity : Activity() {
             })
             addView(TextView(this@MainActivity).apply {
                 text = when {
+                    !enabled -> "The Shizuku service may keep running, but Samsung Lock D2 will not use it."
                     granted -> "Service running · Authorized"
                     running -> "Tap below to authorize Samsung Lock D2."
                     else -> "Start Shizuku, then return here. D2 reconnects automatically."
@@ -388,7 +432,8 @@ class MainActivity : Activity() {
                 setPadding(0, dp(3), 0, dp(8))
             })
             addView(Button(this@MainActivity).apply {
-                text = when { granted -> "Revoke / Reconnect Shizuku   ›"; running -> "Authorize Shizuku   ›"; else -> "Connect Shizuku   ›" }
+                text = when { !enabled -> "Shizuku disabled   ›"; granted -> "Revoke / Reconnect Shizuku   ›"; running -> "Authorize Shizuku   ›"; else -> "Connect Shizuku   ›" }
+                isEnabled = enabled
                 isAllCaps = false
                 setTextColor(Appearance.text(this@MainActivity))
                 background = Appearance.glass(this@MainActivity, 22f, 30, true)
