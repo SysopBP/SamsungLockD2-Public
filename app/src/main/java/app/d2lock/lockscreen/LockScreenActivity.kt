@@ -257,19 +257,7 @@ class LockScreenActivity : Activity() {
             content.addView(actionButton("Close preview") { finish() })
         }
         content.addView(topInfo, LinearLayout.LayoutParams(-1, dp(54)))
-        content.addView(label("Weather: Open-Meteo.com · CC BY 4.0", 12f, Appearance.text(this, true)).apply {
-            gravity = Gravity.CENTER
-            paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG
-            setOnClickListener {
-                val openCredit = {
-                    runCatching {
-                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://open-meteo.com/en/licence")))
-                    }.onFailure { Toast.makeText(this@LockScreenActivity, "Browser unavailable", Toast.LENGTH_SHORT).show() }
-                    Unit
-                }
-                if (preview) openCredit() else authenticate(openCredit)
-            }
-        })
+        // Weather source details are kept in app credits so the lock screen stays clean.
 
         notifications = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL

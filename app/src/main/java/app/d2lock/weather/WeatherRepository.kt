@@ -23,17 +23,32 @@ object WeatherRepository {
         }.getOrNull() ?: return result(null)
         executor.execute {
             val weather = runCatching {
-                val unit = if (Prefs.celsius(context)) "celsius" else "fahrenheit"
-                val url = URL("https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,weather_code&temperature_unit=$unit")
-                val connection = (url.openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 5000; readTimeout = 5000
-                    setRequestProperty("User-Agent", "SamsungLockD2/0.2")
-                }
-                val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() }).getJSONObject("current")
-                Weather(json.getDouble("temperature_2m").toInt(), codeLabel(json.getInt("weather_code")))
+                val points = getJson("https://api.weather.gov/points/${location.latitude},${location.longitude}")
+                val stationsUrl = points.getJSONObject("properties").getString("observationStations")
+                val stations = getJson(stationsUrl).getJSONArray("features")
+                if (stations.length() == 0) error("No NWS observation station")
+                val stationId = stations.getJSONObject(0).getJSONObject("properties").getString("stationIdentifier")
+                val obs = getJson("https://api.weather.gov/stations/$stationId/observations/latest").getJSONObject("properties")
+                val c = obs.getJSONObject("temperature").optDouble("value", Double.NaN)
+                if (c.isNaN()) error("NWS temperature unavailable")
+                val temperature = if (Prefs.celsius(context)) c else (c * 9.0 / 5.0) + 32.0
+                Weather(kotlin.math.round(temperature).toInt(), obs.optString("textDescription", "Weather").trim().ifBlank { "Weather" })
             }.getOrNull()
             result(weather)
         }
+    }
+
+    private fun getJson(address: String): JSONObject {
+        val connection = (URL(address).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 6000
+            readTimeout = 6000
+            setRequestProperty("User-Agent", "SamsungLockD2/0.2 (github.com/SysopBP/SamsungLockD2-Public)")
+            setRequestProperty("Accept", "application/geo+json")
+        }
+        return try {
+            if (connection.responseCode !in 200..299) error("NWS HTTP ${connection.responseCode}")
+            JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+        } finally { connection.disconnect() }
     }
 
     private fun codeLabel(code: Int) = when (code) {
