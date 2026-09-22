@@ -572,7 +572,7 @@ class LockScreenActivity : Activity() {
     private fun shortcutButton(side: String): View = when (Prefs.shortcut(this, side)) {
         "Camera" -> roundButton("📷") {
             if (preview) openCamera() else authenticate { openCamera() }
-        }.apply { contentDescription = "Camera, D2 PIN required" }
+        }.apply { contentDescription = "Camera, D2 authentication required" }
         "Flashlight" -> roundButton("🔦") { toggleTorch() }.apply { contentDescription = "Flashlight" }
         else -> View(this)
     }
