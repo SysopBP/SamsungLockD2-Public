@@ -93,9 +93,24 @@ object ThemeOptions {
         slider("Distance above navigation area","bar_gap",8,72,Appearance.barGap(c)," dp")
         parent.addView(barPreview,LinearLayout.LayoutParams(-1,dp(64)))
         parent.addView(label("The bar uses your accent and keeps your existing shortcuts. Open the lock-screen preview to see its width and position."))
-        parent.addView(Button(c).apply {
-            text="Reset appearance"; setTextColor(Appearance.text(c))
+        parent.addView(LinearLayout(c).apply {
+            orientation=LinearLayout.VERTICAL
+            setPadding(dp(18),dp(12),dp(18),dp(12))
+            background=ui9Card()
+            isClickable=true
+            isFocusable=true
+            addView(TextView(c).apply {
+                text="Reset appearance   ›"
+                textSize=16f
+                setTextColor(Appearance.text(c))
+            })
+            addView(TextView(c).apply {
+                text="Restore default layout, colors and settings"
+                textSize=12f
+                setTextColor(Appearance.secondary(c))
+                setPadding(0,dp(3),0,0)
+            })
             setOnClickListener { Appearance.reset(c); refresh() }
-        },LinearLayout.LayoutParams(-1,dp(56)))
+        },LinearLayout.LayoutParams(-1,dp(72)).apply { topMargin=dp(12); bottomMargin=dp(8) })
     }
 }
