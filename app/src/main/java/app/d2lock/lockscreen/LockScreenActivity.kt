@@ -328,10 +328,10 @@ class LockScreenActivity : Activity() {
         mediaPanel.addView(mediaDetails, LinearLayout.LayoutParams(0, -2, 1f))
         val controls = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
-            addView(mediaButton("‹") { media.previous() })
+            addView(mediaButton("◀|") { media.previous() })
             playPause = mediaButton("▶", true) { media.toggle() }
             addView(playPause)
-            addView(mediaButton("›") { media.next() })
+            addView(mediaButton("|▶") { media.next() })
         }
         mediaPanel.addView(controls)
         if (Prefs.showMedia(this)) content.addView(mediaPanel,
@@ -588,8 +588,15 @@ class LockScreenActivity : Activity() {
 
     private fun mediaButton(value: String, primary: Boolean = false, click: () -> Unit) = TextView(this).apply {
         text = value; textSize = if (primary) 27f else 25f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
-        if (primary) background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x32ffffff); setStroke(dp(1), 0x66ffffff) }
-        layoutParams = LinearLayout.LayoutParams(if (primary) dp(58) else dp(35), if (primary) dp(58) else dp(48))
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(if (primary) 0x32ffffff else 0x24ffffff)
+            setStroke(dp(1), if (primary) 0x66ffffff else 0x52ffffff)
+        }
+        layoutParams = LinearLayout.LayoutParams(if (primary) dp(58) else dp(46), if (primary) dp(58) else dp(46)).apply {
+            marginStart = dp(3)
+            marginEnd = dp(3)
+        }
         setOnClickListener { click() }
     }
     private fun shortcutButton(side: String): View = when (Prefs.shortcut(this, side)) {
