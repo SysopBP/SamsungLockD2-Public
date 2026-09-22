@@ -2,6 +2,7 @@ package app.d2lock.passkeys
 
 import android.os.CancellationSignal
 import androidx.credentials.exceptions.CreateCredentialException
+import androidx.credentials.exceptions.ClearCredentialException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.provider.BeginCreateCredentialRequest
 import androidx.credentials.provider.BeginCreateCredentialResponse
