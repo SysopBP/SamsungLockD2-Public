@@ -354,14 +354,16 @@ class MainActivity : Activity() {
         section(root, "THEME & COLORS")
         ThemeOptions.add(this, root, ::refreshAppearance)
         section(root, "APPEARANCE")
-        root.addView(TextView(this).apply {
+        val appearanceCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
+        root.addView(appearanceCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
+        appearanceCard.addView(TextView(this).apply {
             text = "Dim wallpaper: ${Prefs.wallpaperDim(this@MainActivity)}%"
             textSize = 15f
             setTextColor(Appearance.text(this@MainActivity))
             setPadding(dp(6), dp(4), 0, 0)
             tag = "wallpaper_dim_label"
         })
-        root.addView(SeekBar(this).apply {
+        appearanceCard.addView(SeekBar(this).apply {
             max = 80
             progress = Prefs.wallpaperDim(this@MainActivity)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -374,14 +376,14 @@ class MainActivity : Activity() {
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
-        root.addView(Switch(this).apply {
+        appearanceCard.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Weather in Celsius (off: Fahrenheit)"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.celsius(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setCelsius(this@MainActivity, checked) }
         }, rowParams())
-        root.addView(Switch(this).apply {
+        appearanceCard.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Show media player while D2 is locked"
             setTextColor(Appearance.text(this@MainActivity))
@@ -389,30 +391,34 @@ class MainActivity : Activity() {
             setOnCheckedChangeListener { _, checked -> Prefs.setShowMedia(this@MainActivity, checked) }
         }, rowParams())
         section(root, "NOTIFICATION PRIVACY")
-        root.addView(Switch(this).apply {
+        val privacyCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
+        root.addView(privacyCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
+        privacyCard.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Live notification banners while D2 is locked"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.liveNotifications(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setLiveNotifications(this@MainActivity, checked) }
         }, rowParams())
-        root.addView(TextView(this).apply {
+        privacyCard.addView(TextView(this).apply {
             text = "New notifications appear briefly at the top of D2 and stay in the notification list. Banners follow the privacy choice below. Tap a notification and authenticate with D2 to open it. Your messaging app controls sound and vibration."
             textSize = 13f
             setTextColor(Appearance.secondary(this@MainActivity))
         })
-        addChoice(root, "When D2 is locked", listOf("Hide all", "Count only", "App names", "Public only", "All previews (private too)"),
+        addChoice(privacyCard, "When D2 is locked", listOf("Hide all", "Count only", "App names", "Public only", "All previews (private too)"),
             Prefs.notificationPrivacy(this)) { Prefs.setNotificationPrivacy(this, it) }
-        root.addView(TextView(this).apply {
+        privacyCard.addView(TextView(this).apply {
             text = "Public only shows text from apps that mark it public. All previews can show private messages before you authenticate with D2. Apps marked secret stay hidden."
             textSize = 13f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(8), 0, dp(8), dp(12))
         })
         section(root, "FLOATING BAR")
+        val floatingCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
+        root.addView(floatingCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         val actions = listOf("None", "Camera", "Flashlight")
         for (side in listOf("left", "right")) {
-            addChoice(root, "${side.replaceFirstChar { it.uppercase() }} action", actions,
+            addChoice(floatingCard, "${side.replaceFirstChar { it.uppercase() }} action", actions,
                 actions.indexOf(Prefs.shortcut(this, side)).coerceAtLeast(0)) {
                 Prefs.setShortcut(this, side, actions[it])
             }
@@ -466,7 +472,7 @@ class MainActivity : Activity() {
             isAllCaps = false
             textSize = 16f
             setTextColor(Appearance.text(this@MainActivity))
-            background = pillBackground()
+            background = Appearance.glass(this@MainActivity, 28f, 34, true)
             setOnClickListener { action() }
         }, rowParams())
     }
