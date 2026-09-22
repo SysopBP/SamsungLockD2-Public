@@ -88,6 +88,15 @@ class LockScreenActivity : Activity() {
         }
     }
 
+    private val quickSettingsGuard = object : Runnable {
+        override fun run() {
+            if (!preview && Prefs.quickSettingsGuard(this@LockScreenActivity) && hasWindowFocus()) {
+                runCatching { sendBroadcast(Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)) }
+            }
+            handler.postDelayed(this, 350)
+        }
+    }
+
     private val batteryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
@@ -140,6 +149,7 @@ class LockScreenActivity : Activity() {
             batteryReceiver.onReceive(this, it)
         }
         handler.post(ticker)
+        if (!preview && Prefs.quickSettingsGuard(this)) handler.post(quickSettingsGuard)
         if (!preview && !unlocking && Prefs.kiosk(this)) {
             RootKiosk.attach(this) { kioskStatus.text = it }
         }
@@ -155,6 +165,7 @@ class LockScreenActivity : Activity() {
         wallpaperActive = false
         wallpaperAnimations.forEach { it.pause() }
         handler.removeCallbacks(ticker)
+        handler.removeCallbacks(quickSettingsGuard)
         runCatching { unregisterReceiver(batteryReceiver) }
         super.onPause()
     }
