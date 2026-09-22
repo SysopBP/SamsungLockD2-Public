@@ -1,5 +1,7 @@
 package app.d2lock.passkeys
 
+import android.app.PendingIntent
+import android.content.Intent
 import android.os.Build
 import android.os.CancellationSignal
 import androidx.annotation.RequiresApi
@@ -8,6 +10,8 @@ import androidx.credentials.exceptions.ClearCredentialException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.provider.BeginCreateCredentialRequest
 import androidx.credentials.provider.BeginCreateCredentialResponse
+import androidx.credentials.provider.BeginCreatePublicKeyCredentialRequest
+import androidx.credentials.provider.CreateEntry
 import androidx.credentials.provider.BeginGetCredentialRequest
 import androidx.credentials.provider.BeginGetCredentialResponse
 import androidx.credentials.provider.CredentialProviderService
@@ -38,7 +42,26 @@ class D2CredentialProviderService : CredentialProviderService() {
         cancellationSignal: CancellationSignal,
         callback: OutcomeReceiver<BeginCreateCredentialResponse, CreateCredentialException>
     ) {
-        callback.onResult(BeginCreateCredentialResponse())
+        if (request !is BeginCreatePublicKeyCredentialRequest) {
+            callback.onResult(BeginCreateCredentialResponse())
+            return
+        }
+        val intent = Intent(this, D2PasskeyActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0xD200,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+        )
+        val entry = CreateEntry.Builder("Samsung Lock D2", pendingIntent)
+            .setDescription("Save this passkey with D2")
+            .setPublicKeyCredentialCount(runCatching { D2PasskeyStore(this).list().size }.getOrDefault(0))
+            .build()
+        callback.onResult(
+            BeginCreateCredentialResponse.Builder()
+                .addCreateEntry(entry)
+                .build()
+        )
     }
 
     override fun onClearCredentialStateRequest(
