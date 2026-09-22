@@ -76,7 +76,10 @@ class PatternStore(context: Context, private val now: () -> Long = System::curre
 private class PatternView(context: Context) : View(context) {
     private val selected = mutableListOf<Int>()
     private val dot = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth = 8f; style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
+    private val rim = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val highlight = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val lineGlow = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
+    private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
     var hideTrail = false
     var onComplete: ((List<Int>) -> Unit)? = null
     private var fingerX = 0f
