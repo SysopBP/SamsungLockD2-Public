@@ -46,6 +46,12 @@ object Prefs {
         prefs(context).edit().putInt("glass_$component", value.coerceIn(20, 100)).apply()
     fun showMedia(context: Context) = prefs(context).getBoolean("show_media", true)
     fun setShowMedia(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_media", value).apply()
+    fun notificationDensity(context: Context) = prefs(context).getString("notification_density", "comfortable") ?: "comfortable"
+    fun setNotificationDensity(context: Context, value: String) = prefs(context).edit().putString("notification_density", value).apply()
+    fun notificationRadius(context: Context) = prefs(context).getInt("notification_radius", 28).coerceIn(16, 40)
+    fun setNotificationRadius(context: Context, value: Int) = prefs(context).edit().putInt("notification_radius", value.coerceIn(16, 40)).apply()
+    fun notificationGlass(context: Context) = prefs(context).getInt("notification_glass", lockGlass(context)).coerceIn(20, 100)
+    fun setNotificationGlass(context: Context, value: Int) = prefs(context).edit().putInt("notification_glass", value.coerceIn(20, 100)).apply()
     fun notificationPrivacy(context: Context) = prefs(context).getInt("notification_privacy", 2)
     fun setNotificationPrivacy(context: Context, value: Int) = prefs(context).edit().putInt("notification_privacy", value).apply()
     fun liveNotifications(context: Context) = prefs(context).getBoolean("live_notifications", true)
