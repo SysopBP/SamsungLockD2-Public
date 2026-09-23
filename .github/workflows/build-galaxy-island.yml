@@ -78,10 +78,10 @@ jobs:
           if "import androidx.compose.foundation.BorderStroke" not in size_text:
               first_import = size_text.find("import ")
               size_text = size_text[:first_import] + "import androidx.compose.foundation.BorderStroke\\nimport androidx.compose.material3.Surface\\n" + size_text[first_import:]
-          camera_anchor = '    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {\\n        Text(\\n            text = "Camera / Island Position",'
-          glass_anchor = '    Surface(shape = RoundedCornerShape(32.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f), tonalElevation = 2.dp, shadowElevation = 10.dp, border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))) {\\n        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {\\n        Text(\\n            text = "Camera / Island Position",'
+          camera_anchor = "    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {"
+          glass_anchor = "    Surface(shape = RoundedCornerShape(32.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f), tonalElevation = 2.dp, shadowElevation = 10.dp, border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))) {\\n        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {"
           if camera_anchor not in size_text:
-              raise SystemExit("Galaxy Island source drift: post-position SizePositionScreen anchor missing")
+              raise SystemExit("Galaxy Island source drift: SizePositionScreen Column missing after position edit")
           size_text = size_text.replace(camera_anchor, glass_anchor, 1)
           tail = size_text.rfind("}")
           if tail < 0:
