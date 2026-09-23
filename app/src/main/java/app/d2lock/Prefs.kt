@@ -41,6 +41,8 @@ object Prefs {
     }
     fun celsius(context: Context) = prefs(context).getBoolean("celsius", false)
     fun setCelsius(context: Context, value: Boolean) = prefs(context).edit().putBoolean("celsius", value).apply()
+    fun weatherLocation(context: Context) = prefs(context).getString("weather_location", "") ?: ""
+    fun setWeatherLocation(context: Context, value: String) = prefs(context).edit().putString("weather_location", value.trim()).apply()
     fun lockGlass(context: Context) = prefs(context).getInt("lock_glass", 70).coerceIn(20, 100)
     fun setLockGlass(context: Context, value: Int) = prefs(context).edit().putInt("lock_glass", value.coerceIn(20, 100)).apply()
     fun lockScale(context: Context) = prefs(context).getInt("lock_scale", 100).coerceIn(85, 115)
