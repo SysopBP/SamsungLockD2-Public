@@ -508,10 +508,13 @@ class LockScreenActivity : Activity() {
             (Prefs.clockLayout(this) == "auto" && Prefs.clockAdaptive(this) &&
                 ((::media.isInitialized && media.isPlaying()) || visibleItems.size >= 2)))
         visibleItems.forEach { item ->
+            val density = Prefs.notificationDensity(this)
+            val horizontalPad = when (density) { "compact" -> 13; "large" -> 18; else -> 16 }
+            val verticalPad = when (density) { "compact" -> 7; "large" -> 14; else -> 11 }
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(16), dp(11), dp(16), dp(11))
-                background = notificationPanel(item.packageName)
+                setPadding(dp(horizontalPad), dp(verticalPad), dp(horizontalPad), dp(verticalPad))
+                background = Appearance.glass(this@LockScreenActivity, Prefs.notificationRadius(this@LockScreenActivity).toFloat(), Prefs.notificationGlass(this@LockScreenActivity), true)
                 addView(notificationLabel(item.app, 12f))
                 if (privacy == 4 || (privacy == 3 && item.visibility == Notification.VISIBILITY_PUBLIC)) {
                     addView(notificationLabel(item.title.ifBlank { item.text }, 16f))
@@ -520,7 +523,9 @@ class LockScreenActivity : Activity() {
             }
             if (item.contentIntent != null) card.setOnClickListener { openNotification(item) }
             card.setOnTouchListener(notificationDismissListener(item, card))
-            notifications.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(9) })
+            notifications.addView(card, LinearLayout.LayoutParams(-1, -2).apply {
+                bottomMargin = dp(when (density) { "compact" -> 6; "large" -> 12; else -> 9 })
+            })
         }
     }
 
