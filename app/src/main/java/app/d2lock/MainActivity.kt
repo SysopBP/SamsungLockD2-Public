@@ -522,6 +522,43 @@ class MainActivity : Activity() {
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(48)))
+        appearanceCard.addView(TextView(this).apply {
+            text = "Weather & battery content size: ${Prefs.topInfoSize(this@MainActivity)}%"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "top_info_size_label"
+        })
+        appearanceCard.addView(SeekBar(this).apply {
+            max = 40
+            progress = Prefs.topInfoSize(this@MainActivity) - 80
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val scale = value + 80
+                    Prefs.setTopInfoSize(this@MainActivity, scale)
+                    root.findViewWithTag<TextView>("top_info_size_label")?.text = "Weather & battery content size: $scale%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
+        appearanceCard.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Show weather in pill"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.showWeather(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setShowWeather(this@MainActivity, checked) }
+        }, rowParams())
+        appearanceCard.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Show battery percentage"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.showBatteryPercent(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setShowBatteryPercent(this@MainActivity, checked) }
+        }, rowParams())
         appearanceCard.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Weather in Celsius (off: Fahrenheit)"
@@ -563,6 +600,17 @@ class MainActivity : Activity() {
             isChecked = Prefs.showMedia(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setShowMedia(this@MainActivity, checked) }
         }, rowParams())
+        addButton(appearanceCard, "Reset appearance to defaults") {
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Reset appearance?")
+                .setMessage("This resets visual customization only. PIN, pattern, kiosk, root, Shizuku, ADB recovery, and notification privacy are not changed.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Reset") { _, _ ->
+                    Prefs.resetAppearance(this)
+                    refreshAppearance()
+                }
+                .show()
+        }
         section(root, "NOTIFICATION PRIVACY")
         val privacyCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(privacyCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
