@@ -81,7 +81,12 @@ class LockScreenActivity : Activity() {
 
     private val ticker = object : Runnable {
         override fun run() {
-            clock.text = SimpleDateFormat("h:mm", Locale.getDefault()).format(Date())
+            val time = SimpleDateFormat("h:mm", Locale.getDefault()).format(Date())
+            val requestedLayout = Prefs.clockLayout(this@LockScreenActivity)
+            val stacked = requestedLayout == "stacked" ||
+                (requestedLayout == "auto" && Prefs.clockAdaptive(this@LockScreenActivity) &&
+                    (Prefs.showMedia(this@LockScreenActivity) || NotificationStore.items().size >= 2))
+            clock.text = if (stacked) time.replace(':', '\n') else time
             date.text = SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
             mediaTitle.text = media.title().ifBlank { "Media" }
             mediaArtist.text = media.artist().ifBlank { "Play music to show it here" }
