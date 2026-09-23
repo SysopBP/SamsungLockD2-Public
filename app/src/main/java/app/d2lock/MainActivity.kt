@@ -642,13 +642,8 @@ class MainActivity : Activity() {
             isChecked = Prefs.showBatteryPercent(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setShowBatteryPercent(this@MainActivity, checked) }
         }, rowParams())
-        appearanceCard.addView(Switch(this).apply {
-                thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
-            text = "Weather in Celsius (off: Fahrenheit)"
-            setTextColor(Appearance.text(this@MainActivity))
-            isChecked = Prefs.celsius(this@MainActivity)
-            setOnCheckedChangeListener { _, checked -> Prefs.setCelsius(this@MainActivity, checked) }
-        }, rowParams())
+        addChoice(appearanceCard, "Temperature unit", listOf("Fahrenheit", "Celsius"),
+            if (Prefs.celsius(this)) 1 else 0) { Prefs.setCelsius(this, it == 1) }
         appearanceCard.addView(TextView(this).apply {
             text = "Primary weather location"
             textSize = 15f
@@ -668,6 +663,19 @@ class MainActivity : Activity() {
         addButton(appearanceCard, "Save primary weather location") {
             Prefs.setWeatherLocation(this, weatherLocation.text.toString())
             Toast.makeText(this, if (weatherLocation.text.isNullOrBlank()) "Weather set to automatic location" else "Primary weather location saved", Toast.LENGTH_SHORT).show()
+        }
+        addButton(appearanceCard, "Test weather now") {
+            Prefs.setWeatherLocation(this, weatherLocation.text.toString())
+            Toast.makeText(this, "Checking weather…", Toast.LENGTH_SHORT).show()
+            app.d2lock.weather.WeatherRepository.load(this) { weather ->
+                runOnUiThread {
+                    Toast.makeText(
+                        this,
+                        weather?.let { "${it.temperature}° · ${it.label}" } ?: "Weather unavailable. Check location permission or Primary Location.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
         }
         appearanceCard.addView(TextView(this).apply {
             text = "Leave Primary Location blank to use the device location. Enter a city, postcode, or city + country/region for global weather."
