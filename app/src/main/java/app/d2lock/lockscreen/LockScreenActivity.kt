@@ -255,14 +255,21 @@ class LockScreenActivity : Activity() {
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(dp(20), dp(72), dp(20), dp(125))
         }
-        clock = label("12:00", 82f, Appearance.text(this, true)).apply { letterSpacing = -.05f; gravity = Gravity.CENTER }
-        date = label("", 18f, Appearance.secondary(this, true)).apply { gravity = Gravity.CENTER }
+        val uiScale = Prefs.lockScale(this) / 100f
+        val clockSize = 82f * (Prefs.clockScale(this) / 100f)
+        content.scaleX = uiScale
+        content.scaleY = uiScale
+        clock = label("12:00", clockSize, Appearance.text(this, true)).apply { letterSpacing = -.05f; gravity = Gravity.CENTER }
+        date = label("", 18f, Appearance.secondary(this, true)).apply {
+            gravity = Gravity.CENTER
+            visibility = if (Prefs.showDate(this@LockScreenActivity)) View.VISIBLE else View.GONE
+        }
         val topInfo = LinearLayout(this).apply {
             gravity = Gravity.CENTER
             weather = label("Loading weather…", 15f, Appearance.text(this@LockScreenActivity, true)).apply { gravity = Gravity.CENTER }
             battery = label("—%", 15f, Appearance.text(this@LockScreenActivity, true)).apply { gravity = Gravity.CENTER }
             // One continuous transparent weather/battery pill, matching the AMOLED glass design.
-            background = Appearance.glass(this@LockScreenActivity, 30f, 32, true)
+            background = Appearance.glass(this@LockScreenActivity, 30f, Prefs.componentGlass(this@LockScreenActivity, "top_info"), true)
             addView(weather, LinearLayout.LayoutParams(0, dp(42), 1f))
             addView(battery, LinearLayout.LayoutParams(0, dp(42), 1f))
         }
@@ -303,7 +310,7 @@ class LockScreenActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(14), dp(12), dp(10), dp(12))
-            background = Appearance.glass(this@LockScreenActivity, 34f, 42, true)
+            background = Appearance.glass(this@LockScreenActivity, 34f, Prefs.componentGlass(this@LockScreenActivity, "media"), true)
             elevation = dp(8).toFloat()
         }
         mediaPanel.addView(label("♫", 25f, Color.WHITE).apply {
