@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="d2_icon_purple">#5B21B6</color>
+    <color name="d2_icon_blue">#1D4ED8</color>
+    <color name="d2_icon_red">#B91C1C</color>
+    <color name="d2_icon_green">#047857</color>
+    <color name="d2_icon_gold">#A16207</color>
+    <color name="d2_icon_silver">#64748B</color>
+    <color name="d2_icon_amoled">#000000</color>
+</resources>
