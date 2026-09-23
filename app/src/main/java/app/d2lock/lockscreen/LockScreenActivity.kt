@@ -81,7 +81,13 @@ class LockScreenActivity : Activity() {
 
     private val ticker = object : Runnable {
         override fun run() {
-            clock.text = SimpleDateFormat("h:mm", Locale.getDefault()).format(Date())
+            val time = SimpleDateFormat("h:mm", Locale.getDefault()).format(Date())
+            val requestedLayout = Prefs.clockLayout(this@LockScreenActivity)
+            val stacked = requestedLayout == "stacked" ||
+                (requestedLayout == "auto" && Prefs.clockAdaptive(this@LockScreenActivity) &&
+                    ((::media.isInitialized && media.isPlaying()) || NotificationStore.items.size >= 2))
+            clock.text = if (stacked) time.replace(':', '\n') else time
+            applyAdaptiveClockPosition(stacked)
             date.text = SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
             mediaTitle.text = media.title().ifBlank { "Media" }
             mediaArtist.text = media.artist().ifBlank { "Play music to show it here" }
@@ -104,7 +110,8 @@ class LockScreenActivity : Activity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
             val charging = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) in listOf(BatteryManager.BATTERY_STATUS_CHARGING, BatteryManager.BATTERY_STATUS_FULL)
-            battery.text = if (charging) "⚡ $level%" else "$level%"
+            val percent = if (Prefs.showBatteryPercent(this@LockScreenActivity)) "  $level%" else ""
+            battery.text = if (charging) "▰  ⚡$percent" else "▰$percent"
         }
     }
 
@@ -255,15 +262,71 @@ class LockScreenActivity : Activity() {
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(dp(20), dp(72), dp(20), dp(125))
         }
-        clock = label("12:00", 82f, Appearance.text(this, true)).apply { letterSpacing = -.05f; gravity = Gravity.CENTER }
-        date = label("", 18f, Appearance.secondary(this, true)).apply { gravity = Gravity.CENTER }
+        val uiScale = Prefs.lockScale(this) / 100f
+        val style = Prefs.clockStyle(this)
+        val adaptiveFactor = if (Prefs.clockAdaptive(this)) {
+            when {
+                Prefs.showMedia(this) && NotificationStore.items.isNotEmpty() -> .82f
+                NotificationStore.items.isNotEmpty() -> .90f
+                else -> 1f
+            }
+        } else 1f
+        val styleFactor = when (style) {
+            "minimal" -> .78f
+            "condensed" -> .94f
+            "bold" -> 1.04f
+            else -> 1f
+        }
+        val clockSize = 82f * (Prefs.clockScale(this) / 100f) * adaptiveFactor * styleFactor
+        content.scaleX = uiScale
+        content.scaleY = uiScale
+        val requestedClockLayout = Prefs.clockLayout(this)
+        val stackedClock = requestedClockLayout == "stacked" ||
+            (requestedClockLayout == "auto" && Prefs.clockAdaptive(this) &&
+                (NotificationStore.items.size >= 2))
+        clock = label(if (stackedClock) "12\n00" else "12:00", clockSize, Appearance.text(this, true)).apply {
+            if (stackedClock) {
+                setLineSpacing(-dp(12).toFloat(), .86f)
+                includeFontPadding = false
+            }
+            gravity = Gravity.CENTER
+            typeface = when (style) {
+                "rounded" -> android.graphics.Typeface.create("sans-serif-rounded", android.graphics.Typeface.NORMAL)
+                "condensed" -> android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.NORMAL)
+                "bold" -> android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+                "minimal" -> android.graphics.Typeface.create("sans-serif-light", android.graphics.Typeface.NORMAL)
+                "classic" -> android.graphics.Typeface.DEFAULT
+                else -> android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
+            }
+            letterSpacing = when (style) {
+                "condensed" -> -.075f
+                "minimal" -> .015f
+                "bold" -> -.035f
+                else -> -.05f
+            }
+        }
+        date = label("", 18f, Appearance.secondary(this, true)).apply {
+            gravity = Gravity.CENTER
+            visibility = if (Prefs.showDate(this@LockScreenActivity)) View.VISIBLE else View.GONE
+        }
+        val topInfoScale = Prefs.topInfoSize(this) / 100f
         val topInfo = LinearLayout(this).apply {
             gravity = Gravity.CENTER
-            weather = label("Loading weather…", 15f, Appearance.text(this@LockScreenActivity, true)).apply { gravity = Gravity.CENTER }
-            battery = label("—%", 15f, Appearance.text(this@LockScreenActivity, true)).apply { gravity = Gravity.CENTER }
-            // One continuous transparent weather/battery pill, matching the AMOLED glass design.
-            background = Appearance.glass(this@LockScreenActivity, 30f, 32, true)
-            addView(weather, LinearLayout.LayoutParams(0, dp(42), 1f))
+            setPadding(dp(8), 0, dp(8), 0)
+            weather = label("◌  Loading…", 15f * topInfoScale, Appearance.text(this@LockScreenActivity, true)).apply {
+                gravity = Gravity.CENTER
+                visibility = if (Prefs.showWeather(this@LockScreenActivity)) View.VISIBLE else View.GONE
+            }
+            val divider = View(this@LockScreenActivity).apply {
+                setBackgroundColor(0x35ffffff)
+                visibility = if (Prefs.showWeather(this@LockScreenActivity)) View.VISIBLE else View.GONE
+            }
+            battery = label("▰  —%", 15f * topInfoScale, Appearance.text(this@LockScreenActivity, true)).apply { gravity = Gravity.CENTER }
+            background = Appearance.glass(this@LockScreenActivity, 30f, Prefs.componentGlass(this@LockScreenActivity, "top_info"), true)
+            if (Prefs.showWeather(this@LockScreenActivity)) {
+                addView(weather, LinearLayout.LayoutParams(0, dp(42), 1f))
+                addView(divider, LinearLayout.LayoutParams(dp(1), dp(20)))
+            }
             addView(battery, LinearLayout.LayoutParams(0, dp(42), 1f))
         }
         content.addView(clock)
@@ -284,7 +347,7 @@ class LockScreenActivity : Activity() {
             })
             content.addView(actionButton("Close preview") { finish() })
         }
-        content.addView(topInfo, LinearLayout.LayoutParams(-1, dp(54)))
+        content.addView(topInfo, LinearLayout.LayoutParams(-1, dp((54 * topInfoScale).toInt())))
         // Weather source details are kept in app credits so the lock screen stays clean.
 
         notifications = LinearLayout(this).apply {
@@ -299,11 +362,14 @@ class LockScreenActivity : Activity() {
         }
         content.addView(notificationScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
+        val mediaLayout = Prefs.mediaLayout(this)
+        val mediaCompact = mediaLayout == "compact"
+        val mediaLarge = mediaLayout == "large"
         val mediaPanel = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(14), dp(12), dp(10), dp(12))
-            background = Appearance.glass(this@LockScreenActivity, 34f, 42, true)
+            setPadding(dp(if (mediaCompact) 10 else 14), dp(if (mediaCompact) 8 else if (mediaLarge) 15 else 12), dp(10), dp(if (mediaCompact) 8 else if (mediaLarge) 15 else 12))
+            background = Appearance.glass(this@LockScreenActivity, 34f, Prefs.componentGlass(this@LockScreenActivity, "media"), true)
             elevation = dp(8).toFloat()
         }
         mediaPanel.addView(label("♫", 25f, Color.WHITE).apply {
@@ -312,14 +378,14 @@ class LockScreenActivity : Activity() {
                 cornerRadius = dp(17).toFloat()
                 setColor(0xff41475d.toInt())
             }
-        }, LinearLayout.LayoutParams(dp(62), dp(62)))
+        }, LinearLayout.LayoutParams(dp(if (mediaCompact) 48 else if (mediaLarge) 70 else 62), dp(if (mediaCompact) 48 else if (mediaLarge) 70 else 62)))
         val mediaDetails = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), 0, 0, 0)
-            mediaTitle = label("Media", 16f, Color.WHITE).apply {
+            setPadding(dp(if (mediaCompact) 9 else 12), 0, 0, 0)
+            mediaTitle = label("Media", if (mediaCompact) 14f else if (mediaLarge) 18f else 16f, Color.WHITE).apply {
                 maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
             }
-            mediaArtist = label("Play music to show it here", 12f, 0xffd1d4df.toInt()).apply {
+            mediaArtist = label("Play music to show it here", if (mediaCompact) 11f else if (mediaLarge) 13f else 12f, 0xffd1d4df.toInt()).apply {
                 maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
             }
             addView(mediaTitle)
@@ -332,10 +398,13 @@ class LockScreenActivity : Activity() {
             playPause = mediaButton("▶", true) { media.toggle() }
             addView(playPause)
             addView(mediaButton("|▶") { media.next() })
+            val buttonScale = Prefs.mediaButtonsScale(this@LockScreenActivity) / 100f
+            scaleX = buttonScale
+            scaleY = buttonScale
         }
         mediaPanel.addView(controls)
         if (Prefs.showMedia(this)) content.addView(mediaPanel,
-            LinearLayout.LayoutParams(-1, dp(94)).apply { bottomMargin = dp(12) })
+            LinearLayout.LayoutParams(-1, dp(if (mediaCompact) 74 else if (mediaLarge) 108 else 94)).apply { bottomMargin = dp(12) })
         frame.addView(content, FrameLayout.LayoutParams(-1, -1))
         val floatingBar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
@@ -400,6 +469,23 @@ class LockScreenActivity : Activity() {
         }
     }
 
+    private fun applyAdaptiveClockPosition(stacked: Boolean) {
+        if (!::clock.isInitialized) return
+        val pressure = NotificationStore.items.size.coerceAtMost(4)
+        val mediaActive = ::media.isInitialized && media.isPlaying()
+        val target = if (Prefs.clockAdaptive(this)) {
+            when {
+                mediaActive && pressure >= 2 -> -dp(26).toFloat()
+                mediaActive || pressure >= 3 -> -dp(18).toFloat()
+                pressure >= 1 -> -dp(10).toFloat()
+                else -> 0f
+            }
+        } else 0f
+        clock.animate().translationY(target).setDuration(220).start()
+        if (::date.isInitialized) date.animate().translationY(target).setDuration(220).start()
+        clock.setLineSpacing(if (stacked) -dp(12).toFloat() else 0f, if (stacked) .86f else 1f)
+    }
+
     private fun renderNotifications() {
         bannerKey?.let { key ->
             val current = NotificationStore.items.firstOrNull { it.key == key }
@@ -436,11 +522,17 @@ class LockScreenActivity : Activity() {
             })
             return
         }
+        applyAdaptiveClockPosition(Prefs.clockLayout(this) == "stacked" ||
+            (Prefs.clockLayout(this) == "auto" && Prefs.clockAdaptive(this) &&
+                ((::media.isInitialized && media.isPlaying()) || visibleItems.size >= 2)))
         visibleItems.forEach { item ->
+            val density = Prefs.notificationDensity(this)
+            val horizontalPad = when (density) { "compact" -> 13; "large" -> 18; else -> 16 }
+            val verticalPad = when (density) { "compact" -> 7; "large" -> 14; else -> 11 }
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(16), dp(11), dp(16), dp(11))
-                background = notificationPanel(item.packageName)
+                setPadding(dp(horizontalPad), dp(verticalPad), dp(horizontalPad), dp(verticalPad))
+                background = Appearance.glass(this@LockScreenActivity, Prefs.notificationRadius(this@LockScreenActivity).toFloat(), Prefs.notificationGlass(this@LockScreenActivity), true)
                 addView(notificationLabel(item.app, 12f))
                 if (privacy == 4 || (privacy == 3 && item.visibility == Notification.VISIBILITY_PUBLIC)) {
                     addView(notificationLabel(item.title.ifBlank { item.text }, 16f))
@@ -449,7 +541,9 @@ class LockScreenActivity : Activity() {
             }
             if (item.contentIntent != null) card.setOnClickListener { openNotification(item) }
             card.setOnTouchListener(notificationDismissListener(item, card))
-            notifications.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(9) })
+            notifications.addView(card, LinearLayout.LayoutParams(-1, -2).apply {
+                bottomMargin = dp(when (density) { "compact" -> 6; "large" -> 12; else -> 9 })
+            })
         }
     }
 

@@ -385,6 +385,180 @@ class MainActivity : Activity() {
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+        appearanceCard.addView(TextView(this).apply {
+            text = "Lock-screen glass: ${Prefs.lockGlass(this@MainActivity)}%"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "lock_glass_label"
+        })
+        appearanceCard.addView(SeekBar(this).apply {
+            max = 80
+            progress = Prefs.lockGlass(this@MainActivity) - 20
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val glass = value + 20
+                    Prefs.setLockGlass(this@MainActivity, glass)
+                    root.findViewWithTag<TextView>("lock_glass_label")?.text = "Lock-screen glass: $glass%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
+        appearanceCard.addView(TextView(this).apply {
+            text = "Lock-screen UI scale: ${Prefs.lockScale(this@MainActivity)}%"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "lock_scale_label"
+        })
+        appearanceCard.addView(SeekBar(this).apply {
+            max = 30
+            progress = Prefs.lockScale(this@MainActivity) - 85
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val scale = value + 85
+                    Prefs.setLockScale(this@MainActivity, scale)
+                    root.findViewWithTag<TextView>("lock_scale_label")?.text = "Lock-screen UI scale: $scale%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+        addChoice(appearanceCard, "Clock style", listOf("Adaptive Clean", "Classic", "Rounded", "Condensed", "Bold", "Minimal"),
+            listOf("adaptive", "classic", "rounded", "condensed", "bold", "minimal").indexOf(Prefs.clockStyle(this)).coerceAtLeast(0)) {
+            Prefs.setClockStyle(this, listOf("adaptive", "classic", "rounded", "condensed", "bold", "minimal")[it])
+        }
+        addChoice(appearanceCard, "Adaptive clock layout", listOf("Auto", "Single line", "Stacked"),
+            listOf("auto", "single", "stacked").indexOf(Prefs.clockLayout(this)).coerceAtLeast(0)) {
+            Prefs.setClockLayout(this, listOf("auto", "single", "stacked")[it])
+        }
+        appearanceCard.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Adaptive clock sizing"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.clockAdaptive(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setClockAdaptive(this@MainActivity, checked) }
+        }, rowParams())
+        appearanceCard.addView(TextView(this).apply {
+            text = "Clock size: ${Prefs.clockScale(this@MainActivity)}%"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "clock_scale_label"
+        })
+        appearanceCard.addView(SeekBar(this).apply {
+            max = 50
+            progress = Prefs.clockScale(this@MainActivity) - 80
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val scale = value + 80
+                    Prefs.setClockScale(this@MainActivity, scale)
+                    root.findViewWithTag<TextView>("clock_scale_label")?.text = "Clock size: $scale%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
+        appearanceCard.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Show date under clock"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.showDate(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setShowDate(this@MainActivity, checked) }
+        }, rowParams())
+        appearanceCard.addView(TextView(this).apply {
+            text = "Weather & battery glass: ${Prefs.componentGlass(this@MainActivity, "top_info")}%"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "top_info_glass_label"
+        })
+        appearanceCard.addView(SeekBar(this).apply {
+            max = 80
+            progress = Prefs.componentGlass(this@MainActivity, "top_info") - 20
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val glass = value + 20
+                    Prefs.setComponentGlass(this@MainActivity, "top_info", glass)
+                    root.findViewWithTag<TextView>("top_info_glass_label")?.text = "Weather & battery glass: $glass%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
+        appearanceCard.addView(TextView(this).apply {
+            text = "Media player glass: ${Prefs.componentGlass(this@MainActivity, "media")}%"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "media_glass_label"
+        })
+        appearanceCard.addView(SeekBar(this).apply {
+            max = 80
+            progress = Prefs.componentGlass(this@MainActivity, "media") - 20
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val glass = value + 20
+                    Prefs.setComponentGlass(this@MainActivity, "media", glass)
+                    root.findViewWithTag<TextView>("media_glass_label")?.text = "Media player glass: $glass%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
+        appearanceCard.addView(TextView(this).apply {
+            text = "Weather & battery content size: ${Prefs.topInfoSize(this@MainActivity)}%"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "top_info_size_label"
+        })
+        appearanceCard.addView(SeekBar(this).apply {
+            max = 40
+            progress = Prefs.topInfoSize(this@MainActivity) - 80
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val scale = value + 80
+                    Prefs.setTopInfoSize(this@MainActivity, scale)
+                    root.findViewWithTag<TextView>("top_info_size_label")?.text = "Weather & battery content size: $scale%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
+        appearanceCard.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Show weather in pill"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.showWeather(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setShowWeather(this@MainActivity, checked) }
+        }, rowParams())
+        appearanceCard.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Show battery percentage"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.showBatteryPercent(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setShowBatteryPercent(this@MainActivity, checked) }
+        }, rowParams())
         appearanceCard.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Weather in Celsius (off: Fahrenheit)"
@@ -392,6 +566,33 @@ class MainActivity : Activity() {
             isChecked = Prefs.celsius(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setCelsius(this@MainActivity, checked) }
         }, rowParams())
+        addChoice(appearanceCard, "Media player layout", listOf("Compact", "Comfortable", "Large"),
+            listOf("compact", "comfortable", "large").indexOf(Prefs.mediaLayout(this)).coerceAtLeast(0)) {
+            Prefs.setMediaLayout(this, listOf("compact", "comfortable", "large")[it])
+        }
+        appearanceCard.addView(TextView(this).apply {
+            text = "Media button size: ${Prefs.mediaButtonsScale(this@MainActivity)}%"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "media_button_scale_label"
+        })
+        appearanceCard.addView(SeekBar(this).apply {
+            max = 40
+            progress = Prefs.mediaButtonsScale(this@MainActivity) - 80
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val scale = value + 80
+                    Prefs.setMediaButtonsScale(this@MainActivity, scale)
+                    root.findViewWithTag<TextView>("media_button_scale_label")?.text = "Media button size: $scale%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
         appearanceCard.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Show media player while D2 is locked"
@@ -399,6 +600,17 @@ class MainActivity : Activity() {
             isChecked = Prefs.showMedia(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setShowMedia(this@MainActivity, checked) }
         }, rowParams())
+        addButton(appearanceCard, "Reset appearance to defaults") {
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Reset appearance?")
+                .setMessage("This resets visual customization only. PIN, pattern, kiosk, root, Shizuku, ADB recovery, and notification privacy are not changed.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Reset") { _, _ ->
+                    Prefs.resetAppearance(this)
+                    refreshAppearance()
+                }
+                .show()
+        }
         section(root, "NOTIFICATION PRIVACY")
         val privacyCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(privacyCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
@@ -416,6 +628,56 @@ class MainActivity : Activity() {
         })
         addChoice(privacyCard, "When D2 is locked", listOf("Hide all", "Count only", "App names", "Public only", "All previews (private too)"),
             Prefs.notificationPrivacy(this)) { Prefs.setNotificationPrivacy(this, it) }
+        addChoice(privacyCard, "Notification card density", listOf("Compact", "Comfortable", "Large"),
+            listOf("compact", "comfortable", "large").indexOf(Prefs.notificationDensity(this)).coerceAtLeast(0)) {
+            Prefs.setNotificationDensity(this, listOf("compact", "comfortable", "large")[it])
+        }
+        privacyCard.addView(TextView(this).apply {
+            text = "Notification corner radius: ${Prefs.notificationRadius(this@MainActivity)}dp"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "notification_radius_label"
+        })
+        privacyCard.addView(SeekBar(this).apply {
+            max = 24
+            progress = Prefs.notificationRadius(this@MainActivity) - 16
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val radius = value + 16
+                    Prefs.setNotificationRadius(this@MainActivity, radius)
+                    root.findViewWithTag<TextView>("notification_radius_label")?.text = "Notification corner radius: ${radius}dp"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
+        privacyCard.addView(TextView(this).apply {
+            text = "Notification glass: ${Prefs.notificationGlass(this@MainActivity)}%"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "notification_glass_label"
+        })
+        privacyCard.addView(SeekBar(this).apply {
+            max = 80
+            progress = Prefs.notificationGlass(this@MainActivity) - 20
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val glass = value + 20
+                    Prefs.setNotificationGlass(this@MainActivity, glass)
+                    root.findViewWithTag<TextView>("notification_glass_label")?.text = "Notification glass: $glass%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
         privacyCard.addView(TextView(this).apply {
             text = "Public only shows text from apps that mark it public. All previews can show private messages before you authenticate with D2. Apps marked secret stay hidden."
             textSize = 13f
