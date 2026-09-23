@@ -118,13 +118,36 @@ class MainActivity : Activity() {
         addButton(root, "Licenses and credits") {
             val notice = assets.open("THIRD_PARTY_NOTICES.txt").bufferedReader().use { it.readText() }
             val text = TextView(this).apply {
-                this.text = "D2 Project — All rights reserved.\n\nWeather data: NOAA / National Weather Service. NWS information is public domain unless otherwise noted.\\n\\n$notice"
-                setPadding(dp(20), dp(12), dp(20), dp(12))
+                this.text = "D2 Project — All rights reserved.\n\nWeather data: NOAA / National Weather Service. NWS information is public domain unless otherwise noted.\n\n$notice"
+                textSize = 14f
+                setTextColor(Appearance.text(this@MainActivity))
+                setLineSpacing(0f, 1.12f)
+                setPadding(dp(18), dp(14), dp(18), dp(18))
                 setTextIsSelectable(true)
             }
-            AlertDialog.Builder(this).setTitle("Licenses and credits")
-                .setView(ScrollView(this).apply { addView(text) })
-                .setPositiveButton("Close", null).show()
+            val scroll = ScrollView(this).apply {
+                isVerticalScrollBarEnabled = true
+                addView(text)
+                background = Appearance.glass(this@MainActivity, 24f, 30, true)
+            }
+            val content = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(12), dp(4), dp(12), dp(8))
+                addView(scroll, LinearLayout.LayoutParams(-1, dp(560)))
+            }
+            val dialog = AlertDialog.Builder(this)
+                .setTitle("Licenses and credits")
+                .setView(content)
+                .setPositiveButton("Close", null)
+                .create()
+            dialog.setOnShowListener {
+                dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 78, true))
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.apply {
+                    setTextColor(Appearance.accent(this@MainActivity))
+                    textSize = 15f
+                }
+            }
+            dialog.show()
         }
         val configured = PinStore(this).configured()
         if (configured) {
