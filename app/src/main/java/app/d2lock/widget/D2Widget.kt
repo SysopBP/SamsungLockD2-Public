@@ -35,6 +35,7 @@ class D2Widget : AppWidgetProvider() {
             val label = if (WidgetPrefs.action(context,id) == "single") "Lock D2" else "Lock D2\nDouble-tap"
             view.setTextViewText(R.id.d2_widget, if (WidgetPrefs.label(context,id)) label else "D2")
             when (WidgetPrefs.style(context,id)) {
+                "galaxy" -> { view.setInt(R.id.d2_widget, "setBackgroundColor", 0xB8141820.toInt()); view.setTextColor(R.id.d2_widget, android.graphics.Color.WHITE) }
                 "amoled" -> { view.setInt(R.id.d2_widget, "setBackgroundColor", android.graphics.Color.BLACK); view.setTextColor(R.id.d2_widget, android.graphics.Color.WHITE) }
                 "light" -> { view.setInt(R.id.d2_widget, "setBackgroundColor", 0xEAF4F6FA.toInt()); view.setTextColor(R.id.d2_widget, 0xFF15171C.toInt()) }
                 else -> { view.setInt(R.id.d2_widget, "setBackgroundColor", 0xD9232730.toInt()); view.setTextColor(R.id.d2_widget, android.graphics.Color.WHITE) }
