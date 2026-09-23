@@ -59,6 +59,23 @@ jobs:
               ("private companion object {\n        val SHADOW_ENABLED", "private companion object {\n        val GLASS_ENABLED = booleanPreferencesKey(\"glass_enabled\")\n        val SHADOW_ENABLED"),
           ])
 
+          # Hotfix 1: give Size & Position a visible glass card without changing geometry behavior.
+          size_ui = root / "app/src/main/java/com/ekoehler/expressivecutout/ui/screen/SettingScreens/SizePositionScreen.kt"
+          size_text = size_ui.read_text()
+          if "import androidx.compose.foundation.BorderStroke" not in size_text:
+              first_import = size_text.find("import ")
+              size_text = size_text[:first_import] + "import androidx.compose.foundation.BorderStroke\\nimport androidx.compose.material3.Surface\\n" + size_text[first_import:]
+          old_column = "    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {"
+          new_column = "    Surface(shape = RoundedCornerShape(32.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f), tonalElevation = 2.dp, shadowElevation = 10.dp, border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))) {\\n        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {"
+          if old_column not in size_text:
+              raise SystemExit("Galaxy Island source drift: SizePositionScreen Column anchor missing")
+          size_text = size_text.replace(old_column, new_column, 1)
+          tail = size_text.rfind("\\n}")
+          if tail < 0:
+              raise SystemExit("Galaxy Island source drift: SizePositionScreen closing brace missing")
+          size_text = size_text[:tail] + "\\n    }" + size_text[tail:]
+          size_ui.write_text(size_text)
+
           # The base project already persists offsetXDp/offsetYDp in LayoutPreferences and
           # applies them live. Make those controls explicit as camera/island positioning rather
           # than introducing a second geometry store.
