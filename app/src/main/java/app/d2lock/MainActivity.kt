@@ -461,6 +461,52 @@ class MainActivity : Activity() {
             isChecked = Prefs.showDate(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setShowDate(this@MainActivity, checked) }
         }, rowParams())
+        appearanceCard.addView(TextView(this).apply {
+            text = "Weather & battery glass: ${Prefs.componentGlass(this@MainActivity, "top_info")}%"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "top_info_glass_label"
+        })
+        appearanceCard.addView(SeekBar(this).apply {
+            max = 80
+            progress = Prefs.componentGlass(this@MainActivity, "top_info") - 20
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val glass = value + 20
+                    Prefs.setComponentGlass(this@MainActivity, "top_info", glass)
+                    root.findViewWithTag<TextView>("top_info_glass_label")?.text = "Weather & battery glass: $glass%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
+        appearanceCard.addView(TextView(this).apply {
+            text = "Media player glass: ${Prefs.componentGlass(this@MainActivity, "media")}%"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "media_glass_label"
+        })
+        appearanceCard.addView(SeekBar(this).apply {
+            max = 80
+            progress = Prefs.componentGlass(this@MainActivity, "media") - 20
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val glass = value + 20
+                    Prefs.setComponentGlass(this@MainActivity, "media", glass)
+                    root.findViewWithTag<TextView>("media_glass_label")?.text = "Media player glass: $glass%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
         appearanceCard.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Weather in Celsius (off: Fahrenheit)"
