@@ -529,6 +529,33 @@ class MainActivity : Activity() {
             isChecked = Prefs.celsius(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setCelsius(this@MainActivity, checked) }
         }, rowParams())
+        addChoice(appearanceCard, "Media player layout", listOf("Compact", "Comfortable", "Large"),
+            listOf("compact", "comfortable", "large").indexOf(Prefs.mediaLayout(this)).coerceAtLeast(0)) {
+            Prefs.setMediaLayout(this, listOf("compact", "comfortable", "large")[it])
+        }
+        appearanceCard.addView(TextView(this).apply {
+            text = "Media button size: ${Prefs.mediaButtonsScale(this@MainActivity)}%"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "media_button_scale_label"
+        })
+        appearanceCard.addView(SeekBar(this).apply {
+            max = 40
+            progress = Prefs.mediaButtonsScale(this@MainActivity) - 80
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val scale = value + 80
+                    Prefs.setMediaButtonsScale(this@MainActivity, scale)
+                    root.findViewWithTag<TextView>("media_button_scale_label")?.text = "Media button size: $scale%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
         appearanceCard.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Show media player while D2 is locked"
