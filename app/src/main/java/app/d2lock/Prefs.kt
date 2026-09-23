@@ -30,6 +30,10 @@ object Prefs {
     fun setLockGlass(context: Context, value: Int) = prefs(context).edit().putInt("lock_glass", value.coerceIn(20, 100)).apply()
     fun lockScale(context: Context) = prefs(context).getInt("lock_scale", 100).coerceIn(85, 115)
     fun setLockScale(context: Context, value: Int) = prefs(context).edit().putInt("lock_scale", value.coerceIn(85, 115)).apply()
+    fun clockStyle(context: Context) = prefs(context).getString("clock_style", "adaptive") ?: "adaptive"
+    fun setClockStyle(context: Context, value: String) = prefs(context).edit().putString("clock_style", value).apply()
+    fun clockAdaptive(context: Context) = prefs(context).getBoolean("clock_adaptive", true)
+    fun setClockAdaptive(context: Context, value: Boolean) = prefs(context).edit().putBoolean("clock_adaptive", value).apply()
     fun clockScale(context: Context) = prefs(context).getInt("clock_scale", 100).coerceIn(80, 130)
     fun setClockScale(context: Context, value: Int) = prefs(context).edit().putInt("clock_scale", value.coerceIn(80, 130)).apply()
     fun showDate(context: Context) = prefs(context).getBoolean("show_date", true)
