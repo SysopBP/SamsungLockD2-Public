@@ -85,8 +85,9 @@ class LockScreenActivity : Activity() {
             val requestedLayout = Prefs.clockLayout(this@LockScreenActivity)
             val stacked = requestedLayout == "stacked" ||
                 (requestedLayout == "auto" && Prefs.clockAdaptive(this@LockScreenActivity) &&
-                    (Prefs.showMedia(this@LockScreenActivity) || NotificationStore.items.size >= 2))
+                    ((::media.isInitialized && media.isPlaying()) || NotificationStore.items.size >= 2))
             clock.text = if (stacked) time.replace(':', '\n') else time
+            applyAdaptiveClockPosition(stacked)
             date.text = SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
             mediaTitle.text = media.title().ifBlank { "Media" }
             mediaArtist.text = media.artist().ifBlank { "Play music to show it here" }
@@ -281,7 +282,7 @@ class LockScreenActivity : Activity() {
         val requestedClockLayout = Prefs.clockLayout(this)
         val stackedClock = requestedClockLayout == "stacked" ||
             (requestedClockLayout == "auto" && Prefs.clockAdaptive(this) &&
-                (Prefs.showMedia(this) || NotificationStore.items.size >= 2))
+                (NotificationStore.items.size >= 2))
         clock = label(if (stackedClock) "12\n00" else "12:00", clockSize, Appearance.text(this, true)).apply {
             if (stackedClock) {
                 setLineSpacing(-dp(12).toFloat(), .86f)
@@ -450,6 +451,23 @@ class LockScreenActivity : Activity() {
         }
     }
 
+    private fun applyAdaptiveClockPosition(stacked: Boolean) {
+        if (!::clock.isInitialized) return
+        val pressure = NotificationStore.items.size.coerceAtMost(4)
+        val mediaActive = ::media.isInitialized && media.isPlaying()
+        val target = if (Prefs.clockAdaptive(this)) {
+            when {
+                mediaActive && pressure >= 2 -> -dp(26).toFloat()
+                mediaActive || pressure >= 3 -> -dp(18).toFloat()
+                pressure >= 1 -> -dp(10).toFloat()
+                else -> 0f
+            }
+        } else 0f
+        clock.animate().translationY(target).setDuration(220).start()
+        if (::date.isInitialized) date.animate().translationY(target).setDuration(220).start()
+        clock.setLineSpacing(if (stacked) -dp(12).toFloat() else 0f, if (stacked) .86f else 1f)
+    }
+
     private fun renderNotifications() {
         bannerKey?.let { key ->
             val current = NotificationStore.items.firstOrNull { it.key == key }
@@ -486,6 +504,9 @@ class LockScreenActivity : Activity() {
             })
             return
         }
+        applyAdaptiveClockPosition(Prefs.clockLayout(this) == "stacked" ||
+            (Prefs.clockLayout(this) == "auto" && Prefs.clockAdaptive(this) &&
+                ((::media.isInitialized && media.isPlaying()) || visibleItems.size >= 2)))
         visibleItems.forEach { item ->
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
