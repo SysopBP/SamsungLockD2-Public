@@ -89,11 +89,27 @@ jobs:
           )
           size_ui.write_text(size_text)
 
-          # Emit the transformed Size & Position source in the Actions log so the
-          # next visual pass can target the real upstream composables precisely.
-          print("===== SIZE_POSITION_SOURCE_BEGIN =====")
-          print(size_ui.read_text())
-          print("===== SIZE_POSITION_SOURCE_END =====")
+          # Hotfix visual pass 2: apply a safe glass-card treatment to the existing
+          # DimensionsEditor surface. Keep the editor hierarchy and control logic intact.
+          size_text = size_ui.read_text()
+          if "import androidx.compose.foundation.background" not in size_text:
+              size_text = size_text.replace(
+                  "import androidx.compose.foundation.isSystemInDarkTheme",
+                  "import androidx.compose.foundation.background\\nimport androidx.compose.foundation.isSystemInDarkTheme",
+                  1,
+              )
+          if "import androidx.compose.foundation.shape.RoundedCornerShape" not in size_text:
+              size_text = size_text.replace(
+                  "import androidx.compose.foundation.layout.width",
+                  "import androidx.compose.foundation.layout.width\\nimport androidx.compose.foundation.shape.RoundedCornerShape",
+                  1,
+              )
+          size_text = size_text.replace(
+              "    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {",
+              "    Column(\\n        modifier = Modifier\\n            .fillMaxWidth()\\n            .background(\\n                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),\\n                shape = RoundedCornerShape(28.dp),\\n            )\\n            .padding(horizontal = 16.dp, vertical = 14.dp),\\n        verticalArrangement = Arrangement.spacedBy(8.dp),\\n    ) {",
+              1,
+          )
+          size_ui.write_text(size_text)
 
           vm = "app/src/main/java/com/ekoehler/expressivecutout/ui/AppViewModel.kt"
           edit(vm, [
