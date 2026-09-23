@@ -46,6 +46,23 @@ object IconManager {
                 PackageManager.DONT_KILL_APP
             )
         }
+
+        // Samsung One UI Home can keep the old icon cached when aliases are toggled
+        // with DONT_KILL_APP. Explicitly nudge the launcher package so it re-queries
+        // the enabled launcher component without killing D2 itself.
+        runCatching {
+            val launcherIntent = android.content.Intent(android.content.Intent.ACTION_MAIN)
+                .addCategory(android.content.Intent.CATEGORY_HOME)
+            val launcher = pm.resolveActivity(launcherIntent, PackageManager.MATCH_DEFAULT_ONLY)
+                ?.activityInfo?.packageName
+            if (!launcher.isNullOrBlank()) {
+                context.sendBroadcast(
+                    android.content.Intent(android.content.Intent.ACTION_PACKAGE_CHANGED)
+                        .setData(android.net.Uri.parse("package:" + context.packageName))
+                        .setPackage(launcher)
+                )
+            }
+        }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, selected.key).apply()
     }
 
