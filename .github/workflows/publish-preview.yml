@@ -20,7 +20,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p dist
-          gh run download 35823784961 --repo SysopBP/SamsungLockD2-Public --name SamsungLockD2-deliverables --dir dist
+          gh run download 35840069548 --repo SysopBP/SamsungLockD2-Public --name SamsungLockD2-deliverables --dir dist
           sha256sum --check dist/SHA256SUMS.txt
 
       - name: Download latest Galaxy Island Glass build
@@ -28,7 +28,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p galaxy-island
-          gh run download 35822666440 --repo SysopBP/SamsungLockD2-Public --name Galaxy-Island-glass-APK --dir galaxy-island
+          gh run download 35840069493 --repo SysopBP/SamsungLockD2-Public --name Galaxy-Island-glass-APK --dir galaxy-island
           find galaxy-island -type f -maxdepth 2 -print
           cp galaxy-island/*.apk dist/Galaxy-Island-Glass.apk
 
@@ -47,14 +47,14 @@ jobs:
           cp dist/SHA256SUMS.txt bundle/D2-SHA256SUMS.txt
           cp dist/BETA-SHA256SUMS.txt bundle/
           if [ -f dist/SamsungLockD2-source.zip ]; then cp dist/SamsungLockD2-source.zip bundle/; fi
-          zip -j SamsungLockD2-v0.5.0-beta.1-bundle.zip bundle/*
+          zip -j SamsungLockD2-v0.5.0-beta.1-hotfix.1-bundle.zip bundle/*
 
       - name: Upload beta bundle artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SamsungLockD2-v0.5.0-beta.1-bundle
+          name: SamsungLockD2-v0.5.0-beta.1-hotfix.1-bundle
           path: |
-            SamsungLockD2-v0.5.0-beta.1-bundle.zip
+            SamsungLockD2-v0.5.0-beta.1-hotfix.1-bundle.zip
             bundle/*
           if-no-files-found: error
           retention-days: 90
