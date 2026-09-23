@@ -256,10 +256,40 @@ class LockScreenActivity : Activity() {
             setPadding(dp(20), dp(72), dp(20), dp(125))
         }
         val uiScale = Prefs.lockScale(this) / 100f
-        val clockSize = 82f * (Prefs.clockScale(this) / 100f)
+        val style = Prefs.clockStyle(this)
+        val adaptiveFactor = if (Prefs.clockAdaptive(this)) {
+            when {
+                Prefs.showMedia(this) && NotificationStore.items().isNotEmpty() -> .82f
+                NotificationStore.items().isNotEmpty() -> .90f
+                else -> 1f
+            }
+        } else 1f
+        val styleFactor = when (style) {
+            "minimal" -> .78f
+            "condensed" -> .94f
+            "bold" -> 1.04f
+            else -> 1f
+        }
+        val clockSize = 82f * (Prefs.clockScale(this) / 100f) * adaptiveFactor * styleFactor
         content.scaleX = uiScale
         content.scaleY = uiScale
-        clock = label("12:00", clockSize, Appearance.text(this, true)).apply { letterSpacing = -.05f; gravity = Gravity.CENTER }
+        clock = label("12:00", clockSize, Appearance.text(this, true)).apply {
+            gravity = Gravity.CENTER
+            typeface = when (style) {
+                "rounded" -> android.graphics.Typeface.create("sans-serif-rounded", android.graphics.Typeface.NORMAL)
+                "condensed" -> android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.NORMAL)
+                "bold" -> android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+                "minimal" -> android.graphics.Typeface.create("sans-serif-light", android.graphics.Typeface.NORMAL)
+                "classic" -> android.graphics.Typeface.DEFAULT
+                else -> android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
+            }
+            letterSpacing = when (style) {
+                "condensed" -> -.075f
+                "minimal" -> .015f
+                "bold" -> -.035f
+                else -> -.05f
+            }
+        }
         date = label("", 18f, Appearance.secondary(this, true)).apply {
             gravity = Gravity.CENTER
             visibility = if (Prefs.showDate(this@LockScreenActivity)) View.VISIBLE else View.GONE
