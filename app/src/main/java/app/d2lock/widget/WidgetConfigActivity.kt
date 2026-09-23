@@ -23,6 +23,7 @@ class WidgetConfigActivity : Activity() {
         val prefs = getSharedPreferences("d2_widget_preferences", MODE_PRIVATE)
         var style = prefs.getString("style_" + widgetId, "glass") ?: "glass"
         var action = prefs.getString("action_" + widgetId, "double") ?: "double"
+        var density = prefs.getString("density_" + widgetId, "comfortable") ?: "comfortable"
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(24), dp(48), dp(24), dp(24))
@@ -46,6 +47,7 @@ class WidgetConfigActivity : Activity() {
         }
         addChoice("Widget style", arrayOf("D2 Glass","Galaxy Glass","AMOLED Black","Light"), arrayOf("glass","galaxy","amoled","light"), {style}) {style=it}
         addChoice("Tap action", arrayOf("Double-tap to lock","Single-tap to lock"), arrayOf("double","single"), {action}) {action=it}
+        addChoice("Widget density", arrayOf("Compact","Comfortable","Large"), arrayOf("compact","comfortable","large"), {density}) {density=it}
         val showLabel=CheckBox(this).apply {
             text="Show widget label"; textSize=17f; setTextColor(Appearance.text(this@WidgetConfigActivity))
             isChecked=prefs.getBoolean("label_" + widgetId,true); setPadding(dp(10),dp(8),0,dp(8))
@@ -55,7 +57,7 @@ class WidgetConfigActivity : Activity() {
             text="Save widget"; textSize=17f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@WidgetConfigActivity))
             background=Appearance.glass(this@WidgetConfigActivity,28f,42,true)
             setOnClickListener {
-                prefs.edit().putString("style_" + widgetId,style).putString("action_" + widgetId,action).putBoolean("label_" + widgetId,showLabel.isChecked).apply()
+                prefs.edit().putString("style_" + widgetId,style).putString("action_" + widgetId,action).putString("density_" + widgetId,density).putBoolean("label_" + widgetId,showLabel.isChecked).apply()
                 D2Widget.update(this@WidgetConfigActivity,getSystemService(AppWidgetManager::class.java),widgetId)
                 setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,widgetId)); finish()
             }
