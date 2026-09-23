@@ -70,10 +70,10 @@ jobs:
           if old_column not in size_text:
               raise SystemExit("Galaxy Island source drift: SizePositionScreen Column anchor missing")
           size_text = size_text.replace(old_column, new_column, 1)
-          tail = size_text.rfind("\\n}")
+          tail = size_text.rfind("}")
           if tail < 0:
               raise SystemExit("Galaxy Island source drift: SizePositionScreen closing brace missing")
-          size_text = size_text[:tail] + "\\n    }" + size_text[tail:]
+          size_text = size_text[:tail] + "    }\\n" + size_text[tail:]
           size_ui.write_text(size_text)
 
           # The base project already persists offsetXDp/offsetYDp in LayoutPreferences and
