@@ -678,6 +678,7 @@ class LockScreenActivity : Activity() {
         if (pinDialog?.isShowing == true) return
         val unlocked = {
             unlocking = true
+            playUnlockHaptic()
             RootKiosk.unlock(this) {
                 app.d2lock.bridge.IslandBridge.setLocked(this, false)
                 afterUnlock?.invoke()
@@ -690,6 +691,20 @@ class LockScreenActivity : Activity() {
             })
         } else {
             pinDialog = PinUi.show(this, success = unlocked)
+        }
+    }
+
+    private fun playUnlockHaptic() {
+        val duration = when (Prefs.unlockHaptics(this)) {
+            "soft" -> 18L
+            "medium" -> 32L
+            "strong" -> 50L
+            else -> return
+        }
+        runCatching {
+            getSystemService(Vibrator::class.java)?.vibrate(
+                VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE)
+            )
         }
     }
 
