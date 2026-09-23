@@ -47,23 +47,24 @@ object IconManager {
             )
         }
 
-        // Samsung One UI Home can keep the old icon cached when aliases are toggled
-        // with DONT_KILL_APP. Explicitly nudge the launcher package so it re-queries
-        // the enabled launcher component without killing D2 itself.
-        runCatching {
-            val launcherIntent = android.content.Intent(android.content.Intent.ACTION_MAIN)
-                .addCategory(android.content.Intent.CATEGORY_HOME)
-            val launcher = pm.resolveActivity(launcherIntent, PackageManager.MATCH_DEFAULT_ONLY)
-                ?.activityInfo?.packageName
-            if (!launcher.isNullOrBlank()) {
-                context.sendBroadcast(
-                    android.content.Intent(android.content.Intent.ACTION_PACKAGE_CHANGED)
-                        .setData(android.net.Uri.parse("package:" + context.packageName))
-                        .setPackage(launcher)
-                )
-            }
+        // Persist synchronously before the launcher reacts to the component change.
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY, selected.key)
+            .commit()
+
+        // ACTION_PACKAGE_CHANGED is a protected package-manager broadcast on modern
+        // Android/Samsung builds. Alias toggling itself is the supported launcher signal.
+        // Verify the selected alias remains enabled after the switch.
+        if (pm.getComponentEnabledSetting(selectedComponent) !=
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        ) {
+            pm.setComponentEnabledSetting(
+                selectedComponent,
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                PackageManager.DONT_KILL_APP
+            )
         }
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, selected.key).apply()
     }
 
     fun reset(context: Context) = apply(context, "purple")
