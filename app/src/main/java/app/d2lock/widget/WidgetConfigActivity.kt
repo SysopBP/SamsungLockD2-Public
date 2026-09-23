@@ -44,7 +44,7 @@ class WidgetConfigActivity : Activity() {
             }
             root.addView(row, LinearLayout.LayoutParams(-1,dp(76)).apply{bottomMargin=dp(10)})
         }
-        addChoice("Widget style", arrayOf("D2 Glass","AMOLED Black","Light"), arrayOf("glass","amoled","light"), {style}) {style=it}
+        addChoice("Widget style", arrayOf("D2 Glass","Galaxy Glass","AMOLED Black","Light"), arrayOf("glass","galaxy","amoled","light"), {style}) {style=it}
         addChoice("Tap action", arrayOf("Double-tap to lock","Single-tap to lock"), arrayOf("double","single"), {action}) {action=it}
         val showLabel=CheckBox(this).apply {
             text="Show widget label"; textSize=17f; setTextColor(Appearance.text(this@WidgetConfigActivity))
