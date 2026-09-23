@@ -115,10 +115,43 @@ class MainActivity : Activity() {
             setPadding(0, dp(4), 0, dp(24))
         })
 
+        section(root, "SETTINGS")
+        val categories = listOf(
+            Triple("Main", "Security, access & preview", "main_settings"),
+            Triple("Clock & Weather", "Clock style, global weather & location", "clock_weather"),
+            Triple("Notifications", "Privacy, banners & card appearance", "notifications"),
+            Triple("App Theme", "Glass, wallpaper, scale & media", "app_theme"),
+            Triple("Floating Bar", "Left and right lock-screen actions", "floating_bar")
+        )
+        categories.forEach { (label, description, target) ->
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(18), dp(13), dp(18), dp(13))
+                background = Appearance.glass(this@MainActivity, 30f, 36, true)
+                addView(TextView(this@MainActivity).apply {
+                    text = "$label   ›"
+                    textSize = 17f
+                    setTextColor(Appearance.text(this@MainActivity))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = description
+                    textSize = 13f
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                    setPadding(0, dp(3), 0, 0)
+                })
+                setOnClickListener {
+                    root.findViewWithTag<android.view.View>(target)?.let { view ->
+                        (root.parent as? ScrollView)?.smoothScrollTo(0, view.top)
+                    }
+                }
+            }
+            root.addView(card, LinearLayout.LayoutParams(-1, dp(76)).apply { bottomMargin = dp(8) })
+        }
+
         addButton(root, "Licenses and credits") {
             val notice = assets.open("THIRD_PARTY_NOTICES.txt").bufferedReader().use { it.readText() }
             val text = TextView(this).apply {
-                this.text = "D2 Project — All rights reserved.\n\nWeather data: NOAA / National Weather Service. NWS information is public domain unless otherwise noted.\n\n$notice"
+                this.text = "D2 Project — All rights reserved.\n\nWeather data and geocoding: Open-Meteo.\n\n$notice"
                 textSize = 14f
                 setTextColor(Appearance.text(this@MainActivity))
                 setLineSpacing(0f, 1.12f)
@@ -407,7 +440,8 @@ class MainActivity : Activity() {
             setPadding(dp(6), 0, dp(6), dp(12))
         })
 
-        section(root, "APPEARANCE")
+        section(root, "APP THEME")
+        root.getChildAt(root.childCount - 1).tag = "app_theme"
         val appearanceCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(appearanceCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         appearanceCard.addView(TextView(this).apply {
@@ -478,6 +512,8 @@ class MainActivity : Activity() {
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+        section(appearanceCard, "CLOCK & WEATHER")
+        appearanceCard.getChildAt(appearanceCard.childCount - 1).tag = "clock_weather"
         addChoice(appearanceCard, "Clock style", listOf("Adaptive Clean", "Classic", "Rounded", "Condensed", "Bold", "Minimal"),
             listOf("adaptive", "classic", "rounded", "condensed", "bold", "minimal").indexOf(Prefs.clockStyle(this)).coerceAtLeast(0)) {
             Prefs.setClockStyle(this, listOf("adaptive", "classic", "rounded", "condensed", "bold", "minimal")[it])
@@ -613,6 +649,33 @@ class MainActivity : Activity() {
             isChecked = Prefs.celsius(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setCelsius(this@MainActivity, checked) }
         }, rowParams())
+        appearanceCard.addView(TextView(this).apply {
+            text = "Primary weather location"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(8), 0, dp(4))
+        })
+        val weatherLocation = android.widget.EditText(this).apply {
+            hint = "Automatic · or city / postcode / region"
+            setText(Prefs.weatherLocation(this@MainActivity))
+            setTextColor(Appearance.text(this@MainActivity))
+            setHintTextColor(Appearance.secondary(this@MainActivity))
+            background = Appearance.glass(this@MainActivity, 22f, 26, true)
+            setPadding(dp(14), dp(10), dp(14), dp(10))
+            setSingleLine(true)
+        }
+        appearanceCard.addView(weatherLocation, LinearLayout.LayoutParams(-1, dp(56)).apply { bottomMargin = dp(8) })
+        addButton(appearanceCard, "Save primary weather location") {
+            Prefs.setWeatherLocation(this, weatherLocation.text.toString())
+            Toast.makeText(this, if (weatherLocation.text.isNullOrBlank()) "Weather set to automatic location" else "Primary weather location saved", Toast.LENGTH_SHORT).show()
+        }
+        appearanceCard.addView(TextView(this).apply {
+            text = "Leave Primary Location blank to use the device location. Enter a city, postcode, or city + country/region for global weather."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(6), 0, dp(6), dp(10))
+        })
+        section(appearanceCard, "MEDIA")
         addChoice(appearanceCard, "Media player layout", listOf("Compact", "Comfortable", "Large"),
             listOf("compact", "comfortable", "large").indexOf(Prefs.mediaLayout(this)).coerceAtLeast(0)) {
             Prefs.setMediaLayout(this, listOf("compact", "comfortable", "large")[it])
@@ -658,7 +721,8 @@ class MainActivity : Activity() {
                 }
                 .show()
         }
-        section(root, "NOTIFICATION PRIVACY")
+        section(root, "NOTIFICATIONS")
+        root.getChildAt(root.childCount - 1).tag = "notifications"
         val privacyCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(privacyCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         privacyCard.addView(Switch(this).apply {
@@ -732,6 +796,7 @@ class MainActivity : Activity() {
             setPadding(dp(8), 0, dp(8), dp(12))
         })
         section(root, "FLOATING BAR")
+        root.getChildAt(root.childCount - 1).tag = "floating_bar"
         val floatingCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(floatingCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         val actions = listOf("None", "Camera", "Flashlight")
@@ -741,7 +806,8 @@ class MainActivity : Activity() {
                 Prefs.setShortcut(this, side, actions[it])
             }
         }
-        section(root, "ACCESS & PREVIEW")
+        section(root, "MAIN · ACCESS & PREVIEW")
+        root.getChildAt(root.childCount - 1).tag = "main_settings"
         addButton(root, "Grant notification and media access") {
             startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
         }
