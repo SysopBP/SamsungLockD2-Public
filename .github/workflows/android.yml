@@ -101,7 +101,8 @@ jobs:
           unzip -t dist/SamsungLockD2-KSUNext-v0.5.6-paired.zip
           zip -r dist/SamsungLockD2-source.zip app/src app/build.gradle.kts build.gradle.kts settings.gradle.kts gradle.properties gradle gradlew gradlew.bat module README.md LICENSE THIRD_PARTY_NOTICES.txt docs .github
           cp runtime-dependencies.txt dist/
-          sha256sum dist/*.apk dist/*.zip > dist/SHA256SUMS.txt
+          (cd dist && sha256sum *.apk *.zip > SHA256SUMS.txt)
+          (cd dist && sha256sum -c SHA256SUMS.txt)
       - uses: actions/upload-artifact@v4
         with:
           name: SamsungLockD2-deliverables
