@@ -444,6 +444,7 @@ class MainActivity : Activity() {
         root.getChildAt(root.childCount - 1).tag = "app_theme"
         val appearanceCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(appearanceCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
+        section(appearanceCard, "WALLPAPER & GLASS")
         appearanceCard.addView(TextView(this).apply {
             text = "Dim wallpaper: ${Prefs.wallpaperDim(this@MainActivity)}%"
             textSize = 15f
@@ -512,6 +513,12 @@ class MainActivity : Activity() {
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+        appearanceCard.addView(TextView(this).apply {
+            text = "These controls change the D2 lock-screen presentation only. They do not alter the system lock screen or launcher."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(8), 0, dp(8), dp(10))
+        })
         section(appearanceCard, "CLOCK & WEATHER")
         appearanceCard.getChildAt(appearanceCard.childCount - 1).tag = "clock_weather"
         addChoice(appearanceCard, "Clock style", listOf("Adaptive Clean", "Classic", "Rounded", "Condensed", "Bold", "Minimal"),
@@ -684,6 +691,12 @@ class MainActivity : Activity() {
             setPadding(dp(6), 0, dp(6), dp(10))
         })
         section(appearanceCard, "MEDIA")
+        appearanceCard.addView(TextView(this).apply {
+            text = "Media appearance follows the same D2 glass theme while keeping player layout and button sizing independent."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(8), 0, dp(8), dp(8))
+        })
         addChoice(appearanceCard, "Media player layout", listOf("Compact", "Comfortable", "Large"),
             listOf("compact", "comfortable", "large").indexOf(Prefs.mediaLayout(this)).coerceAtLeast(0)) {
             Prefs.setMediaLayout(this, listOf("compact", "comfortable", "large")[it])
