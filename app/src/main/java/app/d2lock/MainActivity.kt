@@ -116,33 +116,37 @@ class MainActivity : Activity() {
         })
 
         section(root, "SETTINGS")
-        val categoryRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        listOf(
-            "Main" to "main_settings",
-            "Clock & Weather" to "clock_weather",
-            "Notifications" to "notifications",
-            "App Theme" to "app_theme",
-            "Floating Bar" to "floating_bar"
-        ).forEach { (label, target) ->
-            categoryRow.addView(Button(this).apply {
-                text = label
-                isAllCaps = false
-                textSize = 12f
-                setTextColor(Appearance.text(this@MainActivity))
-                background = Appearance.glass(this@MainActivity, 24f, 34, true)
+        val categories = listOf(
+            Triple("Main", "Security, access & preview", "main_settings"),
+            Triple("Clock & Weather", "Clock style, global weather & location", "clock_weather"),
+            Triple("Notifications", "Privacy, banners & card appearance", "notifications"),
+            Triple("App Theme", "Glass, wallpaper, scale & media", "app_theme"),
+            Triple("Floating Bar", "Left and right lock-screen actions", "floating_bar")
+        )
+        categories.forEach { (label, description, target) ->
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(18), dp(13), dp(18), dp(13))
+                background = Appearance.glass(this@MainActivity, 30f, 36, true)
+                addView(TextView(this@MainActivity).apply {
+                    text = "$label   ›"
+                    textSize = 17f
+                    setTextColor(Appearance.text(this@MainActivity))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = description
+                    textSize = 13f
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                    setPadding(0, dp(3), 0, 0)
+                })
                 setOnClickListener {
                     root.findViewWithTag<android.view.View>(target)?.let { view ->
                         (root.parent as? ScrollView)?.smoothScrollTo(0, view.top)
                     }
                 }
-            }, LinearLayout.LayoutParams(0, dp(52), 1f).apply {
-                marginEnd = dp(5)
-            })
+            }
+            root.addView(card, LinearLayout.LayoutParams(-1, dp(76)).apply { bottomMargin = dp(8) })
         }
-        root.addView(categoryRow, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
 
         addButton(root, "Licenses and credits") {
             val notice = assets.open("THIRD_PARTY_NOTICES.txt").bufferedReader().use { it.readText() }
