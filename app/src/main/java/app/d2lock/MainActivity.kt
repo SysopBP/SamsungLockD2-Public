@@ -444,6 +444,39 @@ class MainActivity : Activity() {
         root.getChildAt(root.childCount - 1).tag = "app_theme"
         val appearanceCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(appearanceCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
+        section(appearanceCard, "LOCK SCREEN EXTRAS")
+        appearanceCard.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Wallpaper parallax"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.wallpaperParallax(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setWallpaperParallax(this@MainActivity, checked) }
+        }, rowParams())
+        appearanceCard.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Glass shimmer"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.glassShimmer(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setGlassShimmer(this@MainActivity, checked) }
+        }, rowParams())
+        appearanceCard.addView(Switch(this).apply {
+            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            text = "Double-tap empty lock screen to sleep"
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.doubleTapSleep(this@MainActivity)
+            setOnCheckedChangeListener { _, checked -> Prefs.setDoubleTapSleep(this@MainActivity, checked) }
+        }, rowParams())
+        addChoice(appearanceCard, "Unlock haptics", listOf("Off", "Soft", "Medium", "Strong"),
+            listOf("off", "soft", "medium", "strong").indexOf(Prefs.unlockHaptics(this)).coerceAtLeast(0)) {
+            Prefs.setUnlockHaptics(this, listOf("off", "soft", "medium", "strong")[it])
+        }
+        appearanceCard.addView(TextView(this).apply {
+            text = "Optional effects are off by default and work with any wallpaper."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(6), 0, dp(6), dp(12))
+        })
+
         appearanceCard.addView(TextView(this).apply {
             text = "Dim wallpaper: ${Prefs.wallpaperDim(this@MainActivity)}%"
             textSize = 15f
