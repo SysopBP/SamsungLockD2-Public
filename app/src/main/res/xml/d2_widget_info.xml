@@ -5,6 +5,7 @@
     android:targetCellHeight="1"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/d2_widget"
+    android:previewLayout="@layout/d2_widget_preview"
     android:configure="app.d2lock.widget.WidgetConfigActivity"
     android:widgetFeatures="reconfigurable|configuration_optional"
     android:resizeMode="horizontal|vertical"
