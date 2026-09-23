@@ -30,6 +30,14 @@ object Prefs {
     fun setLockGlass(context: Context, value: Int) = prefs(context).edit().putInt("lock_glass", value.coerceIn(20, 100)).apply()
     fun lockScale(context: Context) = prefs(context).getInt("lock_scale", 100).coerceIn(85, 115)
     fun setLockScale(context: Context, value: Int) = prefs(context).edit().putInt("lock_scale", value.coerceIn(85, 115)).apply()
+    fun clockScale(context: Context) = prefs(context).getInt("clock_scale", 100).coerceIn(80, 130)
+    fun setClockScale(context: Context, value: Int) = prefs(context).edit().putInt("clock_scale", value.coerceIn(80, 130)).apply()
+    fun showDate(context: Context) = prefs(context).getBoolean("show_date", true)
+    fun setShowDate(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_date", value).apply()
+    fun componentGlass(context: Context, component: String) =
+        prefs(context).getInt("glass_$component", lockGlass(context)).coerceIn(20, 100)
+    fun setComponentGlass(context: Context, component: String, value: Int) =
+        prefs(context).edit().putInt("glass_$component", value.coerceIn(20, 100)).apply()
     fun showMedia(context: Context) = prefs(context).getBoolean("show_media", true)
     fun setShowMedia(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_media", value).apply()
     fun notificationPrivacy(context: Context) = prefs(context).getInt("notification_privacy", 2)
