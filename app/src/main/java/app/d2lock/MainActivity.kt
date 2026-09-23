@@ -887,15 +887,59 @@ class MainActivity : Activity() {
         card.addView(titleView)
         card.addView(valueView)
         card.setOnClickListener {
-            AlertDialog.Builder(this)
-                .setTitle(title)
-                .setSingleChoiceItems(choices.toTypedArray(), choices.indexOf(valueView.text.toString().substringBefore("   ›"))) { dialog, which ->
-                    valueView.text = choices[which] + "   ›"
-                    save(which)
-                    dialog.dismiss()
+            val current = choices.indexOf(valueView.text.toString().substringBefore("   ›")).coerceAtLeast(0)
+            val dialogContent = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(14), dp(6), dp(14), dp(10))
+            }
+            choices.forEachIndexed { index, choice ->
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(14), dp(8), dp(14), dp(8))
+                    background = Appearance.glass(this@MainActivity, 24f, if (index == current) 52 else 28, true)
                 }
+                val radio = RadioButton(this).apply {
+                    isChecked = index == current
+                    buttonTintList = android.content.res.ColorStateList(
+                        arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                        intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity))
+                    )
+                    isClickable = false
+                }
+                val labels = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(TextView(this@MainActivity).apply {
+                        text = choice
+                        textSize = 17f
+                        setTextColor(Appearance.text(this@MainActivity))
+                    })
+                    if (title == "D2 unlock method") addView(TextView(this@MainActivity).apply {
+                        text = if (choice == "PIN") "Use your 6-digit D2 PIN" else "Draw your unlock pattern"
+                        textSize = 13f
+                        setTextColor(Appearance.secondary(this@MainActivity))
+                    })
+                }
+                row.addView(radio, LinearLayout.LayoutParams(dp(48), dp(54)))
+                row.addView(labels, LinearLayout.LayoutParams(0, -2, 1f))
+                row.setOnClickListener {
+                    valueView.text = choices[index] + "   ›"
+                    save(index)
+                    (dialogContent.tag as? AlertDialog)?.dismiss()
+                }
+                dialogContent.addView(row, LinearLayout.LayoutParams(-1, dp(if (title == "D2 unlock method") 72 else 62)).apply { bottomMargin = dp(8) })
+            }
+            val dialog = AlertDialog.Builder(this)
+                .setTitle(title)
+                .setView(dialogContent)
                 .setNegativeButton("Cancel", null)
-                .show()
+                .create()
+            dialogContent.tag = dialog
+            dialog.setOnShowListener {
+                dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true))
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Appearance.accent(this@MainActivity))
+            }
+            dialog.show()
         }
         parent.addView(card, LinearLayout.LayoutParams(-1, dp(72)).apply { bottomMargin = dp(8) })
     }
