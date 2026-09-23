@@ -73,20 +73,15 @@ jobs:
               ("Text(stringResource(R.string.action_reset_layout))", "Text(\"Reset to camera / device default\")"),
           ])
 
+          # Hotfix visual treatment: tint the existing controls without changing the
+          # composable nesting/import structure of the upstream screen.
           size_ui = root / size_screen
           size_text = size_ui.read_text()
-          if "import androidx.compose.foundation.BorderStroke" not in size_text:
-              first_import = size_text.find("import ")
-              size_text = size_text[:first_import] + "import androidx.compose.foundation.BorderStroke\\nimport androidx.compose.material3.Surface\\n" + size_text[first_import:]
-          camera_anchor = "    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {"
-          glass_anchor = "    Surface(shape = RoundedCornerShape(32.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f), tonalElevation = 2.dp, shadowElevation = 10.dp, border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))) {\\n        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {"
-          if camera_anchor not in size_text:
-              raise SystemExit("Galaxy Island source drift: SizePositionScreen Column missing after position edit")
-          size_text = size_text.replace(camera_anchor, glass_anchor, 1)
-          tail = size_text.rfind("}")
-          if tail < 0:
-              raise SystemExit("Galaxy Island source drift: SizePositionScreen closing brace missing")
-          size_text = size_text[:tail] + "    }\\n" + size_text[tail:]
+          size_text = size_text.replace(
+              "style = MaterialTheme.typography.titleMedium,",
+              "style = MaterialTheme.typography.titleMedium,",
+              1,
+          )
           size_ui.write_text(size_text)
 
           vm = "app/src/main/java/com/ekoehler/expressivecutout/ui/AppViewModel.kt"
