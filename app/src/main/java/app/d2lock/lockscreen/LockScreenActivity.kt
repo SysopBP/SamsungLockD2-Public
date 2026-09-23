@@ -513,7 +513,8 @@ class LockScreenActivity : Activity() {
             preview || it.visibility != Notification.VISIBILITY_SECRET
         }
         if (visibleItems.isEmpty()) {
-            notifications.addView(label("No visible notifications", 14f, Appearance.secondary(this, true)).apply { gravity = Gravity.CENTER })
+            // Keep the lock screen visually clean when there is nothing to show.
+            // The notification container simply remains empty.
             return
         }
         if (privacy == 1) {
