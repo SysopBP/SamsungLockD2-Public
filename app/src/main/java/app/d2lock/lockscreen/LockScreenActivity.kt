@@ -85,7 +85,7 @@ class LockScreenActivity : Activity() {
             val requestedLayout = Prefs.clockLayout(this@LockScreenActivity)
             val stacked = requestedLayout == "stacked" ||
                 (requestedLayout == "auto" && Prefs.clockAdaptive(this@LockScreenActivity) &&
-                    (Prefs.showMedia(this@LockScreenActivity) || NotificationStore.items().size >= 2))
+                    (Prefs.showMedia(this@LockScreenActivity) || NotificationStore.items.size >= 2))
             clock.text = if (stacked) time.replace(':', '\n') else time
             date.text = SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
             mediaTitle.text = media.title().ifBlank { "Media" }
@@ -264,8 +264,8 @@ class LockScreenActivity : Activity() {
         val style = Prefs.clockStyle(this)
         val adaptiveFactor = if (Prefs.clockAdaptive(this)) {
             when {
-                Prefs.showMedia(this) && NotificationStore.items().isNotEmpty() -> .82f
-                NotificationStore.items().isNotEmpty() -> .90f
+                Prefs.showMedia(this) && NotificationStore.items.isNotEmpty() -> .82f
+                NotificationStore.items.isNotEmpty() -> .90f
                 else -> 1f
             }
         } else 1f
@@ -281,7 +281,7 @@ class LockScreenActivity : Activity() {
         val requestedClockLayout = Prefs.clockLayout(this)
         val stackedClock = requestedClockLayout == "stacked" ||
             (requestedClockLayout == "auto" && Prefs.clockAdaptive(this) &&
-                (Prefs.showMedia(this) || NotificationStore.items().size >= 2))
+                (Prefs.showMedia(this) || NotificationStore.items.size >= 2))
         clock = label(if (stackedClock) "12\n00" else "12:00", clockSize, Appearance.text(this, true)).apply {
             if (stackedClock) {
                 setLineSpacing(-dp(12).toFloat(), .86f)
