@@ -273,7 +273,15 @@ class LockScreenActivity : Activity() {
         val clockSize = 82f * (Prefs.clockScale(this) / 100f) * adaptiveFactor * styleFactor
         content.scaleX = uiScale
         content.scaleY = uiScale
-        clock = label("12:00", clockSize, Appearance.text(this, true)).apply {
+        val requestedClockLayout = Prefs.clockLayout(this)
+        val stackedClock = requestedClockLayout == "stacked" ||
+            (requestedClockLayout == "auto" && Prefs.clockAdaptive(this) &&
+                (Prefs.showMedia(this) || NotificationStore.items().size >= 2))
+        clock = label(if (stackedClock) "12\n00" else "12:00", clockSize, Appearance.text(this, true)).apply {
+            if (stackedClock) {
+                setLineSpacing(-dp(12).toFloat(), .86f)
+                includeFontPadding = false
+            }
             gravity = Gravity.CENTER
             typeface = when (style) {
                 "rounded" -> android.graphics.Typeface.create("sans-serif-rounded", android.graphics.Typeface.NORMAL)
