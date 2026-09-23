@@ -26,11 +26,23 @@ object IconManager {
     fun apply(context: Context, key: String) {
         val selected = options.firstOrNull { it.key == key } ?: options.first()
         val pm = context.packageManager
-        options.forEach { option ->
+        // Enable the destination alias first. Disabling the currently active alias before
+        // enabling its replacement can briefly leave the package with no LAUNCHER component,
+        // which causes One UI Home to drop the app icon.
+        val selectedComponent = ComponentName(
+            context.packageName,
+            context.packageName + ".launcher." + selected.alias
+        )
+        pm.setComponentEnabledSetting(
+            selectedComponent,
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+            PackageManager.DONT_KILL_APP
+        )
+
+        options.filter { it != selected }.forEach { option ->
             pm.setComponentEnabledSetting(
                 ComponentName(context.packageName, context.packageName + ".launcher." + option.alias),
-                if (option == selected) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                else PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                 PackageManager.DONT_KILL_APP
             )
         }
