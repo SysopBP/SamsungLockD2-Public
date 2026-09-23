@@ -115,6 +115,35 @@ class MainActivity : Activity() {
             setPadding(0, dp(4), 0, dp(24))
         })
 
+        section(root, "SETTINGS")
+        val categoryRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        listOf(
+            "Main" to "main_settings",
+            "Clock & Weather" to "clock_weather",
+            "Notifications" to "notifications",
+            "App Theme" to "app_theme",
+            "Floating Bar" to "floating_bar"
+        ).forEach { (label, target) ->
+            categoryRow.addView(Button(this).apply {
+                text = label
+                isAllCaps = false
+                textSize = 12f
+                setTextColor(Appearance.text(this@MainActivity))
+                background = Appearance.glass(this@MainActivity, 24f, 34, true)
+                setOnClickListener {
+                    root.findViewWithTag<android.view.View>(target)?.let { view ->
+                        (root.parent as? ScrollView)?.smoothScrollTo(0, view.top)
+                    }
+                }
+            }, LinearLayout.LayoutParams(0, dp(52), 1f).apply {
+                marginEnd = dp(5)
+            })
+        }
+        root.addView(categoryRow, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+
         addButton(root, "Licenses and credits") {
             val notice = assets.open("THIRD_PARTY_NOTICES.txt").bufferedReader().use { it.readText() }
             val text = TextView(this).apply {
@@ -408,6 +437,7 @@ class MainActivity : Activity() {
         })
 
         section(root, "APP THEME")
+        root.getChildAt(root.childCount - 1).tag = "app_theme"
         val appearanceCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(appearanceCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         appearanceCard.addView(TextView(this).apply {
@@ -479,6 +509,7 @@ class MainActivity : Activity() {
             })
         }, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
         section(appearanceCard, "CLOCK & WEATHER")
+        appearanceCard.getChildAt(appearanceCard.childCount - 1).tag = "clock_weather"
         addChoice(appearanceCard, "Clock style", listOf("Adaptive Clean", "Classic", "Rounded", "Condensed", "Bold", "Minimal"),
             listOf("adaptive", "classic", "rounded", "condensed", "bold", "minimal").indexOf(Prefs.clockStyle(this)).coerceAtLeast(0)) {
             Prefs.setClockStyle(this, listOf("adaptive", "classic", "rounded", "condensed", "bold", "minimal")[it])
@@ -687,6 +718,7 @@ class MainActivity : Activity() {
                 .show()
         }
         section(root, "NOTIFICATIONS")
+        root.getChildAt(root.childCount - 1).tag = "notifications"
         val privacyCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(privacyCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         privacyCard.addView(Switch(this).apply {
@@ -760,6 +792,7 @@ class MainActivity : Activity() {
             setPadding(dp(8), 0, dp(8), dp(12))
         })
         section(root, "FLOATING BAR")
+        root.getChildAt(root.childCount - 1).tag = "floating_bar"
         val floatingCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(floatingCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         val actions = listOf("None", "Camera", "Flashlight")
@@ -770,6 +803,7 @@ class MainActivity : Activity() {
             }
         }
         section(root, "MAIN · ACCESS & PREVIEW")
+        root.getChildAt(root.childCount - 1).tag = "main_settings"
         addButton(root, "Grant notification and media access") {
             startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
         }
