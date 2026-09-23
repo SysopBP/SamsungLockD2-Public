@@ -95,18 +95,18 @@ jobs:
           if "import androidx.compose.foundation.background" not in size_text:
               size_text = size_text.replace(
                   "import androidx.compose.foundation.isSystemInDarkTheme",
-                  "import androidx.compose.foundation.background\\nimport androidx.compose.foundation.isSystemInDarkTheme",
+                  "import androidx.compose.foundation.background\nimport androidx.compose.foundation.isSystemInDarkTheme",
                   1,
               )
           if "import androidx.compose.foundation.shape.RoundedCornerShape" not in size_text:
               size_text = size_text.replace(
                   "import androidx.compose.foundation.layout.width",
-                  "import androidx.compose.foundation.layout.width\\nimport androidx.compose.foundation.shape.RoundedCornerShape",
+                  "import androidx.compose.foundation.layout.width\nimport androidx.compose.foundation.shape.RoundedCornerShape",
                   1,
               )
           size_text = size_text.replace(
               "    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {",
-              "    Column(\\n        modifier = Modifier\\n            .fillMaxWidth()\\n            .background(\\n                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),\\n                shape = RoundedCornerShape(28.dp),\\n            )\\n            .padding(horizontal = 16.dp, vertical = 14.dp),\\n        verticalArrangement = Arrangement.spacedBy(8.dp),\\n    ) {",
+              "    Column(\n        modifier = Modifier\n            .fillMaxWidth()\n            .background(\n                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),\n                shape = RoundedCornerShape(28.dp),\n            )\n            .padding(horizontal = 16.dp, vertical = 14.dp),\n        verticalArrangement = Arrangement.spacedBy(8.dp),\n    ) {",
               1,
           )
           size_ui.write_text(size_text)
