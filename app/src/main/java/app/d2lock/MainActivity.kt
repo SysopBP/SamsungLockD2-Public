@@ -384,6 +384,29 @@ class MainActivity : Activity() {
 
         section(root, "THEME & COLORS")
         ThemeOptions.add(this, root, ::refreshAppearance)
+        section(root, "APP ICON")
+        val iconOptions = IconManager.options
+        val currentIcon = IconManager.selected(this)
+        addChoice(
+            root,
+            "Titanium launcher icon",
+            iconOptions.map { it.label },
+            iconOptions.indexOfFirst { it.key == currentIcon }.coerceAtLeast(0)
+        ) { selected ->
+            IconManager.apply(this, iconOptions[selected].key)
+            Toast.makeText(this, "${iconOptions[selected].label} applied", Toast.LENGTH_SHORT).show()
+        }
+        addButton(root, "Reset Titanium icon") {
+            IconManager.reset(this)
+            Toast.makeText(this, "Titanium Purple restored", Toast.LENGTH_SHORT).show()
+        }
+        root.addView(TextView(this).apply {
+            text = "Choose the D2 Titanium launcher color. Some launchers may take a moment to refresh the icon."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(6), 0, dp(6), dp(12))
+        })
+
         section(root, "APPEARANCE")
         val appearanceCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(appearanceCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
