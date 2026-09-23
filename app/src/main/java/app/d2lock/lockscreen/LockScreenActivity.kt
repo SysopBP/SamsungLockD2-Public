@@ -350,10 +350,13 @@ class LockScreenActivity : Activity() {
         }
         content.addView(notificationScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
+        val mediaLayout = Prefs.mediaLayout(this)
+        val mediaCompact = mediaLayout == "compact"
+        val mediaLarge = mediaLayout == "large"
         val mediaPanel = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(14), dp(12), dp(10), dp(12))
+            setPadding(dp(if (mediaCompact) 10 else 14), dp(if (mediaCompact) 8 else if (mediaLarge) 15 else 12), dp(10), dp(if (mediaCompact) 8 else if (mediaLarge) 15 else 12))
             background = Appearance.glass(this@LockScreenActivity, 34f, Prefs.componentGlass(this@LockScreenActivity, "media"), true)
             elevation = dp(8).toFloat()
         }
@@ -363,14 +366,14 @@ class LockScreenActivity : Activity() {
                 cornerRadius = dp(17).toFloat()
                 setColor(0xff41475d.toInt())
             }
-        }, LinearLayout.LayoutParams(dp(62), dp(62)))
+        }, LinearLayout.LayoutParams(dp(if (mediaCompact) 48 else if (mediaLarge) 70 else 62), dp(if (mediaCompact) 48 else if (mediaLarge) 70 else 62)))
         val mediaDetails = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), 0, 0, 0)
-            mediaTitle = label("Media", 16f, Color.WHITE).apply {
+            setPadding(dp(if (mediaCompact) 9 else 12), 0, 0, 0)
+            mediaTitle = label("Media", if (mediaCompact) 14f else if (mediaLarge) 18f else 16f, Color.WHITE).apply {
                 maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
             }
-            mediaArtist = label("Play music to show it here", 12f, 0xffd1d4df.toInt()).apply {
+            mediaArtist = label("Play music to show it here", if (mediaCompact) 11f else if (mediaLarge) 13f else 12f, 0xffd1d4df.toInt()).apply {
                 maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
             }
             addView(mediaTitle)
@@ -383,10 +386,13 @@ class LockScreenActivity : Activity() {
             playPause = mediaButton("▶", true) { media.toggle() }
             addView(playPause)
             addView(mediaButton("|▶") { media.next() })
+            val buttonScale = Prefs.mediaButtonsScale(this@LockScreenActivity) / 100f
+            scaleX = buttonScale
+            scaleY = buttonScale
         }
         mediaPanel.addView(controls)
         if (Prefs.showMedia(this)) content.addView(mediaPanel,
-            LinearLayout.LayoutParams(-1, dp(94)).apply { bottomMargin = dp(12) })
+            LinearLayout.LayoutParams(-1, dp(if (mediaCompact) 74 else if (mediaLarge) 108 else 94)).apply { bottomMargin = dp(12) })
         frame.addView(content, FrameLayout.LayoutParams(-1, -1))
         val floatingBar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
