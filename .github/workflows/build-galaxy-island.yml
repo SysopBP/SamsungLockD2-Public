@@ -59,6 +59,18 @@ jobs:
               ("private companion object {\n        val SHADOW_ENABLED", "private companion object {\n        val GLASS_ENABLED = booleanPreferencesKey(\"glass_enabled\")\n        val SHADOW_ENABLED"),
           ])
 
+          geometry = "app/src/main/java/com/ekoehler/expressivecutout/data/GeometryPreferences.kt"
+          if (root / geometry).exists():
+              edit(geometry, [
+                  ("data class GeometrySettings(", "data class GeometrySettings(\n    val cameraOffsetXDp: Float = 0f,\n    val cameraOffsetYDp: Float = 0f,"),
+              ])
+          else:
+              print("Camera offset: GeometryPreferences.kt not present; discovering geometry source")
+              for p in root.glob("app/src/main/java/**/*.kt"):
+                  t = p.read_text(errors="ignore")
+                  if "cutout" in t.lower() and ("offset" in t.lower() or "geometry" in t.lower()):
+                      print("CAMERA_CANDIDATE", p.relative_to(root))
+
           vm = "app/src/main/java/com/ekoehler/expressivecutout/ui/AppViewModel.kt"
           edit(vm, [
               ("    fun setShadowEnabled(enabled: Boolean)", "    fun setGlassEnabled(enabled: Boolean) = viewModelScope.launch {\n        appearancePreferences.setGlassEnabled(enabled)\n    }\n\n    fun setShadowEnabled(enabled: Boolean)")
