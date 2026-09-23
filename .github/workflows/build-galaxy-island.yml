@@ -111,6 +111,21 @@ jobs:
           )
           size_ui.write_text(size_text)
 
+          # Visual pass 3: polish the editor typography and reset control while
+          # keeping the proven slider/corner implementations untouched.
+          size_text = size_ui.read_text()
+          size_text = size_text.replace(
+              'text = stringResource(R.string.appearance_corner),\n            style = MaterialTheme.typography.bodyMedium,',
+              'text = stringResource(R.string.appearance_corner),\n            style = MaterialTheme.typography.labelLarge,\n            color = MaterialTheme.colorScheme.onSurfaceVariant,',
+              1,
+          )
+          size_text = size_text.replace(
+              'modifier = Modifier.fillMaxWidth(),\n        ) {\n            Icon(\n                imageVector = Icons.Rounded.RestartAlt,',
+              'modifier = Modifier.fillMaxWidth(),\n            shape = RoundedCornerShape(22.dp),\n        ) {\n            Icon(\n                imageVector = Icons.Rounded.RestartAlt,',
+              1,
+          )
+          size_ui.write_text(size_text)
+
           vm = "app/src/main/java/com/ekoehler/expressivecutout/ui/AppViewModel.kt"
           edit(vm, [
               ("    fun setShadowEnabled(enabled: Boolean)", "    fun setGlassEnabled(enabled: Boolean) = viewModelScope.launch {\n        appearancePreferences.setGlassEnabled(enabled)\n    }\n\n    fun setShadowEnabled(enabled: Boolean)")
