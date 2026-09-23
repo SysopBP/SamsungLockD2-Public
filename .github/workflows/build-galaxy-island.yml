@@ -126,6 +126,27 @@ jobs:
           )
           size_ui.write_text(size_text)
 
+          # Visual pass 4: locate the shared AdjustableSlider implementation and
+          # give its labels/values a softer One UI treatment without altering slider behavior.
+          slider_file = None
+          for candidate in root.rglob("*.kt"):
+              candidate_text = candidate.read_text()
+              if "fun AdjustableSlider(" in candidate_text:
+                  slider_file = candidate
+                  slider_text = candidate_text
+                  break
+          if slider_file is None:
+              raise SystemExit("Galaxy Island source drift: AdjustableSlider implementation not found")
+          slider_text = slider_text.replace(
+              "style = MaterialTheme.typography.bodyMedium,",
+              "style = MaterialTheme.typography.labelLarge,",
+          )
+          slider_text = slider_text.replace(
+              "style = MaterialTheme.typography.bodySmall,",
+              "style = MaterialTheme.typography.labelMedium,",
+          )
+          slider_file.write_text(slider_text)
+
           vm = "app/src/main/java/com/ekoehler/expressivecutout/ui/AppViewModel.kt"
           edit(vm, [
               ("    fun setShadowEnabled(enabled: Boolean)", "    fun setGlassEnabled(enabled: Boolean) = viewModelScope.launch {\n        appearancePreferences.setGlassEnabled(enabled)\n    }\n\n    fun setShadowEnabled(enabled: Boolean)")
