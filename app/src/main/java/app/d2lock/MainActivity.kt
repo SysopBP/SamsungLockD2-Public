@@ -385,6 +385,52 @@ class MainActivity : Activity() {
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+        appearanceCard.addView(TextView(this).apply {
+            text = "Lock-screen glass: ${Prefs.lockGlass(this@MainActivity)}%"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "lock_glass_label"
+        })
+        appearanceCard.addView(SeekBar(this).apply {
+            max = 80
+            progress = Prefs.lockGlass(this@MainActivity) - 20
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val glass = value + 20
+                    Prefs.setLockGlass(this@MainActivity, glass)
+                    root.findViewWithTag<TextView>("lock_glass_label")?.text = "Lock-screen glass: $glass%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
+        appearanceCard.addView(TextView(this).apply {
+            text = "Lock-screen UI scale: ${Prefs.lockScale(this@MainActivity)}%"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "lock_scale_label"
+        })
+        appearanceCard.addView(SeekBar(this).apply {
+            max = 30
+            progress = Prefs.lockScale(this@MainActivity) - 85
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val scale = value + 85
+                    Prefs.setLockScale(this@MainActivity, scale)
+                    root.findViewWithTag<TextView>("lock_scale_label")?.text = "Lock-screen UI scale: $scale%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
         appearanceCard.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Weather in Celsius (off: Fahrenheit)"
