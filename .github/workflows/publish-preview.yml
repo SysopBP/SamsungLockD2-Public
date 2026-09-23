@@ -1,35 +1,60 @@
-name: Publish tested v0.4.1 preview
+name: Publish Samsung Lock D2 Beta
+
 on:
   push:
     paths:
       - .github/workflows/publish-preview.yml
+  workflow_dispatch:
+
 permissions:
   actions: read
   contents: write
+
 jobs:
   release:
     if: github.repository == 'SysopBP/SamsungLockD2-Public'
     runs-on: ubuntu-latest
     steps:
-      - name: Download tested build
+      - name: Download latest tested D2 build
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh run download 35443284342 --repo SysopBP/SamsungLockD2-Public --name SamsungLockD2-deliverables --dir dist
+          mkdir -p dist
+          gh run download 35823784961 --repo SysopBP/SamsungLockD2-Public --name SamsungLockD2-deliverables --dir dist
           sha256sum --check dist/SHA256SUMS.txt
-          unzip -t dist/SamsungLockD2-KSUNext-v0.5.1-bundled.zip
-          cmp dist/SamsungLockD2-debug.apk <(unzip -p dist/SamsungLockD2-KSUNext-v0.5.1-bundled.zip payload/SamsungLockD2.apk)
-      - name: Publish prerelease
+
+      - name: Download latest Galaxy Island Glass build
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cat > release-notes.md <<'NOTES'
-          ## Samsung Lock D2 v0.4.1 preview
-          
-          User-tested update for the public experimental preview. Adds visible media and controls, Fahrenheit/Celsius selection, configurable bottom shortcuts, a floating action bar, and notification privacy settings. The notification fix adds **All previews (private too)**: choose it in D2 settings and grant notification access to show ordinary notification text while locked. **Public only** shows text only when an app explicitly marks a notification public; secret notifications stay hidden while locked.
-          
-          Install the debug APK. The KernelSU Next ZIP is optional and contains the same APK. If Android rejects installation over a previous debug build because its signing certificate differs, uninstall the older app first; doing so clears the D2 PIN and settings.
-          
-          D2 is an experimental app privacy screen, not a replacement for Android's secure device lock or encryption. See the [README](https://github.com/SysopBP/SamsungLockD2-Public#readme) for setup and recovery details.
-          NOTES
-          gh release create v0.4.1-preview.1 --repo SysopBP/SamsungLockD2-Public --target "${GITHUB_SHA}" --title "Samsung Lock D2 v0.4.1 — media and notification preview" --prerelease --notes-file release-notes.md dist/SamsungLockD2-debug.apk dist/SamsungLockD2-KSUNext-v0.5.1-bundled.zip dist/SamsungLockD2-source.zip dist/SHA256SUMS.txt
+          mkdir -p galaxy-island
+          gh run download 35822666440 --repo SysopBP/SamsungLockD2-Public --name Galaxy-Island-glass-APK --dir galaxy-island
+          find galaxy-island -type f -maxdepth 2 -print
+          cp galaxy-island/*.apk dist/Galaxy-Island-Glass.apk
+
+      - name: Verify and create beta bundle
+        run: |
+          set -e
+          KSZIP="$(find dist -maxdepth 1 -type f -name '*KSUNext*.zip' | head -1)"
+          test -n "$KSZIP"
+          unzip -t "$KSZIP"
+          cmp dist/SamsungLockD2-debug.apk <(unzip -p "$KSZIP" payload/SamsungLockD2.apk)
+          (cd dist && sha256sum SamsungLockD2-debug.apk Galaxy-Island-Glass.apk "$(/usr/bin/basename "$KSZIP")" > BETA-SHA256SUMS.txt)
+          mkdir -p bundle
+          cp dist/SamsungLockD2-debug.apk bundle/
+          cp dist/Galaxy-Island-Glass.apk bundle/
+          cp "$KSZIP" bundle/
+          cp dist/SHA256SUMS.txt bundle/D2-SHA256SUMS.txt
+          cp dist/BETA-SHA256SUMS.txt bundle/
+          if [ -f dist/SamsungLockD2-source.zip ]; then cp dist/SamsungLockD2-source.zip bundle/; fi
+          zip -j SamsungLockD2-v0.5.0-beta.1-bundle.zip bundle/*
+
+      - name: Upload beta bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SamsungLockD2-v0.5.0-beta.1-bundle
+          path: |
+            SamsungLockD2-v0.5.0-beta.1-bundle.zip
+            bundle/*
+          if-no-files-found: error
+          retention-days: 90
