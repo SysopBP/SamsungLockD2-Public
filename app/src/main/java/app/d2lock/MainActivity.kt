@@ -733,6 +733,7 @@ class MainActivity : Activity() {
         root.getChildAt(root.childCount - 1).tag = "notifications"
         val privacyCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(privacyCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
+        section(privacyCard, "BANNERS & PRIVACY")
         privacyCard.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Live notification banners while D2 is locked"
@@ -747,6 +748,7 @@ class MainActivity : Activity() {
         })
         addChoice(privacyCard, "When D2 is locked", listOf("Hide all", "Count only", "App names", "Public only", "All previews (private too)"),
             Prefs.notificationPrivacy(this)) { Prefs.setNotificationPrivacy(this, it) }
+        section(privacyCard, "CARD APPEARANCE")
         addChoice(privacyCard, "Notification card density", listOf("Compact", "Comfortable", "Large"),
             listOf("compact", "comfortable", "large").indexOf(Prefs.notificationDensity(this)).coerceAtLeast(0)) {
             Prefs.setNotificationDensity(this, listOf("compact", "comfortable", "large")[it])
@@ -799,6 +801,13 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(-1, dp(48)))
         privacyCard.addView(TextView(this).apply {
             text = "Public only shows text from apps that mark it public. All previews can show private messages before you authenticate with D2. Apps marked secret stay hidden."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(8), 0, dp(8), dp(12))
+        })
+        section(privacyCard, "GESTURES")
+        privacyCard.addView(TextView(this).apply {
+            text = "Swipe a notification to the right to dismiss it. D2 keeps the existing dismissal behavior unchanged; this section is informational so the gesture is easy to discover."
             textSize = 13f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(8), 0, dp(8), dp(12))
