@@ -829,6 +829,13 @@ class MainActivity : Activity() {
         root.getChildAt(root.childCount - 1).tag = "floating_bar"
         val floatingCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(floatingCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
+        floatingCard.addView(TextView(this).apply {
+            text = "Choose the shortcuts shown on the left and right sides of the D2 lock screen. Existing shortcut behavior is unchanged."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(8), dp(2), dp(8), dp(10))
+        })
+        section(floatingCard, "LOCK-SCREEN SHORTCUTS")
         val actions = listOf("None", "Camera", "Flashlight")
         for (side in listOf("left", "right")) {
             addChoice(floatingCard, "${side.replaceFirstChar { it.uppercase() }} action", actions,
@@ -836,6 +843,12 @@ class MainActivity : Activity() {
                 Prefs.setShortcut(this, side, actions[it])
             }
         }
+        floatingCard.addView(TextView(this).apply {
+            text = "Set either side to None for a cleaner minimal layout. Camera and Flashlight remain available independently."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(8), dp(4), dp(8), dp(10))
+        })
         section(root, "MAIN · ACCESS & PREVIEW")
         root.getChildAt(root.childCount - 1).tag = "main_settings"
         addButton(root, "Grant notification and media access") {
