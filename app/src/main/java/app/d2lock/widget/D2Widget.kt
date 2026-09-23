@@ -20,8 +20,9 @@ private object WidgetPrefs {
     fun style(c: Context, id: Int) = p(c).getString("style_$id", "glass") ?: "glass"
     fun action(c: Context, id: Int) = p(c).getString("action_$id", "double") ?: "double"
     fun label(c: Context, id: Int) = p(c).getBoolean("label_$id", true)
+    fun density(c: Context, id: Int) = p(c).getString("density_$id", "comfortable") ?: "comfortable"
     fun save(c: Context, id: Int, style: String, action: String, label: Boolean) = p(c).edit().putString("style_$id", style).putString("action_$id", action).putBoolean("label_$id", label).apply()
-    fun remove(c: Context, id: Int) = p(c).edit().remove("style_$id").remove("action_$id").remove("label_$id").apply()
+    fun remove(c: Context, id: Int) = p(c).edit().remove("style_$id").remove("action_$id").remove("label_$id").remove("density_$id").apply()
 }
 
 class D2Widget : AppWidgetProvider() {
@@ -34,6 +35,8 @@ class D2Widget : AppWidgetProvider() {
             val view = RemoteViews(context.packageName, R.layout.d2_widget)
             val label = if (WidgetPrefs.action(context,id) == "single") "Lock D2" else "Lock D2\nDouble-tap"
             view.setTextViewText(R.id.d2_widget, if (WidgetPrefs.label(context,id)) label else "D2")
+            val textSize = when (WidgetPrefs.density(context,id)) { "compact" -> 13f; "large" -> 20f; else -> 16f }
+            view.setTextViewTextSize(R.id.d2_widget, android.util.TypedValue.COMPLEX_UNIT_SP, textSize)
             when (WidgetPrefs.style(context,id)) {
                 "galaxy" -> { view.setInt(R.id.d2_widget, "setBackgroundColor", 0xB8141820.toInt()); view.setTextColor(R.id.d2_widget, android.graphics.Color.WHITE) }
                 "amoled" -> { view.setInt(R.id.d2_widget, "setBackgroundColor", android.graphics.Color.BLACK); view.setTextColor(R.id.d2_widget, android.graphics.Color.WHITE) }
