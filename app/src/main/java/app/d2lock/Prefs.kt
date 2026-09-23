@@ -44,6 +44,10 @@ object Prefs {
         prefs(context).getInt("glass_$component", lockGlass(context)).coerceIn(20, 100)
     fun setComponentGlass(context: Context, component: String, value: Int) =
         prefs(context).edit().putInt("glass_$component", value.coerceIn(20, 100)).apply()
+    fun mediaLayout(context: Context) = prefs(context).getString("media_layout", "comfortable") ?: "comfortable"
+    fun setMediaLayout(context: Context, value: String) = prefs(context).edit().putString("media_layout", value).apply()
+    fun mediaButtonsScale(context: Context) = prefs(context).getInt("media_buttons_scale", 100).coerceIn(80, 120)
+    fun setMediaButtonsScale(context: Context, value: Int) = prefs(context).edit().putInt("media_buttons_scale", value.coerceIn(80, 120)).apply()
     fun showMedia(context: Context) = prefs(context).getBoolean("show_media", true)
     fun setShowMedia(context: Context, value: Boolean) = prefs(context).edit().putBoolean("show_media", value).apply()
     fun notificationDensity(context: Context) = prefs(context).getString("notification_density", "comfortable") ?: "comfortable"
