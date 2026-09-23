@@ -73,13 +73,18 @@ jobs:
               ("Text(stringResource(R.string.action_reset_layout))", "Text(\"Reset to camera / device default\")"),
           ])
 
-          # Hotfix visual treatment: tint the existing controls without changing the
-          # composable nesting/import structure of the upstream screen.
+          # Hotfix visual pass 1: make the positioning section feel more like the
+          # glass island without changing the upstream composable hierarchy.
           size_ui = root / size_screen
           size_text = size_ui.read_text()
           size_text = size_text.replace(
-              "style = MaterialTheme.typography.titleMedium,",
-              "style = MaterialTheme.typography.titleMedium,",
+              'style = MaterialTheme.typography.titleMedium,\\n            modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),',
+              'style = MaterialTheme.typography.titleMedium,\\n            color = MaterialTheme.colorScheme.primary,\\n            modifier = Modifier.padding(top = 10.dp, bottom = 3.dp),',
+              1,
+          )
+          size_text = size_text.replace(
+              'color = MaterialTheme.colorScheme.onSurfaceVariant,\\n            modifier = Modifier.padding(bottom = 4.dp),',
+              'color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f),\\n            modifier = Modifier.padding(bottom = 8.dp),',
               1,
           )
           size_ui.write_text(size_text)
