@@ -33,7 +33,7 @@ class WidgetConfigActivity : Activity() {
         root.addView(TextView(this).apply { text="D2 Widget"; textSize=30f; setTextColor(Appearance.text(this@WidgetConfigActivity)) })
         root.addView(TextView(this).apply { text="Customize this widget"; textSize=14f; setTextColor(Appearance.secondary(this@WidgetConfigActivity)); setPadding(0,dp(4),0,dp(22)) })
         fun addChoice(title:String, values:Array<String>, keys:Array<String>, current:()->String, set:(String)->Unit) {
-            lateinit var row: TextView\n            row=TextView(this).apply {
+            lateinit var row: TextView\n            // Keep this assignment separate so the row can update itself after a glass-dialog selection.\n            row=TextView(this).apply {
                 text=title + "\n" + values[keys.indexOf(current()).coerceAtLeast(0)] + "   ›"
                 textSize=17f; setTextColor(Appearance.text(this@WidgetConfigActivity)); gravity=Gravity.CENTER_VERTICAL
                 setPadding(dp(18),0,dp(18),0); background=Appearance.glass(this@WidgetConfigActivity,28f,34,true)
