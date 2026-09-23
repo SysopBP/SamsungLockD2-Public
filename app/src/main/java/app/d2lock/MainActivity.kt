@@ -407,7 +407,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), 0, dp(6), dp(12))
         })
 
-        section(root, "APPEARANCE")
+        section(root, "APP THEME")
         val appearanceCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(appearanceCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         appearanceCard.addView(TextView(this).apply {
@@ -478,6 +478,7 @@ class MainActivity : Activity() {
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+        section(appearanceCard, "CLOCK & WEATHER")
         addChoice(appearanceCard, "Clock style", listOf("Adaptive Clean", "Classic", "Rounded", "Condensed", "Bold", "Minimal"),
             listOf("adaptive", "classic", "rounded", "condensed", "bold", "minimal").indexOf(Prefs.clockStyle(this)).coerceAtLeast(0)) {
             Prefs.setClockStyle(this, listOf("adaptive", "classic", "rounded", "condensed", "bold", "minimal")[it])
@@ -639,6 +640,7 @@ class MainActivity : Activity() {
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(6), 0, dp(6), dp(10))
         })
+        section(appearanceCard, "MEDIA")
         addChoice(appearanceCard, "Media player layout", listOf("Compact", "Comfortable", "Large"),
             listOf("compact", "comfortable", "large").indexOf(Prefs.mediaLayout(this)).coerceAtLeast(0)) {
             Prefs.setMediaLayout(this, listOf("compact", "comfortable", "large")[it])
@@ -684,7 +686,7 @@ class MainActivity : Activity() {
                 }
                 .show()
         }
-        section(root, "NOTIFICATION PRIVACY")
+        section(root, "NOTIFICATIONS")
         val privacyCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(privacyCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         privacyCard.addView(Switch(this).apply {
@@ -767,7 +769,7 @@ class MainActivity : Activity() {
                 Prefs.setShortcut(this, side, actions[it])
             }
         }
-        section(root, "ACCESS & PREVIEW")
+        section(root, "MAIN · ACCESS & PREVIEW")
         addButton(root, "Grant notification and media access") {
             startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
         }
