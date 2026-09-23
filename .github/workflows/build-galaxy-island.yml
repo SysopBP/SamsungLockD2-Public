@@ -89,6 +89,12 @@ jobs:
           )
           size_ui.write_text(size_text)
 
+          # Emit the transformed Size & Position source in the Actions log so the
+          # next visual pass can target the real upstream composables precisely.
+          print("===== SIZE_POSITION_SOURCE_BEGIN =====")
+          print(size_ui.read_text())
+          print("===== SIZE_POSITION_SOURCE_END =====")
+
           vm = "app/src/main/java/com/ekoehler/expressivecutout/ui/AppViewModel.kt"
           edit(vm, [
               ("    fun setShadowEnabled(enabled: Boolean)", "    fun setGlassEnabled(enabled: Boolean) = viewModelScope.launch {\n        appearancePreferences.setGlassEnabled(enabled)\n    }\n\n    fun setShadowEnabled(enabled: Boolean)")
