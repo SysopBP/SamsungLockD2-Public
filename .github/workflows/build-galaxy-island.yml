@@ -50,36 +50,36 @@ jobs:
 
           prefs = "app/src/main/java/com/ekoehler/expressivecutout/data/AppearancePreferences.kt"
           edit(prefs, [
-              ("data class AppearanceSettings(\\n    val shadowEnabled:", "data class AppearanceSettings(\\n    val glassEnabled: Boolean = DEFAULT_GLASS_ENABLED,\\n    val shadowEnabled:"),
-              ("companion object {\\n        const val DEFAULT_SHADOW_ENABLED", "companion object {\\n        const val DEFAULT_GLASS_ENABLED = false\\n        const val DEFAULT_SHADOW_ENABLED"),
-              ("AppearanceSettings(\\n            shadowEnabled =", "AppearanceSettings(\\n            glassEnabled = prefs[GLASS_ENABLED] ?: AppearanceSettings.DEFAULT_GLASS_ENABLED,\\n            shadowEnabled ="),
-              ("return JSONObject().apply {\\n            put(\\\"shadowEnabled\\\"", "return JSONObject().apply {\\n            put(\\\"glassEnabled\\\", s.glassEnabled)\\n            put(\\\"shadowEnabled\\\""),
-              ("context.appearanceDataStore.edit {\\n            if (obj.has(\\\"shadowEnabled\\\"))", "context.appearanceDataStore.edit {\\n            if (obj.has(\\\"glassEnabled\\\")) it[GLASS_ENABLED] = obj.getBoolean(\\\"glassEnabled\\\")\\n            if (obj.has(\\\"shadowEnabled\\\"))"),
-              ("    suspend fun setShadowEnabled(enabled: Boolean)", "    suspend fun setGlassEnabled(enabled: Boolean) = context.appearanceDataStore.edit {\\n        it[GLASS_ENABLED] = enabled\\n    }\\n\\n    suspend fun setShadowEnabled(enabled: Boolean)"),
-              ("private companion object {\\n        val SHADOW_ENABLED", "private companion object {\\n        val GLASS_ENABLED = booleanPreferencesKey(\\\"glass_enabled\\\")\\n        val SHADOW_ENABLED"),
+              ("data class AppearanceSettings(\n    val shadowEnabled:", "data class AppearanceSettings(\n    val glassEnabled: Boolean = DEFAULT_GLASS_ENABLED,\n    val shadowEnabled:"),
+              ("companion object {\n        const val DEFAULT_SHADOW_ENABLED", "companion object {\n        const val DEFAULT_GLASS_ENABLED = false\n        const val DEFAULT_SHADOW_ENABLED"),
+              ("AppearanceSettings(\n            shadowEnabled =", "AppearanceSettings(\n            glassEnabled = prefs[GLASS_ENABLED] ?: AppearanceSettings.DEFAULT_GLASS_ENABLED,\n            shadowEnabled ="),
+              ("return JSONObject().apply {\n            put(\"shadowEnabled\"", "return JSONObject().apply {\n            put(\"glassEnabled\", s.glassEnabled)\n            put(\"shadowEnabled\""),
+              ("context.appearanceDataStore.edit {\n            if (obj.has(\"shadowEnabled\"))", "context.appearanceDataStore.edit {\n            if (obj.has(\"glassEnabled\")) it[GLASS_ENABLED] = obj.getBoolean(\"glassEnabled\")\n            if (obj.has(\"shadowEnabled\"))"),
+              ("    suspend fun setShadowEnabled(enabled: Boolean)", "    suspend fun setGlassEnabled(enabled: Boolean) = context.appearanceDataStore.edit {\n        it[GLASS_ENABLED] = enabled\n    }\n\n    suspend fun setShadowEnabled(enabled: Boolean)"),
+              ("private companion object {\n        val SHADOW_ENABLED", "private companion object {\n        val GLASS_ENABLED = booleanPreferencesKey(\"glass_enabled\")\n        val SHADOW_ENABLED"),
           ])
 
           vm = "app/src/main/java/com/ekoehler/expressivecutout/ui/AppViewModel.kt"
           edit(vm, [
-              ("    fun setShadowEnabled(enabled: Boolean)", "    fun setGlassEnabled(enabled: Boolean) = viewModelScope.launch {\\n        appearancePreferences.setGlassEnabled(enabled)\\n    }\\n\\n    fun setShadowEnabled(enabled: Boolean)")
+              ("    fun setShadowEnabled(enabled: Boolean)", "    fun setGlassEnabled(enabled: Boolean) = viewModelScope.launch {\n        appearancePreferences.setGlassEnabled(enabled)\n    }\n\n    fun setShadowEnabled(enabled: Boolean)")
           ])
 
           screen = "app/src/main/java/com/ekoehler/expressivecutout/ui/screen/SettingScreens/AppearanceScreen.kt"
           edit(screen, [
-              ("        SettingsToggleCard(\\n            shape = RoundedCornerShape(24.dp),\\n            title = stringResource(R.string.appearance_shadow_title)", "        SettingsToggleCard(\\n            shape = RoundedCornerShape(24.dp),\\n            title = stringResource(R.string.appearance_glass_title),\\n            description = stringResource(R.string.appearance_glass_desc),\\n            checked = appearance.glassEnabled,\\n            onCheckedChange = viewModel::setGlassEnabled,\\n        )\\n\\n        SettingsToggleCard(\\n            shape = RoundedCornerShape(24.dp),\\n            title = stringResource(R.string.appearance_shadow_title)")
+              ("        SettingsToggleCard(\n            shape = RoundedCornerShape(24.dp),\n            title = stringResource(R.string.appearance_shadow_title)", "        SettingsToggleCard(\n            shape = RoundedCornerShape(24.dp),\n            title = stringResource(R.string.appearance_glass_title),\n            description = stringResource(R.string.appearance_glass_desc),\n            checked = appearance.glassEnabled,\n            onCheckedChange = viewModel::setGlassEnabled,\n        )\n\n        SettingsToggleCard(\n            shape = RoundedCornerShape(24.dp),\n            title = stringResource(R.string.appearance_shadow_title)")
           ])
 
           strings = "app/src/main/res/values/strings.xml"
           edit(strings, [
-              ("    <string name=\\\"appearance_section_title\\\">Appearance</string>", "    <string name=\\\"appearance_section_title\\\">Appearance</string>\\n    <string name=\\\"appearance_glass_title\\\">One UI 9 glass island</string>\\n    <string name=\\\"appearance_glass_desc\\\">Use translucent glass surfaces, a soft highlight edge and deeper floating shadow for compact and expanded islands.</string>")
+              ("    <string name=\"appearance_section_title\">Appearance</string>", "    <string name=\"appearance_section_title\">Appearance</string>\n    <string name=\"appearance_glass_title\">One UI 9 glass island</string>\n    <string name=\"appearance_glass_desc\">Use translucent glass surfaces, a soft highlight edge and deeper floating shadow for compact and expanded islands.</string>")
           ])
 
           island = "app/src/main/java/com/ekoehler/expressivecutout/overlay/DynamicIsland.kt"
           edit(island, [
-              ("    val border = if (appearance.strokeEnabled) {", "    val border = if (appearance.glassEnabled) {\\n        BorderStroke(1.dp, Color.White.copy(alpha = 0.24f))\\n    } else if (appearance.strokeEnabled) {"),
-              ("    Surface(\\n        modifier = modifier.background(currentBaseColor, shape),\\n        shape = shape,\\n        color = currentBaseColor,", "    val surfaceColor = if (appearance.glassEnabled) currentBaseColor.copy(alpha = 0.72f) else currentBaseColor\\n    val surfaceModifier = if (appearance.glassEnabled) modifier else modifier.background(currentBaseColor, shape)\\n\\n    Surface(\\n        modifier = surfaceModifier,\\n        shape = shape,\\n        color = surfaceColor,"),
+              ("    val border = if (appearance.strokeEnabled) {", "    val border = if (appearance.glassEnabled) {\n        BorderStroke(1.dp, Color.White.copy(alpha = 0.24f))\n    } else if (appearance.strokeEnabled) {"),
+              ("    Surface(\n        modifier = modifier.background(currentBaseColor, shape),\n        shape = shape,\n        color = currentBaseColor,", "    val surfaceColor = if (appearance.glassEnabled) currentBaseColor.copy(alpha = 0.72f) else currentBaseColor\n    val surfaceModifier = if (appearance.glassEnabled) modifier else modifier.background(currentBaseColor, shape)\n\n    Surface(\n        modifier = surfaceModifier,\n        shape = shape,\n        color = surfaceColor,"),
               ("        shadowElevation = if (appearance.shadowEnabled) 6.dp else 0.dp,", "        shadowElevation = if (appearance.glassEnabled) 12.dp else if (appearance.shadowEnabled) 6.dp else 0.dp,"),
-              ("            Box(modifier = Modifier.fillMaxSize().background(currentBaseColor)) {\\n                Box(modifier = Modifier.fillMaxSize().background(normalBrush))", "            Box(modifier = Modifier.fillMaxSize().then(if (appearance.glassEnabled) Modifier else Modifier.background(currentBaseColor))) {\\n                Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (appearance.glassEnabled) 0.72f else 1f }.background(normalBrush))\\n                if (appearance.glassEnabled) {\\n                    Box(modifier = Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.045f)))\\n                }")
+              ("            Box(modifier = Modifier.fillMaxSize().background(currentBaseColor)) {\n                Box(modifier = Modifier.fillMaxSize().background(normalBrush))", "            Box(modifier = Modifier.fillMaxSize().then(if (appearance.glassEnabled) Modifier else Modifier.background(currentBaseColor))) {\n                Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (appearance.glassEnabled) 0.72f else 1f }.background(normalBrush))\n                if (appearance.glassEnabled) {\n                    Box(modifier = Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.045f)))\n                }")
           ])
           PY
           chmod +x gradlew
