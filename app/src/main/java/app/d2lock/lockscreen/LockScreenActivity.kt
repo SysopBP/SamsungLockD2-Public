@@ -110,7 +110,8 @@ class LockScreenActivity : Activity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
             val charging = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) in listOf(BatteryManager.BATTERY_STATUS_CHARGING, BatteryManager.BATTERY_STATUS_FULL)
-            battery.text = if (charging) "⚡ $level%" else "$level%"
+            val percent = if (Prefs.showBatteryPercent(this@LockScreenActivity)) "  $level%" else ""
+            battery.text = if (charging) "▰  ⚡$percent" else "▰$percent"
         }
     }
 
@@ -308,13 +309,24 @@ class LockScreenActivity : Activity() {
             gravity = Gravity.CENTER
             visibility = if (Prefs.showDate(this@LockScreenActivity)) View.VISIBLE else View.GONE
         }
+        val topInfoScale = Prefs.topInfoSize(this) / 100f
         val topInfo = LinearLayout(this).apply {
             gravity = Gravity.CENTER
-            weather = label("Loading weather…", 15f, Appearance.text(this@LockScreenActivity, true)).apply { gravity = Gravity.CENTER }
-            battery = label("—%", 15f, Appearance.text(this@LockScreenActivity, true)).apply { gravity = Gravity.CENTER }
-            // One continuous transparent weather/battery pill, matching the AMOLED glass design.
+            setPadding(dp(8), 0, dp(8), 0)
+            weather = label("◌  Loading…", 15f * topInfoScale, Appearance.text(this@LockScreenActivity, true)).apply {
+                gravity = Gravity.CENTER
+                visibility = if (Prefs.showWeather(this@LockScreenActivity)) View.VISIBLE else View.GONE
+            }
+            val divider = View(this@LockScreenActivity).apply {
+                setBackgroundColor(0x35ffffff)
+                visibility = if (Prefs.showWeather(this@LockScreenActivity)) View.VISIBLE else View.GONE
+            }
+            battery = label("▰  —%", 15f * topInfoScale, Appearance.text(this@LockScreenActivity, true)).apply { gravity = Gravity.CENTER }
             background = Appearance.glass(this@LockScreenActivity, 30f, Prefs.componentGlass(this@LockScreenActivity, "top_info"), true)
-            addView(weather, LinearLayout.LayoutParams(0, dp(42), 1f))
+            if (Prefs.showWeather(this@LockScreenActivity)) {
+                addView(weather, LinearLayout.LayoutParams(0, dp(42), 1f))
+                addView(divider, LinearLayout.LayoutParams(dp(1), dp(20)))
+            }
             addView(battery, LinearLayout.LayoutParams(0, dp(42), 1f))
         }
         content.addView(clock)
@@ -335,7 +347,7 @@ class LockScreenActivity : Activity() {
             })
             content.addView(actionButton("Close preview") { finish() })
         }
-        content.addView(topInfo, LinearLayout.LayoutParams(-1, dp(54)))
+        content.addView(topInfo, LinearLayout.LayoutParams(-1, dp((54 * topInfoScale).toInt())))
         // Weather source details are kept in app credits so the lock screen stays clean.
 
         notifications = LinearLayout(this).apply {
