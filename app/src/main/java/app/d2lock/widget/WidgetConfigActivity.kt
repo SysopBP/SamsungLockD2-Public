@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.Gravity
 import android.widget.CheckBox
 import android.widget.LinearLayout
+import android.widget.RadioButton
 import android.widget.TextView
 import app.d2lock.Appearance
 import app.d2lock.R
@@ -37,10 +38,51 @@ class WidgetConfigActivity : Activity() {
                 textSize=17f; setTextColor(Appearance.text(this@WidgetConfigActivity)); gravity=Gravity.CENTER_VERTICAL
                 setPadding(dp(18),0,dp(18),0); background=Appearance.glass(this@WidgetConfigActivity,28f,34,true)
                 setOnClickListener {
-                    AlertDialog.Builder(this@WidgetConfigActivity).setTitle(title)
-                        .setSingleChoiceItems(values, keys.indexOf(current()).coerceAtLeast(0)) { d,w ->
-                            set(keys[w]); text=title + "\n" + values[w] + "   ›"; d.dismiss()
-                        }.show()
+                    val selected = keys.indexOf(current()).coerceAtLeast(0)
+                    val dialogContent = LinearLayout(this@WidgetConfigActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(dp(14), dp(6), dp(14), dp(10))
+                    }
+                    values.forEachIndexed { index, value ->
+                        val option = LinearLayout(this@WidgetConfigActivity).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = Gravity.CENTER_VERTICAL
+                            setPadding(dp(14), dp(8), dp(14), dp(8))
+                            background = Appearance.glass(this@WidgetConfigActivity, 24f, if (index == selected) 52 else 28, true)
+                        }
+                        val radio = RadioButton(this@WidgetConfigActivity).apply {
+                            isChecked = index == selected
+                            buttonTintList = android.content.res.ColorStateList(
+                                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                                intArrayOf(Appearance.accent(this@WidgetConfigActivity), Appearance.secondary(this@WidgetConfigActivity))
+                            )
+                            isClickable = false
+                        }
+                        val label = TextView(this@WidgetConfigActivity).apply {
+                            this.text = value
+                            textSize = 17f
+                            setTextColor(Appearance.text(this@WidgetConfigActivity))
+                        }
+                        option.addView(radio, LinearLayout.LayoutParams(dp(48), dp(54)))
+                        option.addView(label, LinearLayout.LayoutParams(0, -2, 1f))
+                        option.setOnClickListener {
+                            set(keys[index])
+                            row.text = title + "\n" + values[index] + "   ›"
+                            (dialogContent.tag as? AlertDialog)?.dismiss()
+                        }
+                        dialogContent.addView(option, LinearLayout.LayoutParams(-1, dp(64)).apply { bottomMargin = dp(8) })
+                    }
+                    val dialog = AlertDialog.Builder(this@WidgetConfigActivity)
+                        .setTitle(title)
+                        .setView(dialogContent)
+                        .setNegativeButton("Cancel", null)
+                        .create()
+                    dialogContent.tag = dialog
+                    dialog.setOnShowListener {
+                        dialog.window?.setBackgroundDrawable(Appearance.glass(this@WidgetConfigActivity, 30f, 76, true))
+                        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Appearance.accent(this@WidgetConfigActivity))
+                    }
+                    dialog.show()
                 }
             }
             root.addView(row, LinearLayout.LayoutParams(-1,dp(76)).apply{bottomMargin=dp(10)})
