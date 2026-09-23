@@ -118,7 +118,7 @@ class MainActivity : Activity() {
         addButton(root, "Licenses and credits") {
             val notice = assets.open("THIRD_PARTY_NOTICES.txt").bufferedReader().use { it.readText() }
             val text = TextView(this).apply {
-                this.text = "D2 Project — All rights reserved.\n\nWeather data: NOAA / National Weather Service. NWS information is public domain unless otherwise noted.\n\n$notice"
+                this.text = "D2 Project — All rights reserved.\n\nWeather data and geocoding: Open-Meteo.\n\n$notice"
                 textSize = 14f
                 setTextColor(Appearance.text(this@MainActivity))
                 setLineSpacing(0f, 1.12f)
@@ -613,6 +613,32 @@ class MainActivity : Activity() {
             isChecked = Prefs.celsius(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setCelsius(this@MainActivity, checked) }
         }, rowParams())
+        appearanceCard.addView(TextView(this).apply {
+            text = "Primary weather location"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(8), 0, dp(4))
+        })
+        val weatherLocation = android.widget.EditText(this).apply {
+            hint = "Automatic · or city / postcode / region"
+            setText(Prefs.weatherLocation(this@MainActivity))
+            setTextColor(Appearance.text(this@MainActivity))
+            setHintTextColor(Appearance.secondary(this@MainActivity))
+            background = Appearance.glass(this@MainActivity, 22f, 26, true)
+            setPadding(dp(14), dp(10), dp(14), dp(10))
+            setSingleLine(true)
+        }
+        appearanceCard.addView(weatherLocation, LinearLayout.LayoutParams(-1, dp(56)).apply { bottomMargin = dp(8) })
+        addButton(appearanceCard, "Save primary weather location") {
+            Prefs.setWeatherLocation(this, weatherLocation.text.toString())
+            Toast.makeText(this, if (weatherLocation.text.isNullOrBlank()) "Weather set to automatic location" else "Primary weather location saved", Toast.LENGTH_SHORT).show()
+        }
+        appearanceCard.addView(TextView(this).apply {
+            text = "Leave Primary Location blank to use the device location. Enter a city, postcode, or city + country/region for global weather."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(6), 0, dp(6), dp(10))
+        })
         addChoice(appearanceCard, "Media player layout", listOf("Compact", "Comfortable", "Large"),
             listOf("compact", "comfortable", "large").indexOf(Prefs.mediaLayout(this)).coerceAtLeast(0)) {
             Prefs.setMediaLayout(this, listOf("compact", "comfortable", "large")[it])
