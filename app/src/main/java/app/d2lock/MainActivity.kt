@@ -553,6 +553,56 @@ class MainActivity : Activity() {
         })
         addChoice(privacyCard, "When D2 is locked", listOf("Hide all", "Count only", "App names", "Public only", "All previews (private too)"),
             Prefs.notificationPrivacy(this)) { Prefs.setNotificationPrivacy(this, it) }
+        addChoice(privacyCard, "Notification card density", listOf("Compact", "Comfortable", "Large"),
+            listOf("compact", "comfortable", "large").indexOf(Prefs.notificationDensity(this)).coerceAtLeast(0)) {
+            Prefs.setNotificationDensity(this, listOf("compact", "comfortable", "large")[it])
+        }
+        privacyCard.addView(TextView(this).apply {
+            text = "Notification corner radius: ${Prefs.notificationRadius(this@MainActivity)}dp"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "notification_radius_label"
+        })
+        privacyCard.addView(SeekBar(this).apply {
+            max = 24
+            progress = Prefs.notificationRadius(this@MainActivity) - 16
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val radius = value + 16
+                    Prefs.setNotificationRadius(this@MainActivity, radius)
+                    root.findViewWithTag<TextView>("notification_radius_label")?.text = "Notification corner radius: ${radius}dp"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
+        privacyCard.addView(TextView(this).apply {
+            text = "Notification glass: ${Prefs.notificationGlass(this@MainActivity)}%"
+            textSize = 15f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(6), dp(4), 0, 0)
+            tag = "notification_glass_label"
+        })
+        privacyCard.addView(SeekBar(this).apply {
+            max = 80
+            progress = Prefs.notificationGlass(this@MainActivity) - 20
+            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            thumbTintList = progressTintList
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val glass = value + 20
+                    Prefs.setNotificationGlass(this@MainActivity, glass)
+                    root.findViewWithTag<TextView>("notification_glass_label")?.text = "Notification glass: $glass%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
         privacyCard.addView(TextView(this).apply {
             text = "Public only shows text from apps that mark it public. All previews can show private messages before you authenticate with D2. Apps marked secret stay hidden."
             textSize = 13f
