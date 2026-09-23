@@ -21,6 +21,9 @@ import android.os.BatteryManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.PowerManager
 import android.provider.MediaStore
 import android.view.Gravity
 import android.view.View
@@ -76,6 +79,7 @@ class LockScreenActivity : Activity() {
     private lateinit var kioskStatus: TextView
     private var pinDialog: AlertDialog? = null
     private var wallpaperActive = false
+    private var emptyTapAt = 0L
     private val wallpaperExecutor = Executors.newSingleThreadExecutor()
     private val wallpaperAnimations = mutableListOf<ObjectAnimator>()
 
@@ -235,13 +239,15 @@ class LockScreenActivity : Activity() {
                             bitmap?.recycle()
                         } else if (bitmap != null) {
                             wallpaperView.setImageBitmap(bitmap)
-                            listOf(View.SCALE_X, View.SCALE_Y).forEach { property ->
-                                wallpaperAnimations += ObjectAnimator.ofFloat(wallpaperView, property, 1f, 1.06f).apply {
-                                    duration = 14000
-                                    repeatCount = ValueAnimator.INFINITE
-                                    repeatMode = ValueAnimator.REVERSE
-                                    start()
-                                    if (!wallpaperActive) pause()
+                            if (Prefs.wallpaperParallax(this@LockScreenActivity)) {
+                                listOf(View.SCALE_X, View.SCALE_Y).forEach { property ->
+                                    wallpaperAnimations += ObjectAnimator.ofFloat(wallpaperView, property, 1f, 1.06f).apply {
+                                        duration = 14000
+                                        repeatCount = ValueAnimator.INFINITE
+                                        repeatMode = ValueAnimator.REVERSE
+                                        start()
+                                        if (!wallpaperActive) pause()
+                                    }
                                 }
                             }
                         } else {
@@ -255,6 +261,42 @@ class LockScreenActivity : Activity() {
                 setBackgroundColor(Color.argb((255f * dim / 100f).toInt(), 0, 0, 0))
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }, FrameLayout.LayoutParams(-1, -1))
+        }
+
+        if (Prefs.glassShimmer(this)) {
+            frame.addView(View(this).apply {
+                background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                    intArrayOf(Color.TRANSPARENT, 0x18ffffff, Color.TRANSPARENT))
+                alpha = .55f
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                ObjectAnimator.ofFloat(this, View.TRANSLATION_X, -dp(180).toFloat(), dp(180).toFloat()).apply {
+                    duration = 6500
+                    repeatCount = ValueAnimator.INFINITE
+                    repeatMode = ValueAnimator.REVERSE
+                    start()
+                    wallpaperAnimations += this
+                    if (!wallpaperActive) pause()
+                }
+            }, FrameLayout.LayoutParams(-1, -1))
+        }
+        if (Prefs.doubleTapSleep(this)) {
+            frame.setOnTouchListener { _, event ->
+                if (event.action != MotionEvent.ACTION_UP) false
+                else {
+                    val now = android.os.SystemClock.elapsedRealtime()
+                    val doubleTap = now - emptyTapAt in 40..350
+                    emptyTapAt = now
+                    if (doubleTap && NotificationStore.items.isEmpty()) {
+                        if (Prefs.rootMode(this@LockScreenActivity)) {
+                            runCatching { Runtime.getRuntime().exec(arrayOf("su", "-c", "input keyevent 26")) }
+                        } else {
+                            runCatching { getSystemService(PowerManager::class.java).isInteractive }
+                            Toast.makeText(this@LockScreenActivity, "Double-tap sleep requires D2 root mode", Toast.LENGTH_SHORT).show()
+                        }
+                        true
+                    } else false
+                }
+            }
         }
 
         val content = LinearLayout(this).apply {
