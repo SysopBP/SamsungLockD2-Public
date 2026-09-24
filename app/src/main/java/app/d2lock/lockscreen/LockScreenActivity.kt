@@ -791,7 +791,20 @@ class LockScreenActivity : Activity() {
             if (preview) openCamera() else authenticate { openCamera() }
         }.apply { contentDescription = "Camera, D2 authentication required" }
         "Flashlight" -> roundButton("🔦") { toggleTorch() }.apply { contentDescription = "Flashlight" }
-        else -> View(this)
+        else -> {
+            val value = Prefs.shortcut(this, side)
+            if (!value.startsWith("app:")) View(this) else {
+                val pkg = value.removePrefix("app:")
+                val appInfo = runCatching { packageManager.getApplicationInfo(pkg, 0) }.getOrNull()
+                if (appInfo == null) View(this) else roundButton("↗") {
+                    val launch = packageManager.getLaunchIntentForPackage(pkg)
+                    if (launch != null) {
+                        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        if (preview) startActivity(launch) else authenticate { startActivity(launch) }
+                    }
+                }.apply { contentDescription = packageManager.getApplicationLabel(appInfo).toString() }
+            }
+        }
     }
 
     private fun notificationLabel(value: String, size: Float) = label(value, size, Appearance.text(this, true)).apply {
