@@ -974,7 +974,7 @@ class MainActivity : Activity() {
             Prefs.setFloatingUnlockGesture(this, listOf("tap_or_slide", "slide_only", "tap_only")[it])
         }
         floatingCard.addView(TextView(this).apply {
-            text = "Slide up on the center unlock control for a glass lift effect. Slide only prevents an accidental tap from opening authentication."
+            text = "Slide left, right, or up on the center unlock control. The glass control follows your finger and snaps back if the gesture does not reach the unlock threshold."
             textSize = 13f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(6), 0, dp(6), dp(10))
