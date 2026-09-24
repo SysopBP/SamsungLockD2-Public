@@ -17,6 +17,16 @@ object IconManager {
         Option("amoled", "AMOLED Black", "TitaniumAmoled"),
     )
 
+    fun iconResource(key: String): Int = when (key) {
+        "red" -> R.mipmap.ic_d2_red
+        "blue" -> R.mipmap.ic_d2_blue
+        "purple" -> R.mipmap.ic_d2_purple
+        "green" -> R.mipmap.ic_d2_green
+        "gold" -> R.mipmap.ic_d2_gold
+        "amoled" -> R.mipmap.ic_d2_amoled
+        else -> R.mipmap.ic_d2_silver
+    }
+
     private const val PREFS = "d2_launcher_icon"
     private const val KEY = "selected"
 
