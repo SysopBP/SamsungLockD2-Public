@@ -1243,7 +1243,7 @@ class MainActivity : Activity() {
         dialog.show()
     }
 
-    private fun flashSettingsTarget(view: View) {
+    private fun flashSettingsTarget(view: android.view.View) {
         val originalAlpha = view.alpha
         view.animate().cancel()
         view.animate().alpha(0.42f).setDuration(110).withEndAction {
