@@ -431,10 +431,21 @@ class MainActivity : Activity() {
         }
         addButton(root, "Reset Titanium icon") {
             IconManager.reset(this)
-            Toast.makeText(this, "Titanium Purple restored", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Titanium Graphite restored", Toast.LENGTH_SHORT).show()
+        }
+        addButton(root, "Icon diagnostics") {
+            android.app.AlertDialog.Builder(this)
+                .setTitle("D2 launcher icon diagnostics")
+                .setMessage(
+                    "Saved selection: " + IconManager.selected(this) +
+                        "\n\nPackageManager states:\n" + IconManager.diagnostic(this) +
+                        "\n\nState values: 0=default, 1=enabled, 2=disabled."
+                )
+                .setPositiveButton("OK", null)
+                .show()
         }
         root.addView(TextView(this).apply {
-            text = "Choose the D2 Titanium launcher color. Some launchers may take a moment to refresh the icon."
+            text = "Choose the D2 Titanium launcher color. If One UI keeps the previous icon, open Icon diagnostics and send the state shown there."
             textSize = 13f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(6), 0, dp(6), dp(12))
