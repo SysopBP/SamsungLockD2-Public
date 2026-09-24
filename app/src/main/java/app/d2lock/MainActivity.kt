@@ -27,7 +27,6 @@ import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.view.updateLayoutParams
 import app.d2lock.lockscreen.LockScreenActivity
 import app.d2lock.lockscreen.LockScreenService
 import app.d2lock.root.RootManager
@@ -299,7 +298,7 @@ class MainActivity : Activity() {
             }
             true
         }
-        return settingsScroll(root)
+        return settingsHost(root)
         }
         val taps = DoubleTap()
         addButton(root, "Double-tap to lock D2") {
@@ -1021,7 +1020,10 @@ class MainActivity : Activity() {
         })
         host.setOnApplyWindowInsetsListener { _, insets ->
             val bars = insets.getInsets(android.view.WindowInsets.Type.systemBars())
-            nav.updateLayoutParams<android.widget.FrameLayout.LayoutParams> { bottomMargin = dp(18) + bars.bottom }
+            (nav.layoutParams as? android.widget.FrameLayout.LayoutParams)?.let { params ->
+                params.bottomMargin = dp(18) + bars.bottom
+                nav.layoutParams = params
+            }
             insets
         }
         return host
