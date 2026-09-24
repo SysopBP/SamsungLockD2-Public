@@ -640,10 +640,10 @@ class LockScreenActivity : Activity() {
                 MotionEvent.ACTION_MOVE -> {
                     tracker?.addMovement(event)
                     val dx = event.x - downX
-                    if (dx > dp(4)) {
+                    if (kotlin.math.abs(dx) > dp(2)) {
                         card.translationX = dx
                         card.alpha = (1f - dx / (card.width.coerceAtLeast(1) * .8f)).coerceIn(.28f, 1f)
-                    } else if (dx < 0f) card.translationX = dx * .12f
+                    }
                     return true
                 }
                 MotionEvent.ACTION_UP -> {
@@ -653,8 +653,8 @@ class LockScreenActivity : Activity() {
                     tracker?.recycle(); tracker = null
                     val dx = event.x - downX
                     val dy = event.y - downY
-                    if (dx > card.width * .20f || (dx > dp(18) && velocityX > dp(650))) {
-                        card.animate().translationX(card.width.toFloat()).alpha(0f).setDuration(150).withEndAction {
+                    if (kotlin.math.abs(dx) > card.width * .12f || (kotlin.math.abs(dx) > dp(12) && kotlin.math.abs(velocityX) > dp(420))) {
+                        card.animate().translationX(if (dx >= 0f) card.width.toFloat() else -card.width.toFloat()).alpha(0f).setDuration(140).withEndAction {
                             NotificationStore.listener?.dismiss(item.key)
                             NotificationStore.items.removeAll { it.key == item.key }
                             renderNotifications()
