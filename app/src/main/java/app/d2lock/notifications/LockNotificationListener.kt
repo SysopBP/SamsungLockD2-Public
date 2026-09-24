@@ -20,6 +20,7 @@ class LockNotificationListener : NotificationListenerService() {
         NotificationStore.listener = this
         NotificationStore.items.clear()
         CallNotificationStore.items.clear()
+        CallNotificationStore.onChanged?.invoke()
         activeNotifications?.forEach(::put)
         NotificationStore.onChanged?.invoke()
     }
@@ -36,12 +37,14 @@ class LockNotificationListener : NotificationListenerService() {
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         NotificationStore.items.removeAll { it.key == sbn.key }
         CallNotificationStore.items.removeAll { it.key == sbn.key }
+        CallNotificationStore.onChanged?.invoke()
         NotificationStore.onChanged?.invoke()
     }
 
     override fun onListenerDisconnected() {
         NotificationStore.listener = null
         CallNotificationStore.items.clear()
+        CallNotificationStore.onChanged?.invoke()
         NotificationStore.items.clear()
         NotificationStore.onChanged?.invoke()
     }
