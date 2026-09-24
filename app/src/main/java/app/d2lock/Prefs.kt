@@ -40,6 +40,44 @@ object Prefs {
         return count
     }
 
+    fun applyProfile(context: Context, profile: String) {
+        val e = prefs(context).edit()
+        when (profile) {
+            "daily" -> e.putInt("wallpaper_dim", 24).putInt("lock_glass", 72)
+                .putString("clock_style", "adaptive").putBoolean("clock_adaptive", true)
+                .putInt("clock_scale", 100).putBoolean("show_date", true)
+                .putBoolean("show_weather", true).putBoolean("show_battery_percent", true)
+                .putString("notification_density", "comfortable").putInt("notification_radius", 28)
+                .putInt("notification_glass", 72).putBoolean("show_media", true)
+                .putString("media_layout", "comfortable").putString("floating_unlock_gesture", "tap_or_slide")
+            "amoled" -> e.putInt("wallpaper_dim", 68).putInt("lock_glass", 88)
+                .putString("clock_style", "adaptive").putBoolean("clock_adaptive", true)
+                .putInt("clock_scale", 100).putBoolean("show_date", true)
+                .putBoolean("show_weather", true).putBoolean("show_battery_percent", true)
+                .putString("notification_density", "compact").putInt("notification_radius", 26)
+                .putInt("notification_glass", 88).putBoolean("show_media", true)
+                .putString("media_layout", "compact").putString("floating_unlock_gesture", "tap_or_slide")
+            "minimal" -> e.putInt("wallpaper_dim", 38).putInt("lock_glass", 82)
+                .putString("clock_style", "adaptive").putBoolean("clock_adaptive", true)
+                .putInt("clock_scale", 92).putBoolean("show_date", true)
+                .putBoolean("show_weather", false).putBoolean("show_battery_percent", false)
+                .putString("notification_density", "compact").putInt("notification_radius", 30)
+                .putInt("notification_glass", 84).putBoolean("show_media", false)
+                .putString("floating_unlock_gesture", "slide_only")
+            "night" -> e.putInt("wallpaper_dim", 58).putInt("lock_glass", 90)
+                .putString("clock_style", "adaptive").putBoolean("clock_adaptive", true)
+                .putInt("clock_scale", 96).putBoolean("show_date", true)
+                .putBoolean("show_weather", true).putBoolean("show_battery_percent", true)
+                .putString("notification_density", "compact").putInt("notification_radius", 32)
+                .putInt("notification_glass", 90).putBoolean("show_media", true)
+                .putString("media_layout", "compact").putString("floating_unlock_gesture", "slide_only")
+            else -> return
+        }
+        e.putString("active_profile", profile).apply()
+    }
+
+    fun activeProfile(context: Context) = prefs(context).getString("active_profile", "custom") ?: "custom"
+
     fun enabled(context: Context) = prefs(context).getBoolean("enabled", false)
     fun setEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean("enabled", value).apply()
     fun rootMode(context: Context) = prefs(context).getBoolean("root_mode", false)
