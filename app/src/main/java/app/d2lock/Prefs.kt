@@ -6,6 +6,40 @@ object Prefs {
     private const val FILE = "lock_preferences"
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
+    fun exportSettings(context: Context): String {
+        val excluded = setOf("enabled", "root_mode", "root_kiosk", "adb_recovery", "shizuku_enabled")
+        val json = org.json.JSONObject()
+        prefs(context).all.forEach { (key, value) ->
+            if (key !in excluded) when (value) {
+                is Boolean, is Int, is Long, is Float, is String -> json.put(key, value)
+            }
+        }
+        return json.toString(2)
+    }
+
+    fun importSettings(context: Context, raw: String): Int {
+        val excluded = setOf("enabled", "root_mode", "root_kiosk", "adb_recovery", "shizuku_enabled")
+        val json = org.json.JSONObject(raw)
+        val edit = prefs(context).edit()
+        var count = 0
+        val keys = json.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            if (key in excluded) continue
+            when (val value = json.get(key)) {
+                is Boolean -> edit.putBoolean(key, value)
+                is Int -> edit.putInt(key, value)
+                is Long -> edit.putLong(key, value)
+                is Double -> edit.putFloat(key, value.toFloat())
+                is String -> edit.putString(key, value)
+                else -> continue
+            }
+            count++
+        }
+        edit.apply()
+        return count
+    }
+
     fun enabled(context: Context) = prefs(context).getBoolean("enabled", false)
     fun setEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean("enabled", value).apply()
     fun rootMode(context: Context) = prefs(context).getBoolean("root_mode", false)
