@@ -42,6 +42,7 @@ import android.widget.Toast
 import app.d2lock.Prefs
 import app.d2lock.MainActivity
 import app.d2lock.root.RootKiosk
+import app.d2lock.root.KioskGuardian
 import app.d2lock.security.PinStore
 import app.d2lock.security.PinUi
 import app.d2lock.security.PatternStore
@@ -166,6 +167,7 @@ class LockScreenActivity : Activity() {
         if (!preview && Prefs.quickSettingsGuard(this)) handler.post(quickSettingsGuard)
         if (!preview && !unlocking && Prefs.kiosk(this)) {
             RootKiosk.attach(this) { kioskStatus.text = it }
+            KioskGuardian.start(this)
         }
     }
 
@@ -213,6 +215,7 @@ class LockScreenActivity : Activity() {
     override fun onBackPressed() { if (preview) finish() else authenticate() }
 
     override fun onDestroy() {
+        KioskGuardian.stop(this)
         RootKiosk.detach(this)
         wallpaperAnimations.forEach { it.cancel() }
         wallpaperAnimations.clear()
