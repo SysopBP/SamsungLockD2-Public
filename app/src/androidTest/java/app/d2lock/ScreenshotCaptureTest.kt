@@ -175,13 +175,13 @@ class ScreenshotCaptureTest {
     val dialogs=views(activity!!.window.decorView).toList()
     // PinUi is a separate window; dismiss the visible dialog through instrumentation before pattern preview.
    }
-   ui.pressBack(); SystemClock.sleep(400)
+   ui.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK); SystemClock.sleep(400)
    onMain {
     val dialog=PatternUi.show(activity!!,setup=true,success={})
     dialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
    }
    capture(scenario,"04-beta1-glass-pattern")
-   ui.pressBack(); SystemClock.sleep(400)
+   ui.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK); SystemClock.sleep(400)
    Appearance.set(ctx,"mode",3); Appearance.set(ctx,"accent",11); Appearance.set(ctx,"custom",0xffd8d8d8.toInt()); Appearance.set(ctx,"notifications",2)
    scenario.recreate()
    scenario.onActivity { activity=it }
