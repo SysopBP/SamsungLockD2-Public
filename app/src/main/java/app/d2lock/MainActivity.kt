@@ -981,9 +981,24 @@ class MainActivity : Activity() {
         })
         val actions = listOf("None", "Camera", "Flashlight")
         for (side in listOf("left", "right")) {
-            addChoice(floatingCard, "${side.replaceFirstChar { it.uppercase() }} action", actions,
-                actions.indexOf(Prefs.shortcut(this, side)).coerceAtLeast(0)) {
-                Prefs.setShortcut(this, side, actions[it])
+            val current = Prefs.shortcut(this, side)
+            val currentLabel = if (current.startsWith("app:")) {
+                val pkg = current.removePrefix("app:")
+                runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrDefault("Selected app")
+            } else current
+            addButton(floatingCard, "${side.replaceFirstChar { it.uppercase() }} shortcut · $currentLabel") {
+                val builtIns = arrayOf("None", "Camera", "Flashlight", "Choose an app…")
+                val dialog = AlertDialog.Builder(this)
+                    .setTitle("${side.replaceFirstChar { it.uppercase() }} shortcut")
+                    .setItems(builtIns) { _, which ->
+                        if (which < 3) {
+                            Prefs.setShortcut(this, side, builtIns[which])
+                            showD2Message("${builtIns[which]} shortcut selected")
+                            refreshAppearance()
+                        } else showAppShortcutPicker(side)
+                    }.setNegativeButton("Cancel", null).create()
+                dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this, 30f, 76, true)) }
+                dialog.show()
             }
         }
         section(root, "MAIN · ACCESS & PREVIEW")
@@ -1129,6 +1144,26 @@ class MainActivity : Activity() {
             setPadding(dp(4), dp(28), dp(4), dp(10))
         })
         return settingsHost(root)
+    }
+
+    private fun showAppShortcutPicker(side: String) {
+        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val apps = packageManager.queryIntentActivities(launcherIntent, PackageManager.MATCH_ALL)
+            .filter { it.activityInfo.packageName != packageName }
+            .distinctBy { it.activityInfo.packageName }
+            .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+        val labels = apps.map { it.loadLabel(packageManager).toString() }.toTypedArray()
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Choose an app")
+            .setItems(labels) { _, which ->
+                val info = apps[which]
+                Prefs.setShortcut(this, side, "app:${info.activityInfo.packageName}")
+                showD2Message("${info.loadLabel(packageManager)} shortcut selected")
+                refreshAppearance()
+            }
+            .setNegativeButton("Cancel", null).create()
+        dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this, 30f, 76, true)) }
+        dialog.show()
     }
 
     private fun settingsHost(root: LinearLayout): ViewGroup {
