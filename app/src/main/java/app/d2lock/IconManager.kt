@@ -62,6 +62,15 @@ object IconManager {
         }
     }
 
+    /** PackageManager alias states for diagnosing One UI launcher caching. */
+    fun diagnostic(context: Context): String {
+        val pm = context.packageManager
+        return options.joinToString(" | ") { option ->
+            val state = pm.getComponentEnabledSetting(component(context, option))
+            "${option.key}=$state"
+        }
+    }
+
     fun reset(context: Context) = apply(context, "silver")
 
     private fun component(context: Context, option: Option) = ComponentName(
