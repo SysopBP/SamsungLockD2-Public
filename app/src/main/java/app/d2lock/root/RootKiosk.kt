@@ -28,6 +28,14 @@ object RootKiosk {
     private var active = false
     private var message = "Kiosk inactive"
     internal val diagnostic: String get() = message
+    internal fun isEnforced() = active
+    internal fun reassert(activity: Activity) {
+        if (!active || activity.isDestroyed || activity.isFinishing) return
+        if (mode(activity) == ActivityManager.LOCK_TASK_MODE_LOCKED) return
+        runCatching { activity.startLockTask() }
+            .onSuccess { report("Kiosk Guardian • restoring secure lock") }
+            .onFailure { report("Kiosk Guardian could not restore lock: ${it.message}") }
+    }
     private var lastPulse = 0L
     private var detachedAt = 0L
     private fun mode(activity: Activity) = activity.getSystemService(ActivityManager::class.java).lockTaskModeState
