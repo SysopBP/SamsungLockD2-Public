@@ -434,15 +434,47 @@ class MainActivity : Activity() {
             Toast.makeText(this, "Titanium Graphite restored", Toast.LENGTH_SHORT).show()
         }
         addButton(root, "Icon diagnostics") {
-            android.app.AlertDialog.Builder(this)
-                .setTitle("D2 launcher icon diagnostics")
-                .setMessage(
-                    "Saved selection: " + IconManager.selected(this) +
-                        "\n\nPackageManager states:\n" + IconManager.diagnostic(this) +
-                        "\n\nState values: 0=default, 1=enabled, 2=disabled."
-                )
+            val diagnosticContent = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(20), dp(8), dp(20), dp(10))
+                addView(TextView(this@MainActivity).apply {
+                    text = "Saved selection"
+                    textSize = 13f
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = IconManager.selected(this@MainActivity).replaceFirstChar { it.uppercase() }
+                    textSize = 18f
+                    setTextColor(Appearance.accent(this@MainActivity))
+                    setPadding(0, dp(2), 0, dp(14))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = "PACKAGE MANAGER STATES"
+                    textSize = 12f
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = IconManager.diagnostic(this@MainActivity)
+                    textSize = 15f
+                    setTextColor(Appearance.text(this@MainActivity))
+                    setPadding(0, dp(5), 0, dp(12))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = "0 = default   ·   1 = enabled   ·   2 = disabled"
+                    textSize = 12f
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                })
+            }
+            val dialog = AlertDialog.Builder(this)
+                .setTitle("Icon diagnostics")
+                .setView(diagnosticContent)
                 .setPositiveButton("OK", null)
-                .show()
+                .create()
+            dialog.setOnShowListener {
+                dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true))
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(this@MainActivity))
+            }
+            dialog.show()
         }
         root.addView(TextView(this).apply {
             text = "Choose the D2 Titanium launcher color. If One UI keeps the previous icon, open Icon diagnostics and send the state shown there."
