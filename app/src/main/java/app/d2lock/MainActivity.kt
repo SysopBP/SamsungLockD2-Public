@@ -1017,6 +1017,71 @@ class MainActivity : Activity() {
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(4), dp(2), dp(4), dp(12))
         })
+        addButton(root, "Save current as custom profile") {
+            val input = android.widget.EditText(this).apply {
+                hint = "Profile name"
+                setSingleLine()
+                setTextColor(Appearance.text(this@MainActivity))
+                setHintTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(dp(16), dp(12), dp(16), dp(12))
+                background = Appearance.glass(this@MainActivity, 24f, 34, true)
+            }
+            val dialog = AlertDialog.Builder(this)
+                .setTitle("Save custom profile")
+                .setView(input)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Save", null)
+                .create()
+            dialog.setOnShowListener {
+                dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true))
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(this@MainActivity))
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setOnClickListener {
+                    val name = input.text.toString().trim()
+                    if (name.isBlank()) showD2Message("Enter a profile name")
+                    else {
+                        Prefs.saveCustomProfile(this@MainActivity, name)
+                        dialog.dismiss()
+                        showD2Message("$name profile saved")
+                        refreshAppearance()
+                    }
+                }
+            }
+            dialog.show()
+        }
+        val customProfiles = Prefs.customProfileNames(this)
+        if (customProfiles.isNotEmpty()) {
+            addButton(root, "Load custom profile") {
+                val names = Prefs.customProfileNames(this)
+                val dialog = AlertDialog.Builder(this)
+                    .setTitle("Custom profiles")
+                    .setItems(names.toTypedArray()) { _, which ->
+                        val name = names[which]
+                        if (Prefs.applyCustomProfile(this, name)) {
+                            showD2Message("$name profile applied")
+                            refreshAppearance()
+                        }
+                    }.setNegativeButton("Cancel", null).create()
+                dialog.setOnShowListener {
+                    dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true))
+                }
+                dialog.show()
+            }
+            addButton(root, "Delete custom profile") {
+                val names = Prefs.customProfileNames(this)
+                val dialog = AlertDialog.Builder(this)
+                    .setTitle("Delete custom profile")
+                    .setItems(names.toTypedArray()) { _, which ->
+                        val name = names[which]
+                        Prefs.deleteCustomProfile(this, name)
+                        showD2Message("$name profile deleted")
+                        refreshAppearance()
+                    }.setNegativeButton("Cancel", null).create()
+                dialog.setOnShowListener {
+                    dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true))
+                }
+                dialog.show()
+            }
+        }
 
         section(root, "BACKUP & RESTORE")
         addButton(root, "Copy settings backup") {
