@@ -1025,10 +1025,25 @@ class MainActivity : Activity() {
                 type = "image/*"
             }, appWallpaperPicker)
         }
-        addSlider(root, "D2 background dim", 0, 90, Prefs.appWallpaperDim(this)) {
-            Prefs.setAppWallpaperDim(this, it)
-            refreshAppearance()
-        }
+        root.addView(TextView(this).apply {
+            text = "D2 background dim: ${Prefs.appWallpaperDim(this@MainActivity)}%"
+            textSize = 14f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            tag = "d2_app_wallpaper_dim_label"
+        })
+        root.addView(SeekBar(this).apply {
+            max = 90
+            progress = Prefs.appWallpaperDim(this@MainActivity)
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    Prefs.setAppWallpaperDim(this@MainActivity, value)
+                    root.findViewWithTag<TextView>("d2_app_wallpaper_dim_label")?.text = "D2 background dim: $value%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) { refreshAppearance() }
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
         addButton(root, "Reset D2 app wallpaper") {
             Prefs.clearAppWallpaper(this)
             showD2Message("D2 app wallpaper reset")
