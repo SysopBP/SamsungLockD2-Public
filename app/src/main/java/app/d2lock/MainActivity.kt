@@ -1001,6 +1001,16 @@ class MainActivity : Activity() {
         addButton(root, "Preview lock screen") {
             startActivity(Intent(this, LockScreenActivity::class.java).putExtra("preview", true))
         }
+        section(root, "LOCK-SCREEN PROFILES")
+        addChoice(root, "Profile", Prefs.activeProfile(this).replaceFirstChar { it.uppercase() },
+            listOf("Daily", "AMOLED", "Minimal", "Night"),
+            listOf("daily", "amoled", "minimal", "night")) { value ->
+            Prefs.applyProfile(this, value)
+            showD2Message("${value.replaceFirstChar { it.uppercase() }} profile applied")
+            refreshAppearance()
+        }
+        addSecondary(root, "Profiles instantly tune the clock, glass, wallpaper dimming, notifications, media and Floating Bar behavior. Individual changes remain available afterward.")
+
         section(root, "BACKUP & RESTORE")
         addButton(root, "Copy settings backup") {
             val backup = Prefs.exportSettings(this)
