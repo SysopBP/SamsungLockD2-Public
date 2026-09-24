@@ -14,11 +14,15 @@ data class CallNotification(val key: String, val controls: List<CallControl>, va
 /** Phone controls stay separate from message previews; no caller name or number is stored. */
 object CallNotificationStore {
     val items = CopyOnWriteArrayList<CallNotification>()
+    @Volatile var onChanged: (() -> Unit)? = null
 
     fun update(sbn: StatusBarNotification, allowedPackages: Set<String>) {
         items.removeAll { it.key == sbn.key }
         val notification = sbn.notification
-        if (sbn.packageName !in allowedPackages || notification.category != Notification.CATEGORY_CALL) return
+        if (sbn.packageName !in allowedPackages || notification.category != Notification.CATEGORY_CALL) {
+            onChanged?.invoke()
+            return
+        }
         // A notification cannot delegate lock-screen access to an unrelated intent creator.
         fun trusted(intent: PendingIntent?) = intent?.takeIf { it.creatorPackage in allowedPackages }
         val controls = notification.actions.orEmpty().mapNotNull { action ->
@@ -27,6 +31,7 @@ object CallNotificationStore {
         }.take(3)
         val open = trusted(notification.contentIntent) ?: trusted(notification.fullScreenIntent)
         if (controls.isNotEmpty() || open != null) items.add(CallNotification(sbn.key, controls, open))
+        onChanged?.invoke()
     }
 
     fun send(activity: Activity, pending: PendingIntent) {
