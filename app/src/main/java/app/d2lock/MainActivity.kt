@@ -475,11 +475,11 @@ class MainActivity : Activity() {
             IconManager.apply(this, option.key)
             iconPreviewImage.setImageResource(IconManager.iconResource(option.key))
             iconPreviewText.text = option.label
-            Toast.makeText(this, "${option.label} applied", Toast.LENGTH_SHORT).show()
+            showD2Message("${option.label} applied")
         }
         addButton(root, "Reset Titanium icon") {
             IconManager.reset(this)
-            Toast.makeText(this, "Titanium Graphite restored", Toast.LENGTH_SHORT).show()
+            showD2Message("Titanium Graphite restored")
         }
         addButton(root, "Icon diagnostics") {
             val diagnosticContent = LinearLayout(this).apply {
@@ -791,7 +791,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(weatherLocation, LinearLayout.LayoutParams(-1, dp(56)).apply { bottomMargin = dp(8) })
         addButton(appearanceCard, "Save primary weather location") {
             Prefs.setWeatherLocation(this, weatherLocation.text.toString())
-            Toast.makeText(this, if (weatherLocation.text.isNullOrBlank()) "Weather set to automatic location" else "Primary weather location saved", Toast.LENGTH_SHORT).show()
+            showD2Message(if (weatherLocation.text.isNullOrBlank()) "Weather set to automatic location" else "Primary weather location saved")
         }
         appearanceCard.addView(TextView(this).apply {
             text = "Leave Primary Location blank to use the device location. Enter a city, postcode, or city + country/region for global weather."
@@ -983,6 +983,37 @@ class MainActivity : Activity() {
         settings.post { (settings as? ScrollView)?.scrollTo(0, y) }
     }
 
+    private fun showD2Message(message: String, duration: Long = 2200L) {
+        val host = findViewById<ViewGroup>(android.R.id.content) ?: return
+        host.findViewWithTag<android.view.View>("d2_glass_message")?.let { host.removeView(it) }
+        val bubble = TextView(this).apply {
+            tag = "d2_glass_message"
+            text = message
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(18), dp(12), dp(18), dp(12))
+            background = Appearance.glass(this@MainActivity, 26f, 72, true)
+            elevation = dp(22).toFloat()
+            alpha = 0f
+            translationY = dp(16).toFloat()
+        }
+        host.addView(bubble, ViewGroup.LayoutParams(-1, -2))
+        bubble.post {
+            val params = bubble.layoutParams
+            if (params is android.widget.FrameLayout.LayoutParams) {
+                params.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                params.setMargins(dp(24), 0, dp(24), dp(30))
+                bubble.layoutParams = params
+            }
+            bubble.animate().alpha(1f).translationY(0f).setDuration(180).start()
+            bubble.postDelayed({
+                bubble.animate().alpha(0f).translationY(dp(12).toFloat()).setDuration(160)
+                    .withEndAction { runCatching { host.removeView(bubble) } }.start()
+            }, duration)
+        }
+    }
+
     private fun addButton(parent: LinearLayout, label: String, action: () -> Unit) {
         parent.addView(Button(this).apply {
             text = "$label   ›"
@@ -1049,7 +1080,7 @@ class MainActivity : Activity() {
                         Shizuku.requestPermission(shizukuRequestCode)
                     } else {
                         refreshShizukuUi()
-                        Toast.makeText(this@MainActivity, "Shizuku is connected and authorized", Toast.LENGTH_SHORT).show()
+                        showD2Message("Shizuku is connected and authorized")
                     }
                 }
             }, LinearLayout.LayoutParams(-1, dp(50)))
@@ -1206,7 +1237,7 @@ class MainActivity : Activity() {
         if (requestCode == wallpaperPicker && resultCode == RESULT_OK) data?.data?.let { uri ->
             contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             Prefs.setWallpaper(this, uri.toString())
-            Toast.makeText(this, "Wallpaper saved", Toast.LENGTH_SHORT).show()
+            showD2Message("Wallpaper saved")
         }
     }
 }
