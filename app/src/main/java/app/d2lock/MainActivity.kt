@@ -956,6 +956,45 @@ class MainActivity : Activity() {
         addButton(root, "Preview lock screen") {
             startActivity(Intent(this, LockScreenActivity::class.java).putExtra("preview", true))
         }
+        section(root, "BACKUP & RESTORE")
+        addButton(root, "Copy settings backup") {
+            val backup = Prefs.exportSettings(this)
+            val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("D2 settings backup", backup))
+            showD2Message("D2 settings backup copied")
+        }
+        addButton(root, "Restore settings backup") {
+            val input = android.widget.EditText(this).apply {
+                hint = "Paste D2 settings backup"
+                minLines = 5
+                maxLines = 10
+                setTextColor(Appearance.text(this@MainActivity))
+                setHintTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(dp(16), dp(12), dp(16), dp(12))
+                background = Appearance.glass(this@MainActivity, 24f, 34, true)
+            }
+            val dialog = AlertDialog.Builder(this)
+                .setTitle("Restore D2 settings")
+                .setMessage("Appearance and lock-screen preferences will be restored. Root, kiosk, ADB recovery, Shizuku state, and D2 enabled state are intentionally not imported.")
+                .setView(input)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Restore", null)
+                .create()
+            dialog.setOnShowListener {
+                dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true))
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(this@MainActivity))
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setOnClickListener {
+                    runCatching { Prefs.importSettings(this@MainActivity, input.text.toString()) }
+                        .onSuccess { count ->
+                            dialog.dismiss()
+                            showD2Message("Restored $count D2 settings")
+                            refreshAppearance()
+                        }
+                        .onFailure { showD2Message("Backup is not valid D2 settings") }
+                }
+            }
+            dialog.show()
+        }
         root.addView(TextView(this).apply {
             text = "Double-tap the D2 button or its home-screen widget to open the PIN screen. Taps elsewhere on the home screen are controlled by your launcher.\\n\\nD2 uses its own PIN and does not turn the display off. Optional kiosk mode uses Android task restrictions and interacts with keyguard internally.\\n\\nWithout active kiosk, Home/Recents can bypass D2. Root, recovery, and reboot remain bypasses in either mode. D2 cannot repair firmware or guarantee prevention of download-mode errors."
             textSize = 14f
