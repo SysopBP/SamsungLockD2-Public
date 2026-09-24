@@ -27,6 +27,7 @@ import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.view.updateLayoutParams
 import app.d2lock.lockscreen.LockScreenActivity
 import app.d2lock.lockscreen.LockScreenService
 import app.d2lock.root.RootManager
@@ -101,7 +102,7 @@ class MainActivity : Activity() {
     private fun buildSettings(): ViewGroup {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(22), dp(56), dp(22), dp(32))
+            setPadding(dp(22), dp(56), dp(22), dp(118))
             setBackgroundColor(Appearance.background(this@MainActivity))
         }
         root.addView(TextView(this).apply {
@@ -153,7 +154,7 @@ class MainActivity : Activity() {
                 })
                 setOnClickListener {
                     root.findViewWithTag<android.view.View>(target)?.let { view ->
-                        (root.parent as? ScrollView)?.smoothScrollTo(0, view.top)
+                        ((root.parent as? ScrollView))?.smoothScrollTo(0, view.top)
                     }
                 }
             }
@@ -294,7 +295,7 @@ class MainActivity : Activity() {
                     query.contains("theme") || query.contains("glass") || query.contains("wallpaper") || query.contains("media") -> "app_theme"
                     else -> "main_settings"
                 }
-                root.findViewWithTag<android.view.View>(target)?.let { view -> root.parent?.let { (it as? ScrollView)?.smoothScrollTo(0, view.top) } }
+                root.findViewWithTag<android.view.View>(target)?.let { view -> (root.parent as? ScrollView)?.smoothScrollTo(0, view.top) }
             }
             true
         }
@@ -961,17 +962,69 @@ class MainActivity : Activity() {
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(4), dp(28), dp(4), dp(10))
         })
-        return settingsScroll(root)
+        return settingsHost(root)
     }
 
-    private fun settingsScroll(root: LinearLayout) = ScrollView(this).apply {
-        addView(root)
-        setBackgroundColor(Appearance.background(this@MainActivity))
-        setOnApplyWindowInsetsListener { view, insets ->
+    private fun settingsHost(root: LinearLayout): ViewGroup {
+        val host = android.widget.FrameLayout(this).apply {
+            setBackgroundColor(Appearance.background(this@MainActivity))
+        }
+        val scroll = ScrollView(this).apply { addView(root) }
+        host.addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
+
+        val nav = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(dp(8), dp(7), dp(8), dp(7))
+            background = Appearance.glass(this@MainActivity, 34f, 78, true)
+            elevation = dp(24).toFloat()
+        }
+        val destinations = listOf(
+            Triple("⌂", "Main", "main_settings"),
+            Triple("◷", "Clock", "clock_weather"),
+            Triple("▣", "Alerts", "notifications"),
+            Triple("✦", "Theme", "app_theme"),
+            Triple("—", "Bar", "floating_bar")
+        )
+        destinations.forEachIndexed { index, (icon, label, target) ->
+            nav.addView(LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                isClickable = true
+                isFocusable = true
+                contentDescription = label
+                background = if (index == 0) Appearance.glass(this@MainActivity, 26f, 42, true) else null
+                addView(TextView(this@MainActivity).apply {
+                    text = icon; textSize = 20f; gravity = Gravity.CENTER
+                    setTextColor(Appearance.text(this@MainActivity))
+                }, LinearLayout.LayoutParams(-1, dp(28)))
+                addView(TextView(this@MainActivity).apply {
+                    text = label; textSize = 11f; gravity = Gravity.CENTER
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                }, LinearLayout.LayoutParams(-1, dp(20)))
+                setOnClickListener {
+                    root.findViewWithTag<android.view.View>(target)?.let { view ->
+                        scroll.smoothScrollTo(0, view.top)
+                    }
+                    for (i in 0 until nav.childCount) nav.getChildAt(i).background = null
+                    background = Appearance.glass(this@MainActivity, 26f, 42, true)
+                    animate().scaleX(0.94f).scaleY(0.94f).setDuration(70).withEndAction {
+                        animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+                    }.start()
+                }
+            }, LinearLayout.LayoutParams(0, dp(60), 1f).apply {
+                if (index > 0) marginStart = dp(2)
+            })
+        }
+        host.addView(nav, android.widget.FrameLayout.LayoutParams(-1, dp(74), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
+            setMargins(dp(18), 0, dp(18), dp(18))
+        })
+        host.setOnApplyWindowInsetsListener { _, insets ->
             val bars = insets.getInsets(android.view.WindowInsets.Type.systemBars())
-            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            nav.updateLayoutParams<android.widget.FrameLayout.LayoutParams> { bottomMargin = dp(18) + bars.bottom }
             insets
         }
+        return host
     }
 
     private fun refreshAppearance() {
