@@ -230,7 +230,12 @@ class LockScreenActivity : Activity() {
         Prefs.wallpaper(this)?.let { saved ->
             frame.addView(ImageView(this).apply {
                 scaleType = ImageView.ScaleType.CENTER_CROP
-                alpha = .72f
+                alpha = if (Prefs.wallpaperAmoled(this@LockScreenActivity)) .58f else .72f
+                val zoom = Prefs.wallpaperZoom(this@LockScreenActivity) / 100f
+                scaleX = zoom
+                scaleY = zoom
+                translationX = dp(Prefs.wallpaperOffsetX(this@LockScreenActivity)).toFloat()
+                translationY = dp(Prefs.wallpaperOffsetY(this@LockScreenActivity)).toFloat()
                 val wallpaperView = this
                 wallpaperExecutor.execute {
                     val bitmap = runCatching { WallpaperDecoder.decode(applicationContext, Uri.parse(saved)) }.getOrNull()
@@ -241,7 +246,7 @@ class LockScreenActivity : Activity() {
                             wallpaperView.setImageBitmap(bitmap)
                             if (Prefs.wallpaperParallax(this@LockScreenActivity)) {
                                 listOf(View.SCALE_X, View.SCALE_Y).forEach { property ->
-                                    wallpaperAnimations += ObjectAnimator.ofFloat(wallpaperView, property, 1f, 1.06f).apply {
+                                    wallpaperAnimations += ObjectAnimator.ofFloat(wallpaperView, property, zoom, zoom + .06f).apply {
                                         duration = 14000
                                         repeatCount = ValueAnimator.INFINITE
                                         repeatMode = ValueAnimator.REVERSE
@@ -256,7 +261,7 @@ class LockScreenActivity : Activity() {
                     }
                 }
             }, FrameLayout.LayoutParams(-1, -1))
-            val dim = Prefs.wallpaperDim(this)
+            val dim = (Prefs.wallpaperDim(this) + if (Prefs.wallpaperAmoled(this)) 18 else 0).coerceAtMost(90)
             if (dim > 0) frame.addView(View(this).apply {
                 setBackgroundColor(Color.argb((255f * dim / 100f).toInt(), 0, 0, 0))
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
