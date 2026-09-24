@@ -41,6 +41,7 @@ import rikka.shizuku.Shizuku
 
 class MainActivity : Activity() {
     private val wallpaperPicker = 701
+    private val appWallpaperPicker = 702
     private var authorized = false
     private var pinDialog: AlertDialog? = null
     private val shizukuRequestCode = 910
@@ -147,7 +148,7 @@ class MainActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(22), dp(56), dp(22), dp(118))
-            setBackgroundColor(Appearance.background(this@MainActivity))
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
         }
         root.addView(TextView(this).apply {
             text = "Samsung Lock D2"
@@ -1223,7 +1224,18 @@ class MainActivity : Activity() {
         val host = android.widget.FrameLayout(this).apply {
             setBackgroundColor(Appearance.background(this@MainActivity))
         }
-        val scroll = ScrollView(this).apply { tag = "settings_scroll"; addView(root) }
+        Prefs.appWallpaper(this)?.let { saved ->
+            host.addView(ImageView(this).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                alpha = 1f
+                runCatching { setImageURI(Uri.parse(saved)) }
+            }, android.widget.FrameLayout.LayoutParams(-1, -1))
+            val dim = Prefs.appWallpaperDim(this)
+            if (dim > 0) host.addView(android.view.View(this).apply {
+                setBackgroundColor(Color.argb((255f * dim / 100f).toInt(), 0, 0, 0))
+            }, android.widget.FrameLayout.LayoutParams(-1, -1))
+        }
+        val scroll = ScrollView(this).apply { tag = "settings_scroll"; setBackgroundColor(Color.TRANSPARENT); addView(root) }
         host.addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
 
         val nav = LinearLayout(this).apply {
@@ -1570,6 +1582,12 @@ class MainActivity : Activity() {
             contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             Prefs.setWallpaper(this, uri.toString())
             showD2Message("Wallpaper saved")
+        }
+        if (requestCode == appWallpaperPicker && resultCode == RESULT_OK) data?.data?.let { uri ->
+            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            Prefs.setAppWallpaper(this, uri.toString())
+            showD2Message("App background saved")
+            refreshAppearance()
         }
     }
 }
