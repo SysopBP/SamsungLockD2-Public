@@ -16,7 +16,7 @@ data class LiveHubCard(
     val subtitle: String = "",
     val progress: Float? = null,
     val priority: Int = defaultPriority(kind),
-    val updatedAt: Long = android.os.SystemClock.elapsedRealtime()
+    val updatedAt: Long = System.currentTimeMillis()
 ) {
     companion object {
         fun defaultPriority(kind: LiveHubKind) = when (kind) {
