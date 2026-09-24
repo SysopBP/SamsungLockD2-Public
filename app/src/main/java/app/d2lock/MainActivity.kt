@@ -73,14 +73,59 @@ class MainActivity : Activity() {
                         runCatching { LockScreenService.start(this) }
                     }
                     setContentView(buildSettings())
+                    maybeShowWhatsNew()
                 }, cancel = { finish() })
             } else {
                 // Upgrades must not leave the old unprotected service enabled.
                 Prefs.setEnabled(this, false)
                 LockScreenService.stop(this)
                 setContentView(buildSettings())
+                maybeShowWhatsNew()
             }
         }
+    }
+
+    private fun maybeShowWhatsNew() {
+        val version = runCatching {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "current"
+        }.getOrDefault("current")
+        val prefs = getSharedPreferences("d2_whats_new", MODE_PRIVATE)
+        if (prefs.getString("shown_version", "") == version) return
+
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), dp(8))
+            addView(TextView(this@MainActivity).apply {
+                text = "D2 $version"
+                textSize = 13f
+                setTextColor(Appearance.accent(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = "New in this build"
+                textSize = 22f
+                setTextColor(Appearance.text(this@MainActivity))
+                setPadding(0, dp(4), 0, dp(12))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = "• Floating glass settings navigation\n• Settings search\n• UI9 glass confirmation messages\n• Tap or slide Floating Bar unlock\n• Launcher icon preview and diagnostics\n• Settings backup and restore"
+                textSize = 15f
+                setLineSpacing(dp(4).toFloat(), 1f)
+                setTextColor(Appearance.text(this@MainActivity))
+            })
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("What's New")
+            .setView(content)
+            .setPositiveButton("Got it") { _, _ ->
+                prefs.edit().putString("shown_version", version).apply()
+            }
+            .create()
+        dialog.setOnCancelListener { prefs.edit().putString("shown_version", version).apply() }
+        dialog.setOnShowListener {
+            dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 32f, 82, true))
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(this@MainActivity))
+        }
+        dialog.show()
     }
 
     override fun onDestroy() {
