@@ -12,6 +12,7 @@ data class CallControl(val label: String, val intent: PendingIntent)
 data class CallNotification(val key: String, val controls: List<CallControl>, val open: PendingIntent?)
 
 /** Phone controls stay separate from message previews; no caller name or number is stored. */
+// CI: incoming-call lock-screen controls
 object CallNotificationStore {
     val items = CopyOnWriteArrayList<CallNotification>()
     @Volatile var onChanged: (() -> Unit)? = null
