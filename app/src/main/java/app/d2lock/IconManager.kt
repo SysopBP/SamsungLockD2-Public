@@ -3,6 +3,7 @@ package app.d2lock
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 
 object IconManager {
     data class Option(val key: String, val label: String, val alias: String)
@@ -26,39 +27,50 @@ object IconManager {
     fun apply(context: Context, key: String) {
         val selected = options.firstOrNull { it.key == key } ?: options.first()
         val pm = context.packageManager
-        val selectedComponent = component(context, selected)
 
-        // Store first so a process restart caused by a launcher/package refresh cannot
-        // revert the selection to the previous icon.
+        // Persist before touching launcher components so a package refresh/process restart
+        // cannot restore the previous selection.
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(KEY, selected.key).commit()
 
-        // Explicitly enable the destination first, then disable every other alias.
-        // COMPONENT_ENABLED_STATE_DEFAULT is deliberately avoided: TitaniumPurple is
-        // enabled in the manifest, so resetting it to DEFAULT can make it reappear.
-        pm.setComponentEnabledSetting(
-            selectedComponent,
-            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-            PackageManager.DONT_KILL_APP
-        )
-        options.filterNot { it.key == selected.key }.forEach { option ->
-            pm.setComponentEnabledSetting(
-                component(context, option),
-                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                PackageManager.DONT_KILL_APP
-            )
-        }
-
-        // A second pass makes the final package-manager state deterministic on One UI.
-        options.forEach { option ->
-            val wanted = if (option.key == selected.key)
-                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-            else
-                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-            val name = component(context, option)
-            if (pm.getComponentEnabledSetting(name) != wanted) {
-                pm.setComponentEnabledSetting(name, wanted, PackageManager.DONT_KILL_APP)
+        // API 33+ can change all aliases atomically. This avoids One UI briefly seeing
+        // multiple launcher activities (or none), which can leave its cached icon stale.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val settings = options.map { option ->
+                PackageManager.ComponentEnabledSetting(
+                    component(context, option),
+                    if (option.key == selected.key)
+                        PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                    else
+                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    PackageManager.SYNCHRONOUS
+                )
             }
+            pm.setComponentEnabledSettings(settings)
+        } else {
+            // Older Android fallback: enable destination first, then synchronously disable
+            // the remaining launcher aliases.
+            pm.setComponentEnabledSetting(
+                component(context, selected),
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                PackageManager.SYNCHRONOUS
+            )
+            options.filterNot { it.key == selected.key }.forEach { option ->
+                pm.setComponentEnabledSetting(
+                    component(context, option),
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    PackageManager.SYNCHRONOUS
+                )
+            }
+        }
+    }
+
+    /** Current package-manager alias states, useful when diagnosing launcher caching. */
+    fun diagnostic(context: Context): String {
+        val pm = context.packageManager
+        return options.joinToString(" | ") { option ->
+            val state = pm.getComponentEnabledSetting(component(context, option))
+            "${option.key}=$state"
         }
     }
 
