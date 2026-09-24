@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="d2_icon_purple">#5B21B6</color>
-    <color name="d2_icon_blue">#1D4ED8</color>
-    <color name="d2_icon_red">#B91C1C</color>
-    <color name="d2_icon_green">#047857</color>
-    <color name="d2_icon_gold">#A16207</color>
-    <color name="d2_icon_silver">#64748B</color>
-    <color name="d2_icon_amoled">#000000</color>
+    <color name="d2_icon_purple">#6D42D8</color>
+    <color name="d2_icon_blue">#0877E8</color>
+    <color name="d2_icon_red">#8E1838</color>
+    <color name="d2_icon_green">#0B8A67</color>
+    <color name="d2_icon_gold">#A87818</color>
+    <color name="d2_icon_silver">#3E4754</color>
+    <color name="d2_icon_amoled">#050507</color>
 </resources>

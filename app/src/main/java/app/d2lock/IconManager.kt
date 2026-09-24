@@ -8,64 +8,64 @@ object IconManager {
     data class Option(val key: String, val label: String, val alias: String)
 
     val options = listOf(
+        Option("silver", "Titanium Graphite", "TitaniumSilver"),
+        Option("red", "Wine Red", "TitaniumRed"),
+        Option("blue", "Samsung Blue", "TitaniumBlue"),
         Option("purple", "Titanium Purple", "TitaniumPurple"),
-        Option("blue", "Titanium Blue", "TitaniumBlue"),
-        Option("red", "Titanium Red", "TitaniumRed"),
-        Option("green", "Titanium Green", "TitaniumGreen"),
+        Option("green", "Emerald", "TitaniumGreen"),
         Option("gold", "Titanium Gold", "TitaniumGold"),
-        Option("silver", "Titanium Silver", "TitaniumSilver"),
-        Option("amoled", "Titanium AMOLED", "TitaniumAmoled"),
+        Option("amoled", "AMOLED Black", "TitaniumAmoled"),
     )
 
     private const val PREFS = "d2_launcher_icon"
     private const val KEY = "selected"
 
     fun selected(context: Context): String =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, "purple") ?: "purple"
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, "silver") ?: "silver"
 
     fun apply(context: Context, key: String) {
         val selected = options.firstOrNull { it.key == key } ?: options.first()
         val pm = context.packageManager
-        // Enable the destination alias first. Disabling the currently active alias before
-        // enabling its replacement can briefly leave the package with no LAUNCHER component,
-        // which causes One UI Home to drop the app icon.
-        val selectedComponent = ComponentName(
-            context.packageName,
-            context.packageName + ".launcher." + selected.alias
-        )
+        val selectedComponent = component(context, selected)
+
+        // Store first so a process restart caused by a launcher/package refresh cannot
+        // revert the selection to the previous icon.
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString(KEY, selected.key).commit()
+
+        // Explicitly enable the destination first, then disable every other alias.
+        // COMPONENT_ENABLED_STATE_DEFAULT is deliberately avoided: TitaniumPurple is
+        // enabled in the manifest, so resetting it to DEFAULT can make it reappear.
         pm.setComponentEnabledSetting(
             selectedComponent,
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
             PackageManager.DONT_KILL_APP
         )
-
-        options.filter { it != selected }.forEach { option ->
+        options.filterNot { it.key == selected.key }.forEach { option ->
             pm.setComponentEnabledSetting(
-                ComponentName(context.packageName, context.packageName + ".launcher." + option.alias),
+                component(context, option),
                 PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                 PackageManager.DONT_KILL_APP
             )
         }
 
-        // Persist synchronously before the launcher reacts to the component change.
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit()
-            .putString(KEY, selected.key)
-            .commit()
-
-        // ACTION_PACKAGE_CHANGED is a protected package-manager broadcast on modern
-        // Android/Samsung builds. Alias toggling itself is the supported launcher signal.
-        // Verify the selected alias remains enabled after the switch.
-        if (pm.getComponentEnabledSetting(selectedComponent) !=
-            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-        ) {
-            pm.setComponentEnabledSetting(
-                selectedComponent,
-                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                PackageManager.DONT_KILL_APP
-            )
+        // A second pass makes the final package-manager state deterministic on One UI.
+        options.forEach { option ->
+            val wanted = if (option.key == selected.key)
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            else
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            val name = component(context, option)
+            if (pm.getComponentEnabledSetting(name) != wanted) {
+                pm.setComponentEnabledSetting(name, wanted, PackageManager.DONT_KILL_APP)
+            }
         }
     }
 
-    fun reset(context: Context) = apply(context, "purple")
+    fun reset(context: Context) = apply(context, "silver")
+
+    private fun component(context: Context, option: Option) = ComponentName(
+        context.packageName,
+        context.packageName + ".launcher." + option.alias
+    )
 }
