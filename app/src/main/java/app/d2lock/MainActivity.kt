@@ -128,6 +128,7 @@ class MainActivity : Activity() {
         root.addView(settingsSearch, LinearLayout.LayoutParams(-1, dp(54)).apply { bottomMargin = dp(16) })
 
         section(root, "SETTINGS")
+        root.getChildAt(root.childCount - 1).tag = "settings"
         val categories = listOf(
             Triple("Main", "Security, access & preview", "main_settings"),
             Triple("Clock & Weather", "Clock style, global weather & location", "clock_weather"),
@@ -983,7 +984,8 @@ class MainActivity : Activity() {
             Triple("◷", "Clock", "clock_weather"),
             Triple("▣", "Alerts", "notifications"),
             Triple("✦", "Theme", "app_theme"),
-            Triple("—", "Bar", "floating_bar")
+            Triple("—", "Bar", "floating_bar"),
+            Triple("⚙", "Settings", "settings")
         )
         destinations.forEachIndexed { index, (icon, label, target) ->
             nav.addView(LinearLayout(this).apply {
