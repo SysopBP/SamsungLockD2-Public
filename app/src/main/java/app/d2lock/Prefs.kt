@@ -78,6 +78,59 @@ object Prefs {
 
     fun activeProfile(context: Context) = prefs(context).getString("active_profile", "custom") ?: "custom"
 
+    private val profileExcluded = setOf("enabled", "root_mode", "root_kiosk", "adb_recovery", "shizuku_enabled", "active_profile")
+
+    fun customProfileNames(context: Context): List<String> {
+        val raw = prefs(context).getString("custom_profiles", "{}") ?: "{}"
+        val json = runCatching { org.json.JSONObject(raw) }.getOrDefault(org.json.JSONObject())
+        return buildList {
+            val keys = json.keys()
+            while (keys.hasNext()) add(keys.next())
+        }.sorted()
+    }
+
+    fun saveCustomProfile(context: Context, name: String) {
+        val clean = name.trim().take(32)
+        require(clean.isNotBlank())
+        val store = runCatching { org.json.JSONObject(prefs(context).getString("custom_profiles", "{}") ?: "{}") }
+            .getOrDefault(org.json.JSONObject())
+        val snapshot = org.json.JSONObject()
+        prefs(context).all.forEach { (key, value) ->
+            if (key !in profileExcluded && key != "custom_profiles") when (value) {
+                is Boolean, is Int, is Long, is Float, is String -> snapshot.put(key, value)
+            }
+        }
+        store.put(clean, snapshot)
+        prefs(context).edit().putString("custom_profiles", store.toString()).putString("active_profile", "custom:$clean").apply()
+    }
+
+    fun applyCustomProfile(context: Context, name: String): Boolean {
+        val store = runCatching { org.json.JSONObject(prefs(context).getString("custom_profiles", "{}") ?: "{}") }.getOrNull() ?: return false
+        val snapshot = store.optJSONObject(name) ?: return false
+        val edit = prefs(context).edit()
+        val keys = snapshot.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            when (val value = snapshot.get(key)) {
+                is Boolean -> edit.putBoolean(key, value)
+                is Int -> edit.putInt(key, value)
+                is Long -> edit.putLong(key, value)
+                is Double -> edit.putFloat(key, value.toFloat())
+                is String -> edit.putString(key, value)
+            }
+        }
+        edit.putString("active_profile", "custom:$name").apply()
+        return true
+    }
+
+    fun deleteCustomProfile(context: Context, name: String) {
+        val store = runCatching { org.json.JSONObject(prefs(context).getString("custom_profiles", "{}") ?: "{}") }.getOrNull() ?: return
+        store.remove(name)
+        val e = prefs(context).edit().putString("custom_profiles", store.toString())
+        if (activeProfile(context) == "custom:$name") e.putString("active_profile", "custom")
+        e.apply()
+    }
+
     fun enabled(context: Context) = prefs(context).getBoolean("enabled", false)
     fun setEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean("enabled", value).apply()
     fun rootMode(context: Context) = prefs(context).getBoolean("root_mode", false)
