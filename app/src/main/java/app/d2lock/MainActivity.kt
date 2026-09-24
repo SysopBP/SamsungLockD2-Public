@@ -20,6 +20,7 @@ import android.widget.Button
 import android.widget.ArrayAdapter
 import android.widget.Spinner
 import android.widget.LinearLayout
+import android.widget.ImageView
 import android.widget.ScrollView
 import android.widget.RadioButton
 import android.widget.SeekBar
@@ -420,14 +421,36 @@ class MainActivity : Activity() {
         section(root, "APP ICON")
         val iconOptions = IconManager.options
         val currentIcon = IconManager.selected(this)
+        val iconPreview = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(14), dp(10), dp(14), dp(10))
+            background = Appearance.glass(this@MainActivity, 28f, 30, true)
+        }
+        val iconPreviewImage = ImageView(this).apply {
+            setImageResource(IconManager.iconResource(currentIcon))
+            contentDescription = "Selected D2 launcher icon"
+        }
+        val iconPreviewText = TextView(this).apply {
+            text = iconOptions.firstOrNull { it.key == currentIcon }?.label ?: "Titanium Graphite"
+            textSize = 16f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(14), 0, 0, 0)
+        }
+        iconPreview.addView(iconPreviewImage, LinearLayout.LayoutParams(dp(54), dp(54)))
+        iconPreview.addView(iconPreviewText, LinearLayout.LayoutParams(0, -2, 1f))
+        root.addView(iconPreview, LinearLayout.LayoutParams(-1, dp(74)).apply { bottomMargin = dp(8) })
         addChoice(
             root,
             "Titanium launcher icon",
             iconOptions.map { it.label },
             iconOptions.indexOfFirst { it.key == currentIcon }.coerceAtLeast(0)
         ) { selected ->
-            IconManager.apply(this, iconOptions[selected].key)
-            Toast.makeText(this, "${iconOptions[selected].label} applied", Toast.LENGTH_SHORT).show()
+            val option = iconOptions[selected]
+            IconManager.apply(this, option.key)
+            iconPreviewImage.setImageResource(IconManager.iconResource(option.key))
+            iconPreviewText.text = option.label
+            Toast.makeText(this, "${option.label} applied", Toast.LENGTH_SHORT).show()
         }
         addButton(root, "Reset Titanium icon") {
             IconManager.reset(this)
@@ -477,7 +500,7 @@ class MainActivity : Activity() {
             dialog.show()
         }
         root.addView(TextView(this).apply {
-            text = "Choose the D2 Titanium launcher color. If One UI keeps the previous icon, open Icon diagnostics and send the state shown there."
+            text = "Choose the D2 Titanium launcher color. Samsung Theme Park or another custom icon pack can override D2’s selected launcher icon. If the preview changes but the Home screen icon does not, temporarily apply Samsung’s default icons and test again."
             textSize = 13f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(6), 0, dp(6), dp(12))
