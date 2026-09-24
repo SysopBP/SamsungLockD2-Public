@@ -1135,14 +1135,14 @@ class MainActivity : Activity() {
         val host = android.widget.FrameLayout(this).apply {
             setBackgroundColor(Appearance.background(this@MainActivity))
         }
-        val scroll = ScrollView(this).apply { addView(root) }
+        val scroll = ScrollView(this).apply { tag = "settings_scroll"; addView(root) }
         host.addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
 
         val nav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setPadding(dp(8), dp(7), dp(8), dp(7))
-            background = Appearance.glass(this@MainActivity, 34f, 78, true)
+            setPadding(dp(7), dp(7), dp(7), dp(7))
+            background = Appearance.glass(this@MainActivity, 36f, 82, true)
             elevation = dp(24).toFloat()
         }
         val destinations = listOf(
@@ -1150,40 +1150,57 @@ class MainActivity : Activity() {
             Triple("◷", "Clock", "clock_weather"),
             Triple("▣", "Alerts", "notifications"),
             Triple("✦", "Theme", "app_theme"),
-            Triple("—", "Bar", "floating_bar"),
+            Triple("▬", "Bar", "floating_bar"),
             Triple("⚙", "Settings", "settings")
         )
+        val items = mutableListOf<LinearLayout>()
+        fun select(item: LinearLayout) {
+            items.forEach { candidate ->
+                candidate.animate().cancel()
+                candidate.background = null
+                candidate.scaleX = 1f
+                candidate.scaleY = 1f
+                (candidate.getChildAt(0) as? TextView)?.setTextColor(Appearance.secondary(this@MainActivity))
+            }
+            item.background = Appearance.glass(this@MainActivity, 28f, 48, true)
+            (item.getChildAt(0) as? TextView)?.setTextColor(Appearance.accent(this@MainActivity))
+            item.scaleX = .88f
+            item.scaleY = .88f
+            item.animate().scaleX(1f).scaleY(1f).setDuration(180).start()
+        }
         destinations.forEachIndexed { index, (icon, label, target) ->
-            nav.addView(LinearLayout(this).apply {
+            val item = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
                 isClickable = true
                 isFocusable = true
                 contentDescription = label
-                background = if (index == 0) Appearance.glass(this@MainActivity, 26f, 42, true) else null
                 addView(TextView(this@MainActivity).apply {
-                    text = icon; textSize = 20f; gravity = Gravity.CENTER
-                    setTextColor(Appearance.text(this@MainActivity))
-                }, LinearLayout.LayoutParams(-1, dp(28)))
+                    text = icon
+                    textSize = if (label == "Bar") 17f else 21f
+                    gravity = Gravity.CENTER
+                    setTextColor(if (index == 0) Appearance.accent(this@MainActivity) else Appearance.secondary(this@MainActivity))
+                }, LinearLayout.LayoutParams(-1, dp(29)))
                 addView(TextView(this@MainActivity).apply {
-                    text = label; textSize = 11f; gravity = Gravity.CENTER
+                    text = label
+                    textSize = 10f
+                    gravity = Gravity.CENTER
                     setTextColor(Appearance.secondary(this@MainActivity))
-                }, LinearLayout.LayoutParams(-1, dp(20)))
+                }, LinearLayout.LayoutParams(-1, dp(18)))
                 setOnClickListener {
                     root.findViewWithTag<android.view.View>(target)?.let { view ->
-                        scroll.smoothScrollTo(0, view.top)
+                        scroll.smoothScrollTo(0, (view.top - dp(16)).coerceAtLeast(0))
                     }
-                    for (i in 0 until nav.childCount) nav.getChildAt(i).background = null
-                    background = Appearance.glass(this@MainActivity, 26f, 42, true)
-                    animate().scaleX(0.94f).scaleY(0.94f).setDuration(70).withEndAction {
-                        animate().scaleX(1f).scaleY(1f).setDuration(120).start()
-                    }.start()
+                    select(this)
                 }
-            }, LinearLayout.LayoutParams(0, dp(60), 1f).apply {
+            }
+            items += item
+            nav.addView(item, LinearLayout.LayoutParams(0, dp(58), 1f).apply {
                 if (index > 0) marginStart = dp(2)
             })
         }
-        host.addView(nav, android.widget.FrameLayout.LayoutParams(-1, dp(74), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
+        items.firstOrNull()?.background = Appearance.glass(this, 28f, 48, true)
+        host.addView(nav, android.widget.FrameLayout.LayoutParams(-1, dp(72), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
             setMargins(dp(18), 0, dp(18), dp(18))
         })
         host.setOnApplyWindowInsetsListener { _, insets ->
