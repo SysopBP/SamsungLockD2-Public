@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.IBinder
+import android.os.SystemClock
 import app.d2lock.MainActivity
 import app.d2lock.Prefs
 import app.d2lock.R
@@ -17,6 +18,20 @@ import app.d2lock.root.RootManager
 import app.d2lock.security.PinStore
 
 class LockScreenService : Service() {
+    private val recoveryPrefs by lazy { getSharedPreferences("d2_guardian_recovery", Context.MODE_PRIVATE) }
+
+    private fun postBootLaunchAllowed(): Boolean {
+        val now = SystemClock.elapsedRealtime()
+        val windowStart = recoveryPrefs.getLong("boot_window_start", 0L)
+        val attempts = if (windowStart == 0L || now - windowStart > BOOT_WINDOW_MS) 0
+            else recoveryPrefs.getInt("boot_attempts", 0)
+        if (attempts >= MAX_BOOT_ATTEMPTS) return false
+        recoveryPrefs.edit()
+            .putLong("boot_window_start", if (attempts == 0) now else windowStart)
+            .putInt("boot_attempts", attempts + 1)
+            .apply()
+        return true
+    }
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == Intent.ACTION_SCREEN_ON && Prefs.enabled(context) && PinStore(context).configured()) {
@@ -58,18 +73,17 @@ class LockScreenService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        if (intent?.getBooleanExtra(EXTRA_POST_BOOT, false) == true) {
-            // BOOT_COMPLETED can arrive after the display is already on, so relying only on
-            // ACTION_SCREEN_ON leaves a gap. Root companion is the preferred launch path
-            // because modern Android can defer background activity starts.
-            if (app.d2lock.notifications.CallNotificationStore.items.isEmpty()) {
-                if (Prefs.rootMode(this)) {
-                    RootManager.launchCompanion()
-                } else {
-                    runCatching {
-                        startActivity(Intent(this, LockScreenActivity::class.java)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
-                    }
+        if (intent?.getBooleanExtra(EXTRA_POST_BOOT, false) == true &&
+            postBootLaunchAllowed() &&
+            app.d2lock.notifications.CallNotificationStore.items.isEmpty()) {
+            // Never loop indefinitely at boot. Guardian permits only a small number of
+            // restoration attempts inside a bounded window; normal SCREEN_ON remains available.
+            if (Prefs.rootMode(this)) {
+                RootManager.launchCompanion()
+            } else {
+                runCatching {
+                    startActivity(Intent(this, LockScreenActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
                 }
             }
         }
@@ -81,6 +95,8 @@ class LockScreenService : Service() {
     companion object {
         private const val CHANNEL = "lock_companion"
         private const val ID = 3701
+        private const val BOOT_WINDOW_MS = 120_000L
+        private const val MAX_BOOT_ATTEMPTS = 2
         private const val EXTRA_POST_BOOT = "d2_post_boot"
         fun start(context: Context, postBoot: Boolean = false) =
             context.startForegroundService(Intent(context, LockScreenService::class.java).apply {
