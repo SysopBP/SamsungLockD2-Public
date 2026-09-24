@@ -22,8 +22,8 @@
     </queries>
     <application
         android:allowBackup="false"
-        android:icon="@mipmap/ic_d2_purple"
-        android:roundIcon="@mipmap/ic_d2_purple"
+        android:icon="@mipmap/ic_d2_silver"
+        android:roundIcon="@mipmap/ic_d2_silver"
         android:enableOnBackInvokedCallback="true"
         android:label="Samsung Lock D2"
         android:theme="@style/Theme.SamsungLock">
@@ -58,7 +58,7 @@
         <activity android:name=".MainActivity" android:exported="true" />
 
         <!-- Launcher aliases let D2 switch Titanium icon colors without touching the lock-screen activity. -->
-        <activity-alias android:name=".launcher.TitaniumPurple" android:enabled="true" android:exported="true" android:icon="@mipmap/ic_d2_purple" android:roundIcon="@mipmap/ic_d2_purple" android:label="Samsung Lock D2" android:targetActivity=".MainActivity">
+        <activity-alias android:name=".launcher.TitaniumPurple" android:enabled="false" android:exported="true" android:icon="@mipmap/ic_d2_purple" android:roundIcon="@mipmap/ic_d2_purple" android:label="Samsung Lock D2" android:targetActivity=".MainActivity">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
         <activity-alias android:name=".launcher.TitaniumBlue" android:enabled="false" android:exported="true" android:icon="@mipmap/ic_d2_blue" android:roundIcon="@mipmap/ic_d2_blue" android:label="Samsung Lock D2" android:targetActivity=".MainActivity">
@@ -73,7 +73,7 @@
         <activity-alias android:name=".launcher.TitaniumGold" android:enabled="false" android:exported="true" android:icon="@mipmap/ic_d2_gold" android:roundIcon="@mipmap/ic_d2_gold" android:label="Samsung Lock D2" android:targetActivity=".MainActivity">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
-        <activity-alias android:name=".launcher.TitaniumSilver" android:enabled="false" android:exported="true" android:icon="@mipmap/ic_d2_silver" android:roundIcon="@mipmap/ic_d2_silver" android:label="Samsung Lock D2" android:targetActivity=".MainActivity">
+        <activity-alias android:name=".launcher.TitaniumSilver" android:enabled="true" android:exported="true" android:icon="@mipmap/ic_d2_silver" android:roundIcon="@mipmap/ic_d2_silver" android:label="Samsung Lock D2" android:targetActivity=".MainActivity">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity-alias>
         <activity-alias android:name=".launcher.TitaniumAmoled" android:enabled="false" android:exported="true" android:icon="@mipmap/ic_d2_amoled" android:roundIcon="@mipmap/ic_d2_amoled" android:label="Samsung Lock D2" android:targetActivity=".MainActivity">
