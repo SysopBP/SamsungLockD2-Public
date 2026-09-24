@@ -13,7 +13,7 @@ import java.lang.ref.WeakReference
  * Guardian does not authenticate or release kiosk policy. It only detects a
  * lost/invalid lock surface and asks RootKiosk to reassert the existing lease.
  */
-object KioskGuardian {
+object KioskD2Guardian {
     private val main = Handler(Looper.getMainLooper())
     private var owner = WeakReference<Activity>(null)
     private var enabled = false
