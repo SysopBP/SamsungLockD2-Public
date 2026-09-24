@@ -1373,7 +1373,11 @@ class MainActivity : Activity() {
                         showQuickSettingsSheet(root, scroll)
                     } else {
                         root.findViewWithTag<android.view.View>(target)?.let { view ->
-                            scroll.smoothScrollTo(0, (view.top - dp(16)).coerceAtLeast(0))
+                            val rect = android.graphics.Rect()
+                            view.getDrawingRect(rect)
+                            root.offsetDescendantRectToMyCoords(view, rect)
+                            scroll.smoothScrollTo(0, (rect.top - dp(18)).coerceAtLeast(0))
+                            view.postDelayed({ flashSettingsTarget(view) }, 280)
                         }
                     }
                     select(this)
