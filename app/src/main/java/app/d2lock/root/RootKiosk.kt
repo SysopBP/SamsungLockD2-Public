@@ -26,9 +26,10 @@ object RootKiosk {
     private var generation = 0
     private var starting = false
     private var active = false
+    private var releasing = false
     private var message = "Kiosk inactive"
     internal val diagnostic: String get() = message
-    internal fun isEnforced() = active
+    internal fun isEnforced() = active && !releasing
     internal fun reassert(activity: Activity) {
         if (!active || activity.isDestroyed || activity.isFinishing) return
         if (mode(activity) == ActivityManager.LOCK_TASK_MODE_LOCKED) return
@@ -139,6 +140,9 @@ object RootKiosk {
     }
     /** Call only from a verified D2 authentication callback. Recovery is a deliberately separate escape path. */
     fun unlock(activity: Activity, done: () -> Unit) {
+        // Tell Guardian this is an authenticated release before lock-task is stopped,
+        // preventing the watchdog from racing a legitimate unlock.
+        releasing = true
         if (active) {
             try { activity.stopLockTask() }
             catch (_: Exception) { /* Removing our temporary allowlist below also stops the task. */ }
@@ -158,7 +162,7 @@ object RootKiosk {
                 runCatching { lease.writer.write("RELEASE\n"); lease.writer.flush(); queue?.poll(5, TimeUnit.SECONDS) }
                 lease.close()
             }
-            main.post { report("Kiosk inactive"); done() }
+            main.post { releasing = false; report("Kiosk inactive"); done() }
         }
     }
     fun detach(activity: Activity) {
