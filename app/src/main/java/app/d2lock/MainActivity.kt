@@ -116,6 +116,17 @@ class MainActivity : Activity() {
             setPadding(0, dp(4), 0, dp(24))
         })
 
+        val settingsSearch = android.widget.EditText(this).apply {
+            hint = "Search settings"
+            textSize = 15f
+            setSingleLine(true)
+            setTextColor(Appearance.text(this@MainActivity))
+            setHintTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(18), 0, dp(18), 0)
+            background = Appearance.glass(this@MainActivity, 28f, 34, true)
+        }
+        root.addView(settingsSearch, LinearLayout.LayoutParams(-1, dp(54)).apply { bottomMargin = dp(16) })
+
         section(root, "SETTINGS")
         val categories = listOf(
             Triple("Main", "Security, access & preview", "main_settings"),
@@ -273,7 +284,21 @@ class MainActivity : Activity() {
                 textSize = 16f
                 setTextColor(Appearance.text(this@MainActivity))
             })
-            return settingsScroll(root)
+            settingsSearch.setOnEditorActionListener { _, _, _ ->
+            val query = settingsSearch.text.toString().trim().lowercase()
+            if (query.isNotEmpty()) {
+                val target = when {
+                    query.contains("weather") || query.contains("clock") -> "clock_weather"
+                    query.contains("notification") || query.contains("privacy") -> "notifications"
+                    query.contains("floating") || query.contains("slide") || query.contains("shortcut") -> "floating_bar"
+                    query.contains("theme") || query.contains("glass") || query.contains("wallpaper") || query.contains("media") -> "app_theme"
+                    else -> "main_settings"
+                }
+                root.findViewWithTag<android.view.View>(target)?.let { view -> root.parent?.let { (it as? ScrollView)?.smoothScrollTo(0, view.top) } }
+            }
+            true
+        }
+        return settingsScroll(root)
         }
         val taps = DoubleTap()
         addButton(root, "Double-tap to lock D2") {
