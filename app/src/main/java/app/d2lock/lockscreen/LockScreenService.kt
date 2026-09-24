@@ -58,6 +58,21 @@ class LockScreenService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        if (intent?.getBooleanExtra(EXTRA_POST_BOOT, false) == true) {
+            // BOOT_COMPLETED can arrive after the display is already on, so relying only on
+            // ACTION_SCREEN_ON leaves a gap. Root companion is the preferred launch path
+            // because modern Android can defer background activity starts.
+            if (app.d2lock.notifications.CallNotificationStore.items.isEmpty()) {
+                if (Prefs.rootMode(this)) {
+                    RootManager.launchCompanion()
+                } else {
+                    runCatching {
+                        startActivity(Intent(this, LockScreenActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+                    }
+                }
+            }
+        }
         return START_STICKY
     }
 
@@ -66,7 +81,11 @@ class LockScreenService : Service() {
     companion object {
         private const val CHANNEL = "lock_companion"
         private const val ID = 3701
-        fun start(context: Context) = context.startForegroundService(Intent(context, LockScreenService::class.java))
+        private const val EXTRA_POST_BOOT = "d2_post_boot"
+        fun start(context: Context, postBoot: Boolean = false) =
+            context.startForegroundService(Intent(context, LockScreenService::class.java).apply {
+                if (postBoot) putExtra(EXTRA_POST_BOOT, true)
+            })
         fun stop(context: Context) = context.stopService(Intent(context, LockScreenService::class.java))
     }
 }
