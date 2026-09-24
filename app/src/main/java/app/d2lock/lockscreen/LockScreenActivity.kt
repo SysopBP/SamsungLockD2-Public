@@ -498,48 +498,47 @@ class LockScreenActivity : Activity() {
     }
 
     private fun unlockSwipeListener() = object : View.OnTouchListener {
+        private var startX = 0f
         private var startY = 0f
         private var dragging = false
         override fun onTouch(v: View, event: android.view.MotionEvent): Boolean {
             val mode = Prefs.floatingUnlockGesture(this@LockScreenActivity)
             when (event.actionMasked) {
                 android.view.MotionEvent.ACTION_DOWN -> {
-                    startY = event.y
-                    dragging = false
+                    startX = event.x; startY = event.y; dragging = false
                     v.animate().cancel()
                     v.animate().scaleX(0.97f).scaleY(0.97f).alpha(0.88f).setDuration(90).start()
                     return true
                 }
                 android.view.MotionEvent.ACTION_MOVE -> {
-                    val distance = (startY - event.y).coerceAtLeast(0f)
-                    if (distance > dp(8)) dragging = true
-                    if (mode != "tap_only") {
+                    val dx = event.x - startX
+                    val dy = event.y - startY
+                    val horizontal = kotlin.math.abs(dx) > kotlin.math.abs(dy)
+                    val valid = horizontal || dy < 0f
+                    val distance = if (horizontal) kotlin.math.abs(dx) else (-dy).coerceAtLeast(0f)
+                    if (valid && distance > dp(8)) dragging = true
+                    if (mode != "tap_only" && valid) {
                         val travel = distance.coerceAtMost(dp(48).toFloat())
-                        v.translationY = -travel * 0.55f
-                        v.scaleX = 0.97f + (travel / dp(48)) * 0.06f
-                        v.scaleY = v.scaleX
-                        v.alpha = 0.88f + (travel / dp(48)) * 0.12f
+                        if (horizontal) { v.translationX = dx.coerceIn(-dp(48).toFloat(), dp(48).toFloat()) * .55f; v.translationY = 0f }
+                        else { v.translationY = -travel * .55f; v.translationX = 0f }
+                        val scale = .97f + (travel / dp(48)) * .06f
+                        v.scaleX = scale; v.scaleY = scale
+                        v.alpha = .88f + (travel / dp(48)) * .12f
                     }
                     return true
                 }
                 android.view.MotionEvent.ACTION_UP -> {
-                    val distance = startY - event.y
-                    val slide = distance > dp(36)
-                    val tap = !dragging && kotlin.math.abs(distance) < dp(12)
-                    v.animate().translationY(0f).scaleX(1f).scaleY(1f).alpha(1f).setDuration(180).start()
-                    val unlock = when (mode) {
-                        "slide_only" -> slide
-                        "tap_only" -> tap
-                        else -> slide || tap
-                    }
-                    if (unlock) {
-                        v.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
-                        authenticate()
-                    }
+                    val dx = event.x - startX
+                    val dy = event.y - startY
+                    val slide = kotlin.math.abs(dx) > dp(36) || dy < -dp(36)
+                    val tap = !dragging && kotlin.math.abs(dx) < dp(12) && kotlin.math.abs(dy) < dp(12)
+                    v.animate().translationX(0f).translationY(0f).scaleX(1f).scaleY(1f).alpha(1f).setDuration(180).start()
+                    val unlock = when (mode) { "slide_only" -> slide; "tap_only" -> tap; else -> slide || tap }
+                    if (unlock) { v.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM); authenticate() }
                     return true
                 }
                 android.view.MotionEvent.ACTION_CANCEL -> {
-                    v.animate().translationY(0f).scaleX(1f).scaleY(1f).alpha(1f).setDuration(180).start()
+                    v.animate().translationX(0f).translationY(0f).scaleX(1f).scaleY(1f).alpha(1f).setDuration(180).start()
                     return true
                 }
             }
