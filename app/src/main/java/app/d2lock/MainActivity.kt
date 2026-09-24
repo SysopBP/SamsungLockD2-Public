@@ -201,6 +201,7 @@ class MainActivity : Activity() {
                 setOnClickListener {
                     root.findViewWithTag<android.view.View>(target)?.let { view ->
                         ((root.parent as? ScrollView))?.smoothScrollTo(0, view.top)
+                        view.postDelayed({ flashSettingsTarget(view) }, 280)
                     }
                 }
             }
@@ -341,7 +342,10 @@ class MainActivity : Activity() {
                     query.contains("theme") || query.contains("glass") || query.contains("wallpaper") || query.contains("media") -> "app_theme"
                     else -> "main_settings"
                 }
-                root.findViewWithTag<android.view.View>(target)?.let { view -> (root.parent as? ScrollView)?.smoothScrollTo(0, view.top) }
+                root.findViewWithTag<android.view.View>(target)?.let { view ->
+                    (root.parent as? ScrollView)?.smoothScrollTo(0, view.top)
+                    view.postDelayed({ flashSettingsTarget(view) }, 280)
+                }
             }
             true
         }
@@ -1197,7 +1201,10 @@ class MainActivity : Activity() {
             addButton(panel, label) {
                 dialog.dismiss()
                 root.findViewWithTag<android.view.View>(target)?.let { view ->
-                    scroll.post { scroll.smoothScrollTo(0, (view.top - dp(16)).coerceAtLeast(0)) }
+                    scroll.post {
+                        scroll.smoothScrollTo(0, (view.top - dp(16)).coerceAtLeast(0))
+                        view.postDelayed({ flashSettingsTarget(view) }, 280)
+                    }
                 }
             }
         }
@@ -1218,6 +1225,18 @@ class MainActivity : Activity() {
             panel.animate().translationY(0f).alpha(1f).setDuration(220).start()
         }
         dialog.show()
+    }
+
+    private fun flashSettingsTarget(view: View) {
+        val originalAlpha = view.alpha
+        view.animate().cancel()
+        view.animate().alpha(0.42f).setDuration(110).withEndAction {
+            view.animate().alpha(1f).setDuration(180).withEndAction {
+                view.animate().alpha(0.58f).setDuration(110).withEndAction {
+                    view.animate().alpha(originalAlpha).setDuration(220).start()
+                }.start()
+            }.start()
+        }.start()
     }
 
     private fun settingsHost(root: LinearLayout): ViewGroup {
