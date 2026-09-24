@@ -1,6 +1,7 @@
 package app.d2lock
 
 import android.content.Context
+import android.net.Uri
 
 object Prefs {
     private const val FILE = "lock_preferences"
@@ -22,6 +23,14 @@ object Prefs {
         val json = org.json.JSONObject(raw)
         val edit = prefs(context).edit()
         var count = 0
+        val uriBackedKeys = setOf("wallpaper", "app_wallpaper")
+
+        fun canReadRestoredUri(value: String): Boolean {
+            if (!value.startsWith("content://")) return true
+            return runCatching {
+                context.contentResolver.openInputStream(Uri.parse(value))?.use { true } ?: false
+            }.getOrDefault(false)
+        }
         val keys = json.keys()
         while (keys.hasNext()) {
             val key = keys.next()
@@ -31,7 +40,13 @@ object Prefs {
                 is Int -> edit.putInt(key, value)
                 is Long -> edit.putLong(key, value)
                 is Double -> edit.putFloat(key, value.toFloat())
-                is String -> edit.putString(key, value)
+                is String -> {
+                    // Backups can contain document-provider URIs whose persisted grant
+                    // belonged to another install/device. Skip stale wallpaper URIs so
+                    // restore cannot leave D2 pointing at inaccessible content.
+                    if (key in uriBackedKeys && !canReadRestoredUri(value)) continue
+                    edit.putString(key, value)
+                }
                 else -> continue
             }
             count++

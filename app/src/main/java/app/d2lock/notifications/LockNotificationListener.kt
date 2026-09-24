@@ -68,6 +68,13 @@ class LockNotificationListener : NotificationListenerService() {
         }.getOrDefault(sbn.packageName)
         val item = LockNotification(sbn.key, app, title, text, sbn.postTime,
             sbn.notification.visibility, sbn.notification.contentIntent, sbn.packageName)
+        // Some apps/services repost the same visible notification under a new key.
+        // Collapse only true presentation duplicates; distinct messages from the same
+        // package remain separate notifications.
+        NotificationStore.items.removeAll {
+            it.packageName == item.packageName &&
+                it.title == item.title && it.text == item.text
+        }
         NotificationStore.items.add(0, item)
         while (NotificationStore.items.size > 20) NotificationStore.items.removeAt(NotificationStore.items.lastIndex)
         return item
