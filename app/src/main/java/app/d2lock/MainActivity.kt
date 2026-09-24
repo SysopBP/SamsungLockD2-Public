@@ -553,18 +553,52 @@ class MainActivity : Activity() {
         iconPreview.addView(iconPreviewImage, LinearLayout.LayoutParams(dp(54), dp(54)))
         iconPreview.addView(iconPreviewText, LinearLayout.LayoutParams(0, -2, 1f))
         root.addView(iconPreview, LinearLayout.LayoutParams(-1, dp(74)).apply { bottomMargin = dp(8) })
-        addChoice(
-            root,
-            "Titanium launcher icon",
-            iconOptions.map { it.label },
-            iconOptions.indexOfFirst { it.key == currentIcon }.coerceAtLeast(0)
-        ) { selected ->
-            val option = iconOptions[selected]
-            IconManager.apply(this, option.key)
-            iconPreviewImage.setImageResource(IconManager.iconResource(option.key))
-            iconPreviewText.text = option.label
-            showD2Message("${option.label} applied")
+        val iconPicker = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(4), dp(4), dp(4), dp(10))
         }
+        val iconCells = mutableMapOf<String, LinearLayout>()
+        fun refreshIconPicker(selectedKey: String) {
+            iconCells.forEach { (key, cell) ->
+                cell.background = if (key == selectedKey)
+                    Appearance.glass(this@MainActivity, 22f, 72, true) else null
+                cell.alpha = if (key == selectedKey) 1f else .72f
+            }
+        }
+        iconOptions.forEach { option ->
+            val cell = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                isClickable = true
+                isFocusable = true
+                contentDescription = option.label + " D2 launcher icon"
+                setPadding(dp(5), dp(6), dp(5), dp(5))
+            }
+            cell.addView(ImageView(this).apply {
+                setImageResource(IconManager.iconResource(option.key))
+                contentDescription = null
+            }, LinearLayout.LayoutParams(dp(42), dp(42)))
+            cell.addView(TextView(this).apply {
+                text = option.label.substringAfterLast(" ")
+                textSize = 10f
+                gravity = Gravity.CENTER
+                maxLines = 1
+                setTextColor(Appearance.text(this@MainActivity))
+            }, LinearLayout.LayoutParams(-1, -2))
+            cell.setOnClickListener {
+                IconManager.apply(this, option.key)
+                iconPreviewImage.setImageResource(IconManager.iconResource(option.key))
+                iconPreviewText.text = option.label
+                refreshIconPicker(option.key)
+                showD2Message(option.label + " applied")
+            }
+            iconCells[option.key] = cell
+            iconPicker.addView(cell, LinearLayout.LayoutParams(0, dp(72), 1f))
+        }
+        refreshIconPicker(currentIcon)
+        root.addView(iconPicker, LinearLayout.LayoutParams(-1, -2))
+
         addButton(root, "Reset Titanium icon") {
             IconManager.reset(this)
             showD2Message("Titanium Graphite restored")
