@@ -162,8 +162,35 @@ class MainActivity : Activity() {
             setPadding(0, dp(4), 0, dp(24))
         })
 
+        val configured = PinStore(this).configured()
+        if (!configured) {
+            val setupCard = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(18), dp(16), dp(18), dp(16))
+                background = Appearance.glass(this@MainActivity, 30f, 42, true)
+                addView(TextView(this@MainActivity).apply {
+                    text = "Finish D2 setup"
+                    textSize = 20f
+                    setTextColor(Appearance.text(this@MainActivity))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = "Create your D2 PIN to unlock the settings tabs and protected features. Until this is completed, those sections are intentionally unavailable."
+                    textSize = 14f
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                    setPadding(0, dp(5), 0, dp(12))
+                })
+            }
+            addButton(setupCard, "Create D2 PIN now") {
+                pinDialog = PinUi.show(this, setup = true, success = {
+                    authorized = true
+                    setContentView(buildSettings())
+                })
+            }
+            root.addView(setupCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(16) })
+        }
+
         val settingsSearch = android.widget.EditText(this).apply {
-            hint = "Search settings"
+            hint = if (configured) "Search settings" else "Finish D2 setup to search settings"
             textSize = 15f
             setSingleLine(true)
             setTextColor(Appearance.text(this@MainActivity))
@@ -175,13 +202,15 @@ class MainActivity : Activity() {
 
         section(root, "SETTINGS")
         root.getChildAt(root.childCount - 1).tag = "settings"
-        val categories = listOf(
+        val categories = if (configured) listOf(
             Triple("Main", "Security, access & preview", "main_settings"),
             Triple("Clock & Weather", "Clock style, global weather & location", "clock_weather"),
             Triple("Notifications", "Privacy, banners & card appearance", "notifications"),
             Triple("App Theme", "Glass, wallpaper, scale & media", "app_theme"),
             Triple("Floating Bar", "Left and right lock-screen actions", "floating_bar")
-        )
+        ) else emptyList()
+        settingsSearch.isEnabled = configured
+        settingsSearch.alpha = if (configured) 1f else 0.55f
         categories.forEach { (label, description, target) ->
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -200,7 +229,10 @@ class MainActivity : Activity() {
                 })
                 setOnClickListener {
                     root.findViewWithTag<android.view.View>(target)?.let { view ->
-                        ((root.parent as? ScrollView))?.smoothScrollTo(0, view.top)
+                        val rect = android.graphics.Rect()
+                        view.getDrawingRect(rect)
+                        root.offsetDescendantRectToMyCoords(view, rect)
+                        (root.parent as? ScrollView)?.smoothScrollTo(0, (rect.top - dp(18)).coerceAtLeast(0))
                         view.postDelayed({ flashSettingsTarget(view) }, 280)
                     }
                 }
@@ -242,7 +274,6 @@ class MainActivity : Activity() {
             }
             dialog.show()
         }
-        val configured = PinStore(this).configured()
         if (configured) {
             root.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
@@ -1342,7 +1373,11 @@ class MainActivity : Activity() {
                         showQuickSettingsSheet(root, scroll)
                     } else {
                         root.findViewWithTag<android.view.View>(target)?.let { view ->
-                            scroll.smoothScrollTo(0, (view.top - dp(16)).coerceAtLeast(0))
+                            val rect = android.graphics.Rect()
+                            view.getDrawingRect(rect)
+                            root.offsetDescendantRectToMyCoords(view, rect)
+                            scroll.smoothScrollTo(0, (rect.top - dp(18)).coerceAtLeast(0))
+                            view.postDelayed({ flashSettingsTarget(view) }, 280)
                         }
                     }
                     select(this)
