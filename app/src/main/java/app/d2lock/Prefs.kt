@@ -19,6 +19,8 @@ object Prefs {
     fun shizukuEnabled(context: Context) = prefs(context).getBoolean("shizuku_enabled", true)
     fun setShizukuEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean("shizuku_enabled", value).apply()
     fun unlockMethod(context: Context) = prefs(context).getString("unlock_method", "pin") ?: "pin"
+    fun floatingUnlockGesture(context: Context) = prefs(context).getString("floating_unlock_gesture", "tap_or_slide") ?: "tap_or_slide"
+    fun setFloatingUnlockGesture(context: Context, value: String) = prefs(context).edit().putString("floating_unlock_gesture", value).apply()
     fun setUnlockMethod(context: Context, value: String) = prefs(context).edit().putString("unlock_method", value).apply()
     fun wallpaper(context: Context): String? = prefs(context).getString("wallpaper", null)
     fun setWallpaper(context: Context, value: String) = prefs(context).edit().putString("wallpaper", value).apply()
