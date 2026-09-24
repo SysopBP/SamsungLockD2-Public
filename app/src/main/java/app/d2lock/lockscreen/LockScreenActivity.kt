@@ -146,6 +146,7 @@ class LockScreenActivity : Activity() {
             systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
         NotificationStore.onChanged = { runOnUiThread(::renderNotifications) }
+        app.d2lock.notifications.CallNotificationStore.onChanged = { runOnUiThread(::renderNotifications) }
         NotificationStore.onPosted = { item -> runOnUiThread { showLiveNotification(item) } }
         renderNotifications()
         WeatherRepository.load(this) { value -> runOnUiThread {
@@ -218,6 +219,7 @@ class LockScreenActivity : Activity() {
         wallpaperAnimations.clear()
         wallpaperExecutor.shutdownNow()
         if (NotificationStore.onChanged != null) NotificationStore.onChanged = null
+        app.d2lock.notifications.CallNotificationStore.onChanged = null
         NotificationStore.onPosted = null
         super.onDestroy()
     }
