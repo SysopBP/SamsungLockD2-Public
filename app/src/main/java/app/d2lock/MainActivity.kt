@@ -898,6 +898,16 @@ class MainActivity : Activity() {
         root.getChildAt(root.childCount - 1).tag = "floating_bar"
         val floatingCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(floatingCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
+        addChoice(floatingCard, "Unlock gesture", listOf("Tap or slide", "Slide only", "Tap only"),
+            listOf("tap_or_slide", "slide_only", "tap_only").indexOf(Prefs.floatingUnlockGesture(this)).coerceAtLeast(0)) {
+            Prefs.setFloatingUnlockGesture(this, listOf("tap_or_slide", "slide_only", "tap_only")[it])
+        }
+        floatingCard.addView(TextView(this).apply {
+            text = "Slide up on the center unlock control for a glass lift effect. Slide only prevents an accidental tap from opening authentication."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(6), 0, dp(6), dp(10))
+        })
         val actions = listOf("None", "Camera", "Flashlight")
         for (side in listOf("left", "right")) {
             addChoice(floatingCard, "${side.replaceFirstChar { it.uppercase() }} action", actions,
