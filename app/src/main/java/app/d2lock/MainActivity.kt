@@ -1166,6 +1166,59 @@ class MainActivity : Activity() {
         dialog.show()
     }
 
+    private fun showQuickSettingsSheet(root: LinearLayout, scroll: ScrollView) {
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(14), dp(18), dp(18))
+            background = Appearance.glass(this@MainActivity, 34f, 86, true)
+        }
+        panel.addView(TextView(this).apply {
+            text = "Quick Settings"
+            textSize = 22f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(4), dp(2), dp(4), dp(10))
+        })
+        panel.addView(TextView(this).apply {
+            text = "Jump straight to the D2 controls you use most."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(4), 0, dp(4), dp(10))
+        })
+        val dialog = AlertDialog.Builder(this).setView(panel).create()
+        val shortcuts = listOf(
+            "Lock-screen profiles" to "main_settings",
+            "Clock & Weather" to "clock_weather",
+            "Notifications" to "notifications",
+            "Theme & Glass" to "app_theme",
+            "Floating Bar & Apps" to "floating_bar"
+        )
+        shortcuts.forEach { (label, target) ->
+            addButton(panel, label) {
+                dialog.dismiss()
+                root.findViewWithTag<android.view.View>(target)?.let { view ->
+                    scroll.post { scroll.smoothScrollTo(0, (view.top - dp(16)).coerceAtLeast(0)) }
+                }
+            }
+        }
+        addButton(panel, "Full Settings") {
+            dialog.dismiss()
+            root.findViewWithTag<android.view.View>("settings")?.let { view ->
+                scroll.post { scroll.smoothScrollTo(0, (view.top - dp(16)).coerceAtLeast(0)) }
+            }
+        }
+        dialog.setOnShowListener {
+            dialog.window?.apply {
+                setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+                setDimAmount(0.30f)
+                attributes = attributes.apply { gravity = Gravity.BOTTOM }
+            }
+            panel.translationY = dp(40).toFloat()
+            panel.alpha = 0f
+            panel.animate().translationY(0f).alpha(1f).setDuration(220).start()
+        }
+        dialog.show()
+    }
+
     private fun settingsHost(root: LinearLayout): ViewGroup {
         val host = android.widget.FrameLayout(this).apply {
             setBackgroundColor(Appearance.background(this@MainActivity))
@@ -1223,8 +1276,12 @@ class MainActivity : Activity() {
                     setTextColor(Appearance.secondary(this@MainActivity))
                 }, LinearLayout.LayoutParams(-1, dp(18)))
                 setOnClickListener {
-                    root.findViewWithTag<android.view.View>(target)?.let { view ->
-                        scroll.smoothScrollTo(0, (view.top - dp(16)).coerceAtLeast(0))
+                    if (target == "settings") {
+                        showQuickSettingsSheet(root, scroll)
+                    } else {
+                        root.findViewWithTag<android.view.View>(target)?.let { view ->
+                            scroll.smoothScrollTo(0, (view.top - dp(16)).coerceAtLeast(0))
+                        }
                     }
                     select(this)
                 }
