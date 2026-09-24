@@ -1018,6 +1018,22 @@ class MainActivity : Activity() {
                 type = "image/*"
             }, wallpaperPicker)
         }
+        section(root, "D2 APP BACKGROUND")
+        addButton(root, "Choose D2 app wallpaper") {
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "image/*"
+            }, appWallpaperPicker)
+        }
+        addSlider(root, "D2 background dim", 0, 90, Prefs.appWallpaperDim(this)) {
+            Prefs.setAppWallpaperDim(this, it)
+            refreshAppearance()
+        }
+        addButton(root, "Reset D2 app wallpaper") {
+            Prefs.clearAppWallpaper(this)
+            showD2Message("D2 app wallpaper reset")
+            refreshAppearance()
+        }
         addButton(root, "Preview lock screen") {
             startActivity(Intent(this, LockScreenActivity::class.java).putExtra("preview", true))
         }
