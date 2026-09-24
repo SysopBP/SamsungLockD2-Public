@@ -494,7 +494,13 @@ class MainActivity : Activity() {
 
         section(root, "ADB / USB RECOVERY")
         root.addView(TextView(this).apply {
-            text = RootManager.usbAdbState()?.summary ?: "Root access is required to inspect Samsung USB/ADB state."
+            val state = RootManager.usbAdbState()
+            text = when {
+                state == null -> "Root access is required to inspect Samsung USB/ADB state."
+                Prefs.adbRecovery(this@MainActivity) && state.adbEnabled != "1" ->
+                    "Recovery is configured · USB debugging is currently off · ${state.summary}"
+                else -> state.summary
+            }
             textSize = 13f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(6), 0, dp(6), dp(10))
@@ -1532,7 +1538,8 @@ class MainActivity : Activity() {
             "SHIZUKU AUTHORIZED" to shizukuGranted,
             "NOTIFICATION ACCESS" to notificationsReady,
             "D2 WAKE SERVICE" to Prefs.enabled(this),
-            "ADB RECOVERY" to (Prefs.adbRecovery(this) && adbState?.adbEnabled == "1"),
+            // Recovery health is separate from the current USB-debugging toggle.
+            "ADB RECOVERY" to (Prefs.adbRecovery(this) && rootReady && adbState != null),
             "GALAXY ISLAND" to app.d2lock.bridge.IslandBridge.enabled(this)
         )
         val ready = rows.count { it.second }
