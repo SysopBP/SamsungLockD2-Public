@@ -41,6 +41,7 @@ import rikka.shizuku.Shizuku
 
 class MainActivity : Activity() {
     private val wallpaperPicker = 701
+    private val appWallpaperPicker = 702
     private var authorized = false
     private var pinDialog: AlertDialog? = null
     private val shizukuRequestCode = 910
@@ -73,14 +74,59 @@ class MainActivity : Activity() {
                         runCatching { LockScreenService.start(this) }
                     }
                     setContentView(buildSettings())
+                    maybeShowWhatsNew()
                 }, cancel = { finish() })
             } else {
                 // Upgrades must not leave the old unprotected service enabled.
                 Prefs.setEnabled(this, false)
                 LockScreenService.stop(this)
                 setContentView(buildSettings())
+                maybeShowWhatsNew()
             }
         }
+    }
+
+    private fun maybeShowWhatsNew() {
+        val version = runCatching {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "current"
+        }.getOrDefault("current")
+        val prefs = getSharedPreferences("d2_whats_new", MODE_PRIVATE)
+        if (prefs.getString("shown_version", "") == version) return
+
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), dp(8))
+            addView(TextView(this@MainActivity).apply {
+                text = "D2 $version"
+                textSize = 13f
+                setTextColor(Appearance.accent(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = "New in this build"
+                textSize = 22f
+                setTextColor(Appearance.text(this@MainActivity))
+                setPadding(0, dp(4), 0, dp(12))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = "• Floating glass settings navigation\n• Settings search\n• UI9 glass confirmation messages\n• Tap or slide Floating Bar unlock\n• Launcher icon preview and diagnostics\n• Settings backup and restore"
+                textSize = 15f
+                setLineSpacing(dp(4).toFloat(), 1f)
+                setTextColor(Appearance.text(this@MainActivity))
+            })
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("What's New")
+            .setView(content)
+            .setPositiveButton("Got it") { _, _ ->
+                prefs.edit().putString("shown_version", version).apply()
+            }
+            .create()
+        dialog.setOnCancelListener { prefs.edit().putString("shown_version", version).apply() }
+        dialog.setOnShowListener {
+            dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 32f, 82, true))
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(this@MainActivity))
+        }
+        dialog.show()
     }
 
     override fun onDestroy() {
@@ -101,8 +147,8 @@ class MainActivity : Activity() {
     private fun buildSettings(): ViewGroup {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(22), dp(56), dp(22), dp(32))
-            setBackgroundColor(Appearance.background(this@MainActivity))
+            setPadding(dp(22), dp(56), dp(22), dp(118))
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
         }
         root.addView(TextView(this).apply {
             text = "Samsung Lock D2"
@@ -116,14 +162,55 @@ class MainActivity : Activity() {
             setPadding(0, dp(4), 0, dp(24))
         })
 
+        val configured = PinStore(this).configured()
+        if (!configured) {
+            val setupCard = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(18), dp(16), dp(18), dp(16))
+                background = Appearance.glass(this@MainActivity, 30f, 42, true)
+                addView(TextView(this@MainActivity).apply {
+                    text = "Finish D2 setup"
+                    textSize = 20f
+                    setTextColor(Appearance.text(this@MainActivity))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = "Create your D2 PIN to unlock the settings tabs and protected features. Until this is completed, those sections are intentionally unavailable."
+                    textSize = 14f
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                    setPadding(0, dp(5), 0, dp(12))
+                })
+            }
+            addButton(setupCard, "Create D2 PIN now") {
+                pinDialog = PinUi.show(this, setup = true, success = {
+                    authorized = true
+                    setContentView(buildSettings())
+                })
+            }
+            root.addView(setupCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(16) })
+        }
+
+        val settingsSearch = android.widget.EditText(this).apply {
+            hint = if (configured) "Search settings" else "Finish D2 setup to search settings"
+            textSize = 15f
+            setSingleLine(true)
+            setTextColor(Appearance.text(this@MainActivity))
+            setHintTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(18), 0, dp(18), 0)
+            background = Appearance.glass(this@MainActivity, 28f, 34, true)
+        }
+        root.addView(settingsSearch, LinearLayout.LayoutParams(-1, dp(54)).apply { bottomMargin = dp(16) })
+
         section(root, "SETTINGS")
-        val categories = listOf(
+        root.getChildAt(root.childCount - 1).tag = "settings"
+        val categories = if (configured) listOf(
             Triple("Main", "Security, access & preview", "main_settings"),
             Triple("Clock & Weather", "Clock style, global weather & location", "clock_weather"),
             Triple("Notifications", "Privacy, banners & card appearance", "notifications"),
             Triple("App Theme", "Glass, wallpaper, scale & media", "app_theme"),
             Triple("Floating Bar", "Left and right lock-screen actions", "floating_bar")
-        )
+        ) else emptyList()
+        settingsSearch.isEnabled = configured
+        settingsSearch.alpha = if (configured) 1f else 0.55f
         categories.forEach { (label, description, target) ->
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -142,7 +229,11 @@ class MainActivity : Activity() {
                 })
                 setOnClickListener {
                     root.findViewWithTag<android.view.View>(target)?.let { view ->
-                        (root.parent as? ScrollView)?.smoothScrollTo(0, view.top)
+                        val rect = android.graphics.Rect()
+                        view.getDrawingRect(rect)
+                        root.offsetDescendantRectToMyCoords(view, rect)
+                        (root.parent as? ScrollView)?.smoothScrollTo(0, (rect.top - dp(18)).coerceAtLeast(0))
+                        view.postDelayed({ flashSettingsTarget(view) }, 280)
                     }
                 }
             }
@@ -183,7 +274,6 @@ class MainActivity : Activity() {
             }
             dialog.show()
         }
-        val configured = PinStore(this).configured()
         if (configured) {
             root.addView(Switch(this).apply {
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
@@ -273,7 +363,24 @@ class MainActivity : Activity() {
                 textSize = 16f
                 setTextColor(Appearance.text(this@MainActivity))
             })
-            return settingsScroll(root)
+            settingsSearch.setOnEditorActionListener { _, _, _ ->
+            val query = settingsSearch.text.toString().trim().lowercase()
+            if (query.isNotEmpty()) {
+                val target = when {
+                    query.contains("weather") || query.contains("clock") -> "clock_weather"
+                    query.contains("notification") || query.contains("privacy") -> "notifications"
+                    query.contains("floating") || query.contains("slide") || query.contains("shortcut") -> "floating_bar"
+                    query.contains("theme") || query.contains("glass") || query.contains("wallpaper") || query.contains("media") -> "app_theme"
+                    else -> "main_settings"
+                }
+                root.findViewWithTag<android.view.View>(target)?.let { view ->
+                    (root.parent as? ScrollView)?.smoothScrollTo(0, view.top)
+                    view.postDelayed({ flashSettingsTarget(view) }, 280)
+                }
+            }
+            true
+        }
+        return settingsHost(root)
         }
         val taps = DoubleTap()
         addButton(root, "Double-tap to lock D2") {
@@ -450,11 +557,11 @@ class MainActivity : Activity() {
             IconManager.apply(this, option.key)
             iconPreviewImage.setImageResource(IconManager.iconResource(option.key))
             iconPreviewText.text = option.label
-            Toast.makeText(this, "${option.label} applied", Toast.LENGTH_SHORT).show()
+            showD2Message("${option.label} applied")
         }
         addButton(root, "Reset Titanium icon") {
             IconManager.reset(this)
-            Toast.makeText(this, "Titanium Graphite restored", Toast.LENGTH_SHORT).show()
+            showD2Message("Titanium Graphite restored")
         }
         addButton(root, "Icon diagnostics") {
             val diagnosticContent = LinearLayout(this).apply {
@@ -766,7 +873,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(weatherLocation, LinearLayout.LayoutParams(-1, dp(56)).apply { bottomMargin = dp(8) })
         addButton(appearanceCard, "Save primary weather location") {
             Prefs.setWeatherLocation(this, weatherLocation.text.toString())
-            Toast.makeText(this, if (weatherLocation.text.isNullOrBlank()) "Weather set to automatic location" else "Primary weather location saved", Toast.LENGTH_SHORT).show()
+            showD2Message(if (weatherLocation.text.isNullOrBlank()) "Weather set to automatic location" else "Primary weather location saved")
         }
         appearanceCard.addView(TextView(this).apply {
             text = "Leave Primary Location blank to use the device location. Enter a city, postcode, or city + country/region for global weather."
@@ -903,16 +1010,31 @@ class MainActivity : Activity() {
             Prefs.setFloatingUnlockGesture(this, listOf("tap_or_slide", "slide_only", "tap_only")[it])
         }
         floatingCard.addView(TextView(this).apply {
-            text = "Slide up on the center unlock control for a glass lift effect. Slide only prevents an accidental tap from opening authentication."
+            text = "Slide left, right, or up on the center unlock control. The glass control follows your finger and snaps back if the gesture does not reach the unlock threshold."
             textSize = 13f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(6), 0, dp(6), dp(10))
         })
         val actions = listOf("None", "Camera", "Flashlight")
         for (side in listOf("left", "right")) {
-            addChoice(floatingCard, "${side.replaceFirstChar { it.uppercase() }} action", actions,
-                actions.indexOf(Prefs.shortcut(this, side)).coerceAtLeast(0)) {
-                Prefs.setShortcut(this, side, actions[it])
+            val current = Prefs.shortcut(this, side)
+            val currentLabel = if (current.startsWith("app:")) {
+                val pkg = current.removePrefix("app:")
+                runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrDefault("Selected app")
+            } else current
+            addButton(floatingCard, "${side.replaceFirstChar { it.uppercase() }} shortcut · $currentLabel") {
+                val builtIns = arrayOf("None", "Camera", "Flashlight", "Choose an app…")
+                val dialog = AlertDialog.Builder(this)
+                    .setTitle("${side.replaceFirstChar { it.uppercase() }} shortcut")
+                    .setItems(builtIns) { _, which ->
+                        if (which < 3) {
+                            Prefs.setShortcut(this, side, builtIns[which])
+                            showD2Message("${builtIns[which]} shortcut selected")
+                            refreshAppearance()
+                        } else showAppShortcutPicker(side)
+                    }.setNegativeButton("Cancel", null).create()
+                dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this, 30f, 76, true)) }
+                dialog.show()
             }
         }
         section(root, "MAIN · ACCESS & PREVIEW")
@@ -927,8 +1049,160 @@ class MainActivity : Activity() {
                 type = "image/*"
             }, wallpaperPicker)
         }
+        section(root, "D2 APP BACKGROUND")
+        addButton(root, "Choose D2 app wallpaper") {
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "image/*"
+            }, appWallpaperPicker)
+        }
+        root.addView(TextView(this).apply {
+            text = "D2 background dim: ${Prefs.appWallpaperDim(this@MainActivity)}%"
+            textSize = 14f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            tag = "d2_app_wallpaper_dim_label"
+        })
+        root.addView(SeekBar(this).apply {
+            max = 90
+            progress = Prefs.appWallpaperDim(this@MainActivity)
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    Prefs.setAppWallpaperDim(this@MainActivity, value)
+                    root.findViewWithTag<TextView>("d2_app_wallpaper_dim_label")?.text = "D2 background dim: $value%"
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) { refreshAppearance() }
+            })
+        }, LinearLayout.LayoutParams(-1, dp(48)))
+        addButton(root, "Reset D2 app wallpaper") {
+            Prefs.clearAppWallpaper(this)
+            showD2Message("D2 app wallpaper reset")
+            refreshAppearance()
+        }
         addButton(root, "Preview lock screen") {
             startActivity(Intent(this, LockScreenActivity::class.java).putExtra("preview", true))
+        }
+        section(root, "LOCK-SCREEN PROFILES")
+        val profileLabels = listOf("Daily", "AMOLED", "Minimal", "Night")
+        val profileKeys = listOf("daily", "amoled", "minimal", "night")
+        val selectedProfile = profileKeys.indexOf(Prefs.activeProfile(this)).coerceAtLeast(0)
+        addChoice(root, "Profile", profileLabels, selectedProfile) { index ->
+            val value = profileKeys[index]
+            Prefs.applyProfile(this, value)
+            showD2Message("${profileLabels[index]} profile applied")
+            refreshAppearance()
+        }
+        root.addView(TextView(this).apply {
+            text = "Profiles instantly tune the clock, glass, wallpaper dimming, notifications, media and Floating Bar behavior. Individual changes remain available afterward."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(4), dp(2), dp(4), dp(12))
+        })
+        addButton(root, "Save current as custom profile") {
+            val input = android.widget.EditText(this).apply {
+                hint = "Profile name"
+                setSingleLine()
+                setTextColor(Appearance.text(this@MainActivity))
+                setHintTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(dp(16), dp(12), dp(16), dp(12))
+                background = Appearance.glass(this@MainActivity, 24f, 34, true)
+            }
+            val dialog = AlertDialog.Builder(this)
+                .setTitle("Save custom profile")
+                .setView(input)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Save", null)
+                .create()
+            dialog.setOnShowListener {
+                dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true))
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(this@MainActivity))
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setOnClickListener {
+                    val name = input.text.toString().trim()
+                    if (name.isBlank()) showD2Message("Enter a profile name")
+                    else {
+                        Prefs.saveCustomProfile(this@MainActivity, name)
+                        dialog.dismiss()
+                        showD2Message("$name profile saved")
+                        refreshAppearance()
+                    }
+                }
+            }
+            dialog.show()
+        }
+        val customProfiles = Prefs.customProfileNames(this)
+        if (customProfiles.isNotEmpty()) {
+            addButton(root, "Load custom profile") {
+                val names = Prefs.customProfileNames(this)
+                val dialog = AlertDialog.Builder(this)
+                    .setTitle("Custom profiles")
+                    .setItems(names.toTypedArray()) { _, which ->
+                        val name = names[which]
+                        if (Prefs.applyCustomProfile(this, name)) {
+                            showD2Message("$name profile applied")
+                            refreshAppearance()
+                        }
+                    }.setNegativeButton("Cancel", null).create()
+                dialog.setOnShowListener {
+                    dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true))
+                }
+                dialog.show()
+            }
+            addButton(root, "Delete custom profile") {
+                val names = Prefs.customProfileNames(this)
+                val dialog = AlertDialog.Builder(this)
+                    .setTitle("Delete custom profile")
+                    .setItems(names.toTypedArray()) { _, which ->
+                        val name = names[which]
+                        Prefs.deleteCustomProfile(this, name)
+                        showD2Message("$name profile deleted")
+                        refreshAppearance()
+                    }.setNegativeButton("Cancel", null).create()
+                dialog.setOnShowListener {
+                    dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true))
+                }
+                dialog.show()
+            }
+        }
+
+        section(root, "BACKUP & RESTORE")
+        addButton(root, "Copy settings backup") {
+            val backup = Prefs.exportSettings(this)
+            val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("D2 settings backup", backup))
+            showD2Message("D2 settings backup copied")
+        }
+        addButton(root, "Restore settings backup") {
+            val input = android.widget.EditText(this).apply {
+                hint = "Paste D2 settings backup"
+                minLines = 5
+                maxLines = 10
+                setTextColor(Appearance.text(this@MainActivity))
+                setHintTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(dp(16), dp(12), dp(16), dp(12))
+                background = Appearance.glass(this@MainActivity, 24f, 34, true)
+            }
+            val dialog = AlertDialog.Builder(this)
+                .setTitle("Restore D2 settings")
+                .setMessage("Appearance and lock-screen preferences will be restored. Root, kiosk, ADB recovery, Shizuku state, and D2 enabled state are intentionally not imported.")
+                .setView(input)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Restore", null)
+                .create()
+            dialog.setOnShowListener {
+                dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true))
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(this@MainActivity))
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setOnClickListener {
+                    runCatching { Prefs.importSettings(this@MainActivity, input.text.toString()) }
+                        .onSuccess { count ->
+                            dialog.dismiss()
+                            showD2Message("Restored $count D2 settings")
+                            refreshAppearance()
+                        }
+                        .onFailure { showD2Message("Backup is not valid D2 settings") }
+                }
+            }
+            dialog.show()
         }
         root.addView(TextView(this).apply {
             text = "Double-tap the D2 button or its home-screen widget to open the PIN screen. Taps elsewhere on the home screen are controlled by your launcher.\\n\\nD2 uses its own PIN and does not turn the display off. Optional kiosk mode uses Android task restrictions and interacts with keyguard internally.\\n\\nWithout active kiosk, Home/Recents can bypass D2. Root, recovery, and reboot remain bypasses in either mode. D2 cannot repair firmware or guarantee prevention of download-mode errors."
@@ -936,17 +1210,197 @@ class MainActivity : Activity() {
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(4), dp(28), dp(4), dp(10))
         })
-        return settingsScroll(root)
+        return settingsHost(root)
     }
 
-    private fun settingsScroll(root: LinearLayout) = ScrollView(this).apply {
-        addView(root)
-        setBackgroundColor(Appearance.background(this@MainActivity))
-        setOnApplyWindowInsetsListener { view, insets ->
+    private fun showAppShortcutPicker(side: String) {
+        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val apps = packageManager.queryIntentActivities(launcherIntent, PackageManager.MATCH_ALL)
+            .filter { it.activityInfo.packageName != packageName }
+            .distinctBy { it.activityInfo.packageName }
+            .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+        val labels = apps.map { it.loadLabel(packageManager).toString() }.toTypedArray()
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Choose an app")
+            .setItems(labels) { _, which ->
+                val info = apps[which]
+                Prefs.setShortcut(this, side, "app:${info.activityInfo.packageName}")
+                showD2Message("${info.loadLabel(packageManager)} shortcut selected")
+                refreshAppearance()
+            }
+            .setNegativeButton("Cancel", null).create()
+        dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this, 30f, 76, true)) }
+        dialog.show()
+    }
+
+    private fun showQuickSettingsSheet(root: LinearLayout, scroll: ScrollView) {
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(14), dp(18), dp(18))
+            background = Appearance.glass(this@MainActivity, 34f, 86, true)
+        }
+        panel.addView(TextView(this).apply {
+            text = "Quick Settings"
+            textSize = 22f
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(4), dp(2), dp(4), dp(10))
+        })
+        panel.addView(TextView(this).apply {
+            text = "Jump straight to the D2 controls you use most."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(4), 0, dp(4), dp(10))
+        })
+        val dialog = AlertDialog.Builder(this).setView(panel).create()
+        val shortcuts = listOf(
+            "Lock-screen profiles" to "main_settings",
+            "Clock & Weather" to "clock_weather",
+            "Notifications" to "notifications",
+            "Theme & Glass" to "app_theme",
+            "Floating Bar & Apps" to "floating_bar"
+        )
+        shortcuts.forEach { (label, target) ->
+            addButton(panel, label) {
+                dialog.dismiss()
+                root.findViewWithTag<android.view.View>(target)?.let { view ->
+                    scroll.post {
+                        scroll.smoothScrollTo(0, (view.top - dp(16)).coerceAtLeast(0))
+                        view.postDelayed({ flashSettingsTarget(view) }, 280)
+                    }
+                }
+            }
+        }
+        addButton(panel, "Full Settings") {
+            dialog.dismiss()
+            root.findViewWithTag<android.view.View>("settings")?.let { view ->
+                scroll.post { scroll.smoothScrollTo(0, (view.top - dp(16)).coerceAtLeast(0)) }
+            }
+        }
+        dialog.setOnShowListener {
+            dialog.window?.apply {
+                setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+                setDimAmount(0.30f)
+                attributes = attributes.apply { gravity = Gravity.BOTTOM }
+            }
+            panel.translationY = dp(40).toFloat()
+            panel.alpha = 0f
+            panel.animate().translationY(0f).alpha(1f).setDuration(220).start()
+        }
+        dialog.show()
+    }
+
+    private fun flashSettingsTarget(view: android.view.View) {
+        val originalAlpha = view.alpha
+        view.animate().cancel()
+        view.animate().alpha(0.42f).setDuration(110).withEndAction {
+            view.animate().alpha(1f).setDuration(180).withEndAction {
+                view.animate().alpha(0.58f).setDuration(110).withEndAction {
+                    view.animate().alpha(originalAlpha).setDuration(220).start()
+                }.start()
+            }.start()
+        }.start()
+    }
+
+    private fun settingsHost(root: LinearLayout): ViewGroup {
+        val host = android.widget.FrameLayout(this).apply {
+            setBackgroundColor(Appearance.background(this@MainActivity))
+        }
+        Prefs.appWallpaper(this)?.let { saved ->
+            host.addView(ImageView(this).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                alpha = 1f
+                runCatching { setImageURI(Uri.parse(saved)) }
+            }, android.widget.FrameLayout.LayoutParams(-1, -1))
+            val dim = Prefs.appWallpaperDim(this)
+            if (dim > 0) host.addView(android.view.View(this).apply {
+                setBackgroundColor(Color.argb((255f * dim / 100f).toInt(), 0, 0, 0))
+            }, android.widget.FrameLayout.LayoutParams(-1, -1))
+        }
+        val scroll = ScrollView(this).apply { tag = "settings_scroll"; setBackgroundColor(Color.TRANSPARENT); addView(root) }
+        host.addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
+
+        val nav = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(dp(7), dp(7), dp(7), dp(7))
+            background = Appearance.glass(this@MainActivity, 36f, 82, true)
+            elevation = dp(24).toFloat()
+        }
+        val destinations = listOf(
+            Triple("⌂", "Main", "main_settings"),
+            Triple("◷", "Clock", "clock_weather"),
+            Triple("▣", "Alerts", "notifications"),
+            Triple("✦", "Theme", "app_theme"),
+            Triple("▬", "Bar", "floating_bar"),
+            Triple("⚙", "Settings", "settings")
+        )
+        val items = mutableListOf<LinearLayout>()
+        fun select(item: LinearLayout) {
+            items.forEach { candidate ->
+                candidate.animate().cancel()
+                candidate.background = null
+                candidate.scaleX = 1f
+                candidate.scaleY = 1f
+                (candidate.getChildAt(0) as? TextView)?.setTextColor(Appearance.secondary(this@MainActivity))
+            }
+            item.background = Appearance.glass(this@MainActivity, 28f, 48, true)
+            (item.getChildAt(0) as? TextView)?.setTextColor(Appearance.accent(this@MainActivity))
+            item.scaleX = .88f
+            item.scaleY = .88f
+            item.animate().scaleX(1f).scaleY(1f).setDuration(180).start()
+        }
+        destinations.forEachIndexed { index, (icon, label, target) ->
+            val item = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                isClickable = true
+                isFocusable = true
+                contentDescription = label
+                addView(TextView(this@MainActivity).apply {
+                    text = icon
+                    textSize = if (label == "Bar") 17f else 21f
+                    gravity = Gravity.CENTER
+                    setTextColor(if (index == 0) Appearance.accent(this@MainActivity) else Appearance.secondary(this@MainActivity))
+                }, LinearLayout.LayoutParams(-1, dp(29)))
+                addView(TextView(this@MainActivity).apply {
+                    text = label
+                    textSize = 10f
+                    gravity = Gravity.CENTER
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                }, LinearLayout.LayoutParams(-1, dp(18)))
+                setOnClickListener {
+                    if (target == "settings") {
+                        showQuickSettingsSheet(root, scroll)
+                    } else {
+                        root.findViewWithTag<android.view.View>(target)?.let { view ->
+                            val rect = android.graphics.Rect()
+                            view.getDrawingRect(rect)
+                            root.offsetDescendantRectToMyCoords(view, rect)
+                            scroll.smoothScrollTo(0, (rect.top - dp(18)).coerceAtLeast(0))
+                            view.postDelayed({ flashSettingsTarget(view) }, 280)
+                        }
+                    }
+                    select(this)
+                }
+            }
+            items += item
+            nav.addView(item, LinearLayout.LayoutParams(0, dp(58), 1f).apply {
+                if (index > 0) marginStart = dp(2)
+            })
+        }
+        items.firstOrNull()?.background = Appearance.glass(this, 28f, 48, true)
+        host.addView(nav, android.widget.FrameLayout.LayoutParams(-1, dp(72), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
+            setMargins(dp(18), 0, dp(18), dp(18))
+        })
+        host.setOnApplyWindowInsetsListener { _, insets ->
             val bars = insets.getInsets(android.view.WindowInsets.Type.systemBars())
-            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            (nav.layoutParams as? android.widget.FrameLayout.LayoutParams)?.let { params ->
+                params.bottomMargin = dp(18) + bars.bottom
+                nav.layoutParams = params
+            }
             insets
         }
+        return host
     }
 
     private fun refreshAppearance() {
@@ -956,6 +1410,37 @@ class MainActivity : Activity() {
         val settings = buildSettings()
         setContentView(settings)
         settings.post { (settings as? ScrollView)?.scrollTo(0, y) }
+    }
+
+    private fun showD2Message(message: String, duration: Long = 2200L) {
+        val host = findViewById<ViewGroup>(android.R.id.content) ?: return
+        host.findViewWithTag<android.view.View>("d2_glass_message")?.let { host.removeView(it) }
+        val bubble = TextView(this).apply {
+            tag = "d2_glass_message"
+            text = message
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(18), dp(12), dp(18), dp(12))
+            background = Appearance.glass(this@MainActivity, 26f, 72, true)
+            elevation = dp(22).toFloat()
+            alpha = 0f
+            translationY = dp(16).toFloat()
+        }
+        host.addView(bubble, ViewGroup.LayoutParams(-1, -2))
+        bubble.post {
+            val params = bubble.layoutParams
+            if (params is android.widget.FrameLayout.LayoutParams) {
+                params.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                params.setMargins(dp(24), 0, dp(24), dp(30))
+                bubble.layoutParams = params
+            }
+            bubble.animate().alpha(1f).translationY(0f).setDuration(180).start()
+            bubble.postDelayed({
+                bubble.animate().alpha(0f).translationY(dp(12).toFloat()).setDuration(160)
+                    .withEndAction { runCatching { host.removeView(bubble) } }.start()
+            }, duration)
+        }
     }
 
     private fun addButton(parent: LinearLayout, label: String, action: () -> Unit) {
@@ -1024,7 +1509,7 @@ class MainActivity : Activity() {
                         Shizuku.requestPermission(shizukuRequestCode)
                     } else {
                         refreshShizukuUi()
-                        Toast.makeText(this@MainActivity, "Shizuku is connected and authorized", Toast.LENGTH_SHORT).show()
+                        showD2Message("Shizuku is connected and authorized")
                     }
                 }
             }, LinearLayout.LayoutParams(-1, dp(50)))
@@ -1181,7 +1666,13 @@ class MainActivity : Activity() {
         if (requestCode == wallpaperPicker && resultCode == RESULT_OK) data?.data?.let { uri ->
             contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             Prefs.setWallpaper(this, uri.toString())
-            Toast.makeText(this, "Wallpaper saved", Toast.LENGTH_SHORT).show()
+            showD2Message("Wallpaper saved")
+        }
+        if (requestCode == appWallpaperPicker && resultCode == RESULT_OK) data?.data?.let { uri ->
+            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            Prefs.setAppWallpaper(this, uri.toString())
+            showD2Message("App background saved")
+            refreshAppearance()
         }
     }
 }

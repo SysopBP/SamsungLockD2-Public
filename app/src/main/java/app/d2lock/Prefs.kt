@@ -6,6 +6,131 @@ object Prefs {
     private const val FILE = "lock_preferences"
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
+    fun exportSettings(context: Context): String {
+        val excluded = setOf("enabled", "root_mode", "root_kiosk", "adb_recovery", "shizuku_enabled")
+        val json = org.json.JSONObject()
+        prefs(context).all.forEach { (key, value) ->
+            if (key !in excluded) when (value) {
+                is Boolean, is Int, is Long, is Float, is String -> json.put(key, value)
+            }
+        }
+        return json.toString(2)
+    }
+
+    fun importSettings(context: Context, raw: String): Int {
+        val excluded = setOf("enabled", "root_mode", "root_kiosk", "adb_recovery", "shizuku_enabled")
+        val json = org.json.JSONObject(raw)
+        val edit = prefs(context).edit()
+        var count = 0
+        val keys = json.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            if (key in excluded) continue
+            when (val value = json.get(key)) {
+                is Boolean -> edit.putBoolean(key, value)
+                is Int -> edit.putInt(key, value)
+                is Long -> edit.putLong(key, value)
+                is Double -> edit.putFloat(key, value.toFloat())
+                is String -> edit.putString(key, value)
+                else -> continue
+            }
+            count++
+        }
+        edit.apply()
+        return count
+    }
+
+    fun applyProfile(context: Context, profile: String) {
+        val e = prefs(context).edit()
+        when (profile) {
+            "daily" -> e.putInt("wallpaper_dim", 24).putInt("lock_glass", 72)
+                .putString("clock_style", "adaptive").putBoolean("clock_adaptive", true)
+                .putInt("clock_scale", 100).putBoolean("show_date", true)
+                .putBoolean("show_weather", true).putBoolean("show_battery_percent", true)
+                .putString("notification_density", "comfortable").putInt("notification_radius", 28)
+                .putInt("notification_glass", 72).putBoolean("show_media", true)
+                .putString("media_layout", "comfortable").putString("floating_unlock_gesture", "tap_or_slide")
+            "amoled" -> e.putInt("wallpaper_dim", 68).putInt("lock_glass", 88)
+                .putString("clock_style", "adaptive").putBoolean("clock_adaptive", true)
+                .putInt("clock_scale", 100).putBoolean("show_date", true)
+                .putBoolean("show_weather", true).putBoolean("show_battery_percent", true)
+                .putString("notification_density", "compact").putInt("notification_radius", 26)
+                .putInt("notification_glass", 88).putBoolean("show_media", true)
+                .putString("media_layout", "compact").putString("floating_unlock_gesture", "tap_or_slide")
+            "minimal" -> e.putInt("wallpaper_dim", 38).putInt("lock_glass", 82)
+                .putString("clock_style", "adaptive").putBoolean("clock_adaptive", true)
+                .putInt("clock_scale", 92).putBoolean("show_date", true)
+                .putBoolean("show_weather", false).putBoolean("show_battery_percent", false)
+                .putString("notification_density", "compact").putInt("notification_radius", 30)
+                .putInt("notification_glass", 84).putBoolean("show_media", false)
+                .putString("floating_unlock_gesture", "slide_only")
+            "night" -> e.putInt("wallpaper_dim", 58).putInt("lock_glass", 90)
+                .putString("clock_style", "adaptive").putBoolean("clock_adaptive", true)
+                .putInt("clock_scale", 96).putBoolean("show_date", true)
+                .putBoolean("show_weather", true).putBoolean("show_battery_percent", true)
+                .putString("notification_density", "compact").putInt("notification_radius", 32)
+                .putInt("notification_glass", 90).putBoolean("show_media", true)
+                .putString("media_layout", "compact").putString("floating_unlock_gesture", "slide_only")
+            else -> return
+        }
+        e.putString("active_profile", profile).apply()
+    }
+
+    fun activeProfile(context: Context) = prefs(context).getString("active_profile", "custom") ?: "custom"
+
+    private val profileExcluded = setOf("enabled", "root_mode", "root_kiosk", "adb_recovery", "shizuku_enabled", "active_profile")
+
+    fun customProfileNames(context: Context): List<String> {
+        val raw = prefs(context).getString("custom_profiles", "{}") ?: "{}"
+        val json = runCatching { org.json.JSONObject(raw) }.getOrDefault(org.json.JSONObject())
+        return buildList {
+            val keys = json.keys()
+            while (keys.hasNext()) add(keys.next())
+        }.sorted()
+    }
+
+    fun saveCustomProfile(context: Context, name: String) {
+        val clean = name.trim().take(32)
+        require(clean.isNotBlank())
+        val store = runCatching { org.json.JSONObject(prefs(context).getString("custom_profiles", "{}") ?: "{}") }
+            .getOrDefault(org.json.JSONObject())
+        val snapshot = org.json.JSONObject()
+        prefs(context).all.forEach { (key, value) ->
+            if (key !in profileExcluded && key != "custom_profiles") when (value) {
+                is Boolean, is Int, is Long, is Float, is String -> snapshot.put(key, value)
+            }
+        }
+        store.put(clean, snapshot)
+        prefs(context).edit().putString("custom_profiles", store.toString()).putString("active_profile", "custom:$clean").apply()
+    }
+
+    fun applyCustomProfile(context: Context, name: String): Boolean {
+        val store = runCatching { org.json.JSONObject(prefs(context).getString("custom_profiles", "{}") ?: "{}") }.getOrNull() ?: return false
+        val snapshot = store.optJSONObject(name) ?: return false
+        val edit = prefs(context).edit()
+        val keys = snapshot.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            when (val value = snapshot.get(key)) {
+                is Boolean -> edit.putBoolean(key, value)
+                is Int -> edit.putInt(key, value)
+                is Long -> edit.putLong(key, value)
+                is Double -> edit.putFloat(key, value.toFloat())
+                is String -> edit.putString(key, value)
+            }
+        }
+        edit.putString("active_profile", "custom:$name").apply()
+        return true
+    }
+
+    fun deleteCustomProfile(context: Context, name: String) {
+        val store = runCatching { org.json.JSONObject(prefs(context).getString("custom_profiles", "{}") ?: "{}") }.getOrNull() ?: return
+        store.remove(name)
+        val e = prefs(context).edit().putString("custom_profiles", store.toString())
+        if (activeProfile(context) == "custom:$name") e.putString("active_profile", "custom")
+        e.apply()
+    }
+
     fun enabled(context: Context) = prefs(context).getBoolean("enabled", false)
     fun setEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean("enabled", value).apply()
     fun rootMode(context: Context) = prefs(context).getBoolean("root_mode", false)
@@ -24,9 +149,25 @@ object Prefs {
     fun setUnlockMethod(context: Context, value: String) = prefs(context).edit().putString("unlock_method", value).apply()
     fun wallpaper(context: Context): String? = prefs(context).getString("wallpaper", null)
     fun setWallpaper(context: Context, value: String) = prefs(context).edit().putString("wallpaper", value).apply()
+    fun appWallpaper(context: Context): String? = prefs(context).getString("app_wallpaper", null)
+    fun setAppWallpaper(context: Context, value: String) = prefs(context).edit().putString("app_wallpaper", value).apply()
+    fun clearAppWallpaper(context: Context) = prefs(context).edit().remove("app_wallpaper").apply()
+    fun appWallpaperDim(context: Context) = prefs(context).getInt("app_wallpaper_dim", 48).coerceIn(0, 90)
+    fun setAppWallpaperDim(context: Context, value: Int) = prefs(context).edit().putInt("app_wallpaper_dim", value.coerceIn(0, 90)).apply()
     fun wallpaperDim(context: Context) = prefs(context).getInt("wallpaper_dim", 30).coerceIn(0, 80)
     fun wallpaperParallax(context: Context) = prefs(context).getBoolean("wallpaper_parallax", false)
     fun setWallpaperParallax(context: Context, value: Boolean) = prefs(context).edit().putBoolean("wallpaper_parallax", value).apply()
+    fun wallpaperZoom(context: Context) = prefs(context).getInt("wallpaper_zoom", 100).coerceIn(100, 130)
+    fun setWallpaperZoom(context: Context, value: Int) = prefs(context).edit().putInt("wallpaper_zoom", value.coerceIn(100, 130)).apply()
+    fun wallpaperOffsetX(context: Context) = prefs(context).getInt("wallpaper_offset_x", 0).coerceIn(-50, 50)
+    fun setWallpaperOffsetX(context: Context, value: Int) = prefs(context).edit().putInt("wallpaper_offset_x", value.coerceIn(-50, 50)).apply()
+    fun wallpaperOffsetY(context: Context) = prefs(context).getInt("wallpaper_offset_y", 0).coerceIn(-50, 50)
+    fun setWallpaperOffsetY(context: Context, value: Int) = prefs(context).edit().putInt("wallpaper_offset_y", value.coerceIn(-50, 50)).apply()
+    fun wallpaperAmoled(context: Context) = prefs(context).getBoolean("wallpaper_amoled", false)
+    fun setWallpaperAmoled(context: Context, value: Boolean) = prefs(context).edit().putBoolean("wallpaper_amoled", value).apply()
+    fun resetWallpaperStudio(context: Context) = prefs(context).edit()
+        .remove("wallpaper_zoom").remove("wallpaper_offset_x").remove("wallpaper_offset_y")
+        .remove("wallpaper_amoled").remove("wallpaper_dim").remove("wallpaper_parallax").apply()
     fun glassShimmer(context: Context) = prefs(context).getBoolean("glass_shimmer", false)
     fun setGlassShimmer(context: Context, value: Boolean) = prefs(context).edit().putBoolean("glass_shimmer", value).apply()
     fun doubleTapSleep(context: Context) = prefs(context).getBoolean("double_tap_sleep", false)
