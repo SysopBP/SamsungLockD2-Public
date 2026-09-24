@@ -1002,14 +1002,21 @@ class MainActivity : Activity() {
             startActivity(Intent(this, LockScreenActivity::class.java).putExtra("preview", true))
         }
         section(root, "LOCK-SCREEN PROFILES")
-        addChoice(root, "Profile", Prefs.activeProfile(this).replaceFirstChar { it.uppercase() },
-            listOf("Daily", "AMOLED", "Minimal", "Night"),
-            listOf("daily", "amoled", "minimal", "night")) { value ->
+        val profileLabels = listOf("Daily", "AMOLED", "Minimal", "Night")
+        val profileKeys = listOf("daily", "amoled", "minimal", "night")
+        val selectedProfile = profileKeys.indexOf(Prefs.activeProfile(this)).coerceAtLeast(0)
+        addChoice(root, "Profile", profileLabels, selectedProfile) { index ->
+            val value = profileKeys[index]
             Prefs.applyProfile(this, value)
-            showD2Message("${value.replaceFirstChar { it.uppercase() }} profile applied")
+            showD2Message("${profileLabels[index]} profile applied")
             refreshAppearance()
         }
-        addSecondary(root, "Profiles instantly tune the clock, glass, wallpaper dimming, notifications, media and Floating Bar behavior. Individual changes remain available afterward.")
+        root.addView(TextView(this).apply {
+            text = "Profiles instantly tune the clock, glass, wallpaper dimming, notifications, media and Floating Bar behavior. Individual changes remain available afterward."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(4), dp(2), dp(4), dp(12))
+        })
 
         section(root, "BACKUP & RESTORE")
         addButton(root, "Copy settings backup") {
