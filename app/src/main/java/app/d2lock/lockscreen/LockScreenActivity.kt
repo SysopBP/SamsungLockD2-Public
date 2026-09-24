@@ -499,11 +499,47 @@ class LockScreenActivity : Activity() {
 
     private fun unlockSwipeListener() = object : View.OnTouchListener {
         private var startY = 0f
+        private var dragging = false
         override fun onTouch(v: View, event: android.view.MotionEvent): Boolean {
+            val mode = Prefs.floatingUnlockGesture(this@LockScreenActivity)
             when (event.actionMasked) {
-                android.view.MotionEvent.ACTION_DOWN -> { startY = event.y; return true }
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    startY = event.y
+                    dragging = false
+                    v.animate().cancel()
+                    v.animate().scaleX(0.97f).scaleY(0.97f).alpha(0.88f).setDuration(90).start()
+                    return true
+                }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    val distance = (startY - event.y).coerceAtLeast(0f)
+                    if (distance > dp(8)) dragging = true
+                    if (mode != "tap_only") {
+                        val travel = distance.coerceAtMost(dp(48).toFloat())
+                        v.translationY = -travel * 0.55f
+                        v.scaleX = 0.97f + (travel / dp(48)) * 0.06f
+                        v.scaleY = v.scaleX
+                        v.alpha = 0.88f + (travel / dp(48)) * 0.12f
+                    }
+                    return true
+                }
                 android.view.MotionEvent.ACTION_UP -> {
-                    if (startY - event.y > dp(36) || kotlin.math.abs(startY - event.y) < dp(12)) authenticate()
+                    val distance = startY - event.y
+                    val slide = distance > dp(36)
+                    val tap = !dragging && kotlin.math.abs(distance) < dp(12)
+                    v.animate().translationY(0f).scaleX(1f).scaleY(1f).alpha(1f).setDuration(180).start()
+                    val unlock = when (mode) {
+                        "slide_only" -> slide
+                        "tap_only" -> tap
+                        else -> slide || tap
+                    }
+                    if (unlock) {
+                        v.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+                        authenticate()
+                    }
+                    return true
+                }
+                android.view.MotionEvent.ACTION_CANCEL -> {
+                    v.animate().translationY(0f).scaleX(1f).scaleY(1f).alpha(1f).setDuration(180).start()
                     return true
                 }
             }
