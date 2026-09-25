@@ -8,6 +8,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.telecom.TelecomManager
 import android.content.pm.PackageManager
+import android.content.ComponentName
 import android.util.Log
 import java.lang.ref.WeakReference
 
@@ -75,6 +76,12 @@ object KioskD2Guardian {
                 val callActive = activity.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED &&
                     runCatching { telecom?.isInCall == true }.getOrDefault(false)
                 val modeLost = manager.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_LOCKED
+                val topPackage = runCatching {
+                    @Suppress("DEPRECATION")
+                    manager.getRunningTasks(1).firstOrNull()?.topActivity?.packageName
+                }.getOrNull()
+                val callUiPackages = if (callActive) KioskCallApps.resolve(activity) else emptySet()
+                val callUiFocused = callActive && topPackage != null && topPackage in callUiPackages
                 val focusLost = !activity.hasWindowFocus()
                 if (focusLost) {
                     if (lostFocusAt == 0L) {
@@ -86,9 +93,9 @@ object KioskD2Guardian {
                     lostFocusAt = 0L
                 }
                 val staleFocus = lostFocusAt != 0L && now - lostFocusAt >= FOCUS_GRACE_MS
-                val focusRecoverySuppressed = callActive || trustedFocusTransition
+                val focusRecoverySuppressed = callUiFocused || trustedFocusTransition
                 if (staleFocus && focusRecoverySuppressed && !modeLost) {
-                    Log.i(TAG, "GUARDIAN_FOCUS_DEFERRED reason=${if (callActive) "active_call" else "trusted_d2_surface"}")
+                    Log.i(TAG, "GUARDIAN_FOCUS_DEFERRED reason=${if (callUiFocused) "active_call_ui" else "trusted_d2_surface"} top=$topPackage")
                 }
                 if ((modeLost || (staleFocus && !focusRecoverySuppressed)) && now - lastRepairAt >= REPAIR_COOLDOWN_MS) {
                     lastRepairAt = now
