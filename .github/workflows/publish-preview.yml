@@ -33,7 +33,9 @@ jobs:
           fi
           echo "Packaging D2 run $RUN_ID for main $MAIN_SHA"
           gh run download "$RUN_ID" --repo SysopBP/SamsungLockD2-Public --name SamsungLockD2-deliverables --dir dist
-          (cd dist && sha256sum --check SHA256SUMS.txt)
+          # SHA256SUMS.txt is generated from the repository root and therefore
+          # contains dist/... paths. Verify from the workspace root.
+          sha256sum --check dist/SHA256SUMS.txt
 
       - name: Download latest Galaxy Island Glass build
         env:
