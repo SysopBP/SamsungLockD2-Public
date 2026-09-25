@@ -112,6 +112,10 @@ class LockScreenActivity : Activity() {
 
     private val quickSettingsGuard = object : Runnable {
         override fun run() {
+            // Never close system/dialog surfaces while trusted credentials are
+            // being entered. A callback already in flight can survive
+            // removeCallbacks(), so the guard must also check the state here.
+            if (unlocking || pinDialog?.isShowing == true) return
             if (!preview && Prefs.quickSettingsGuard(this@LockScreenActivity) && hasWindowFocus()) {
                 @Suppress("MissingPermission")
                 runCatching { sendBroadcast(Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)) }
@@ -209,6 +213,13 @@ class LockScreenActivity : Activity() {
     override fun onNewIntent(newIntent: Intent) {
         super.onNewIntent(newIntent)
         intent = newIntent
+        // Guardian can relaunch this singleTask activity while the PIN/pattern
+        // sheet is open. Recreating here destroys the credential UI and is the
+        // reason users have to authenticate unrealistically fast.
+        if (unlocking || pinDialog?.isShowing == true) {
+            Log.i("SamsungLockD2", "GUARDIAN_NEW_INTENT_DEFERRED trustedAuth=true")
+            return
+        }
         recreate()
     }
 
