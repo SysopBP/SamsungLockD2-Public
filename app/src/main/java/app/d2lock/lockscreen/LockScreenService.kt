@@ -24,24 +24,7 @@ class LockScreenService : Service() {
                 val callActive = app.d2lock.notifications.CallNotificationStore.items.isNotEmpty()
                 Log.i(TAG, "GUARDIAN_SCREEN_ON callActive=$callActive")
 
-                // Do not blanket-skip wake recovery during a call. That left Launcher/Home
-                // exposed after power-button or double-tap sleep. Root companion gets first
-                // chance because it can make the foreground decision without Android's
-                // background-activity launch restrictions.
-                if (Prefs.rootMode(context) && RootManager.launchCompanion()) {
-                    Log.i(TAG, "GUARDIAN_WAKE_REASSERT_REQUESTED path=root callActive=$callActive")
-                    return
-                }
-
-                // Non-root fallback mirrors the known-good widget launch path. The lock
-                // activity itself remains responsible for trusted call-UI handling.
-                runCatching {
-                    startActivity(Intent(context, LockScreenActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
-                    Log.i(TAG, "GUARDIAN_WAKE_REASSERT_REQUESTED path=activity callActive=$callActive")
-                }.onFailure {
-                    Log.w(TAG, "GUARDIAN_WAKE_REASSERT_FAILED callActive=$callActive", it)
-                }
+                GuardianWatchdog.reassert(context, "screen_on", callActive)
             }
         }
     }
@@ -69,13 +52,45 @@ class LockScreenService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.i(TAG, "GUARDIAN_SERVICE_STARTED")
+        val action = intent?.action
+        val postBoot = intent?.getBooleanExtra(EXTRA_POST_BOOT, false) == true
+        Log.i(TAG, "GUARDIAN_SERVICE_STARTED action=$action postBoot=$postBoot")
+        if (action == ACTION_LOCK_SURFACE_HEALTHY) {
+            markLockSurfaceHealthy()
+            return START_STICKY
+        }
         if (!Prefs.enabled(this) || !PinStore(this).configured()) {
             Log.i(TAG, "GUARDIAN_SERVICE_STOPPED_NOT_ARMED")
             stopSelf()
             return START_NOT_STICKY
         }
+        if (postBoot && app.d2lock.notifications.CallNotificationStore.items.isEmpty() && postBootLaunchAllowed()) {
+            GuardianWatchdog.reassert(this, "post_boot", false)
+        }
         return START_STICKY
+    }
+
+    private fun markLockSurfaceHealthy() {
+        getSharedPreferences(RECOVERY_PREFS, MODE_PRIVATE).edit()
+            .putInt(KEY_ATTEMPTS, 0).putLong(KEY_WINDOW_START, 0L)
+            .putLong(KEY_LAST_HEALTHY, System.currentTimeMillis()).apply()
+        Log.i(TAG, "GUARDIAN_HEALTHY")
+    }
+
+    private fun postBootLaunchAllowed(): Boolean {
+        val now = SystemClock.elapsedRealtime()
+        val prefs = getSharedPreferences(RECOVERY_PREFS, MODE_PRIVATE)
+        var start = prefs.getLong(KEY_WINDOW_START, 0L)
+        var attempts = prefs.getInt(KEY_ATTEMPTS, 0)
+        if (start == 0L || now - start > BOOT_WINDOW_MS) { start = now; attempts = 0 }
+        if (attempts >= MAX_BOOT_ATTEMPTS) {
+            Log.w(TAG, "GUARDIAN_BOOT_SUPPRESSED attempts=$attempts")
+            return false
+        }
+        attempts++
+        prefs.edit().putLong(KEY_WINDOW_START, start).putInt(KEY_ATTEMPTS, attempts).apply()
+        Log.i(TAG, "GUARDIAN_BOOT_ATTEMPT n=$attempts")
+        return true
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -84,7 +99,16 @@ class LockScreenService : Service() {
         private const val TAG = "SamsungLockD2"
         private const val CHANNEL = "lock_companion"
         private const val ID = 3701
-        fun start(context: Context) = context.startForegroundService(Intent(context, LockScreenService::class.java))
+        private const val RECOVERY_PREFS = "d2_guardian_recovery"
+        private const val KEY_ATTEMPTS = "boot_attempts"
+        private const val KEY_WINDOW_START = "boot_window_start"
+        private const val KEY_LAST_HEALTHY = "last_healthy"
+        private const val BOOT_WINDOW_MS = 120_000L
+        private const val MAX_BOOT_ATTEMPTS = 2
+        private const val EXTRA_POST_BOOT = "d2_post_boot"
+        private const val ACTION_LOCK_SURFACE_HEALTHY = "app.d2lock.action.LOCK_SURFACE_HEALTHY"
+        fun start(context: Context, postBoot: Boolean = false) = context.startForegroundService(Intent(context, LockScreenService::class.java).putExtra(EXTRA_POST_BOOT, postBoot))
+        fun markHealthy(context: Context) = context.startService(Intent(context, LockScreenService::class.java).setAction(ACTION_LOCK_SURFACE_HEALTHY))
         fun stop(context: Context) = context.stopService(Intent(context, LockScreenService::class.java))
     }
 }
