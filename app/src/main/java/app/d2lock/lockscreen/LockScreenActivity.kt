@@ -169,6 +169,7 @@ class LockScreenActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        if (!preview && Prefs.kiosk(this)) Log.i("SamsungLockD2", "GUARDIAN_ACTIVITY_RESUMED")
         if (!::clock.isInitialized) return
         wallpaperActive = true
         wallpaperAnimations.forEach { it.resume() }
@@ -211,7 +212,18 @@ class LockScreenActivity : Activity() {
         recreate()
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!preview && Prefs.kiosk(this)) {
+            Log.i("SamsungLockD2", if (hasFocus) "GUARDIAN_WINDOW_FOCUS_GAINED" else "GUARDIAN_WINDOW_FOCUS_LOST")
+            if (hasFocus && RootKiosk.isEnforced()) {
+                window.decorView.post { if (!isDestroyed && !isFinishing) RootKiosk.reassert(this) }
+            }
+        }
+    }
+
     override fun onPause() {
+        if (!preview && Prefs.kiosk(this)) Log.i("SamsungLockD2", "GUARDIAN_ACTIVITY_PAUSED")
         wallpaperActive = false
         wallpaperAnimations.forEach { it.pause() }
         handler.removeCallbacks(ticker)
@@ -221,6 +233,7 @@ class LockScreenActivity : Activity() {
     }
 
     override fun onStop() {
+        if (!preview && Prefs.kiosk(this)) Log.i("SamsungLockD2", "GUARDIAN_ACTIVITY_STOPPED changingConfig=$isChangingConfigurations")
         handler.removeCallbacks(hideBanner)
         hideBanner.run()
         pinDialog?.dismiss()
@@ -235,6 +248,7 @@ class LockScreenActivity : Activity() {
     override fun onBackPressed() { if (preview) finish() else authenticate() }
 
     override fun onDestroy() {
+        if (!preview && Prefs.kiosk(this)) Log.i("SamsungLockD2", "GUARDIAN_ACTIVITY_DESTROYED changingConfig=$isChangingConfigurations")
         RootKiosk.detach(this)
         wallpaperAnimations.forEach { it.cancel() }
         wallpaperAnimations.clear()
