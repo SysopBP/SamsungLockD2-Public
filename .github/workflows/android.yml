@@ -71,7 +71,18 @@ jobs:
             adb shell input keyevent KEYCODE_WAKEUP
             adb shell wm dismiss-keyguard
             adb shell settings put system screen_off_timeout 1800000
+            adb logcat -c
+            adb logcat -v time SamsungLockD2:I '*:S' > guardian-runtime.log 2>&1 &
+            LOGCAT_PID=$!
+            set +e
             ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.notClass=app.d2lock.ComboScreenshotTest,app.d2lock.ScreenshotCaptureTest --stacktrace
+            TEST_EXIT=$?
+            set -e
+            kill "$LOGCAT_PID" 2>/dev/null || true
+            wait "$LOGCAT_PID" 2>/dev/null || true
+            echo '--- Guardian runtime log ---'
+            cat guardian-runtime.log || true
+            exit "$TEST_EXIT"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -79,6 +90,7 @@ jobs:
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
+            guardian-runtime.log
       - name: Verify APK signature
         run: |
           set -o pipefail
