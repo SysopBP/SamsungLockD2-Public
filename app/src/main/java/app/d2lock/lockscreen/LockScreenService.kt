@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.IBinder
+import android.os.SystemClock
 import android.util.Log
 import app.d2lock.MainActivity
 import app.d2lock.Prefs
@@ -56,13 +57,55 @@ class LockScreenService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.i(TAG, "GUARDIAN_SERVICE_STARTED")
+        val action = intent?.action
+        val postBoot = intent?.getBooleanExtra(EXTRA_POST_BOOT, false) == true
+        Log.i(TAG, "GUARDIAN_SERVICE_STARTED action=$action postBoot=$postBoot")
+        if (action == ACTION_LOCK_SURFACE_HEALTHY) {
+            markLockSurfaceHealthy()
+            return START_STICKY
+        }
         if (!Prefs.enabled(this) || !PinStore(this).configured()) {
             Log.i(TAG, "GUARDIAN_SERVICE_STOPPED_NOT_ARMED")
             stopSelf()
             return START_NOT_STICKY
         }
+        if (postBoot && app.d2lock.notifications.CallNotificationStore.items.isEmpty() && postBootLaunchAllowed()) {
+            val root = Prefs.rootMode(this)
+            val launched = root && RootManager.launchCompanion()
+            if (launched) {
+                Log.i(TAG, "GUARDIAN_LOCKSCREEN_REQUESTED path=root")
+            } else {
+                runCatching {
+                    startActivity(Intent(this, LockScreenActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP))
+                }.onSuccess { Log.i(TAG, "GUARDIAN_LOCKSCREEN_REQUESTED path=activity") }
+                 .onFailure { Log.w(TAG, "GUARDIAN_LOCKSCREEN_REQUEST_FAILED", it) }
+            }
+        }
         return START_STICKY
+    }
+
+    private fun markLockSurfaceHealthy() {
+        getSharedPreferences(RECOVERY_PREFS, MODE_PRIVATE).edit()
+            .putInt(KEY_ATTEMPTS, 0).putLong(KEY_WINDOW_START, 0L)
+            .putLong(KEY_LAST_HEALTHY, System.currentTimeMillis()).apply()
+        Log.i(TAG, "GUARDIAN_HEALTHY")
+    }
+
+    private fun postBootLaunchAllowed(): Boolean {
+        val now = SystemClock.elapsedRealtime()
+        val prefs = getSharedPreferences(RECOVERY_PREFS, MODE_PRIVATE)
+        var start = prefs.getLong(KEY_WINDOW_START, 0L)
+        var attempts = prefs.getInt(KEY_ATTEMPTS, 0)
+        if (start == 0L || now - start > BOOT_WINDOW_MS) { start = now; attempts = 0 }
+        if (attempts >= MAX_BOOT_ATTEMPTS) {
+            Log.w(TAG, "GUARDIAN_BOOT_SUPPRESSED attempts=$attempts")
+            return false
+        }
+        attempts++
+        prefs.edit().putLong(KEY_WINDOW_START, start).putInt(KEY_ATTEMPTS, attempts).apply()
+        Log.i(TAG, "GUARDIAN_BOOT_ATTEMPT n=$attempts")
+        return true
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -71,7 +114,16 @@ class LockScreenService : Service() {
         private const val TAG = "SamsungLockD2"
         private const val CHANNEL = "lock_companion"
         private const val ID = 3701
-        fun start(context: Context) = context.startForegroundService(Intent(context, LockScreenService::class.java))
+        private const val RECOVERY_PREFS = "d2_guardian_recovery"
+        private const val KEY_ATTEMPTS = "boot_attempts"
+        private const val KEY_WINDOW_START = "boot_window_start"
+        private const val KEY_LAST_HEALTHY = "last_healthy"
+        private const val BOOT_WINDOW_MS = 120_000L
+        private const val MAX_BOOT_ATTEMPTS = 2
+        private const val EXTRA_POST_BOOT = "d2_post_boot"
+        private const val ACTION_LOCK_SURFACE_HEALTHY = "app.d2lock.action.LOCK_SURFACE_HEALTHY"
+        fun start(context: Context, postBoot: Boolean = false) = context.startForegroundService(Intent(context, LockScreenService::class.java).putExtra(EXTRA_POST_BOOT, postBoot))
+        fun markHealthy(context: Context) = context.startService(Intent(context, LockScreenService::class.java).setAction(ACTION_LOCK_SURFACE_HEALTHY))
         fun stop(context: Context) = context.stopService(Intent(context, LockScreenService::class.java))
     }
 }
