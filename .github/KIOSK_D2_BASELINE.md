@@ -20,3 +20,6 @@ Source package: SamsungLockD2-deliverables (61).zip
 
 ## Integration rule
 Bring later changes forward as explicit, reviewable patches/commits. Do not wholesale replace the source tree from a newer/older artifact. Before merging to the main development line, verify lineage, package/version identity, expected files, and build outputs. Unexpected APK shrinkage or baseline mismatch is a stop condition.
+
+
+Build verification marker: baseline-control-1
