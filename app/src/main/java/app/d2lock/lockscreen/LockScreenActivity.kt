@@ -209,6 +209,10 @@ class LockScreenActivity : Activity() {
     override fun onNewIntent(newIntent: Intent) {
         super.onNewIntent(newIntent)
         intent = newIntent
+        if (unlocking || GuardianWatchdog.isTrustedAuthenticationActive()) {
+            Log.i("SamsungLockD2", "GUARDIAN_NEW_INTENT_DEFERRED_AUTH")
+            return
+        }
         recreate()
     }
 
@@ -239,7 +243,7 @@ class LockScreenActivity : Activity() {
         // Keep an active PIN/pattern sheet alive while Android temporarily changes
         // focus (for example call UI). Dismissing it here races Guardian against
         // the user and recreates the fast-unlock bug.
-        if (!unlocking) {
+        if (!unlocking && !GuardianWatchdog.isTrustedAuthenticationActive()) {
             pinDialog?.dismiss()
             pinDialog = null
         }
