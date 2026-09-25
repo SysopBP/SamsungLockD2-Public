@@ -5,6 +5,7 @@ import android.app.ActivityManager
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import java.lang.ref.WeakReference
 
 /**
@@ -18,20 +19,27 @@ object KioskD2Guardian {
     private var owner = WeakReference<Activity>(null)
     private var enabled = false
     private var lastRepairAt = 0L
+    private var lostFocusAt = 0L
     private const val CHECK_MS = 750L
     private const val REPAIR_COOLDOWN_MS = 1500L
+    private const val FOCUS_GRACE_MS = 1200L
+    private const val TAG = "SamsungLockD2"
 
     fun start(activity: Activity) {
         owner = WeakReference(activity)
         if (enabled) return
         enabled = true
+        lostFocusAt = 0L
+        Log.i(TAG, "GUARDIAN_WATCHDOG_STARTED")
         main.post(check)
     }
 
     fun stop(activity: Activity) {
         if (owner.get() === activity) owner.clear()
         enabled = false
+        lostFocusAt = 0L
         main.removeCallbacks(check)
+        Log.i(TAG, "GUARDIAN_WATCHDOG_STOPPED")
     }
 
     private val check = object : Runnable {
@@ -44,11 +52,26 @@ object KioskD2Guardian {
             }
             val manager = activity.getSystemService(ActivityManager::class.java)
             val now = SystemClock.elapsedRealtime()
-            if (RootKiosk.isEnforced() &&
-                manager.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_LOCKED &&
-                now - lastRepairAt >= REPAIR_COOLDOWN_MS) {
-                lastRepairAt = now
-                RootKiosk.reassert(activity)
+            if (RootKiosk.isEnforced()) {
+                val modeLost = manager.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_LOCKED
+                val focusLost = !activity.hasWindowFocus()
+                if (focusLost) {
+                    if (lostFocusAt == 0L) {
+                        lostFocusAt = now
+                        Log.i(TAG, "GUARDIAN_FOCUS_LOST")
+                    }
+                } else if (lostFocusAt != 0L) {
+                    Log.i(TAG, "GUARDIAN_FOCUS_RESTORED elapsed=${now - lostFocusAt}")
+                    lostFocusAt = 0L
+                }
+                val staleFocus = lostFocusAt != 0L && now - lostFocusAt >= FOCUS_GRACE_MS
+                if ((modeLost || staleFocus) && now - lastRepairAt >= REPAIR_COOLDOWN_MS) {
+                    lastRepairAt = now
+                    Log.w(TAG, "GUARDIAN_REASSERT reason=${if (modeLost) "lock_task_lost" else "focus_lost"} mode=${manager.lockTaskModeState}")
+                    RootKiosk.reassert(activity, bringToFront = staleFocus)
+                }
+            } else {
+                lostFocusAt = 0L
             }
             main.postDelayed(this, CHECK_MS)
         }
