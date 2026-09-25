@@ -6,6 +6,13 @@ import android.app.PendingIntent
 import android.app.Person
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.Shader
+import android.content.ContentValues
+import android.provider.MediaStore
 import android.os.ParcelFileDescriptor
 import android.os.Process
 import android.os.SystemClock
@@ -24,6 +31,8 @@ import app.d2lock.notifications.NotificationStore
 import app.d2lock.root.KioskCallApps
 import app.d2lock.root.RootKiosk
 import app.d2lock.security.PinStore
+import app.d2lock.security.PinUi
+import app.d2lock.security.PatternUi
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -67,6 +76,30 @@ class ScreenshotCaptureTest {
   val output=ParcelFileDescriptor.AutoCloseOutputStream(pipes[1])
   return RootKiosk.Channel(ParcelFileDescriptor.AutoCloseInputStream(pipes[0]).bufferedReader(), output.bufferedWriter()) { runCatching { output.close() } }
  }
+ private fun previewWallpaper(): String {
+  val bitmap=Bitmap.createBitmap(1080,2400,Bitmap.Config.ARGB_8888)
+  val canvas=Canvas(bitmap)
+  val paint=Paint(Paint.ANTI_ALIAS_FLAG)
+  paint.shader=LinearGradient(0f,0f,1080f,2400f,intArrayOf(0xff08090c.toInt(),0xff252a31.toInt(),0xff050506.toInt()),null,Shader.TileMode.CLAMP)
+  canvas.drawRect(0f,0f,1080f,2400f,paint)
+  paint.shader=null
+  paint.style=Paint.Style.STROKE
+  paint.strokeWidth=3f
+  paint.color=0x42ffffff
+  for(i in 0..8) canvas.drawCircle(840f-i*70f,420f+i*185f,250f+i*38f,paint)
+  paint.style=Paint.Style.FILL
+  paint.color=0x18ffffff
+  canvas.drawCircle(180f,1780f,520f,paint)
+  val values=ContentValues().apply {
+   put(MediaStore.Images.Media.DISPLAY_NAME,"d2_beta1_monochrome_wallpaper.png")
+   put(MediaStore.Images.Media.MIME_TYPE,"image/png")
+   put(MediaStore.Images.Media.RELATIVE_PATH,"Pictures/D2Preview")
+  }
+  val uri=checkNotNull(ctx.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,values))
+  ctx.contentResolver.openOutputStream(uri)!!.use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }
+  bitmap.recycle()
+  return uri.toString()
+ }
  private fun <T: android.app.Activity> capture(scenario: ActivityScenario<T>, name: String) {
   scenario.onActivity { it.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
   inst.waitForIdleSync(); SystemClock.sleep(700)
@@ -84,6 +117,18 @@ class ScreenshotCaptureTest {
   // App-only mode is sufficient to document this appearance-only update.
   Prefs.setKiosk(ctx,false); Prefs.setShowMedia(ctx,true)
   Prefs.setNotificationPrivacy(ctx,4); Prefs.setLiveNotifications(ctx,true)
+  val wallpaper=previewWallpaper()
+  Prefs.setWallpaper(ctx,wallpaper); Prefs.setAppWallpaper(ctx,wallpaper)
+  Prefs.setWallpaperAmoled(ctx,true); Prefs.setWallpaperDim(ctx,42); Prefs.setAppWallpaperDim(ctx,34)
+  Prefs.setWallpaperZoom(ctx,108); Prefs.setWallpaperOffsetY(ctx,-8)
+  Appearance.set(ctx,"mode",3)
+  Appearance.set(ctx,"accent",11); Appearance.set(ctx,"custom",0xffd8d8d8.toInt())
+  Appearance.set(ctx,"notifications",2)
+  Appearance.set(ctx,"cards",42); Appearance.set(ctx,"banners",52)
+  Appearance.set(ctx,"bar_width",78); Appearance.set(ctx,"bar_opacity",52); Appearance.set(ctx,"bar_gap",34)
+  Prefs.applyProfile(ctx,"amoled")
+  Prefs.setWallpaper(ctx,wallpaper); Prefs.setAppWallpaper(ctx,wallpaper)
+  Prefs.setWallpaperAmoled(ctx,true); Prefs.setWallpaperDim(ctx,42); Prefs.setAppWallpaperDim(ctx,34)
   shell("cmd notification allow_listener app.d2lock/app.d2lock.notifications.LockNotificationListener")
   SystemClock.sleep(1500)
 
@@ -110,7 +155,7 @@ class ScreenshotCaptureTest {
     assertEquals(2,CallNotificationStore.items.single().controls.size)
     assertTrue(views(activity!!.window.decorView).filterIsInstance<TextView>().any { it.text.toString()=="Open phone call" })
    }
-   capture(scenario,"12-d2-044-call-controls-demo")
+   capture(scenario,"01-beta1-monochrome-call-controls")
    onMain {
     CallNotificationStore.items.clear()
     val message=LockNotification("demo-message","Messages (demo)","Alex · Sample message","The new update is ready. See you soon!",System.currentTimeMillis(),Notification.VISIBILITY_PRIVATE)
@@ -120,15 +165,28 @@ class ScreenshotCaptureTest {
     NotificationStore.onChanged?.invoke(); NotificationStore.onPosted?.invoke(message)
     assertTrue(views(activity!!.window.decorView).filterIsInstance<TextView>().any { it.visibility==View.VISIBLE && it.text.toString().contains("Messages (demo)\n") })
    }
-   capture(scenario,"13-d2-044-centered-notifications")
-   for ((mode,name) in listOf(1 to "14-d2-044-light",3 to "15-d2-044-amoled-floating-bar")) {
-    Appearance.set(ctx,"mode",mode); Appearance.set(ctx,"accent",if(mode==1) 1 else 2)
-    Appearance.set(ctx,"bar_width",75); Appearance.set(ctx,"bar_opacity",65); Appearance.set(ctx,"bar_gap",40)
-    scenario.recreate()
-    scenario.onActivity { activity=it }
-    waitFor("themed screen focus") { onMain { activity!!.hasWindowFocus() } }
-    capture(scenario,name)
+   capture(scenario,"02-beta1-monochrome-notifications")
+   onMain {
+    val dialog=PinUi.show(activity!!,success={})
+    dialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
    }
+   capture(scenario,"03-beta1-glass-pin")
+   onMain {
+    val dialogs=views(activity!!.window.decorView).toList()
+    // PinUi is a separate window; dismiss the visible dialog through instrumentation before pattern preview.
+   }
+   ui.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK); SystemClock.sleep(400)
+   onMain {
+    val dialog=PatternUi.show(activity!!,setup=true,success={})
+    dialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+   }
+   capture(scenario,"04-beta1-glass-pattern")
+   ui.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK); SystemClock.sleep(400)
+   Appearance.set(ctx,"mode",3); Appearance.set(ctx,"accent",11); Appearance.set(ctx,"custom",0xffd8d8d8.toInt()); Appearance.set(ctx,"notifications",2)
+   scenario.recreate()
+   scenario.onActivity { activity=it }
+   waitFor("AMOLED wallpaper focus") { onMain { activity!!.hasWindowFocus() } }
+   capture(scenario,"05-beta1-amoled-wallpaper-floating-bar")
   } finally {
    val done=CountDownLatch(1)
    scenario.onActivity { RootKiosk.unlock(it) { done.countDown() } }
@@ -145,7 +203,16 @@ class ScreenshotCaptureTest {
     dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).performClick()
    }
    waitFor("theme settings ready") { onMain { androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).any { a -> views(a.window.decorView).filterIsInstance<TextView>().any { it.text.toString()=="THEME & COLORS" } } } }
-   for ((title,name) in listOf("THEME & COLORS" to "16-d2-044-theme-settings","FLOATING LOCK-SCREEN BAR" to "17-d2-044-bar-settings")) {
+   capture(settings,"06-beta1-settings-home-wallpaper")
+   for ((title,name) in listOf(
+    "THEME & COLORS" to "07-beta1-theme-monochrome",
+    "APP ICON" to "08-beta1-launcher-icons",
+    "APP THEME" to "09-beta1-wallpaper-studio",
+    "FLOATING BAR" to "10-beta1-floating-bar-shortcuts",
+    "D2 APP BACKGROUND" to "11-beta1-app-background",
+    "LOCK-SCREEN PROFILES" to "12-beta1-lockscreen-profiles",
+    "BACKUP & RESTORE" to "13-beta1-backup-restore"
+   )) {
     settings.onActivity { a ->
      val all=views(a.window.decorView).toList()
      val target=all.filterIsInstance<TextView>().first { it.text.toString()==title }

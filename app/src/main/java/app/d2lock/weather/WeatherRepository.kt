@@ -41,10 +41,20 @@ object WeatherRepository {
     }
 
     private fun geocode(query: String): Pair<Double, Double> {
-        val q = URLEncoder.encode(query, "UTF-8")
-        val json = getJson("https://geocoding-api.open-meteo.com/v1/search?name=$q&count=1&language=en&format=json")
-        val results = json.optJSONArray("results") ?: error("Location not found")
-        if (results.length() == 0) error("Location not found")
+        val normalized = query.trim()
+        val q = URLEncoder.encode(normalized, "UTF-8")
+        fun search(value: String): JSONObject = getJson(
+            "https://geocoding-api.open-meteo.com/v1/search?name=$value&count=10&language=en&format=json"
+        )
+        var results = search(q).optJSONArray("results")
+        // Retry the leading locality when a combined city + country/region query has no match.
+        if (results == null || results.length() == 0) {
+            val locality = normalized.substringBefore(",").trim()
+            if (locality != normalized && locality.isNotEmpty()) {
+                results = search(URLEncoder.encode(locality, "UTF-8")).optJSONArray("results")
+            }
+        }
+        if (results == null || results.length() == 0) error("Location not found")
         val place = results.getJSONObject(0)
         return place.getDouble("latitude") to place.getDouble("longitude")
     }
@@ -68,6 +78,8 @@ object WeatherRepository {
             readTimeout = 6000
             setRequestProperty("User-Agent", "SamsungLockD2/0.5 (github.com/SysopBP/SamsungLockD2-Public)")
             setRequestProperty("Accept", "application/json")
+            setRequestProperty("Accept-Language", "en,*;q=0.5")
+            instanceFollowRedirects = true
         }
         return try {
             if (connection.responseCode !in 200..299) error("Weather HTTP ${connection.responseCode}")

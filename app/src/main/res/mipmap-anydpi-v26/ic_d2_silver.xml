@@ -1,4 +1,4 @@
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/d2_icon_silver" />
-    <foreground android:drawable="@drawable/ic_d2_titanium_mark" />
+    <foreground android:drawable="@drawable/ic_d2_silver_mark" />
 </adaptive-icon>

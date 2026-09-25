@@ -146,6 +146,7 @@ class LockScreenActivity : Activity() {
             systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
         NotificationStore.onChanged = { runOnUiThread(::renderNotifications) }
+        app.d2lock.notifications.CallNotificationStore.onChanged = { runOnUiThread(::renderNotifications) }
         NotificationStore.onPosted = { item -> runOnUiThread { showLiveNotification(item) } }
         renderNotifications()
         WeatherRepository.load(this) { value -> runOnUiThread {
@@ -218,6 +219,7 @@ class LockScreenActivity : Activity() {
         wallpaperAnimations.clear()
         wallpaperExecutor.shutdownNow()
         if (NotificationStore.onChanged != null) NotificationStore.onChanged = null
+        app.d2lock.notifications.CallNotificationStore.onChanged = null
         NotificationStore.onPosted = null
         super.onDestroy()
     }
@@ -230,7 +232,12 @@ class LockScreenActivity : Activity() {
         Prefs.wallpaper(this)?.let { saved ->
             frame.addView(ImageView(this).apply {
                 scaleType = ImageView.ScaleType.CENTER_CROP
-                alpha = .72f
+                alpha = if (Prefs.wallpaperAmoled(this@LockScreenActivity)) .58f else .72f
+                val zoom = Prefs.wallpaperZoom(this@LockScreenActivity) / 100f
+                scaleX = zoom
+                scaleY = zoom
+                translationX = dp(Prefs.wallpaperOffsetX(this@LockScreenActivity)).toFloat()
+                translationY = dp(Prefs.wallpaperOffsetY(this@LockScreenActivity)).toFloat()
                 val wallpaperView = this
                 wallpaperExecutor.execute {
                     val bitmap = runCatching { WallpaperDecoder.decode(applicationContext, Uri.parse(saved)) }.getOrNull()
@@ -241,7 +248,7 @@ class LockScreenActivity : Activity() {
                             wallpaperView.setImageBitmap(bitmap)
                             if (Prefs.wallpaperParallax(this@LockScreenActivity)) {
                                 listOf(View.SCALE_X, View.SCALE_Y).forEach { property ->
-                                    wallpaperAnimations += ObjectAnimator.ofFloat(wallpaperView, property, 1f, 1.06f).apply {
+                                    wallpaperAnimations += ObjectAnimator.ofFloat(wallpaperView, property, zoom, zoom + .06f).apply {
                                         duration = 14000
                                         repeatCount = ValueAnimator.INFINITE
                                         repeatMode = ValueAnimator.REVERSE
@@ -256,7 +263,7 @@ class LockScreenActivity : Activity() {
                     }
                 }
             }, FrameLayout.LayoutParams(-1, -1))
-            val dim = Prefs.wallpaperDim(this)
+            val dim = (Prefs.wallpaperDim(this) + if (Prefs.wallpaperAmoled(this)) 18 else 0).coerceAtMost(90)
             if (dim > 0) frame.addView(View(this).apply {
                 setBackgroundColor(Color.argb((255f * dim / 100f).toInt(), 0, 0, 0))
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
@@ -498,12 +505,47 @@ class LockScreenActivity : Activity() {
     }
 
     private fun unlockSwipeListener() = object : View.OnTouchListener {
+        private var startX = 0f
         private var startY = 0f
+        private var dragging = false
         override fun onTouch(v: View, event: android.view.MotionEvent): Boolean {
+            val mode = Prefs.floatingUnlockGesture(this@LockScreenActivity)
             when (event.actionMasked) {
-                android.view.MotionEvent.ACTION_DOWN -> { startY = event.y; return true }
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    startX = event.x; startY = event.y; dragging = false
+                    v.animate().cancel()
+                    v.animate().scaleX(0.97f).scaleY(0.97f).alpha(0.88f).setDuration(90).start()
+                    return true
+                }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    val dx = event.x - startX
+                    val dy = event.y - startY
+                    val horizontal = kotlin.math.abs(dx) > kotlin.math.abs(dy)
+                    val valid = horizontal || dy < 0f
+                    val distance = if (horizontal) kotlin.math.abs(dx) else (-dy).coerceAtLeast(0f)
+                    if (valid && distance > dp(8)) dragging = true
+                    if (mode != "tap_only" && valid) {
+                        val travel = distance.coerceAtMost(dp(48).toFloat())
+                        if (horizontal) { v.translationX = dx.coerceIn(-dp(48).toFloat(), dp(48).toFloat()) * .55f; v.translationY = 0f }
+                        else { v.translationY = -travel * .55f; v.translationX = 0f }
+                        val scale = .97f + (travel / dp(48)) * .06f
+                        v.scaleX = scale; v.scaleY = scale
+                        v.alpha = .88f + (travel / dp(48)) * .12f
+                    }
+                    return true
+                }
                 android.view.MotionEvent.ACTION_UP -> {
-                    if (startY - event.y > dp(36) || kotlin.math.abs(startY - event.y) < dp(12)) authenticate()
+                    val dx = event.x - startX
+                    val dy = event.y - startY
+                    val slide = kotlin.math.abs(dx) > dp(36) || dy < -dp(36)
+                    val tap = !dragging && kotlin.math.abs(dx) < dp(12) && kotlin.math.abs(dy) < dp(12)
+                    v.animate().translationX(0f).translationY(0f).scaleX(1f).scaleY(1f).alpha(1f).setDuration(180).start()
+                    val unlock = when (mode) { "slide_only" -> slide; "tap_only" -> tap; else -> slide || tap }
+                    if (unlock) { v.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM); authenticate() }
+                    return true
+                }
+                android.view.MotionEvent.ACTION_CANCEL -> {
+                    v.animate().translationX(0f).translationY(0f).scaleX(1f).scaleY(1f).alpha(1f).setDuration(180).start()
                     return true
                 }
             }
@@ -600,10 +642,10 @@ class LockScreenActivity : Activity() {
                 MotionEvent.ACTION_MOVE -> {
                     tracker?.addMovement(event)
                     val dx = event.x - downX
-                    if (dx > dp(4)) {
+                    if (kotlin.math.abs(dx) > dp(2)) {
                         card.translationX = dx
-                        card.alpha = (1f - dx / (card.width.coerceAtLeast(1) * .8f)).coerceIn(.28f, 1f)
-                    } else if (dx < 0f) card.translationX = dx * .12f
+                        card.alpha = (1f - kotlin.math.abs(dx) / (card.width.coerceAtLeast(1) * .65f)).coerceIn(.22f, 1f)
+                    }
                     return true
                 }
                 MotionEvent.ACTION_UP -> {
@@ -613,8 +655,8 @@ class LockScreenActivity : Activity() {
                     tracker?.recycle(); tracker = null
                     val dx = event.x - downX
                     val dy = event.y - downY
-                    if (dx > card.width * .20f || (dx > dp(18) && velocityX > dp(650))) {
-                        card.animate().translationX(card.width.toFloat()).alpha(0f).setDuration(150).withEndAction {
+                    if (kotlin.math.abs(dx) > card.width * .08f || (kotlin.math.abs(dx) > dp(8) && kotlin.math.abs(velocityX) > dp(280))) {
+                        card.animate().translationX(if (dx >= 0f) card.width.toFloat() else -card.width.toFloat()).alpha(0f).setDuration(120).withEndAction {
                             NotificationStore.listener?.dismiss(item.key)
                             NotificationStore.items.removeAll { it.key == item.key }
                             renderNotifications()
@@ -756,7 +798,20 @@ class LockScreenActivity : Activity() {
             if (preview) openCamera() else authenticate { openCamera() }
         }.apply { contentDescription = "Camera, D2 authentication required" }
         "Flashlight" -> roundButton("🔦") { toggleTorch() }.apply { contentDescription = "Flashlight" }
-        else -> View(this)
+        else -> {
+            val value = Prefs.shortcut(this, side)
+            if (!value.startsWith("app:")) View(this) else {
+                val pkg = value.removePrefix("app:")
+                val appInfo = runCatching { packageManager.getApplicationInfo(pkg, 0) }.getOrNull()
+                if (appInfo == null) View(this) else roundButton("↗") {
+                    val launch = packageManager.getLaunchIntentForPackage(pkg)
+                    if (launch != null) {
+                        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        if (preview) startActivity(launch) else authenticate { startActivity(launch) }
+                    }
+                }.apply { contentDescription = packageManager.getApplicationLabel(appInfo).toString() }
+            }
+        }
     }
 
     private fun notificationLabel(value: String, size: Float) = label(value, size, Appearance.text(this, true)).apply {

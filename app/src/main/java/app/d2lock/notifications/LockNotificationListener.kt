@@ -20,6 +20,7 @@ class LockNotificationListener : NotificationListenerService() {
         NotificationStore.listener = this
         NotificationStore.items.clear()
         CallNotificationStore.items.clear()
+        CallNotificationStore.onChanged?.invoke()
         activeNotifications?.forEach(::put)
         NotificationStore.onChanged?.invoke()
     }
@@ -36,12 +37,14 @@ class LockNotificationListener : NotificationListenerService() {
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         NotificationStore.items.removeAll { it.key == sbn.key }
         CallNotificationStore.items.removeAll { it.key == sbn.key }
+        CallNotificationStore.onChanged?.invoke()
         NotificationStore.onChanged?.invoke()
     }
 
     override fun onListenerDisconnected() {
         NotificationStore.listener = null
         CallNotificationStore.items.clear()
+        CallNotificationStore.onChanged?.invoke()
         NotificationStore.items.clear()
         NotificationStore.onChanged?.invoke()
     }
@@ -65,6 +68,13 @@ class LockNotificationListener : NotificationListenerService() {
         }.getOrDefault(sbn.packageName)
         val item = LockNotification(sbn.key, app, title, text, sbn.postTime,
             sbn.notification.visibility, sbn.notification.contentIntent, sbn.packageName)
+        // Some apps/services repost the same visible notification under a new key.
+        // Collapse only true presentation duplicates; distinct messages from the same
+        // package remain separate notifications.
+        NotificationStore.items.removeAll {
+            it.packageName == item.packageName &&
+                it.title == item.title && it.text == item.text
+        }
         NotificationStore.items.add(0, item)
         while (NotificationStore.items.size > 20) NotificationStore.items.removeAt(NotificationStore.items.lastIndex)
         return item
