@@ -1,11 +1,13 @@
 package app.d2lock.root
 
+import android.Manifest
 import android.app.Activity
 import android.app.ActivityManager
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.telecom.TelecomManager
+import android.content.pm.PackageManager
 import android.util.Log
 import java.lang.ref.WeakReference
 
@@ -55,7 +57,8 @@ object KioskD2Guardian {
             val now = SystemClock.elapsedRealtime()
             if (RootKiosk.isEnforced()) {
                 val telecom = activity.getSystemService(TelecomManager::class.java)
-                val callActive = runCatching { telecom?.isInCall == true }.getOrDefault(false)
+                val callActive = activity.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED &&
+                    runCatching { telecom?.isInCall == true }.getOrDefault(false)
                 val modeLost = manager.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_LOCKED
                 val focusLost = !activity.hasWindowFocus()
                 if (focusLost) {
