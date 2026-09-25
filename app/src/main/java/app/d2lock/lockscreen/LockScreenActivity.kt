@@ -676,8 +676,22 @@ class LockScreenActivity : Activity() {
     private fun authenticate(afterUnlock: (() -> Unit)? = null) {
         if (preview) { finish(); return }
         if (pinDialog?.isShowing == true) return
+
+        // #52: authentication grace window. Mark authentication active before the
+        // credential sheet takes focus so onResume/focus recovery cannot re-attach
+        // or reassert kiosk while the user is drawing a pattern or entering a PIN.
+        unlocking = true
+        handler.removeCallbacks(quickSettingsGuard)
+
+        val cancelled = {
+            unlocking = false
+            pinDialog = null
+            if (!preview && Prefs.quickSettingsGuard(this)) handler.post(quickSettingsGuard)
+            if (!preview && Prefs.kiosk(this)) {
+                RootKiosk.attach(this) { kioskStatus.text = it }
+            }
+        }
         val unlocked = {
-            unlocking = true
             playUnlockHaptic()
             RootKiosk.unlock(this) {
                 app.d2lock.bridge.IslandBridge.setLocked(this, false)
@@ -687,10 +701,11 @@ class LockScreenActivity : Activity() {
         }
         if (Prefs.unlockMethod(this) == "pattern" && PatternStore(this).configured()) {
             pinDialog = PatternUi.show(this, success = unlocked, usePin = {
-                pinDialog = PinUi.show(this, success = unlocked)
-            })
+                // Keep the grace window active while switching credential methods.
+                pinDialog = PinUi.show(this, success = unlocked, cancel = cancelled)
+            }, cancel = cancelled)
         } else {
-            pinDialog = PinUi.show(this, success = unlocked)
+            pinDialog = PinUi.show(this, success = unlocked, cancel = cancelled)
         }
     }
 
