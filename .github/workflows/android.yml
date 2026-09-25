@@ -113,4 +113,4 @@ jobs:
           path: app/build/reports/lint-results-debug.*
 
 
-# Build refresh: D2 feedback pack validation
+# Verified baseline control build trigger
