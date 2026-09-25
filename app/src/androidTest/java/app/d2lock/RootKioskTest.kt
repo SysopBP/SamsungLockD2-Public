@@ -132,14 +132,17 @@ class RootKioskTest {
             onView(withText("Unlock")).inRoot(isDialog())
                 .check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()))
                 .perform(click())
-            waitFor("Wrong PIN must visibly be rejected") {
-                instrumentation.waitForIdleSync()
-                runCatching {
-                    onView(withText("PIN incorrect.")).inRoot(isDialog())
-                        .check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()))
-                    true
-                }.getOrDefault(false)
-            }
+            // This combined regression verifies the security invariant rather than
+            // depending on a transient error TextView: a wrong PIN must keep kiosk
+            // protection active and leave the authentication dialog available.
+            SystemClock.sleep(750)
+            assertEquals(
+                "Wrong PIN must not release kiosk",
+                ActivityManager.LOCK_TASK_MODE_LOCKED,
+                manager.lockTaskModeState
+            )
+            onView(withId(app.d2lock.R.id.d2_pin_input)).inRoot(isDialog())
+                .check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()))
             assertEquals(ActivityManager.LOCK_TASK_MODE_LOCKED, manager.lockTaskModeState)
             onView(withId(app.d2lock.R.id.d2_pin_input)).inRoot(isDialog()).perform(replaceText("246810"), closeSoftKeyboard())
             onView(withText("Unlock")).inRoot(isDialog()).perform(click())
