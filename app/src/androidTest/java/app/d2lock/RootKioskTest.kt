@@ -30,7 +30,17 @@ import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class RootKioskTest {
-    @Before fun prepareEmulator() = TestDevice.wake()
+    @Before fun prepareEmulator() {
+        TestDevice.wake()
+        // Each kiosk test must start from a clean app-side fixture. A failed
+        // predecessor can otherwise leave preferences/PIN files behind and
+        // make later failures look like production regressions.
+        Prefs.setKiosk(context, false)
+        RootKiosk.testConnect = null
+        val file = File(context.noBackupFilesDir, "d2-pin.json")
+        file.delete()
+        File(file.path + ".bak").delete()
+    }
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val context get() = instrumentation.targetContext
     private val manager get() = context.getSystemService(ActivityManager::class.java)
@@ -63,7 +73,11 @@ class RootKioskTest {
         try { body() } finally {
             Prefs.setKiosk(context, false)
             RootKiosk.testConnect = null
-            file.delete(); File(file.path + ".bak").delete()
+            file.delete()
+            File(file.path + ".bak").delete()
+            // Let asynchronous recovery/bridge teardown settle before the
+            // next RootKioskTest starts.
+            SystemClock.sleep(750)
         }
     }
     private fun cleanup(scenario: ActivityScenario<LockScreenActivity>) {
