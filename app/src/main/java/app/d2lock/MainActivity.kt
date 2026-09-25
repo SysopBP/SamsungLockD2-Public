@@ -1285,77 +1285,58 @@ class MainActivity : Activity() {
         dialog.show()
     }
 
-    private inner class GuardianSwitch(context: android.content.Context) : android.view.View(context), android.widget.Checkable {
-        private var checkedState = false
-        private var listener: android.widget.CompoundButton.OnCheckedChangeListener? = null
-        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-        private val stroke = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+    private inner class GuardianSwitch(context: android.content.Context) : Switch(context) {
+        private val glassPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        private val glassStroke = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             style = android.graphics.Paint.Style.STROKE
             strokeWidth = dp(1).toFloat()
         }
 
         init {
-            minimumWidth = dp(54)
-            minimumHeight = dp(32)
-            isClickable = true
-            isFocusable = true
-            contentDescription = "D2 setting toggle"
-            setPadding(dp(2), dp(2), dp(2), dp(2))
+            showText = false
+            minimumHeight = dp(48)
+            // Keep Switch's text/listener API for all existing settings, but make its
+            // Samsung-rendered switch assets invisible. Guardian draws the control itself.
+            trackDrawable = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+            thumbDrawable = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
         }
 
-        override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-            setMeasuredDimension(resolveSize(dp(58), widthMeasureSpec), resolveSize(dp(36), heightMeasureSpec))
+        override fun drawableStateChanged() {
+            super.drawableStateChanged()
+            invalidate()
         }
 
         override fun onDraw(canvas: android.graphics.Canvas) {
+            // Let TextView/Switch render the setting label first; native track/thumb are transparent.
             super.onDraw(canvas)
-            val w = width.toFloat()
-            val h = height.toFloat()
-            val pad = dp(3).toFloat()
-            val r = (h - pad * 2f) / 2f
+            val trackW = dp(52).toFloat()
+            val trackH = dp(30).toFloat()
+            val right = width - dp(4).toFloat()
+            val left = right - trackW
+            val top = (height - trackH) / 2f
+            val bottom = top + trackH
+            val radius = trackH / 2f
             val accent = Appearance.accent(this@MainActivity)
-            val track = if (checkedState) {
-                (accent and 0x00ffffff) or 0x66000000
-            } else {
-                if (Appearance.dark(this@MainActivity)) 0x32ffffff else 0x26000000
-            }
-            paint.color = track
-            paint.style = android.graphics.Paint.Style.FILL
-            canvas.drawRoundRect(pad, pad, w - pad, h - pad, r, r, paint)
+            glassPaint.style = android.graphics.Paint.Style.FILL
+            glassPaint.color = if (isChecked) {
+                (accent and 0x00ffffff) or 0x72000000
+            } else if (Appearance.dark(this@MainActivity)) 0x38ffffff else 0x2c000000
+            canvas.drawRoundRect(left, top, right, bottom, radius, radius, glassPaint)
 
-            stroke.color = if (checkedState) 0xaaffffff.toInt() else 0x70ffffff
-            canvas.drawRoundRect(pad, pad, w - pad, h - pad, r, r, stroke)
+            glassStroke.color = if (isChecked) 0xb0ffffff.toInt() else 0x70ffffff
+            canvas.drawRoundRect(left, top, right, bottom, radius, radius, glassStroke)
 
-            val cx = if (checkedState) w - pad - r else pad + r
-            paint.color = if (checkedState) 0xf2ffffff.toInt() else 0xc7ffffff.toInt()
-            canvas.drawCircle(cx, h / 2f, r - dp(2), paint)
-            stroke.color = 0x8fffffff.toInt()
-            canvas.drawCircle(cx, h / 2f, r - dp(2), stroke)
-        }
-
-        override fun performClick(): Boolean {
-            toggle()
-            super.performClick()
-            return true
-        }
-
-        override fun isChecked(): Boolean = checkedState
-
-        override fun setChecked(checked: Boolean) {
-            if (checkedState == checked) return
-            checkedState = checked
-            invalidate()
-            listener?.onCheckedChanged(null, checked)
-        }
-
-        override fun toggle() = setChecked(!checkedState)
-
-        fun setOnCheckedChangeListener(value: android.widget.CompoundButton.OnCheckedChangeListener?) {
-            listener = value
+            val thumbR = dp(11).toFloat()
+            val cx = if (isChecked) right - radius else left + radius
+            val cy = (top + bottom) / 2f
+            glassPaint.color = if (isChecked) 0xf4ffffff.toInt() else 0xc8ffffff.toInt()
+            canvas.drawCircle(cx, cy, thumbR, glassPaint)
+            glassStroke.color = 0x90ffffff.toInt()
+            canvas.drawCircle(cx, cy, thumbR, glassStroke)
         }
     }
 
-    private fun guardianSwitch(): GuardianSwitch = GuardianSwitch(this)
+    private fun guardianSwitch(): Switch = GuardianSwitch(this)
 
     private inner class GuardianSlider(context: android.content.Context) : android.view.View(context) {
         var max: Int = 100
