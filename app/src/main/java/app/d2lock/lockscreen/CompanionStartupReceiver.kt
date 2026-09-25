@@ -51,8 +51,9 @@ class CompanionStartupReceiver : BroadcastReceiver() {
         Log.i(TAG, "GUARDIAN_RESTORE_CHECK source=$source enabled=$enabled configured=$configured")
         if (!enabled || !configured) return
         try {
-            LockScreenService.start(context)
-            Log.i(TAG, "GUARDIAN_SERVICE_REQUESTED source=$source")
+            val postBoot = source == "boot"
+            LockScreenService.start(context, postBoot = postBoot)
+            Log.i(TAG, "GUARDIAN_SERVICE_REQUESTED source=$source postBoot=$postBoot")
         } catch (error: RuntimeException) {
             Log.w(TAG, "GUARDIAN_SERVICE_REQUEST_FAILED source=$source", error)
         }
