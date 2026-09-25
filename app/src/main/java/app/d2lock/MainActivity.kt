@@ -1338,12 +1338,16 @@ class MainActivity : Activity() {
     }
 
     private fun flashSettingsTarget(view: android.view.View) {
+        // Strong One UI-style arrival cue: two quick pulses so the destination
+        // remains obvious even over a busy custom wallpaper.
         val originalAlpha = view.alpha
+        val originalScaleX = view.scaleX
+        val originalScaleY = view.scaleY
         view.animate().cancel()
-        view.animate().alpha(0.42f).setDuration(110).withEndAction {
-            view.animate().alpha(1f).setDuration(180).withEndAction {
-                view.animate().alpha(0.58f).setDuration(110).withEndAction {
-                    view.animate().alpha(originalAlpha).setDuration(220).start()
+        view.animate().alpha(0.28f).scaleX(1.035f).scaleY(1.035f).setDuration(130).withEndAction {
+            view.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(170).withEndAction {
+                view.animate().alpha(0.38f).scaleX(1.025f).scaleY(1.025f).setDuration(130).withEndAction {
+                    view.animate().alpha(originalAlpha).scaleX(originalScaleX).scaleY(originalScaleY).setDuration(210).start()
                 }.start()
             }.start()
         }.start()
