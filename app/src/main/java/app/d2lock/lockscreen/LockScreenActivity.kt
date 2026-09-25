@@ -236,8 +236,13 @@ class LockScreenActivity : Activity() {
         if (!preview && Prefs.kiosk(this)) Log.i("SamsungLockD2", "GUARDIAN_ACTIVITY_STOPPED changingConfig=$isChangingConfigurations")
         handler.removeCallbacks(hideBanner)
         hideBanner.run()
-        pinDialog?.dismiss()
-        pinDialog = null
+        // Keep an active PIN/pattern sheet alive while Android temporarily changes
+        // focus (for example call UI). Dismissing it here races Guardian against
+        // the user and recreates the fast-unlock bug.
+        if (!unlocking) {
+            pinDialog?.dismiss()
+            pinDialog = null
+        }
         super.onStop()
     }
 
@@ -754,8 +759,24 @@ class LockScreenActivity : Activity() {
     private fun authenticate(afterUnlock: (() -> Unit)? = null) {
         if (preview) { finish(); return }
         if (pinDialog?.isShowing == true) return
+
+        // Authentication grace window: mark the credential UI trusted before it
+        // takes focus so kiosk/watchdog recovery cannot race PIN or pattern input.
+        unlocking = true
+        GuardianWatchdog.beginTrustedAuthentication()
+        handler.removeCallbacks(quickSettingsGuard)
+
+        val cancelled = {
+            unlocking = false
+            GuardianWatchdog.endTrustedAuthentication("auth_cancelled")
+            pinDialog = null
+            if (!preview && Prefs.quickSettingsGuard(this)) handler.post(quickSettingsGuard)
+            if (!preview && Prefs.kiosk(this)) {
+                RootKiosk.attach(this) { kioskStatus.text = it }
+            }
+        }
         val unlocked = {
-            unlocking = true
+            GuardianWatchdog.endTrustedAuthentication("auth_success")
             playUnlockHaptic()
             RootKiosk.unlock(this) {
                 app.d2lock.bridge.IslandBridge.setLocked(this, false)
@@ -765,10 +786,11 @@ class LockScreenActivity : Activity() {
         }
         if (Prefs.unlockMethod(this) == "pattern" && PatternStore(this).configured()) {
             pinDialog = PatternUi.show(this, success = unlocked, usePin = {
-                pinDialog = PinUi.show(this, success = unlocked)
-            })
+                // Keep the grace window active while switching credential methods.
+                pinDialog = PinUi.show(this, success = unlocked, cancel = cancelled)
+            }, cancel = cancelled)
         } else {
-            pinDialog = PinUi.show(this, success = unlocked)
+            pinDialog = PinUi.show(this, success = unlocked, cancel = cancelled)
         }
     }
 
