@@ -1277,6 +1277,23 @@ class MainActivity : Activity() {
         dialog.show()
     }
 
+    private fun guardianSwitch(): Switch = Switch(this).apply {
+        // One UI-style state palette: never fall back to Samsung's default purple.
+        val accent = Appearance.accent(this@MainActivity)
+        val offTrack = if (Appearance.dark(this@MainActivity)) 0x4dffffff else 0x33000000
+        val onTrack = (accent and 0x00ffffff) or 0x66000000
+        thumbTintList = android.content.res.ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(0xfff4f4f4.toInt(), 0xffb8b8b8.toInt())
+        )
+        trackTintList = android.content.res.ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(onTrack, offTrack)
+        )
+        minimumHeight = dp(52)
+        showText = false
+    }
+
     private inner class GuardianSlider(context: android.content.Context) : android.view.View(context) {
         var max: Int = 100
             set(value) { field = value.coerceAtLeast(1); progress = progress.coerceAtMost(field); invalidate() }
