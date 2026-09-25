@@ -48,6 +48,9 @@ import app.d2lock.security.PatternStore
 import app.d2lock.security.PatternUi
 import app.d2lock.widget.DoubleTap
 import app.d2lock.media.MediaControllerBridge
+import app.d2lock.livehub.LiveHubCard
+import app.d2lock.livehub.LiveHubKind
+import app.d2lock.livehub.LiveHubStore
 import app.d2lock.notifications.NotificationStore
 import app.d2lock.notifications.LockNotificationListener
 import app.d2lock.weather.WeatherRepository
@@ -96,6 +99,10 @@ class LockScreenActivity : Activity() {
             mediaTitle.text = media.title().ifBlank { "Media" }
             mediaArtist.text = media.artist().ifBlank { "Play music to show it here" }
             playPause.text = if (media.isPlaying()) "Ⅱ" else "▶"
+            val mediaName = media.title()
+            if (mediaName.isNotBlank()) {
+                LiveHubStore.publish(LiveHubCard("media", LiveHubKind.MEDIA, mediaName, media.artist()))
+            } else LiveHubStore.remove("media")
             handler.postDelayed(this, 1000)
         }
     }
@@ -116,6 +123,9 @@ class LockScreenActivity : Activity() {
             val charging = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) in listOf(BatteryManager.BATTERY_STATUS_CHARGING, BatteryManager.BATTERY_STATUS_FULL)
             val percent = if (Prefs.showBatteryPercent(this@LockScreenActivity)) "  $level%" else ""
             battery.text = if (charging) "▰  ⚡$percent" else "▰$percent"
+            if (charging && level >= 0) {
+                LiveHubStore.publish(LiveHubCard("charging", LiveHubKind.CHARGING, "Charging", "$level%", level / 100f))
+            } else LiveHubStore.remove("charging")
         }
     }
 
