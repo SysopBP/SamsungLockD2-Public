@@ -65,7 +65,37 @@ jobs:
               raise SystemExit("D2 baseline regression detected; missing: " + repr(missing))
           if r'\\n\\nD2 uses its own PIN' in main:
               raise SystemExit("D2 baseline regression detected: escaped newline text returned")
-          print("D2 latest-good settings baseline verified")
+          # Full-feature baseline: these source-level markers represent the feature
+          # set accumulated through the Sep 22-23 development passes. A future
+          # merge that drops one of them must fail before an APK can be published.
+          checks = {
+              "app/src/main/java/app/d2lock/lockscreen/LockScreenActivity.kt": [
+                  "Prefs.notificationCardAlpha",
+                  "Prefs.mediaLayout",
+                  "Prefs.clockStyle",
+                  "Prefs.clockLayout",
+                  "Prefs.wallpaperParallax",
+                  "Prefs.glassShimmer",
+              ],
+              "app/src/main/java/app/d2lock/Prefs.kt": [
+                  "notificationCardAlpha",
+                  "mediaLayout",
+                  "clockStyle",
+                  "clockLayout",
+                  "wallpaperParallax",
+                  "glassShimmer",
+              ],
+              "app/src/main/java/app/d2lock/security/PatternAuth.kt": ["PatternUi"],
+              "app/src/main/java/app/d2lock/passkeys/D2PasskeyStore.kt": ["class D2PasskeyStore"],
+              "app/src/main/java/app/d2lock/quicksettings/D2TileService.kt": ["class D2TileService"],
+              "app/src/main/java/app/d2lock/widget/WidgetConfigActivity.kt": ["class WidgetConfigActivity"],
+          }
+          for path, markers in checks.items():
+              source = Path(path).read_text()
+              absent = [m for m in markers if m not in source]
+              if absent:
+                  raise SystemExit(f"D2 full-feature regression detected in {path}; missing: {absent}")
+          print("D2 latest-good full-feature baseline verified")
           PY
 
       - name: Build and lint
