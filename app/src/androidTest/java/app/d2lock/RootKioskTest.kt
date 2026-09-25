@@ -110,18 +110,27 @@ class RootKioskTest {
                     runCatching { decor?.hasWindowFocus() == true }.getOrDefault(false)
             }
             onView(withText("PIN")).inRoot(withDecorView(sameInstance(decor))).perform(click())
-            onView(withId(app.d2lock.R.id.d2_pin_input)).inRoot(isDialog()).perform(typeText("111111"), closeSoftKeyboard())
-            onView(withText("Unlock")).inRoot(isDialog()).perform(click())
+            onView(withId(app.d2lock.R.id.d2_pin_input)).inRoot(isDialog())
+                .check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()))
+                .perform(typeText("111111"), closeSoftKeyboard())
+            onView(withId(app.d2lock.R.id.d2_pin_input)).inRoot(isDialog())
+                .check(androidx.test.espresso.assertion.ViewAssertions.matches(withText("111111")))
+            onView(withText("Unlock")).inRoot(isDialog())
+                .check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()))
+                .perform(click())
             waitFor("Wrong PIN must visibly be rejected") {
                 instrumentation.waitForIdleSync()
                 runCatching {
                     var rejected = false
-                    scenario.onActivity { activity ->
-                        val matches = java.util.ArrayList<android.view.View>()
-                        activity.window.decorView.rootView.findViewsWithText(
-                            matches, "PIN incorrect.", android.view.View.FIND_VIEWS_WITH_TEXT
-                        )
-                        rejected = matches.any { view -> view.isShown }
+                    instrumentation.runOnMainSync {
+                        val roots = android.view.WindowManagerGlobal.getInstance().rootViews
+                        rejected = roots.any { root ->
+                            val matches = java.util.ArrayList<android.view.View>()
+                            root.findViewsWithText(
+                                matches, "PIN incorrect.", android.view.View.FIND_VIEWS_WITH_TEXT
+                            )
+                            matches.any { view -> view.isShown }
+                        }
                     }
                     rejected
                 }.getOrDefault(false)
