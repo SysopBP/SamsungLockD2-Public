@@ -117,9 +117,11 @@ class RootKioskTest {
                 runCatching {
                     var rejected = false
                     scenario.onActivity { activity ->
-                        rejected = activity.window.decorView.rootView
-                            .findViewsWithText(mutableListOf(), "PIN incorrect.", android.view.View.FIND_VIEWS_WITH_TEXT)
-                            .any { it.isShown }
+                        val matches = java.util.ArrayList<android.view.View>()
+                        activity.window.decorView.rootView.findViewsWithText(
+                            matches, "PIN incorrect.", android.view.View.FIND_VIEWS_WITH_TEXT
+                        )
+                        rejected = matches.any { view -> view.isShown }
                     }
                     rejected
                 }.getOrDefault(false)
