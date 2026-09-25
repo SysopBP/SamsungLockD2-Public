@@ -31,8 +31,17 @@ object RootKiosk {
     private var message = "Kiosk inactive"
     internal val diagnostic: String get() = message
     internal fun isEnforced() = active && !releasing
-    internal fun reassert(activity: Activity) {
+    internal fun reassert(activity: Activity, bringToFront: Boolean = false) {
         if (!active || activity.isDestroyed || activity.isFinishing) return
+        if (bringToFront && !activity.hasWindowFocus()) {
+            runCatching {
+                activity.startActivity(activity.intent.addFlags(
+                    android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                        android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
+                ))
+            }.onSuccess { report("Kiosk Guardian • restoring D2 focus") }
+             .onFailure { report("Kiosk Guardian could not restore focus: ${it.message}") }
+        }
         if (mode(activity) == ActivityManager.LOCK_TASK_MODE_LOCKED) return
         runCatching { activity.startLockTask() }
             .onSuccess { report("Kiosk Guardian • restoring secure lock") }
