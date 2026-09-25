@@ -8,6 +8,7 @@ import android.graphics.drawable.GradientDrawable
 import android.text.InputFilter
 import android.text.InputType
 import android.view.Gravity
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import android.widget.EditText
@@ -154,15 +155,22 @@ object PinUi {
                         entered.fill('\u0000'); previous?.fill('\u0000')
                     }
                     activity.runOnUiThread {
-                        if (activity.isDestroyed || activity.isFinishing || !dialog.isShowing) return@runOnUiThread
-                        if (ok) { dialog.dismiss(); success() }
-                        else {
+                        if (activity.isDestroyed || activity.isFinishing || !dialog.isShowing) {
+                            Log.w("SamsungLockD2", "GUARDIAN_PIN_RESULT_DROPPED ok=$ok destroyed=${activity.isDestroyed} finishing=${activity.isFinishing} showing=${dialog.isShowing}")
+                            return@runOnUiThread
+                        }
+                        if (ok) {
+                            Log.i("SamsungLockD2", "GUARDIAN_PIN_ACCEPTED")
+                            dialog.dismiss()
+                            success()
+                        } else {
                             pin.text.clear(); old?.text?.clear(); confirm?.text?.clear()
                             error.setTextColor(Color.rgb(220, 70, 70))
                             error.text = message
                             button.isEnabled = true
                             dialog.getButton(AlertDialog.BUTTON_NEGATIVE).isEnabled = true
                             dialog.setCancelable(true)
+                            Log.i("SamsungLockD2", "GUARDIAN_PIN_REJECTED showing=${dialog.isShowing} errorVisible=${error.isShown} message=${error.text}")
                         }
                     }
                 }
