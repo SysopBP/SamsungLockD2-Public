@@ -81,6 +81,7 @@ class LockScreenActivity : Activity() {
     private var pinDialog: AlertDialog? = null
     private var wallpaperActive = false
     private var emptyTapAt = 0L
+    private var healthyReported = false
     private val wallpaperExecutor = Executors.newSingleThreadExecutor()
     private val wallpaperAnimations = mutableListOf<ObjectAnimator>()
 
@@ -168,6 +169,16 @@ class LockScreenActivity : Activity() {
         if (!preview && !unlocking && Prefs.kiosk(this)) {
             RootKiosk.attach(this) { kioskStatus.text = it }
             KioskD2Guardian.start(this)
+        }
+        if (!preview && !healthyReported) {
+            healthyReported = true
+            // Report only after the activity is resumed and its UI exists. A crash before
+            // this point leaves the boot-attempt budget intact for fail-safe recovery.
+            window.decorView.postDelayed({
+                if (!isDestroyed && !isFinishing && hasWindowFocus()) {
+                    LockScreenService.markHealthy(this)
+                } else healthyReported = false
+            }, 1500)
         }
     }
 
