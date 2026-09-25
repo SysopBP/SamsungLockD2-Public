@@ -17,9 +17,14 @@ object GuardianWatchdog {
     @Volatile private var state = State.PROTECTED
     @Volatile private var lastReassertAt = 0L
     @Volatile private var lastReason = "startup"
+    @Volatile private var trustedAuthentication = false
 
     @Synchronized
     fun reassert(context: Context, reason: String, callActive: Boolean = false): Boolean {
+        if (trustedAuthentication) {
+            Log.i(TAG, "GUARDIAN_RELOCATE_SKIPPED reason=trusted_auth source=$reason")
+            return false
+        }
         if (!Prefs.enabled(context) || !PinStore(context).configured()) {
             transition(State.TEMPORARILY_RELEASED, "not_armed")
             Log.i(TAG, "GUARDIAN_RELOCATE_SKIPPED reason=not_armed source=$reason")
@@ -48,6 +53,20 @@ object GuardianWatchdog {
             transition(State.TEMPORARILY_RELEASED, "reassert_failed")
             false
         }
+    }
+
+    @Synchronized
+    fun beginTrustedAuthentication() {
+        trustedAuthentication = true
+        transition(State.TRUSTED_UI, "authentication")
+        Log.i(TAG, "GUARDIAN_TRUSTED_AUTH_STARTED")
+    }
+
+    @Synchronized
+    fun endTrustedAuthentication(reason: String) {
+        trustedAuthentication = false
+        transition(State.PROTECTED, reason)
+        Log.i(TAG, "GUARDIAN_TRUSTED_AUTH_ENDED reason=$reason")
     }
 
     @Synchronized fun markProtected(reason: String) = transition(State.PROTECTED, reason)
