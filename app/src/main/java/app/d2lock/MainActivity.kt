@@ -1286,7 +1286,8 @@ class MainActivity : Activity() {
         var progressTintList: android.content.res.ColorStateList? = null
         var thumbTintList: android.content.res.ColorStateList? = null
         private var listener: SeekBar.OnSeekBarChangeListener? = null
-        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)\n        private val glassPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        private val glassPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
         private val ring = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             style = android.graphics.Paint.Style.STROKE
             strokeWidth = dp(2).toFloat()
