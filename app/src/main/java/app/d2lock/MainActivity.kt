@@ -294,6 +294,7 @@ class MainActivity : Activity() {
         }
         if (configured) {
             root.addView(Switch(this).apply {
+            styleOneUi9SettingRow(this)
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
                 text = "Connect Galaxy Island (paired build)"
                 setTextColor(Appearance.text(this@MainActivity))
@@ -421,6 +422,7 @@ class MainActivity : Activity() {
         })
 
         val enabled = Switch(this).apply {
+            styleOneUi9SettingRow(this)
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Show D2 when the screen wakes"
             textSize = 17f
@@ -438,6 +440,7 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(-1, dp(1)).apply { topMargin = dp(8); bottomMargin = dp(10) })
         section(root, "SHIZUKU")
         root.addView(Switch(this).apply {
+            styleOneUi9SettingRow(this)
             thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Use Shizuku in Kiosk D2 Guardian"
             textSize = 17f
@@ -457,6 +460,7 @@ class MainActivity : Activity() {
 
         section(root, "LOCK-SCREEN QUICK SETTINGS")
         root.addView(Switch(this).apply {
+            styleOneUi9SettingRow(this)
             thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Guard Quick Settings while D2 is locked"
             textSize = 17f
@@ -472,6 +476,7 @@ class MainActivity : Activity() {
         })
 
         val rootMode = Switch(this).apply {
+            styleOneUi9SettingRow(this)
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Optional KernelSU root mode"
             textSize = 17f
@@ -487,6 +492,7 @@ class MainActivity : Activity() {
         root.addView(rootMode, rowParams())
 
         root.addView(Switch(this).apply {
+            styleOneUi9SettingRow(this)
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Require D2 authentication to leave (root kiosk)"
             textSize = 17f
@@ -524,6 +530,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), 0, dp(6), dp(10))
         })
         root.addView(Switch(this).apply {
+            styleOneUi9SettingRow(this)
             thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "ADB / USB recovery mode"
             textSize = 17f
@@ -677,6 +684,7 @@ class MainActivity : Activity() {
         root.addView(appearanceCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         section(appearanceCard, "LOCK SCREEN EXTRAS")
         appearanceCard.addView(Switch(this).apply {
+            styleOneUi9SettingRow(this)
             thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Wallpaper parallax"
             setTextColor(Appearance.text(this@MainActivity))
@@ -684,6 +692,7 @@ class MainActivity : Activity() {
             setOnCheckedChangeListener { _, checked -> Prefs.setWallpaperParallax(this@MainActivity, checked) }
         }, rowParams())
         appearanceCard.addView(Switch(this).apply {
+            styleOneUi9SettingRow(this)
             thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Glass shimmer"
             setTextColor(Appearance.text(this@MainActivity))
@@ -691,6 +700,7 @@ class MainActivity : Activity() {
             setOnCheckedChangeListener { _, checked -> Prefs.setGlassShimmer(this@MainActivity, checked) }
         }, rowParams())
         appearanceCard.addView(Switch(this).apply {
+            styleOneUi9SettingRow(this)
             thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Double-tap empty lock screen to sleep"
             setTextColor(Appearance.text(this@MainActivity))
@@ -784,6 +794,7 @@ class MainActivity : Activity() {
             Prefs.setClockLayout(this, listOf("auto", "single", "stacked")[it])
         }
         appearanceCard.addView(Switch(this).apply {
+            styleOneUi9SettingRow(this)
             thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Adaptive clock sizing"
             setTextColor(Appearance.text(this@MainActivity))
@@ -813,6 +824,7 @@ class MainActivity : Activity() {
             })
         }, LinearLayout.LayoutParams(-1, dp(48)))
         appearanceCard.addView(Switch(this).apply {
+            styleOneUi9SettingRow(this)
             thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Show date under clock"
             setTextColor(Appearance.text(this@MainActivity))
@@ -886,6 +898,7 @@ class MainActivity : Activity() {
             })
         }, LinearLayout.LayoutParams(-1, dp(48)))
         appearanceCard.addView(Switch(this).apply {
+            styleOneUi9SettingRow(this)
             thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Show weather in pill"
             setTextColor(Appearance.text(this@MainActivity))
@@ -893,6 +906,7 @@ class MainActivity : Activity() {
             setOnCheckedChangeListener { _, checked -> Prefs.setShowWeather(this@MainActivity, checked) }
         }, rowParams())
         appearanceCard.addView(Switch(this).apply {
+            styleOneUi9SettingRow(this)
             thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Show battery percentage"
             setTextColor(Appearance.text(this@MainActivity))
@@ -900,6 +914,7 @@ class MainActivity : Activity() {
             setOnCheckedChangeListener { _, checked -> Prefs.setShowBatteryPercent(this@MainActivity, checked) }
         }, rowParams())
         appearanceCard.addView(Switch(this).apply {
+            styleOneUi9SettingRow(this)
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Weather in Celsius (off: Fahrenheit)"
             setTextColor(Appearance.text(this@MainActivity))
@@ -960,6 +975,7 @@ class MainActivity : Activity() {
             })
         }, LinearLayout.LayoutParams(-1, dp(48)))
         appearanceCard.addView(Switch(this).apply {
+            styleOneUi9SettingRow(this)
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Show media player while D2 is locked"
             setTextColor(Appearance.text(this@MainActivity))
@@ -982,6 +998,7 @@ class MainActivity : Activity() {
         val privacyCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(privacyCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         privacyCard.addView(Switch(this).apply {
+            styleOneUi9SettingRow(this)
                 thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
             text = "Live notification banners while D2 is locked"
             setTextColor(Appearance.text(this@MainActivity))
@@ -1703,6 +1720,12 @@ class MainActivity : Activity() {
         }
         parent.addView(card, LinearLayout.LayoutParams(-1, dp(72)).apply { bottomMargin = dp(8) })
     }
+    private fun styleOneUi9SettingRow(view: android.view.View) {
+        view.background = Appearance.glass(this, 28f, 34, true)
+        view.setPadding(dp(18), dp(10), dp(18), dp(10))
+        view.elevation = dp(2).toFloat()
+    }
+
     private fun rowParams() = LinearLayout.LayoutParams(-1, dp(64)).apply { bottomMargin = dp(8) }
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
