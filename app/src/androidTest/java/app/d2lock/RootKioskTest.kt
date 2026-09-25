@@ -121,18 +121,9 @@ class RootKioskTest {
             waitFor("Wrong PIN must visibly be rejected") {
                 instrumentation.waitForIdleSync()
                 runCatching {
-                    var rejected = false
-                    instrumentation.runOnMainSync {
-                        val roots = android.view.WindowManagerGlobal.getInstance().rootViews
-                        rejected = roots.any { root ->
-                            val matches = java.util.ArrayList<android.view.View>()
-                            root.findViewsWithText(
-                                matches, "PIN incorrect.", android.view.View.FIND_VIEWS_WITH_TEXT
-                            )
-                            matches.any { view -> view.isShown }
-                        }
-                    }
-                    rejected
+                    onView(withText("PIN incorrect.")).inRoot(isDialog())
+                        .check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()))
+                    true
                 }.getOrDefault(false)
             }
             assertEquals(ActivityManager.LOCK_TASK_MODE_LOCKED, manager.lockTaskModeState)
