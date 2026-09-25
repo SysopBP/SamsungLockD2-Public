@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.IBinder
+import android.util.Log
 import app.d2lock.MainActivity
 import app.d2lock.Prefs
 import app.d2lock.R
@@ -34,6 +35,7 @@ class LockScreenService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        Log.i(TAG, "GUARDIAN_SERVICE_CREATED")
         val channel = NotificationChannel(CHANNEL, "Lock-screen companion", NotificationManager.IMPORTANCE_LOW)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
@@ -54,7 +56,9 @@ class LockScreenService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.i(TAG, "GUARDIAN_SERVICE_STARTED")
         if (!Prefs.enabled(this) || !PinStore(this).configured()) {
+            Log.i(TAG, "GUARDIAN_SERVICE_STOPPED_NOT_ARMED")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -64,6 +68,7 @@ class LockScreenService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
+        private const val TAG = "SamsungLockD2"
         private const val CHANNEL = "lock_companion"
         private const val ID = 3701
         fun start(context: Context) = context.startForegroundService(Intent(context, LockScreenService::class.java))
