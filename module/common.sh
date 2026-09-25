@@ -61,8 +61,11 @@ install_payload() {
     log_line "bundled APK not found; MODDIR=$MODDIR SCRIPT_DIR=$SCRIPT_DIR"
     return 2
   }
-  log_line "installing bundled APK from $APK"
-  /system/bin/pm install -r -d "$APK" >> "$LOG" 2>&1
+  # Recovery safety: never allow the boot module to downgrade a newer D2 APK.
+  # pm install -d previously allowed an older bundled payload to replace the
+  # app after reboot, which could make a verified build appear to roll back.
+  log_line "installing bundled APK from $APK (downgrades blocked)"
+  /system/bin/pm install -r "$APK" >> "$LOG" 2>&1
   rc=$?
   [ "$rc" -eq 0 ] && package_installed && return 0
   log_line "pm install returned $rc"
