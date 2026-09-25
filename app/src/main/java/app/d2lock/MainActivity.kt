@@ -732,6 +732,8 @@ class MainActivity : Activity() {
                     val glass = value + 20
                     Prefs.setLockGlass(this@MainActivity, glass)
                     root.findViewWithTag<TextView>("lock_glass_label")?.text = "Lock-screen glass: $glass%"
+                    // Apply the visual change live without rebuilding the activity/view hierarchy.
+                    applyLiveGlassOpacity(root, glass)
                 }
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
@@ -1551,6 +1553,22 @@ class MainActivity : Activity() {
             insets
         }
         return host
+    }
+
+    private fun applyLiveGlassOpacity(root: ViewGroup, glass: Int) {
+        // Update only the visible settings glass surfaces. Rebuilding the entire hierarchy
+        // while a slider is tracking caused Samsung FrameLayout measurement instability.
+        fun walk(view: View) {
+            if (view is ViewGroup) {
+                for (i in 0 until view.childCount) walk(view.getChildAt(i))
+            }
+            when (view.tag) {
+                "appearance_card", "lock_preview_card" ->
+                    view.background = Appearance.glass(this, 28f, glass.coerceIn(20, 100), true)
+            }
+        }
+        walk(root)
+        root.invalidate()
     }
 
     private fun refreshAppearance() {
