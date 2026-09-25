@@ -21,13 +21,26 @@ class LockScreenService : Service() {
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == Intent.ACTION_SCREEN_ON && Prefs.enabled(context) && PinStore(context).configured()) {
-                // Ringing/proximity wake must not put D2 in front of an active phone call.
-                if (app.d2lock.notifications.CallNotificationStore.items.isNotEmpty()) return
-                if (Prefs.rootMode(context) && RootManager.launchCompanion()) return
-                // Android may defer this launch under background-start restrictions.
+                val callActive = app.d2lock.notifications.CallNotificationStore.items.isNotEmpty()
+                Log.i(TAG, "GUARDIAN_SCREEN_ON callActive=$callActive")
+
+                // Do not blanket-skip wake recovery during a call. That left Launcher/Home
+                // exposed after power-button or double-tap sleep. Root companion gets first
+                // chance because it can make the foreground decision without Android's
+                // background-activity launch restrictions.
+                if (Prefs.rootMode(context) && RootManager.launchCompanion()) {
+                    Log.i(TAG, "GUARDIAN_WAKE_REASSERT_REQUESTED path=root callActive=$callActive")
+                    return
+                }
+
+                // Non-root fallback mirrors the known-good widget launch path. The lock
+                // activity itself remains responsible for trusted call-UI handling.
                 runCatching {
                     startActivity(Intent(context, LockScreenActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
+                    Log.i(TAG, "GUARDIAN_WAKE_REASSERT_REQUESTED path=activity callActive=$callActive")
+                }.onFailure {
+                    Log.w(TAG, "GUARDIAN_WAKE_REASSERT_FAILED callActive=$callActive", it)
                 }
             }
         }
