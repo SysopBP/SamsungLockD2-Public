@@ -1275,39 +1275,49 @@ class MainActivity : Activity() {
         dialog.show()
     }
 
-    private fun guardianSlider(): SeekBar = SeekBar(this).apply {
-        // Guardian / One UI 9 treatment: rounded pill track, compact accent fill,
-        // larger touch target and a clean circular thumb instead of the legacy bar.
-        minHeight = dp(52)
-        setPadding(dp(4), dp(8), dp(4), dp(8))
-        splitTrack = false
+    private fun guardianSlider(): SeekBar = object : SeekBar(this) {
+        private val trackPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        private val fillPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        private val thumbPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        private val ringPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = dp(2).toFloat()
+        }
 
-        val inactive = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = dp(4).toFloat()
-            setColor(Appearance.secondary(this@MainActivity) and 0x55ffffff)
-            setSize(1, dp(8))
+        init {
+            minHeight = dp(56)
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+            // Hide framework artwork completely; this view draws the control itself.
+            progressDrawable = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+            thumb = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+            thumbOffset = 0
+            splitTrack = false
         }
-        val active = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = dp(4).toFloat()
-            setColor(Appearance.accent(this@MainActivity))
-            setSize(1, dp(8))
+
+        override fun onDraw(canvas: android.graphics.Canvas) {
+            val left = paddingLeft.toFloat()
+            val right = (width - paddingRight).toFloat()
+            val cy = height / 2f
+            val trackH = dp(10).toFloat()
+            val radius = trackH / 2f
+            val range = (max - min).coerceAtLeast(1)
+            val fraction = ((progress - min).toFloat() / range).coerceIn(0f, 1f)
+            val thumbX = left + (right - left) * fraction
+
+            trackPaint.color = if (Appearance.dark(this@MainActivity)) 0x66ffffff else 0x33000000
+            fillPaint.color = Appearance.accent(this@MainActivity)
+            thumbPaint.color = Appearance.accent(this@MainActivity)
+            ringPaint.color = if (Appearance.dark(this@MainActivity)) android.graphics.Color.WHITE else Appearance.background(this@MainActivity)
+
+            val track = android.graphics.RectF(left, cy - trackH / 2f, right, cy + trackH / 2f)
+            canvas.drawRoundRect(track, radius, radius, trackPaint)
+            if (thumbX > left) {
+                val fill = android.graphics.RectF(left, cy - trackH / 2f, thumbX, cy + trackH / 2f)
+                canvas.drawRoundRect(fill, radius, radius, fillPaint)
+            }
+            canvas.drawCircle(thumbX, cy, dp(13).toFloat(), thumbPaint)
+            canvas.drawCircle(thumbX, cy, dp(13).toFloat(), ringPaint)
         }
-        val scaledActive = ScaleDrawable(active, Gravity.START, 1f, -1f)
-        progressDrawable = LayerDrawable(arrayOf(inactive, scaledActive)).apply {
-            setId(0, android.R.id.background)
-            setId(1, android.R.id.progress)
-        }
-        thumb = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(Appearance.accent(this@MainActivity))
-            setStroke(dp(3), Appearance.background(this@MainActivity))
-            setSize(dp(24), dp(24))
-        }
-        thumbOffset = 0
-        progressTintList = null
-        thumbTintList = null
     }
 
     private fun showQuickSettingsSheet(root: LinearLayout, scroll: ScrollView) {
