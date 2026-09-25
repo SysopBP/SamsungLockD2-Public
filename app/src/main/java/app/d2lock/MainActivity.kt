@@ -1286,7 +1286,7 @@ class MainActivity : Activity() {
         var progressTintList: android.content.res.ColorStateList? = null
         var thumbTintList: android.content.res.ColorStateList? = null
         private var listener: SeekBar.OnSeekBarChangeListener? = null
-        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)\n        private val glassPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
         private val ring = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             style = android.graphics.Paint.Style.STROKE
             strokeWidth = dp(2).toFloat()
@@ -1305,15 +1305,20 @@ class MainActivity : Activity() {
             val left = dp(10).toFloat()
             val right = width - dp(10).toFloat()
             val cy = height / 2f
-            val trackH = dp(12).toFloat()
+            val trackH = dp(14).toFloat()
             val radius = trackH / 2f
             val fraction = (progress.toFloat() / max.coerceAtLeast(1)).coerceIn(0f, 1f)
             val thumbX = left + (right - left) * fraction
 
-            paint.color = if (Appearance.dark(this@MainActivity)) 0x55ffffff else 0x33000000
-            canvas.drawRoundRect(android.graphics.RectF(left, cy - trackH / 2f, right, cy + trackH / 2f), radius, radius, paint)
+            // Glass capsule: translucent body, soft highlight and subtle outline.
+            glassPaint.color = if (Appearance.dark(this@MainActivity)) 0x4dffffff else 0x3dffffff
+            canvas.drawRoundRect(android.graphics.RectF(left, cy - trackH / 2f, right, cy + trackH / 2f), radius, radius, glassPaint)
+            ring.color = if (Appearance.dark(this@MainActivity)) 0x66ffffff else 0x55000000
+            canvas.drawRoundRect(android.graphics.RectF(left, cy - trackH / 2f, right, cy + trackH / 2f), radius, radius, ring)
+            glassPaint.color = 0x38ffffff
+            canvas.drawRoundRect(android.graphics.RectF(left + dp(2), cy - trackH / 2f + dp(2), right - dp(2), cy - dp(1)), radius, radius, glassPaint)
 
-            paint.color = Appearance.accent(this@MainActivity)
+            paint.color = (Appearance.accent(this@MainActivity) and 0x00ffffff) or 0x99000000.toInt()
             if (thumbX > left) {
                 canvas.drawRoundRect(android.graphics.RectF(left, cy - trackH / 2f, thumbX, cy + trackH / 2f), radius, radius, paint)
             }
