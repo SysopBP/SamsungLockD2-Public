@@ -699,7 +699,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "wallpaper_dim_label"
         })
-        appearanceCard.addView(SeekBar(this).apply {
+        appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.wallpaperDim(this@MainActivity)
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -721,7 +721,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "lock_glass_label"
         })
-        appearanceCard.addView(SeekBar(this).apply {
+        appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.lockGlass(this@MainActivity) - 20
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -744,7 +744,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "lock_scale_label"
         })
-        appearanceCard.addView(SeekBar(this).apply {
+        appearanceCard.addView(guardianSlider().apply {
             max = 30
             progress = Prefs.lockScale(this@MainActivity) - 85
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -784,7 +784,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "clock_scale_label"
         })
-        appearanceCard.addView(SeekBar(this).apply {
+        appearanceCard.addView(guardianSlider().apply {
             max = 50
             progress = Prefs.clockScale(this@MainActivity) - 80
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -814,7 +814,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "top_info_glass_label"
         })
-        appearanceCard.addView(SeekBar(this).apply {
+        appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.componentGlass(this@MainActivity, "top_info") - 20
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -837,7 +837,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "media_glass_label"
         })
-        appearanceCard.addView(SeekBar(this).apply {
+        appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.componentGlass(this@MainActivity, "media") - 20
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -860,7 +860,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "top_info_size_label"
         })
-        appearanceCard.addView(SeekBar(this).apply {
+        appearanceCard.addView(guardianSlider().apply {
             max = 40
             progress = Prefs.topInfoSize(this@MainActivity) - 80
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -935,7 +935,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "media_button_scale_label"
         })
-        appearanceCard.addView(SeekBar(this).apply {
+        appearanceCard.addView(guardianSlider().apply {
             max = 40
             progress = Prefs.mediaButtonsScale(this@MainActivity) - 80
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -998,7 +998,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "notification_radius_label"
         })
-        privacyCard.addView(SeekBar(this).apply {
+        privacyCard.addView(guardianSlider().apply {
             max = 24
             progress = Prefs.notificationRadius(this@MainActivity) - 16
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -1021,7 +1021,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "notification_glass_label"
         })
-        privacyCard.addView(SeekBar(this).apply {
+        privacyCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.notificationGlass(this@MainActivity) - 20
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -1104,7 +1104,7 @@ class MainActivity : Activity() {
             setTextColor(Appearance.secondary(this@MainActivity))
             tag = "d2_app_wallpaper_dim_label"
         })
-        root.addView(SeekBar(this).apply {
+        root.addView(guardianSlider().apply {
             max = 90
             progress = Prefs.appWallpaperDim(this@MainActivity)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
