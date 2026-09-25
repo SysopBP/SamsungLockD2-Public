@@ -302,8 +302,7 @@ class MainActivity : Activity() {
             dialog.show()
         }
         if (configured) {
-            root.addView(Switch(this).apply {
-                thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+            root.addView(guardianSwitch().apply {
                 text = "Connect Galaxy Island (paired build)"
                 setTextColor(Appearance.text(this@MainActivity))
                 isChecked = app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)
@@ -429,8 +428,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), 0, dp(6), dp(12))
         })
 
-        val enabled = Switch(this).apply {
-                thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+        val enabled = guardianSwitch().apply {
             text = "Show D2 when the screen wakes"
             textSize = 17f
             setTextColor(Appearance.text(this@MainActivity))
@@ -446,8 +444,7 @@ class MainActivity : Activity() {
             setBackgroundColor((0x22 shl 24) or (Appearance.text(this@MainActivity) and 0xffffff))
         }, LinearLayout.LayoutParams(-1, dp(1)).apply { topMargin = dp(8); bottomMargin = dp(10) })
         section(root, "SHIZUKU")
-        root.addView(Switch(this).apply {
-            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+        root.addView(guardianSwitch().apply {
             text = "Use Shizuku in Kiosk D2 Guardian"
             textSize = 17f
             setTextColor(Appearance.text(this@MainActivity))
@@ -465,8 +462,7 @@ class MainActivity : Activity() {
         addButton(root, "Refresh system health") { refreshShizukuUi() }
 
         section(root, "LOCK-SCREEN QUICK SETTINGS")
-        root.addView(Switch(this).apply {
-            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+        root.addView(guardianSwitch().apply {
             text = "Guard Quick Settings while D2 is locked"
             textSize = 17f
             setTextColor(Appearance.text(this@MainActivity))
@@ -480,8 +476,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), 0, dp(6), dp(14))
         })
 
-        val rootMode = Switch(this).apply {
-                thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+        val rootMode = guardianSwitch().apply {
             text = "Optional KernelSU root mode"
             textSize = 17f
             setTextColor(Appearance.text(this@MainActivity))
@@ -495,8 +490,7 @@ class MainActivity : Activity() {
         }
         root.addView(rootMode, rowParams())
 
-        root.addView(Switch(this).apply {
-                thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+        root.addView(guardianSwitch().apply {
             text = "Require D2 authentication to leave (root kiosk)"
             textSize = 17f
             setTextColor(Appearance.text(this@MainActivity))
@@ -532,8 +526,7 @@ class MainActivity : Activity() {
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(6), 0, dp(6), dp(10))
         })
-        root.addView(Switch(this).apply {
-            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+        root.addView(guardianSwitch().apply {
             text = "ADB / USB recovery mode"
             textSize = 17f
             setTextColor(Appearance.text(this@MainActivity))
@@ -685,22 +678,19 @@ class MainActivity : Activity() {
         val appearanceCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(appearanceCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         section(appearanceCard, "LOCK SCREEN EXTRAS")
-        appearanceCard.addView(Switch(this).apply {
-            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+        appearanceCard.addView(guardianSwitch().apply {
             text = "Wallpaper parallax"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.wallpaperParallax(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setWallpaperParallax(this@MainActivity, checked) }
         }, rowParams())
-        appearanceCard.addView(Switch(this).apply {
-            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+        appearanceCard.addView(guardianSwitch().apply {
             text = "Glass shimmer"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.glassShimmer(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setGlassShimmer(this@MainActivity, checked) }
         }, rowParams())
-        appearanceCard.addView(Switch(this).apply {
-            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+        appearanceCard.addView(guardianSwitch().apply {
             text = "Double-tap empty lock screen to sleep"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.doubleTapSleep(this@MainActivity)
@@ -797,8 +787,7 @@ class MainActivity : Activity() {
             listOf("auto", "single", "stacked").indexOf(Prefs.clockLayout(this)).coerceAtLeast(0)) {
             Prefs.setClockLayout(this, listOf("auto", "single", "stacked")[it])
         }
-        appearanceCard.addView(Switch(this).apply {
-            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+        appearanceCard.addView(guardianSwitch().apply {
             text = "Adaptive clock sizing"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.clockAdaptive(this@MainActivity)
@@ -827,8 +816,7 @@ class MainActivity : Activity() {
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(48)))
-        appearanceCard.addView(Switch(this).apply {
-            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+        appearanceCard.addView(guardianSwitch().apply {
             text = "Show date under clock"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.showDate(this@MainActivity)
@@ -903,22 +891,19 @@ class MainActivity : Activity() {
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(48)))
-        appearanceCard.addView(Switch(this).apply {
-            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+        appearanceCard.addView(guardianSwitch().apply {
             text = "Show weather in pill"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.showWeather(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setShowWeather(this@MainActivity, checked) }
         }, rowParams())
-        appearanceCard.addView(Switch(this).apply {
-            thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+        appearanceCard.addView(guardianSwitch().apply {
             text = "Show battery percentage"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.showBatteryPercent(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setShowBatteryPercent(this@MainActivity, checked) }
         }, rowParams())
-        appearanceCard.addView(Switch(this).apply {
-                thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+        appearanceCard.addView(guardianSwitch().apply {
             text = "Weather in Celsius (off: Fahrenheit)"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.celsius(this@MainActivity)
@@ -978,8 +963,7 @@ class MainActivity : Activity() {
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(48)))
-        appearanceCard.addView(Switch(this).apply {
-                thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+        appearanceCard.addView(guardianSwitch().apply {
             text = "Show media player while D2 is locked"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.showMedia(this@MainActivity)
@@ -1000,8 +984,7 @@ class MainActivity : Activity() {
         root.getChildAt(root.childCount - 1).tag = "notifications"
         val privacyCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
         root.addView(privacyCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
-        privacyCard.addView(Switch(this).apply {
-                thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
+        privacyCard.addView(guardianSwitch().apply {
             text = "Live notification banners while D2 is locked"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.liveNotifications(this@MainActivity)
@@ -1302,39 +1285,77 @@ class MainActivity : Activity() {
         dialog.show()
     }
 
-    private inner class GuardianSwitch(context: android.content.Context) : Switch(context) {
-        private val glassTrack = android.graphics.drawable.GradientDrawable().apply {
-            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-            cornerRadius = dp(18).toFloat()
-            setStroke(dp(1), 0x66ffffff)
+    private inner class GuardianSwitch(context: android.content.Context) : android.view.View(context), android.widget.Checkable {
+        private var checkedState = false
+        private var listener: android.widget.CompoundButton.OnCheckedChangeListener? = null
+        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        private val stroke = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = dp(1).toFloat()
         }
 
         init {
-            minimumHeight = dp(52)
-            showText = false
-            buttonDrawable = null
-            refreshGuardianColors()
-            setOnCheckedChangeListener { _, _ -> refreshGuardianColors() }
+            minimumWidth = dp(54)
+            minimumHeight = dp(32)
+            isClickable = true
+            isFocusable = true
+            contentDescription = "D2 setting toggle"
+            setPadding(dp(2), dp(2), dp(2), dp(2))
         }
 
-        private fun refreshGuardianColors() {
-            val accent = Appearance.accent(this@MainActivity)
-            val trackColor = if (isChecked) {
-                (accent and 0x00ffffff) or 0x99000000.toInt()
-            } else if (Appearance.dark(this@MainActivity)) 0x4dffffff else 0x33000000
-            trackTintList = android.content.res.ColorStateList.valueOf(trackColor)
-            thumbTintList = android.content.res.ColorStateList.valueOf(
-                if (isChecked) 0xfff5f5f5.toInt() else 0xffb8b8b8.toInt()
-            )
+        override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+            setMeasuredDimension(resolveSize(dp(58), widthMeasureSpec), resolveSize(dp(36), heightMeasureSpec))
         }
+
+        override fun onDraw(canvas: android.graphics.Canvas) {
+            super.onDraw(canvas)
+            val w = width.toFloat()
+            val h = height.toFloat()
+            val pad = dp(3).toFloat()
+            val r = (h - pad * 2f) / 2f
+            val accent = Appearance.accent(this@MainActivity)
+            val track = if (checkedState) {
+                (accent and 0x00ffffff) or 0x66000000
+            } else {
+                if (Appearance.dark(this@MainActivity)) 0x32ffffff else 0x26000000
+            }
+            paint.color = track
+            paint.style = android.graphics.Paint.Style.FILL
+            canvas.drawRoundRect(pad, pad, w - pad, h - pad, r, r, paint)
+
+            stroke.color = if (checkedState) 0xaaffffff.toInt() else 0x70ffffff
+            canvas.drawRoundRect(pad, pad, w - pad, h - pad, r, r, stroke)
+
+            val cx = if (checkedState) w - pad - r else pad + r
+            paint.color = if (checkedState) 0xf2ffffff.toInt() else 0xc7ffffff.toInt()
+            canvas.drawCircle(cx, h / 2f, r - dp(2), paint)
+            stroke.color = 0x8fffffff.toInt()
+            canvas.drawCircle(cx, h / 2f, r - dp(2), stroke)
+        }
+
+        override fun performClick(): Boolean {
+            toggle()
+            super.performClick()
+            return true
+        }
+
+        override fun isChecked(): Boolean = checkedState
 
         override fun setChecked(checked: Boolean) {
-            super.setChecked(checked)
-            if (isAttachedToWindow) refreshGuardianColors()
+            if (checkedState == checked) return
+            checkedState = checked
+            invalidate()
+            listener?.onCheckedChanged(null, checked)
+        }
+
+        override fun toggle() = setChecked(!checkedState)
+
+        fun setOnCheckedChangeListener(value: android.widget.CompoundButton.OnCheckedChangeListener?) {
+            listener = value
         }
     }
 
-    private fun guardianSwitch(): Switch = GuardianSwitch(this)
+    private fun guardianSwitch(): GuardianSwitch = GuardianSwitch(this)
 
     private inner class GuardianSlider(context: android.content.Context) : android.view.View(context) {
         var max: Int = 100
