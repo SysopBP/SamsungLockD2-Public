@@ -486,12 +486,26 @@ class MainActivity : Activity() {
         }, rowParams())
         root.addView(shizukuCard(), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
 
-        section(root, "D2 SYSTEM HEALTH")
+        val rootMode = guardianSwitch().apply {
+            text = "Optional KernelSU root mode"
+            textSize = 17f
+            setTextColor(Appearance.text(this@MainActivity))
+            isChecked = Prefs.rootMode(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                if (checked && !RootManager.isAvailable()) {
+                    isChecked = false
+                    Toast.makeText(this@MainActivity, "Root shell was not detected", Toast.LENGTH_LONG).show()
+                } else Prefs.setRootMode(this@MainActivity, checked)
+            }
+        }
+        root.addView(rootMode, rowParams())
+
+        section(root, "RECOVERY & SAFETY")
         root.getChildAt(root.childCount - 1).tag = "recovery_safety"
         root.addView(systemHealthCard(), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
         addButton(root, "Refresh system health") { refreshShizukuUi() }
 
-        section(root, "LOCK-SCREEN QUICK SETTINGS")
+        section(root, "GUARDIAN & KIOSK")
         root.getChildAt(root.childCount - 1).tag = "guardian_kiosk"
         root.addView(guardianSwitch().apply {
             text = "Guard Quick Settings while D2 is locked"
@@ -506,20 +520,6 @@ class MainActivity : Activity() {
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(6), 0, dp(6), dp(14))
         })
-
-        val rootMode = guardianSwitch().apply {
-            text = "Optional KernelSU root mode"
-            textSize = 17f
-            setTextColor(Appearance.text(this@MainActivity))
-            isChecked = Prefs.rootMode(this@MainActivity)
-            setOnCheckedChangeListener { _, checked ->
-                if (checked && !RootManager.isAvailable()) {
-                    isChecked = false
-                    Toast.makeText(this@MainActivity, "Root shell was not detected", Toast.LENGTH_LONG).show()
-                } else Prefs.setRootMode(this@MainActivity, checked)
-            }
-        }
-        root.addView(rootMode, rowParams())
 
         root.addView(guardianSwitch().apply {
             text = "Require D2 authentication to leave (root kiosk)"
@@ -1166,6 +1166,8 @@ class MainActivity : Activity() {
         addButton(root, "Preview lock screen") {
             startActivity(Intent(this, LockScreenActivity::class.java).putExtra("preview", true))
         }
+        section(root, "ADVANCED / EXPERIMENTAL")
+        root.getChildAt(root.childCount - 1).tag = "advanced_settings"
         section(root, "LOCK-SCREEN PROFILES")
         root.getChildAt(root.childCount - 1).tag = "advanced_settings"
         val profileLabels = listOf("Daily", "AMOLED", "Minimal", "Night")
