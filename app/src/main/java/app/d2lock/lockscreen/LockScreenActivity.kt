@@ -754,6 +754,11 @@ class LockScreenActivity : Activity() {
     private fun authenticate(afterUnlock: (() -> Unit)? = null) {
         if (preview) { finish(); return }
         if (pinDialog?.isShowing == true) return
+        // Authentication is a trusted Guardian surface. Suspend focus/wake
+        // reassertion while the owner is entering PIN/pattern so a phone call
+        // cannot repeatedly steal the authentication window.
+        unlocking = true
+        GuardianWatchdog.beginTrustedAuthentication()
         val unlocked = {
             unlocking = true
             playUnlockHaptic()
@@ -766,9 +771,21 @@ class LockScreenActivity : Activity() {
         if (Prefs.unlockMethod(this) == "pattern" && PatternStore(this).configured()) {
             pinDialog = PatternUi.show(this, success = unlocked, usePin = {
                 pinDialog = PinUi.show(this, success = unlocked)
+                attachAuthenticationDismissGuard()
             })
         } else {
             pinDialog = PinUi.show(this, success = unlocked)
+        }
+        attachAuthenticationDismissGuard()
+    }
+
+    private fun attachAuthenticationDismissGuard() {
+        pinDialog?.setOnDismissListener {
+            pinDialog = null
+            if (!isFinishing && !isDestroyed) {
+                unlocking = false
+                GuardianWatchdog.endTrustedAuthentication("auth_dismissed")
+            }
         }
     }
 
