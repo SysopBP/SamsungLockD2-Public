@@ -230,11 +230,14 @@ class MainActivity : Activity() {
         section(root, "SETTINGS")
         root.getChildAt(root.childCount - 1).tag = "settings"
         val categories = if (configured) listOf(
-            Triple("Main", "Security, access & preview", "main_settings"),
-            Triple("Clock & Weather", "Clock style, global weather & location", "clock_weather"),
-            Triple("Notifications", "Privacy, banners & card appearance", "notifications"),
-            Triple("App Theme", "Glass, wallpaper, scale & media", "app_theme"),
-            Triple("Floating Bar", "Left and right lock-screen actions", "floating_bar")
+            Triple("Lock Screen", "Unlock, wake behavior, haptics, clock & weather", "lock_screen_settings"),
+            Triple("Appearance", "Wallpaper, glass, scale, themes & colors", "app_theme"),
+            Triple("Notifications & Media", "Privacy, notification cards & media controls", "notifications"),
+            Triple("Shortcuts & Bar", "Floating bar, camera, flashlight & app shortcuts", "floating_bar"),
+            Triple("Guardian & Kiosk", "Kiosk authentication, quick-settings guard & call behavior", "guardian_kiosk"),
+            Triple("Root & Shizuku", "KernelSU/root mode and Shizuku integration", "root_shizuku"),
+            Triple("Recovery & Safety", "System health, ADB/USB recovery & recovery checks", "recovery_safety"),
+            Triple("Advanced / Experimental", "Optional and experimental Guardian features", "advanced_settings")
         ) else emptyList()
         settingsSearch.isEnabled = configured
         settingsSearch.alpha = if (configured) 1f else 0.55f
@@ -302,6 +305,27 @@ class MainActivity : Activity() {
             dialog.show()
         }
         if (configured) {
+            val statusCard = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(18), dp(14), dp(18), dp(14))
+                background = Appearance.glass(this@MainActivity, 30f, 40, true)
+                addView(TextView(this@MainActivity).apply { text = "D2 STATUS"; textSize = 13f; setTextColor(Appearance.secondary(this@MainActivity)) })
+                addView(TextView(this@MainActivity).apply {
+                    text = "D2 Protected  •  " + Prefs.unlockMethod(this@MainActivity).replaceFirstChar { it.uppercase() }
+                    textSize = 18f; setTextColor(Appearance.text(this@MainActivity)); setPadding(0, dp(4), 0, dp(5))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    val k = if (Prefs.kiosk(this@MainActivity)) "Kiosk on" else "Kiosk off"
+                    val r = if (Prefs.rootMode(this@MainActivity)) "Root on" else "Root off"
+                    val s = if (Prefs.shizukuEnabled(this@MainActivity)) "Shizuku on" else "Shizuku off"
+                    text = k + "  •  " + r + "  •  " + s
+                    textSize = 14f; setTextColor(Appearance.secondary(this@MainActivity))
+                })
+            }
+            root.addView(statusCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
+        }
+
+        if (configured) {
             root.addView(guardianSwitch().apply {
                 text = "Connect Galaxy Island (paired build)"
                 setTextColor(Appearance.text(this@MainActivity))
@@ -319,6 +343,7 @@ class MainActivity : Activity() {
         }
         if (configured) {
             section(root, "UNLOCK METHOD")
+            root.getChildAt(root.childCount - 1).tag = "lock_screen_settings"
             val methods = listOf("PIN", "Pattern")
             addChoice(root, "D2 unlock method", methods, if (Prefs.unlockMethod(this) == "pattern") 1 else 0) { selected ->
                 if (selected == 0) {
@@ -393,11 +418,14 @@ class MainActivity : Activity() {
             val query = settingsSearch.text.toString().trim().lowercase()
             if (query.isNotEmpty()) {
                 val target = when {
-                    query.contains("weather") || query.contains("clock") -> "clock_weather"
-                    query.contains("notification") || query.contains("privacy") -> "notifications"
-                    query.contains("floating") || query.contains("slide") || query.contains("shortcut") -> "floating_bar"
-                    query.contains("theme") || query.contains("glass") || query.contains("wallpaper") || query.contains("media") -> "app_theme"
-                    else -> "main_settings"
+                    query.contains("root") || query.contains("kernelsu") || query.contains("shizuku") -> "root_shizuku"
+                    query.contains("recovery") || query.contains("adb") || query.contains("usb") || query.contains("health") -> "recovery_safety"
+                    query.contains("kiosk") || query.contains("guard") || query.contains("call") -> "guardian_kiosk"
+                    query.contains("notification") || query.contains("privacy") || query.contains("media") -> "notifications"
+                    query.contains("floating") || query.contains("slide") || query.contains("shortcut") || query.contains("camera") || query.contains("flashlight") -> "floating_bar"
+                    query.contains("theme") || query.contains("glass") || query.contains("wallpaper") || query.contains("color") || query.contains("scale") -> "app_theme"
+                    query.contains("profile") || query.contains("experimental") || query.contains("advanced") -> "advanced_settings"
+                    else -> "lock_screen_settings"
                 }
                 root.findViewWithTag<android.view.View>(target)?.let { view ->
                     (root.parent as? ScrollView)?.smoothScrollTo(0, view.top)
@@ -444,6 +472,7 @@ class MainActivity : Activity() {
             setBackgroundColor((0x22 shl 24) or (Appearance.text(this@MainActivity) and 0xffffff))
         }, LinearLayout.LayoutParams(-1, dp(1)).apply { topMargin = dp(8); bottomMargin = dp(10) })
         section(root, "SHIZUKU")
+        root.getChildAt(root.childCount - 1).tag = "root_shizuku"
         root.addView(guardianSwitch().apply {
             text = "Use Shizuku in Kiosk D2 Guardian"
             textSize = 17f
@@ -458,10 +487,12 @@ class MainActivity : Activity() {
         root.addView(shizukuCard(), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
 
         section(root, "D2 SYSTEM HEALTH")
+        root.getChildAt(root.childCount - 1).tag = "recovery_safety"
         root.addView(systemHealthCard(), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
         addButton(root, "Refresh system health") { refreshShizukuUi() }
 
         section(root, "LOCK-SCREEN QUICK SETTINGS")
+        root.getChildAt(root.childCount - 1).tag = "guardian_kiosk"
         root.addView(guardianSwitch().apply {
             text = "Guard Quick Settings while D2 is locked"
             textSize = 17f
@@ -1136,6 +1167,7 @@ class MainActivity : Activity() {
             startActivity(Intent(this, LockScreenActivity::class.java).putExtra("preview", true))
         }
         section(root, "LOCK-SCREEN PROFILES")
+        root.getChildAt(root.childCount - 1).tag = "advanced_settings"
         val profileLabels = listOf("Daily", "AMOLED", "Minimal", "Night")
         val profileKeys = listOf("daily", "amoled", "minimal", "night")
         val selectedProfile = profileKeys.indexOf(Prefs.activeProfile(this)).coerceAtLeast(0)
