@@ -754,10 +754,19 @@ class LockScreenActivity : Activity() {
     private fun authenticate(afterUnlock: (() -> Unit)? = null) {
         if (preview) { finish(); return }
         if (pinDialog?.isShowing == true) return
+
+        // PIN/pattern dialogs are trusted D2-owned windows. They temporarily take
+        // focus from the Activity, which must not be mistaken for an escape.
+        KioskD2Guardian.beginTrustedFocusTransition("authentication")
+        val cancelled = {
+            KioskD2Guardian.endTrustedFocusTransition("authentication_cancelled")
+        }
         val unlocked = {
             unlocking = true
             playUnlockHaptic()
+            Log.i("SamsungLockD2", "GUARDIAN_AUTHORIZED_RELEASE")
             RootKiosk.unlock(this) {
+                KioskD2Guardian.endTrustedFocusTransition("authenticated_release")
                 app.d2lock.bridge.IslandBridge.setLocked(this, false)
                 afterUnlock?.invoke()
                 finish()
@@ -765,10 +774,11 @@ class LockScreenActivity : Activity() {
         }
         if (Prefs.unlockMethod(this) == "pattern" && PatternStore(this).configured()) {
             pinDialog = PatternUi.show(this, success = unlocked, usePin = {
-                pinDialog = PinUi.show(this, success = unlocked)
-            })
+                // Keep the trusted transition active while replacing pattern with PIN.
+                pinDialog = PinUi.show(this, success = unlocked, cancel = cancelled)
+            }, cancel = cancelled)
         } else {
-            pinDialog = PinUi.show(this, success = unlocked)
+            pinDialog = PinUi.show(this, success = unlocked, cancel = cancelled)
         }
     }
 

@@ -1,10 +1,14 @@
 package app.d2lock.root
 
+import android.Manifest
 import android.app.Activity
 import android.app.ActivityManager
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.telecom.TelecomManager
+import android.content.pm.PackageManager
+import android.content.ComponentName
 import android.util.Log
 import java.lang.ref.WeakReference
 
@@ -20,6 +24,7 @@ object KioskD2Guardian {
     private var enabled = false
     private var lastRepairAt = 0L
     private var lostFocusAt = 0L
+    private var trustedFocusTransition = false
     private const val CHECK_MS = 750L
     private const val REPAIR_COOLDOWN_MS = 1500L
     private const val FOCUS_GRACE_MS = 1200L
@@ -34,10 +39,24 @@ object KioskD2Guardian {
         main.post(check)
     }
 
+    /** Suppress focus-only recovery while a trusted D2-owned surface (PIN/pattern) has focus. */
+    fun beginTrustedFocusTransition(reason: String) {
+        trustedFocusTransition = true
+        lostFocusAt = 0L
+        Log.i(TAG, "GUARDIAN_TRUSTED_FOCUS_BEGIN reason=$reason")
+    }
+
+    fun endTrustedFocusTransition(reason: String) {
+        trustedFocusTransition = false
+        lostFocusAt = 0L
+        Log.i(TAG, "GUARDIAN_TRUSTED_FOCUS_END reason=$reason")
+    }
+
     fun stop(activity: Activity) {
         if (owner.get() === activity) owner.clear()
         enabled = false
         lostFocusAt = 0L
+        trustedFocusTransition = false
         main.removeCallbacks(check)
         Log.i(TAG, "GUARDIAN_WATCHDOG_STOPPED")
     }
@@ -53,7 +72,16 @@ object KioskD2Guardian {
             val manager = activity.getSystemService(ActivityManager::class.java)
             val now = SystemClock.elapsedRealtime()
             if (RootKiosk.isEnforced()) {
+                val telecom = activity.getSystemService(TelecomManager::class.java)
+                val callActive = activity.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED &&
+                    runCatching { telecom?.isInCall == true }.getOrDefault(false)
                 val modeLost = manager.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_LOCKED
+                val topPackage = runCatching {
+                    @Suppress("DEPRECATION")
+                    manager.getRunningTasks(1).firstOrNull()?.topActivity?.packageName
+                }.getOrNull()
+                val callUiPackages = if (callActive) KioskCallApps.resolve(activity) else emptySet()
+                val callUiFocused = callActive && topPackage != null && topPackage in callUiPackages
                 val focusLost = !activity.hasWindowFocus()
                 if (focusLost) {
                     if (lostFocusAt == 0L) {
@@ -65,10 +93,14 @@ object KioskD2Guardian {
                     lostFocusAt = 0L
                 }
                 val staleFocus = lostFocusAt != 0L && now - lostFocusAt >= FOCUS_GRACE_MS
-                if ((modeLost || staleFocus) && now - lastRepairAt >= REPAIR_COOLDOWN_MS) {
+                val focusRecoverySuppressed = callUiFocused || trustedFocusTransition
+                if (staleFocus && focusRecoverySuppressed && !modeLost) {
+                    Log.i(TAG, "GUARDIAN_FOCUS_DEFERRED reason=${if (callUiFocused) "active_call_ui" else "trusted_d2_surface"} top=$topPackage")
+                }
+                if ((modeLost || (staleFocus && !focusRecoverySuppressed)) && now - lastRepairAt >= REPAIR_COOLDOWN_MS) {
                     lastRepairAt = now
                     Log.w(TAG, "GUARDIAN_REASSERT reason=${if (modeLost) "lock_task_lost" else "focus_lost"} mode=${manager.lockTaskModeState}")
-                    RootKiosk.reassert(activity, bringToFront = staleFocus)
+                    RootKiosk.reassert(activity, bringToFront = staleFocus && !focusRecoverySuppressed)
                 }
             } else {
                 lostFocusAt = 0L
