@@ -16,23 +16,43 @@ object ThemeOptions {
         fun label(value: String) = TextView(c).apply { text=value; textSize=15f; setTextColor(Appearance.text(c)); setPadding(dp(8),dp(12),dp(8),dp(6)) }
         fun ui9Card() = Appearance.glass(c, 28f, 34, true)
         fun choice(title: String, values: List<String>, selected: Int, key: String) {
-            parent.addView(label(title))
-            parent.addView(Spinner(c).apply {
-                contentDescription=title
-                adapter=object: ArrayAdapter<String>(c,android.R.layout.simple_spinner_dropdown_item,values) {
-                    override fun getView(p:Int,v:View?,g:ViewGroup):View = (super.getView(p,v,g) as TextView).apply { setTextColor(Appearance.text(c)); setPadding(dp(18),0,dp(12),0); background=ui9Card() }
-                    override fun getDropDownView(p:Int,v:View?,g:ViewGroup):View = (super.getDropDownView(p,v,g) as TextView).apply { setTextColor(Appearance.text(c)); setPadding(dp(18),dp(14),dp(18),dp(14)); background=ui9Card() }
+            parent.addView(LinearLayout(c).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(18), dp(12), dp(18), dp(12))
+                background = ui9Card()
+                isClickable = true
+                isFocusable = true
+                addView(TextView(c).apply {
+                    text = title
+                    textSize = 16f
+                    setTextColor(Appearance.text(c))
+                })
+                val current = TextView(c).apply {
+                    text = values.getOrElse(selected) { values.firstOrNull().orEmpty() } + "   ›"
+                    textSize = 13f
+                    setTextColor(Appearance.secondary(c))
+                    setPadding(0, dp(4), 0, 0)
                 }
-                background=ui9Card()
-                setPadding(dp(10),0,dp(10),0)
-                setSelection(selected)
-                onItemSelectedListener=object: AdapterView.OnItemSelectedListener {
-                    override fun onNothingSelected(p:AdapterView<*>?) {}
-                    override fun onItemSelected(p:AdapterView<*>?,v:View?,position:Int,id:Long) {
-                        if(position!=selected) { Appearance.set(c,key,position); refresh() }
+                addView(current)
+                setOnClickListener {
+                    val dialog = AlertDialog.Builder(c)
+                        .setTitle(title)
+                        .setSingleChoiceItems(values.toTypedArray(), selected) { d, which ->
+                            if (which != selected) {
+                                Appearance.set(c, key, which)
+                                d.dismiss()
+                                refresh()
+                            } else d.dismiss()
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .create()
+                    dialog.setOnShowListener {
+                        dialog.window?.setBackgroundDrawable(Appearance.glass(c, 30f, 76, true))
+                        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Appearance.accent(c))
                     }
+                    dialog.show()
                 }
-            },LinearLayout.LayoutParams(-1,dp(60)).apply { bottomMargin=dp(8) })
+            }, LinearLayout.LayoutParams(-1, dp(72)).apply { bottomMargin = dp(8) })
         }
         choice("App theme",listOf("Follow system","Light","Dark","AMOLED Black","One UI Dark","Graphite","Frosted Glass","Smoke","Wine Red","System (Dynamic)"),Appearance.mode(c),"mode")
         choice("Accent color",listOf("System wallpaper","Blue","Teal","Lavender","Rose","Amber","Sage","Wine Red","Deep Blue","Emerald","Purple","Custom color"),Appearance.accentChoice(c),"accent")
