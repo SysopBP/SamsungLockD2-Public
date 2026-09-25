@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.IBinder
+import android.os.SystemClock
 import app.d2lock.MainActivity
 import app.d2lock.Prefs
 import app.d2lock.R
@@ -17,6 +18,28 @@ import app.d2lock.root.RootManager
 import app.d2lock.security.PinStore
 
 class LockScreenService : Service() {
+    private val recoveryPrefs by lazy { getSharedPreferences("d2_guardian_recovery", Context.MODE_PRIVATE) }
+
+    private fun markLockSurfaceHealthy() {
+        recoveryPrefs.edit()
+            .putInt("boot_attempts", 0)
+            .putLong("boot_window_start", 0L)
+            .putLong("last_healthy_at", System.currentTimeMillis())
+            .apply()
+    }
+
+    private fun postBootLaunchAllowed(): Boolean {
+        val now = SystemClock.elapsedRealtime()
+        val windowStart = recoveryPrefs.getLong("boot_window_start", 0L)
+        val attempts = if (windowStart == 0L || now - windowStart > BOOT_WINDOW_MS) 0
+            else recoveryPrefs.getInt("boot_attempts", 0)
+        if (attempts >= MAX_BOOT_ATTEMPTS) return false
+        recoveryPrefs.edit()
+            .putLong("boot_window_start", if (attempts == 0) now else windowStart)
+            .putInt("boot_attempts", attempts + 1)
+            .apply()
+        return true
+    }
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == Intent.ACTION_SCREEN_ON && Prefs.enabled(context) && PinStore(context).configured()) {
@@ -54,9 +77,27 @@ class LockScreenService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_LOCK_SURFACE_HEALTHY) {
+            markLockSurfaceHealthy()
+            return START_STICKY
+        }
         if (!Prefs.enabled(this) || !PinStore(this).configured()) {
             stopSelf()
             return START_NOT_STICKY
+        }
+        if (intent?.getBooleanExtra(EXTRA_POST_BOOT, false) == true &&
+            postBootLaunchAllowed() &&
+            app.d2lock.notifications.CallNotificationStore.items.isEmpty()) {
+            // Never loop indefinitely at boot. Guardian permits only a small number of
+            // restoration attempts inside a bounded window; normal SCREEN_ON remains available.
+            if (Prefs.rootMode(this)) {
+                RootManager.launchCompanion()
+            } else {
+                runCatching {
+                    startActivity(Intent(this, LockScreenActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+                }
+            }
         }
         return START_STICKY
     }
@@ -66,7 +107,16 @@ class LockScreenService : Service() {
     companion object {
         private const val CHANNEL = "lock_companion"
         private const val ID = 3701
-        fun start(context: Context) = context.startForegroundService(Intent(context, LockScreenService::class.java))
+        private const val BOOT_WINDOW_MS = 120_000L
+        private const val MAX_BOOT_ATTEMPTS = 2
+        private const val EXTRA_POST_BOOT = "d2_post_boot"
+        private const val ACTION_LOCK_SURFACE_HEALTHY = "app.d2lock.action.LOCK_SURFACE_HEALTHY"
+        fun start(context: Context, postBoot: Boolean = false) =
+            context.startForegroundService(Intent(context, LockScreenService::class.java).apply {
+                if (postBoot) putExtra(EXTRA_POST_BOOT, true)
+            })
+        fun markHealthy(context: Context) =
+            context.startService(Intent(context, LockScreenService::class.java).setAction(ACTION_LOCK_SURFACE_HEALTHY))
         fun stop(context: Context) = context.stopService(Intent(context, LockScreenService::class.java))
     }
 }

@@ -42,6 +42,7 @@ import android.widget.Toast
 import app.d2lock.Prefs
 import app.d2lock.MainActivity
 import app.d2lock.root.RootKiosk
+import app.d2lock.root.KioskD2Guardian
 import app.d2lock.security.PinStore
 import app.d2lock.security.PinUi
 import app.d2lock.security.PatternStore
@@ -80,6 +81,7 @@ class LockScreenActivity : Activity() {
     private var pinDialog: AlertDialog? = null
     private var wallpaperActive = false
     private var emptyTapAt = 0L
+    private var healthyReported = false
     private val wallpaperExecutor = Executors.newSingleThreadExecutor()
     private val wallpaperAnimations = mutableListOf<ObjectAnimator>()
 
@@ -166,6 +168,17 @@ class LockScreenActivity : Activity() {
         if (!preview && Prefs.quickSettingsGuard(this)) handler.post(quickSettingsGuard)
         if (!preview && !unlocking && Prefs.kiosk(this)) {
             RootKiosk.attach(this) { kioskStatus.text = it }
+            KioskD2Guardian.start(this)
+        }
+        if (!preview && !healthyReported) {
+            healthyReported = true
+            // Report only after the activity is resumed and its UI exists. A crash before
+            // this point leaves the boot-attempt budget intact for fail-safe recovery.
+            window.decorView.postDelayed({
+                if (!isDestroyed && !isFinishing && hasWindowFocus()) {
+                    LockScreenService.markHealthy(this)
+                } else healthyReported = false
+            }, 1500)
         }
     }
 
@@ -213,6 +226,7 @@ class LockScreenActivity : Activity() {
     override fun onBackPressed() { if (preview) finish() else authenticate() }
 
     override fun onDestroy() {
+        KioskD2Guardian.stop(this)
         RootKiosk.detach(this)
         wallpaperAnimations.forEach { it.cancel() }
         wallpaperAnimations.clear()

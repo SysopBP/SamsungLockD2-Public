@@ -14,7 +14,7 @@ class CompanionStartupReceiver : BroadcastReceiver() {
             intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
         if (!Prefs.enabled(context) || !PinStore(context).configured()) return
         try {
-            LockScreenService.start(context)
+            LockScreenService.start(context, postBoot = intent.action == Intent.ACTION_BOOT_COMPLETED)
         } catch (error: RuntimeException) {
             // Foreground starts can be restricted by the OS; settings can retry later.
             Log.w("SamsungLockD2", "Unable to restore wake listener", error)
