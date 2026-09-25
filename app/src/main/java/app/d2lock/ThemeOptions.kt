@@ -16,9 +16,12 @@ object ThemeOptions {
         fun label(value: String) = TextView(c).apply { text=value; textSize=15f; setTextColor(Appearance.text(c)); setPadding(dp(8),dp(12),dp(8),dp(6)) }
         fun ui9Card() = Appearance.glass(c, 28f, 34, true)
         fun choice(title: String, values: List<String>, selected: Int, key: String) {
+            // Match the compact Haptics preference: one clean row, then a
+            // single-choice Guardian glass sheet instead of an expanded list.
             parent.addView(LinearLayout(c).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(18), dp(12), dp(18), dp(12))
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(dp(18), 0, dp(16), 0)
                 background = ui9Card()
                 isClickable = true
                 isFocusable = true
@@ -26,23 +29,20 @@ object ThemeOptions {
                     text = title
                     textSize = 16f
                     setTextColor(Appearance.text(c))
-                })
-                val current = TextView(c).apply {
-                    text = values.getOrElse(selected) { values.firstOrNull().orEmpty() } + "   ›"
-                    textSize = 13f
+                }, LinearLayout.LayoutParams(0, -2, 1f))
+                addView(TextView(c).apply {
+                    text = values.getOrElse(selected) { values.firstOrNull().orEmpty() } + "  ›"
+                    textSize = 14f
+                    gravity = android.view.Gravity.END
                     setTextColor(Appearance.secondary(c))
-                    setPadding(0, dp(4), 0, 0)
-                }
-                addView(current)
+                }, LinearLayout.LayoutParams(-2, -2))
                 setOnClickListener {
                     val dialog = AlertDialog.Builder(c)
                         .setTitle(title)
                         .setSingleChoiceItems(values.toTypedArray(), selected) { d, which ->
-                            if (which != selected) {
-                                Appearance.set(c, key, which)
-                                d.dismiss()
-                                refresh()
-                            } else d.dismiss()
+                            if (which != selected) Appearance.set(c, key, which)
+                            d.dismiss()
+                            if (which != selected) refresh()
                         }
                         .setNegativeButton("Cancel", null)
                         .create()
@@ -52,7 +52,7 @@ object ThemeOptions {
                     }
                     dialog.show()
                 }
-            }, LinearLayout.LayoutParams(-1, dp(72)).apply { bottomMargin = dp(8) })
+            }, LinearLayout.LayoutParams(-1, dp(58)).apply { bottomMargin = dp(8) })
         }
         choice("App theme",listOf("Follow system","Light","Dark","AMOLED Black","One UI Dark","Graphite","Frosted Glass","Smoke","Wine Red","System (Dynamic)"),Appearance.mode(c),"mode")
         choice("Accent color",listOf("System wallpaper","Blue","Teal","Lavender","Rose","Amber","Sage","Wine Red","Deep Blue","Emerald","Purple","Custom color"),Appearance.accentChoice(c),"accent")
@@ -71,7 +71,7 @@ object ThemeOptions {
                     }
                 }; dialog.show()
             }
-        },LinearLayout.LayoutParams(-1,dp(56)))
+        },LinearLayout.LayoutParams(-1,dp(44)))
         choice("Notification colors",listOf("Different colors per app","Use accent color","Monochrome","System colors","Custom color"),Appearance.notificationStyle(c),"notifications")
         val preview=TextView(c).apply {
             text="Notification preview\nA sample message in your chosen style"
@@ -96,7 +96,7 @@ object ThemeOptions {
 
                 init {
                     contentDescription = title
-                    minimumHeight = dp(56)
+                    minimumHeight = dp(44)
                     isClickable = true
                     isFocusable = true
                 }
@@ -106,7 +106,7 @@ object ThemeOptions {
                     val left = dp(10).toFloat()
                     val right = width - dp(10).toFloat()
                     val cy = height / 2f
-                    val trackH = dp(14).toFloat()
+                    val trackH = dp(5).toFloat()
                     val radius = trackH / 2f
                     val fraction = ((sliderValue - min).toFloat() / (max - min).coerceAtLeast(1)).coerceIn(0f, 1f)
                     val thumbX = left + (right - left) * fraction
@@ -123,11 +123,11 @@ object ThemeOptions {
                     if (thumbX > left) canvas.drawRoundRect(android.graphics.RectF(left, cy-trackH/2f, thumbX, cy+trackH/2f), radius, radius, paint)
 
                     paint.color = if (Appearance.dark(c)) 0x88ffffff.toInt() else 0xb8ffffff.toInt()
-                    canvas.drawCircle(thumbX, cy, dp(16).toFloat(), paint)
+                    canvas.drawCircle(thumbX, cy, dp(8).toFloat(), paint)
                     outline.color = if (Appearance.dark(c)) 0xddffffff.toInt() else 0xcc000000.toInt()
-                    canvas.drawCircle(thumbX, cy, dp(16).toFloat(), outline)
+                    canvas.drawCircle(thumbX, cy, dp(8).toFloat(), outline)
                     paint.color = 0x55ffffff
-                    canvas.drawCircle(thumbX-dp(4), cy-dp(4), dp(4).toFloat(), paint)
+                    canvas.drawCircle(thumbX-dp(2), cy-dp(2), dp(2).toFloat(), paint)
                 }
 
                 private fun updateFromTouch(x: Float) {
