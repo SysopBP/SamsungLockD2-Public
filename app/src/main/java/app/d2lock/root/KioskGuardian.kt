@@ -5,6 +5,7 @@ import android.app.ActivityManager
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.telecom.TelecomManager
 import android.util.Log
 import java.lang.ref.WeakReference
 
@@ -53,6 +54,8 @@ object KioskD2Guardian {
             val manager = activity.getSystemService(ActivityManager::class.java)
             val now = SystemClock.elapsedRealtime()
             if (RootKiosk.isEnforced()) {
+                val telecom = activity.getSystemService(TelecomManager::class.java)
+                val callActive = runCatching { telecom?.isInCall == true }.getOrDefault(false)
                 val modeLost = manager.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_LOCKED
                 val focusLost = !activity.hasWindowFocus()
                 if (focusLost) {
@@ -65,7 +68,10 @@ object KioskD2Guardian {
                     lostFocusAt = 0L
                 }
                 val staleFocus = lostFocusAt != 0L && now - lostFocusAt >= FOCUS_GRACE_MS
-                if ((modeLost || staleFocus) && now - lastRepairAt >= REPAIR_COOLDOWN_MS) {
+                if (callActive && staleFocus && !modeLost) {
+                    Log.i(TAG, "GUARDIAN_FOCUS_DEFERRED reason=active_call")
+                }
+                if ((modeLost || (staleFocus && !callActive)) && now - lastRepairAt >= REPAIR_COOLDOWN_MS) {
                     lastRepairAt = now
                     Log.w(TAG, "GUARDIAN_REASSERT reason=${if (modeLost) "lock_task_lost" else "focus_lost"} mode=${manager.lockTaskModeState}")
                     RootKiosk.reassert(activity, bringToFront = staleFocus)
