@@ -123,7 +123,8 @@ class RootKioskTest {
                 scenario.state == Lifecycle.State.RESUMED &&
                     runCatching { decor?.hasWindowFocus() == true }.getOrDefault(false)
             }
-            assertEquals(ActivityManager.LOCK_TASK_MODE_LOCKED, manager.lockTaskModeState)\n        } finally { cleanup(scenario) }
+            assertEquals(ActivityManager.LOCK_TASK_MODE_LOCKED, manager.lockTaskModeState)
+        } finally { cleanup(scenario) }
     }
     @Test fun lostAppConnectionReleasesKiosk() = fixture {
         var bridge: RootKiosk.Channel? = null
