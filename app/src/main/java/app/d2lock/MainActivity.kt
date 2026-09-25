@@ -60,7 +60,7 @@ class MainActivity : Activity() {
         Appearance.apply(this)
         PinUi.protect(this)
         window.statusBarColor = Color.TRANSPARENT
-        setContentView(TextView(this).apply { text = "Kiosk D2 Guardian" })
+        setContentView(buildLockedBackdrop())
         Shizuku.addBinderReceivedListenerSticky(shizukuBinderReceived)
         Shizuku.addBinderDeadListener(shizukuBinderDead)
         Shizuku.addRequestPermissionResultListener(shizukuPermission)
@@ -144,7 +144,31 @@ class MainActivity : Activity() {
         authorized = false
         pinDialog?.dismiss()
         pinDialog = null
-        setContentView(TextView(this).apply { text = "D2 settings locked" })
+        setContentView(buildLockedBackdrop())
+    }
+
+    private fun buildLockedBackdrop(): ViewGroup {
+        // Optional user-selected D2 app wallpaper behind the protected PIN sheet.
+        // With no wallpaper selected this remains a neutral AMOLED-style background.
+        val host = android.widget.FrameLayout(this).apply {
+            setBackgroundColor(Appearance.background(this@MainActivity))
+        }
+        Prefs.appWallpaper(this)?.let { saved ->
+            host.addView(ImageView(this).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                contentDescription = null
+                runCatching { setImageURI(Uri.parse(saved)) }
+            }, android.widget.FrameLayout.LayoutParams(-1, -1))
+            val dim = Prefs.appWallpaperDim(this).coerceIn(0, 100)
+            if (dim > 0) host.addView(View(this).apply {
+                setBackgroundColor(Color.argb((255f * dim / 100f).toInt(), 0, 0, 0))
+            }, android.widget.FrameLayout.LayoutParams(-1, -1))
+        }
+        // A subtle neutral scrim keeps the glass PIN sheet readable on bright custom images.
+        host.addView(View(this).apply {
+            setBackgroundColor(Color.argb(34, 0, 0, 0))
+        }, android.widget.FrameLayout.LayoutParams(-1, -1))
+        return host
     }
 
     private fun buildSettings(): ViewGroup {
