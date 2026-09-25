@@ -62,7 +62,7 @@ install_payload() {
     return 2
   }
   log_line "installing bundled APK from $APK"
-  /system/bin/pm install -r -d "$APK" >> "$LOG" 2>&1
+  /system/bin/pm install -r "$APK" >> "$LOG" 2>&1
   rc=$?
   [ "$rc" -eq 0 ] && package_installed && return 0
   log_line "pm install returned $rc"
