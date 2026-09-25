@@ -1434,7 +1434,7 @@ class MainActivity : Activity() {
             canvas.drawCircle(thumbX, cy, dp(11).toFloat(), paint)
             canvas.drawCircle(thumbX, cy, dp(11).toFloat(), ring)
             paint.color = 0x66ffffff
-            canvas.drawCircle(thumbX - dp(3), cy - dp(3), dp(2.5f).toFloat(), paint)
+            canvas.drawCircle(thumbX - dp(3), cy - dp(3), dp(3).toFloat(), paint)
         }
 
         override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
