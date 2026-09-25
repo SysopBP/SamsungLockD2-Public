@@ -45,6 +45,29 @@ jobs:
           echo "D2_SIGNING_KEYSTORE=$D2_SIGNING_KEYSTORE" >> "$GITHUB_ENV"
           keytool -exportcert -keystore "$D2_SIGNING_KEYSTORE" -storepass android -alias androiddebugkey -file "$RUNNER_TEMP/d2-signer.der"
           echo '7ce7d3e590520bcd54dfd9760f36e5fdc6243b1b062c46cac4670b65efb0f370  '"$RUNNER_TEMP/d2-signer.der" | sha256sum --check
+      - name: Guard latest D2 baseline
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          main = Path("app/src/main/java/app/d2lock/MainActivity.kt").read_text()
+          required = [
+              'Triple("Main", "Security, access & preview", "main_settings")',
+              'Triple("Clock & Weather", "Clock style, global weather & location", "clock_weather")',
+              'Triple("Notifications", "Privacy, banners & card appearance", "notifications")',
+              'Triple("App Theme", "Glass, wallpaper, scale & media", "app_theme")',
+              'Triple("Floating Bar", "Left and right lock-screen actions", "floating_bar")',
+              'section(appearanceCard, "LOCK SCREEN EXTRAS")',
+              'section(root, "MAIN · ACCESS & PREVIEW")',
+              'root.getChildAt(root.childCount - 1).tag = "main_settings"',
+          ]
+          missing = [item for item in required if item not in main]
+          if missing:
+              raise SystemExit("D2 baseline regression detected; missing: " + repr(missing))
+          if r'\\n\\nD2 uses its own PIN' in main:
+              raise SystemExit("D2 baseline regression detected: escaped newline text returned")
+          print("D2 latest-good settings baseline verified")
+          PY
+
       - name: Build and lint
         run: |
           ./gradlew :app:dependencies --configuration debugRuntimeClasspath > runtime-dependencies.txt
