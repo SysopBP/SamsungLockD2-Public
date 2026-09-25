@@ -201,8 +201,15 @@ class LockScreenActivity : Activity() {
     override fun onStop() {
         handler.removeCallbacks(hideBanner)
         hideBanner.run()
-        pinDialog?.dismiss()
-        pinDialog = null
+
+        // Credential dialogs can temporarily stop the lock-screen activity when
+        // Android brings the call UI or another trusted system surface forward.
+        // Do not dismiss the active PIN/pattern sheet here: doing so ends the
+        // #52 authentication grace window and lets Guardian race the user.
+        if (!unlocking) {
+            pinDialog?.dismiss()
+            pinDialog = null
+        }
         super.onStop()
     }
 
