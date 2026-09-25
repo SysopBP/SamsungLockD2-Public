@@ -482,7 +482,7 @@ class MainActivity : Activity() {
             }
         }, rowParams())
         root.addView(TextView(this).apply {
-            text = "Experimental: grant D2 root access in KernelSU. When kiosk is active, Home and Recents are blocked until your selected D2 unlock method is accepted. Check for ‘Kiosk active’ on the lock screen. Preview stays unlocked.\\n\\nAndroid kiosk mode interacts with the system keyguard, but D2 never sets a Samsung PIN. A crash or unresponsive app releases kiosk after about 20 seconds; reboot is the fallback recovery. Power/reboot and root remain bypasses. Primary, unmanaged user only."
+            text = "Experimental: grant D2 root access in KernelSU. When kiosk is active, Home and Recents are blocked until your selected D2 unlock method is accepted. Check for ‘Kiosk active’ on the lock screen. Preview stays unlocked.\n\nAndroid kiosk mode interacts with the system keyguard, but D2 never sets a Samsung PIN. A crash or unresponsive app releases kiosk after about 20 seconds; reboot is the fallback recovery. Power/reboot and root remain bypasses. Primary, unmanaged user only."
             textSize = 14f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(0, dp(4), 0, dp(16))
@@ -1278,22 +1278,39 @@ class MainActivity : Activity() {
         dialog.show()
     }
 
-    private fun guardianSwitch(): Switch = Switch(this).apply {
-        // One UI-style state palette: never fall back to Samsung's default purple.
-        val accent = Appearance.accent(this@MainActivity)
-        val offTrack = if (Appearance.dark(this@MainActivity)) 0x4dffffff else 0x33000000
-        val onTrack = (accent and 0x00ffffff) or 0x66000000
-        thumbTintList = android.content.res.ColorStateList(
-            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-            intArrayOf(0xfff4f4f4.toInt(), 0xffb8b8b8.toInt())
-        )
-        trackTintList = android.content.res.ColorStateList(
-            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-            intArrayOf(onTrack, offTrack)
-        )
-        minimumHeight = dp(52)
-        showText = false
+    private inner class GuardianSwitch(context: android.content.Context) : Switch(context) {
+        private val glassTrack = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+            cornerRadius = dp(18).toFloat()
+            setStroke(dp(1), 0x66ffffff)
+        }
+
+        init {
+            minimumHeight = dp(52)
+            showText = false
+            buttonDrawable = null
+            refreshGuardianColors()
+            setOnCheckedChangeListener { _, _ -> refreshGuardianColors() }
+        }
+
+        private fun refreshGuardianColors() {
+            val accent = Appearance.accent(this@MainActivity)
+            val trackColor = if (isChecked) {
+                (accent and 0x00ffffff) or 0x99000000.toInt()
+            } else if (Appearance.dark(this@MainActivity)) 0x4dffffff else 0x33000000
+            trackTintList = android.content.res.ColorStateList.valueOf(trackColor)
+            thumbTintList = android.content.res.ColorStateList.valueOf(
+                if (isChecked) 0xfff5f5f5.toInt() else 0xffb8b8b8.toInt()
+            )
+        }
+
+        override fun setChecked(checked: Boolean) {
+            super.setChecked(checked)
+            if (isAttachedToWindow) refreshGuardianColors()
+        }
     }
+
+    private fun guardianSwitch(): Switch = GuardianSwitch(this)
 
     private inner class GuardianSlider(context: android.content.Context) : android.view.View(context) {
         var max: Int = 100
