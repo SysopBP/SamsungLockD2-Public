@@ -22,14 +22,9 @@ class LockScreenService : Service() {
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == Intent.ACTION_SCREEN_ON && Prefs.enabled(context) && PinStore(context).configured()) {
-                // Ringing/proximity wake must not put D2 in front of an active phone call.
-                if (app.d2lock.notifications.CallNotificationStore.items.isNotEmpty()) return
-                if (Prefs.rootMode(context) && RootManager.launchCompanion()) return
-                // Android may defer this launch under background-start restrictions.
-                runCatching {
-                    startActivity(Intent(context, LockScreenActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
-                }
+                val callActive = app.d2lock.notifications.CallNotificationStore.items.isNotEmpty()
+                Log.i(TAG, "GUARDIAN_SCREEN_ON callActive=$callActive")
+                GuardianWatchdog.reassert(context, "screen_on", callActive)
             }
         }
     }
