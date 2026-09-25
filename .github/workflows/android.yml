@@ -82,6 +82,9 @@ jobs:
             wait "$LOGCAT_PID" 2>/dev/null || true
             echo '--- Guardian/PIN runtime log ---'
             grep -E 'SamsungLockD2|GUARDIAN_|PinUi|PIN_' guardian-runtime.log || true
+            case "$TEST_EXIT" in
+              ''|*[!0-9]*) TEST_EXIT=1 ;;
+            esac
             exit "$TEST_EXIT"
       - uses: actions/upload-artifact@v4
         if: always()
