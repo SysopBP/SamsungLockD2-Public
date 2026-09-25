@@ -144,6 +144,24 @@ class MainActivity : Activity() {
         setContentView(TextView(this).apply { text = "D2 settings locked" })
     }
 
+
+    private fun styleOneUi9Slider(slider: SeekBar) {
+        val accent = Appearance.accent(this)
+        val inactive = Appearance.blend(Appearance.secondary(this), Appearance.background(this), 0.72f)
+        slider.progressTintList = android.content.res.ColorStateList.valueOf(accent)
+        slider.progressBackgroundTintList = android.content.res.ColorStateList.valueOf(inactive)
+        slider.thumbTintList = android.content.res.ColorStateList.valueOf(accent)
+        slider.splitTrack = false
+        slider.minimumHeight = dp(44)
+        slider.setPadding(dp(4), 0, dp(4), 0)
+        slider.thumb = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(accent)
+            setSize(dp(20), dp(20))
+            setStroke(dp(3), Appearance.background(this@MainActivity))
+        }
+    }
+
     private fun buildSettings(): ViewGroup {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -700,8 +718,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(SeekBar(this).apply {
             max = 80
             progress = Prefs.wallpaperDim(this@MainActivity)
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
+            styleOneUi9Slider(this)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -722,8 +739,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(SeekBar(this).apply {
             max = 80
             progress = Prefs.lockGlass(this@MainActivity) - 20
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
+            styleOneUi9Slider(this)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -745,8 +761,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(SeekBar(this).apply {
             max = 30
             progress = Prefs.lockScale(this@MainActivity) - 85
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
+            styleOneUi9Slider(this)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -785,8 +800,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(SeekBar(this).apply {
             max = 50
             progress = Prefs.clockScale(this@MainActivity) - 80
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
+            styleOneUi9Slider(this)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -815,8 +829,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(SeekBar(this).apply {
             max = 80
             progress = Prefs.componentGlass(this@MainActivity, "top_info") - 20
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
+            styleOneUi9Slider(this)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -838,8 +851,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(SeekBar(this).apply {
             max = 80
             progress = Prefs.componentGlass(this@MainActivity, "media") - 20
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
+            styleOneUi9Slider(this)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -861,8 +873,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(SeekBar(this).apply {
             max = 40
             progress = Prefs.topInfoSize(this@MainActivity) - 80
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
+            styleOneUi9Slider(this)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -936,8 +947,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(SeekBar(this).apply {
             max = 40
             progress = Prefs.mediaButtonsScale(this@MainActivity) - 80
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
+            styleOneUi9Slider(this)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -999,8 +1009,7 @@ class MainActivity : Activity() {
         privacyCard.addView(SeekBar(this).apply {
             max = 24
             progress = Prefs.notificationRadius(this@MainActivity) - 16
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
+            styleOneUi9Slider(this)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -1022,8 +1031,7 @@ class MainActivity : Activity() {
         privacyCard.addView(SeekBar(this).apply {
             max = 80
             progress = Prefs.notificationGlass(this@MainActivity) - 20
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
+            styleOneUi9Slider(this)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
