@@ -57,7 +57,7 @@ class MainActivity : Activity() {
         Appearance.apply(this)
         PinUi.protect(this)
         window.statusBarColor = Color.TRANSPARENT
-        setContentView(TextView(this).apply { text = "Samsung Lock D2" })
+        setContentView(TextView(this).apply { text = "Kiosk D2 Guardian" })
         Shizuku.addBinderReceivedListenerSticky(shizukuBinderReceived)
         Shizuku.addBinderDeadListener(shizukuBinderDead)
         Shizuku.addRequestPermissionResultListener(shizukuPermission)
@@ -151,7 +151,7 @@ class MainActivity : Activity() {
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
         }
         root.addView(TextView(this).apply {
-            text = "Samsung Lock D2"
+            text = "Kiosk D2 Guardian"
             textSize = 32f
             setTextColor(Appearance.text(this@MainActivity))
         })
@@ -393,7 +393,7 @@ class MainActivity : Activity() {
             val manager = getSystemService(AppWidgetManager::class.java)
             if (manager.isRequestPinAppWidgetSupported) {
                 manager.requestPinAppWidget(ComponentName(this, D2Widget::class.java), null, null)
-            } else Toast.makeText(this, "On your home screen, open Widgets and add the Samsung Lock D2 widget.", Toast.LENGTH_LONG).show()
+            } else Toast.makeText(this, "On your home screen, open Widgets and add the Kiosk D2 Guardian widget.", Toast.LENGTH_LONG).show()
         }
         root.addView(TextView(this).apply {
             text = "Each widget has its own settings for style, tap action and label. Long-press a placed widget and choose its widget settings when your launcher supports reconfiguration."
@@ -421,7 +421,7 @@ class MainActivity : Activity() {
         section(root, "SHIZUKU")
         root.addView(Switch(this).apply {
             thumbTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Appearance.accent(this@MainActivity), Appearance.secondary(this@MainActivity)))
-            text = "Use Shizuku in Samsung Lock D2"
+            text = "Use Shizuku in Kiosk D2 Guardian"
             textSize = 17f
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.shizukuEnabled(this@MainActivity)
@@ -1527,9 +1527,9 @@ class MainActivity : Activity() {
             })
             addView(TextView(this@MainActivity).apply {
                 text = when {
-                    !enabled -> "The Shizuku service may keep running, but Samsung Lock D2 will not use it."
+                    !enabled -> "The Shizuku service may keep running, but Kiosk D2 Guardian will not use it."
                     granted -> "Service running · Authorized"
-                    running -> "Tap below to authorize Samsung Lock D2."
+                    running -> "Tap below to authorize Kiosk D2 Guardian."
                     else -> "Start Shizuku, then return here. D2 reconnects automatically."
                 }
                 textSize = 13f
