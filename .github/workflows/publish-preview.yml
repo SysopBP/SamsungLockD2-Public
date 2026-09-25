@@ -15,13 +15,25 @@ jobs:
     if: github.repository == 'SysopBP/SamsungLockD2-Public'
     runs-on: ubuntu-latest
     steps:
-      - name: Download latest tested D2 build
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Download D2 build from current main
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p dist
-          gh run download 35840069548 --repo SysopBP/SamsungLockD2-Public --name SamsungLockD2-deliverables --dir dist
-          sha256sum --check dist/SHA256SUMS.txt
+          MAIN_SHA="$(git rev-parse HEAD)"
+          RUN_ID="$(gh run list --repo SysopBP/SamsungLockD2-Public --workflow android.yml --branch main --commit "$MAIN_SHA" --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
+          if [ -z "$RUN_ID" ]; then
+            echo "::error::No successful D2 build exists for current main commit $MAIN_SHA"
+            exit 1
+          fi
+          echo "Packaging D2 run $RUN_ID for main $MAIN_SHA"
+          gh run download "$RUN_ID" --repo SysopBP/SamsungLockD2-Public --name SamsungLockD2-deliverables --dir dist
+          (cd dist && sha256sum --check SHA256SUMS.txt)
 
       - name: Download latest Galaxy Island Glass build
         env:
