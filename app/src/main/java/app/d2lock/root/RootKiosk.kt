@@ -49,6 +49,10 @@ object RootKiosk {
     }
     private var lastPulse = 0L
     private var detachedAt = 0L
+    private var lockLostAt = 0L
+    private var lockRepairAttempts = 0
+    private const val LOCK_REPAIR_WINDOW_MS = 4500L
+    private const val LOCK_REPAIR_MAX_ATTEMPTS = 3
     private fun mode(activity: Activity) = activity.getSystemService(ActivityManager::class.java).lockTaskModeState
     private fun credentialName(activity: Activity) = if (app.d2lock.Prefs.unlockMethod(activity) == "pattern") "Pattern" else "PIN"
     private fun report(value: String) {
@@ -126,6 +130,7 @@ object RootKiosk {
         val activity = owner.get() ?: return fail("D2 window closed")
         if (mode(activity) == ActivityManager.LOCK_TASK_MODE_LOCKED) {
             starting = false; active = true
+            lockLostAt = 0L; lockRepairAttempts = 0
             Log.i("SamsungLockD2", "GUARDIAN_KIOSK_CONFIRMED mode=LOCKED")
             report("Kiosk active • ${credentialName(activity)} required to leave")
         } else if (SystemClock.elapsedRealtime() < deadline) main.postDelayed({ confirm(ticket, deadline) }, 100)
@@ -145,7 +150,23 @@ object RootKiosk {
                 fail("D2 window closed; recovery released kiosk"); return
             }
             if (active && activity != null && mode(activity) != ActivityManager.LOCK_TASK_MODE_LOCKED) {
-                fail("Kiosk ended; ${activity?.let { credentialName(it) } ?: "D2 authentication"} exit is no longer enforced"); return
+                if (lockLostAt == 0L) {
+                    lockLostAt = now
+                    lockRepairAttempts = 0
+                    Log.w("SamsungLockD2", "GUARDIAN_LOCK_TASK_LOST")
+                }
+                if (now - lockLostAt <= LOCK_REPAIR_WINDOW_MS && lockRepairAttempts < LOCK_REPAIR_MAX_ATTEMPTS) {
+                    lockRepairAttempts++
+                    Log.w("SamsungLockD2", "GUARDIAN_LOCK_TASK_REPAIR attempt=$lockRepairAttempts")
+                    reassert(activity, bringToFront = !activity.hasWindowFocus())
+                } else {
+                    Log.e("SamsungLockD2", "GUARDIAN_LOCK_TASK_RECOVERY_FAILED attempts=$lockRepairAttempts")
+                    fail("Kiosk ended and Guardian could not restore secure lock"); return
+                }
+            } else if (active && activity != null && lockLostAt != 0L) {
+                Log.i("SamsungLockD2", "GUARDIAN_LOCK_TASK_RECOVERED elapsed=${now - lockLostAt} attempts=$lockRepairAttempts")
+                lockLostAt = 0L
+                lockRepairAttempts = 0
             }
             worker.execute { runCatching { lease.writer.write("PING\n"); lease.writer.flush() } }
             main.postDelayed(this, 1000)
@@ -170,6 +191,7 @@ object RootKiosk {
     }
     private fun release(done: () -> Unit) {
         ++generation; starting = false; active = false
+        lockLostAt = 0L; lockRepairAttempts = 0
         main.removeCallbacks(pulse)
         val lease = channel; val queue = events
         channel = null; events = null
