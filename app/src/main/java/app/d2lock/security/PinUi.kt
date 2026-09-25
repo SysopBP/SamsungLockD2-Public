@@ -59,8 +59,8 @@ object PinUi {
             setPadding(dp(18), 0, dp(18), 0)
             background = GradientDrawable().apply {
                 cornerRadius = dp(20).toFloat()
-                setColor(Appearance.surface(activity))
-                setStroke(dp(1), Appearance.secondary(activity))
+                setColor(Color.argb(92, 255, 255, 255))
+                setStroke(dp(1), Color.argb(150, 255, 255, 255))
             }
             form.addView(this, LinearLayout.LayoutParams(-1, dp(58)).apply { bottomMargin = dp(12) })
         }
@@ -92,17 +92,18 @@ object PinUi {
             // One UI 9-style rounded D2 security sheet. Keep authentication behavior unchanged.
             // Match the lock-screen glass cards: translucent accent-tinted surface with a soft edge.
             // The wallpaper remains visible behind the PIN sheet while FLAG_SECURE stays in force.
-            dialog.window?.setBackgroundDrawable(Appearance.glass(activity, 32f, 54, true))
+            dialog.window?.setBackgroundDrawable(Appearance.glass(activity, 34f, 72, true))
             dialog.window?.decorView?.clipToOutline = true
             val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             val negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
             listOf(button, negative).forEach { action ->
                 action.isAllCaps = false
                 action.setPadding(dp(18), 0, dp(18), 0)
+                action.setTextColor(Appearance.text(activity))
                 action.background = GradientDrawable().apply {
                     cornerRadius = dp(22).toFloat()
-                    setColor(Color.TRANSPARENT)
-                    setStroke(dp(1), Appearance.secondary(activity))
+                    setColor(Color.argb(30, 255, 255, 255))
+                    setStroke(dp(1), Color.argb(125, 255, 255, 255))
                 }
             }
             button.filterTouchesWhenObscured = true
