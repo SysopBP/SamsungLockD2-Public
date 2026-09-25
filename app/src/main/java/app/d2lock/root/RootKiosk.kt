@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Process
 import android.os.SystemClock
+import android.util.Log
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.lang.ref.WeakReference
@@ -26,13 +27,26 @@ object RootKiosk {
     private var generation = 0
     private var starting = false
     private var active = false
+    private var releasing = false
     private var message = "Kiosk inactive"
     internal val diagnostic: String get() = message
+    internal fun isEnforced() = active && !releasing
+    internal fun reassert(activity: Activity) {
+        if (!active || activity.isDestroyed || activity.isFinishing) return
+        if (mode(activity) == ActivityManager.LOCK_TASK_MODE_LOCKED) return
+        runCatching { activity.startLockTask() }
+            .onSuccess { report("Kiosk Guardian • restoring secure lock") }
+            .onFailure { report("Kiosk Guardian could not restore lock: ${it.message}") }
+    }
     private var lastPulse = 0L
     private var detachedAt = 0L
     private fun mode(activity: Activity) = activity.getSystemService(ActivityManager::class.java).lockTaskModeState
     private fun credentialName(activity: Activity) = if (app.d2lock.Prefs.unlockMethod(activity) == "pattern") "Pattern" else "PIN"
-    private fun report(value: String) { message = value; observer?.invoke(value) }
+    private fun report(value: String) {
+        message = value
+        Log.i("SamsungLockD2", "GUARDIAN_KIOSK $value")
+        observer?.invoke(value)
+    }
     private fun quote(value: String) = "'" + value.replace("'", "'\\''") + "'"
     internal fun command(activity: Activity): String = "CLASSPATH=" + quote(activity.applicationInfo.sourceDir) +
         " /system/bin/app_process /system/bin app.d2lock.root.KioskBridge " + (Process.myUid() / 100000) +
@@ -93,6 +107,7 @@ object RootKiosk {
             // D2_READY means the root bridge completed ATM's synchronous allowlist update.
             // DPM.isLockTaskPermitted reads persisted DPC policy, not this temporary runtime lease.
             // Never fall back to startSystemLockTaskMode/am task lock (escapable screen pinning).
+            Log.i("SamsungLockD2", "GUARDIAN_KIOSK_REQUESTED")
             activity.startLockTask()
             confirm(ticket, SystemClock.elapsedRealtime() + 3000)
         } catch (e: Exception) { fail(e.message ?: "Kiosk start failed") }
@@ -101,7 +116,9 @@ object RootKiosk {
         if (ticket != generation) return
         val activity = owner.get() ?: return fail("D2 window closed")
         if (mode(activity) == ActivityManager.LOCK_TASK_MODE_LOCKED) {
-            starting = false; active = true; report("Kiosk active • ${credentialName(activity)} required to leave")
+            starting = false; active = true
+            Log.i("SamsungLockD2", "GUARDIAN_KIOSK_CONFIRMED mode=LOCKED")
+            report("Kiosk active • ${credentialName(activity)} required to leave")
         } else if (SystemClock.elapsedRealtime() < deadline) main.postDelayed({ confirm(ticket, deadline) }, 100)
         else fail("Android did not enter full kiosk mode")
     }
@@ -131,11 +148,13 @@ object RootKiosk {
     }
     /** Call only from a verified D2 authentication callback. Recovery is a deliberately separate escape path. */
     fun unlock(activity: Activity, done: () -> Unit) {
+        releasing = true
         if (active) {
             try { activity.stopLockTask() }
             catch (_: Exception) { /* Removing our temporary allowlist below also stops the task. */ }
         }
         release {
+            releasing = false
             if (mode(activity) == ActivityManager.LOCK_TASK_MODE_NONE) done()
             else report("Could not release kiosk. Retry ${credentialName(activity)}, or reboot for recovery.")
         }
