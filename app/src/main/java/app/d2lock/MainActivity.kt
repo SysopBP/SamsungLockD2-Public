@@ -11,6 +11,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
+import android.graphics.drawable.ScaleDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -1271,6 +1273,41 @@ class MainActivity : Activity() {
             .setNegativeButton("Cancel", null).create()
         dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this, 30f, 76, true)) }
         dialog.show()
+    }
+
+    private fun guardianSlider(): SeekBar = SeekBar(this).apply {
+        // Guardian / One UI 9 treatment: rounded pill track, compact accent fill,
+        // larger touch target and a clean circular thumb instead of the legacy bar.
+        minHeight = dp(52)
+        setPadding(dp(4), dp(8), dp(4), dp(8))
+        splitTrack = false
+
+        val inactive = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(4).toFloat()
+            setColor(Appearance.secondary(this@MainActivity) and 0x55ffffff)
+            setSize(1, dp(8))
+        }
+        val active = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(4).toFloat()
+            setColor(Appearance.accent(this@MainActivity))
+            setSize(1, dp(8))
+        }
+        val scaledActive = ScaleDrawable(active, Gravity.START, 1f, -1f)
+        progressDrawable = LayerDrawable(arrayOf(inactive, scaledActive)).apply {
+            setId(0, android.R.id.background)
+            setId(1, android.R.id.progress)
+        }
+        thumb = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(Appearance.accent(this@MainActivity))
+            setStroke(dp(3), Appearance.background(this@MainActivity))
+            setSize(dp(24), dp(24))
+        }
+        thumbOffset = 0
+        progressTintList = null
+        thumbTintList = null
     }
 
     private fun showQuickSettingsSheet(root: LinearLayout, scroll: ScrollView) {
