@@ -67,6 +67,8 @@ object GuardianWatchdog {
         Log.i(TAG, "GUARDIAN_AUTH_END reason=$reason")
     }
 
+    fun isTrustedAuthenticationActive(): Boolean = trustedAuthentication
+
     @Synchronized fun markProtected(reason: String) = transition(State.PROTECTED, reason)
     @Synchronized fun markTrustedUi(reason: String) = transition(State.TRUSTED_UI, reason)
     @Synchronized fun markReleased(reason: String) = transition(State.TEMPORARILY_RELEASED, reason)
