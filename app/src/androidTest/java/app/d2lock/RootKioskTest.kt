@@ -112,10 +112,18 @@ class RootKioskTest {
             onView(withText("PIN")).inRoot(withDecorView(sameInstance(decor))).perform(click())
             onView(withId(app.d2lock.R.id.d2_pin_input)).inRoot(isDialog()).perform(typeText("111111"), closeSoftKeyboard())
             onView(withText("Unlock")).inRoot(isDialog()).perform(click())
-            waitFor("Wrong PIN must visibly be rejected") { runCatching {
-                onView(withText("PIN incorrect.")).inRoot(isDialog()).check(androidx.test.espresso.assertion.ViewAssertions.matches(isDisplayed()))
-                true
-            }.getOrDefault(false) }
+            waitFor("Wrong PIN must visibly be rejected") {
+                instrumentation.waitForIdleSync()
+                runCatching {
+                    var rejected = false
+                    scenario.onActivity { activity ->
+                        rejected = activity.window.decorView.rootView
+                            .findViewsWithText(mutableListOf(), "PIN incorrect.", android.view.View.FIND_VIEWS_WITH_TEXT)
+                            .any { it.isShown }
+                    }
+                    rejected
+                }.getOrDefault(false)
+            }
             assertEquals(ActivityManager.LOCK_TASK_MODE_LOCKED, manager.lockTaskModeState)
             onView(withId(app.d2lock.R.id.d2_pin_input)).inRoot(isDialog()).perform(replaceText("246810"), closeSoftKeyboard())
             onView(withText("Unlock")).inRoot(isDialog()).perform(click())
