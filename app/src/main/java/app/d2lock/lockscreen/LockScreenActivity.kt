@@ -201,15 +201,8 @@ class LockScreenActivity : Activity() {
     override fun onStop() {
         handler.removeCallbacks(hideBanner)
         hideBanner.run()
-
-        // Credential dialogs can temporarily stop the lock-screen activity when
-        // Android brings the call UI or another trusted system surface forward.
-        // Do not dismiss the active PIN/pattern sheet here: doing so ends the
-        // #52 authentication grace window and lets Guardian race the user.
-        if (!unlocking) {
-            pinDialog?.dismiss()
-            pinDialog = null
-        }
+        pinDialog?.dismiss()
+        pinDialog = null
         super.onStop()
     }
 
@@ -688,12 +681,10 @@ class LockScreenActivity : Activity() {
         // credential sheet takes focus so onResume/focus recovery cannot re-attach
         // or reassert kiosk while the user is drawing a pattern or entering a PIN.
         unlocking = true
-        GuardianWatchdog.beginTrustedAuthentication()
         handler.removeCallbacks(quickSettingsGuard)
 
         val cancelled = {
             unlocking = false
-            GuardianWatchdog.endTrustedAuthentication("auth_cancelled")
             pinDialog = null
             if (!preview && Prefs.quickSettingsGuard(this)) handler.post(quickSettingsGuard)
             if (!preview && Prefs.kiosk(this)) {
@@ -701,7 +692,6 @@ class LockScreenActivity : Activity() {
             }
         }
         val unlocked = {
-            GuardianWatchdog.endTrustedAuthentication("auth_success")
             playUnlockHaptic()
             RootKiosk.unlock(this) {
                 app.d2lock.bridge.IslandBridge.setLocked(this, false)
