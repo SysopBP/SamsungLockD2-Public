@@ -697,7 +697,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "wallpaper_dim_label"
         })
-        appearanceCard.addView(SeekBar(this).apply {
+        appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.wallpaperDim(this@MainActivity)
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -719,7 +719,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "lock_glass_label"
         })
-        appearanceCard.addView(SeekBar(this).apply {
+        appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.lockGlass(this@MainActivity) - 20
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -742,7 +742,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "lock_scale_label"
         })
-        appearanceCard.addView(SeekBar(this).apply {
+        appearanceCard.addView(guardianSlider().apply {
             max = 30
             progress = Prefs.lockScale(this@MainActivity) - 85
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -782,7 +782,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "clock_scale_label"
         })
-        appearanceCard.addView(SeekBar(this).apply {
+        appearanceCard.addView(guardianSlider().apply {
             max = 50
             progress = Prefs.clockScale(this@MainActivity) - 80
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -812,7 +812,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "top_info_glass_label"
         })
-        appearanceCard.addView(SeekBar(this).apply {
+        appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.componentGlass(this@MainActivity, "top_info") - 20
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -835,7 +835,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "media_glass_label"
         })
-        appearanceCard.addView(SeekBar(this).apply {
+        appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.componentGlass(this@MainActivity, "media") - 20
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -858,7 +858,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "top_info_size_label"
         })
-        appearanceCard.addView(SeekBar(this).apply {
+        appearanceCard.addView(guardianSlider().apply {
             max = 40
             progress = Prefs.topInfoSize(this@MainActivity) - 80
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -933,7 +933,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "media_button_scale_label"
         })
-        appearanceCard.addView(SeekBar(this).apply {
+        appearanceCard.addView(guardianSlider().apply {
             max = 40
             progress = Prefs.mediaButtonsScale(this@MainActivity) - 80
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -996,7 +996,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "notification_radius_label"
         })
-        privacyCard.addView(SeekBar(this).apply {
+        privacyCard.addView(guardianSlider().apply {
             max = 24
             progress = Prefs.notificationRadius(this@MainActivity) - 16
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -1019,7 +1019,7 @@ class MainActivity : Activity() {
             setPadding(dp(6), dp(4), 0, 0)
             tag = "notification_glass_label"
         })
-        privacyCard.addView(SeekBar(this).apply {
+        privacyCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.notificationGlass(this@MainActivity) - 20
             progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
@@ -1102,7 +1102,7 @@ class MainActivity : Activity() {
             setTextColor(Appearance.secondary(this@MainActivity))
             tag = "d2_app_wallpaper_dim_label"
         })
-        root.addView(SeekBar(this).apply {
+        root.addView(guardianSlider().apply {
             max = 90
             progress = Prefs.appWallpaperDim(this@MainActivity)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -1691,6 +1691,55 @@ class MainActivity : Activity() {
         }
         parent.addView(card, LinearLayout.LayoutParams(-1, dp(72)).apply { bottomMargin = dp(8) })
     }
+    private inner class GuardianSlider(context: android.content.Context) : SeekBar(context) {
+        private val fill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        private val outline = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = dp(1).toFloat()
+        }
+
+        init {
+            // Hide Samsung/Theme Park's native purple SeekBar assets.
+            progressDrawable = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+            thumb = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+            splitTrack = false
+            minimumHeight = dp(38)
+            setPadding(dp(12), paddingTop, dp(12), paddingBottom)
+        }
+
+        override fun onDraw(canvas: android.graphics.Canvas) {
+            val left = paddingLeft.toFloat()
+            val right = (width - paddingRight).toFloat()
+            val cy = height / 2f
+            val railH = dp(7).toFloat()
+            val radius = railH / 2f
+            val fraction = if (max > 0) progress.toFloat() / max.toFloat() else 0f
+            val x = left + (right - left) * fraction
+
+            fill.style = android.graphics.Paint.Style.FILL
+            fill.color = if (Appearance.dark(this@MainActivity)) 0x30ffffff else 0x28000000
+            canvas.drawRoundRect(left, cy - railH / 2f, right, cy + railH / 2f, radius, radius, fill)
+
+            outline.color = if (Appearance.dark(this@MainActivity)) 0x55ffffff else 0x44000000
+            canvas.drawRoundRect(left, cy - railH / 2f, right, cy + railH / 2f, radius, radius, outline)
+
+            if (x > left) {
+                fill.color = (Appearance.accent(this@MainActivity) and 0x00ffffff) or 0xcc000000.toInt()
+                canvas.drawRoundRect(left, cy - railH / 2f, x, cy + railH / 2f, radius, radius, fill)
+            }
+
+            // Compact glass thumb matching the Guardian switches.
+            fill.color = 0xf2ffffff.toInt()
+            canvas.drawCircle(x, cy, dp(10).toFloat(), fill)
+            outline.color = 0xa0ffffff.toInt()
+            canvas.drawCircle(x, cy, dp(10).toFloat(), outline)
+            fill.color = 0x55ffffff
+            canvas.drawCircle(x - dp(3), cy - dp(3), dp(2).toFloat(), fill)
+        }
+    }
+
+    private fun guardianSlider(): SeekBar = GuardianSlider(this)
+
     private fun rowParams() = LinearLayout.LayoutParams(-1, dp(64)).apply { bottomMargin = dp(8) }
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
