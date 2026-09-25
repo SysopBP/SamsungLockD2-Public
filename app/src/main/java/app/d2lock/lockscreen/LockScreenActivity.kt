@@ -236,8 +236,13 @@ class LockScreenActivity : Activity() {
         if (!preview && Prefs.kiosk(this)) Log.i("SamsungLockD2", "GUARDIAN_ACTIVITY_STOPPED changingConfig=$isChangingConfigurations")
         handler.removeCallbacks(hideBanner)
         hideBanner.run()
-        pinDialog?.dismiss()
-        pinDialog = null
+        // Keep the credential sheet alive while trusted authentication is active.
+        // Phone/call/focus transitions can invoke onStop(); dismissing here races
+        // slow PIN/pattern entry and makes Guardian appear to lock the user out.
+        if (!unlocking) {
+            pinDialog?.dismiss()
+            pinDialog = null
+        }
         super.onStop()
     }
 
