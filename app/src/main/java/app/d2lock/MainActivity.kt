@@ -1275,50 +1275,104 @@ class MainActivity : Activity() {
         dialog.show()
     }
 
-    private fun guardianSlider(): SeekBar = object : SeekBar(this) {
-        private val trackPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-        private val fillPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-        private val thumbPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-        private val ringPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+    private inner class GuardianSlider(context: android.content.Context) : android.view.View(context) {
+        var max: Int = 100
+            set(value) { field = value.coerceAtLeast(1); progress = progress.coerceAtMost(field); invalidate() }
+        var progress: Int = 0
+            set(value) { field = value.coerceIn(0, max); invalidate() }
+
+        // Compatibility properties let existing settings blocks migrate without carrying
+        // Android's SeekBar renderer into the new control.
+        var progressTintList: android.content.res.ColorStateList? = null
+        var thumbTintList: android.content.res.ColorStateList? = null
+        private var listener: SeekBar.OnSeekBarChangeListener? = null
+        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        private val ring = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             style = android.graphics.Paint.Style.STROKE
             strokeWidth = dp(2).toFloat()
         }
 
+        fun setOnSeekBarChangeListener(value: SeekBar.OnSeekBarChangeListener?) { listener = value }
+
         init {
-            minHeight = dp(56)
-            setPadding(dp(12), dp(8), dp(12), dp(8))
-            // Hide framework artwork completely; this view draws the control itself.
-            progressDrawable = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
-            thumb = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
-            thumbOffset = 0
-            splitTrack = false
+            minimumHeight = dp(56)
+            isClickable = true
+            isFocusable = true
         }
 
         override fun onDraw(canvas: android.graphics.Canvas) {
-            val left = paddingLeft.toFloat()
-            val right = (width - paddingRight).toFloat()
+            super.onDraw(canvas)
+            val left = dp(10).toFloat()
+            val right = width - dp(10).toFloat()
             val cy = height / 2f
-            val trackH = dp(10).toFloat()
+            val trackH = dp(12).toFloat()
             val radius = trackH / 2f
-            val range = (max - min).coerceAtLeast(1)
-            val fraction = ((progress - min).toFloat() / range).coerceIn(0f, 1f)
+            val fraction = (progress.toFloat() / max.coerceAtLeast(1)).coerceIn(0f, 1f)
             val thumbX = left + (right - left) * fraction
 
-            trackPaint.color = if (Appearance.dark(this@MainActivity)) 0x66ffffff else 0x33000000
-            fillPaint.color = Appearance.accent(this@MainActivity)
-            thumbPaint.color = Appearance.accent(this@MainActivity)
-            ringPaint.color = if (Appearance.dark(this@MainActivity)) android.graphics.Color.WHITE else Appearance.background(this@MainActivity)
+            paint.color = if (Appearance.dark(this@MainActivity)) 0x55ffffff else 0x33000000
+            canvas.drawRoundRect(android.graphics.RectF(left, cy - trackH / 2f, right, cy + trackH / 2f), radius, radius, paint)
 
-            val track = android.graphics.RectF(left, cy - trackH / 2f, right, cy + trackH / 2f)
-            canvas.drawRoundRect(track, radius, radius, trackPaint)
+            paint.color = Appearance.accent(this@MainActivity)
             if (thumbX > left) {
-                val fill = android.graphics.RectF(left, cy - trackH / 2f, thumbX, cy + trackH / 2f)
-                canvas.drawRoundRect(fill, radius, radius, fillPaint)
+                canvas.drawRoundRect(android.graphics.RectF(left, cy - trackH / 2f, thumbX, cy + trackH / 2f), radius, radius, paint)
             }
-            canvas.drawCircle(thumbX, cy, dp(13).toFloat(), thumbPaint)
-            canvas.drawCircle(thumbX, cy, dp(13).toFloat(), ringPaint)
+
+            // Elevated-looking thumb: outer contrast ring + accent center + small highlight.
+            ring.color = if (Appearance.dark(this@MainActivity)) 0xddffffff.toInt() else 0xcc000000.toInt()
+            canvas.drawCircle(thumbX, cy, dp(15).toFloat(), paint)
+            canvas.drawCircle(thumbX, cy, dp(15).toFloat(), ring)
+            paint.color = 0x55ffffff
+            canvas.drawCircle(thumbX - dp(4), cy - dp(4), dp(4).toFloat(), paint)
+        }
+
+        override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
+            if (!isEnabled) return false
+            when (event.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                    listener?.onStartTrackingTouch(null)
+                    updateFromTouch(event.x, true)
+                    return true
+                }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    updateFromTouch(event.x, true)
+                    return true
+                }
+                android.view.MotionEvent.ACTION_UP -> {
+                    updateFromTouch(event.x, true)
+                    listener?.onStopTrackingTouch(null)
+                    parent?.requestDisallowInterceptTouchEvent(false)
+                    performClick()
+                    return true
+                }
+                android.view.MotionEvent.ACTION_CANCEL -> {
+                    listener?.onStopTrackingTouch(null)
+                    parent?.requestDisallowInterceptTouchEvent(false)
+                    return true
+                }
+            }
+            return super.onTouchEvent(event)
+        }
+
+        private fun updateFromTouch(x: Float, fromUser: Boolean) {
+            val left = dp(10).toFloat()
+            val widthAvailable = (width - dp(20)).coerceAtLeast(1)
+            val fraction = ((x - left) / widthAvailable).coerceIn(0f, 1f)
+            val value = kotlin.math.round(fraction * max).toInt()
+            if (value != progress) {
+                progress = value
+                listener?.onProgressChanged(null, value, fromUser)
+            }
+        }
+
+        override fun performClick(): Boolean {
+            super.performClick()
+            return true
         }
     }
+
+    private fun guardianSlider(): GuardianSlider = GuardianSlider(this)
 
     private fun showQuickSettingsSheet(root: LinearLayout, scroll: ScrollView) {
         val panel = LinearLayout(this).apply {
