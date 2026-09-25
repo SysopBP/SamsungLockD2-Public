@@ -759,7 +759,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+        }, LinearLayout.LayoutParams(-1, dp(40)).apply { bottomMargin = dp(8) })
         appearanceCard.addView(TextView(this).apply {
             text = "Lock-screen glass: ${Prefs.lockGlass(this@MainActivity)}%"
             textSize = 15f
@@ -784,7 +784,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(48)))
+        }, LinearLayout.LayoutParams(-1, dp(40)))
         appearanceCard.addView(TextView(this).apply {
             text = "Lock-screen UI scale: ${Prefs.lockScale(this@MainActivity)}%"
             textSize = 15f
@@ -807,7 +807,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(8) })
+        }, LinearLayout.LayoutParams(-1, dp(40)).apply { bottomMargin = dp(8) })
         section(appearanceCard, "CLOCK & WEATHER")
         appearanceCard.getChildAt(appearanceCard.childCount - 1).tag = "clock_weather"
         addChoice(appearanceCard, "Clock style", listOf("Adaptive Clean", "Classic", "Rounded", "Condensed", "Bold", "Minimal"),
@@ -846,7 +846,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(48)))
+        }, LinearLayout.LayoutParams(-1, dp(40)))
         appearanceCard.addView(guardianSwitch().apply {
             text = "Show date under clock"
             setTextColor(Appearance.text(this@MainActivity))
@@ -875,7 +875,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(48)))
+        }, LinearLayout.LayoutParams(-1, dp(40)))
         appearanceCard.addView(TextView(this).apply {
             text = "Media player glass: ${Prefs.componentGlass(this@MainActivity, "media")}%"
             textSize = 15f
@@ -898,7 +898,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(48)))
+        }, LinearLayout.LayoutParams(-1, dp(40)))
         appearanceCard.addView(TextView(this).apply {
             text = "Weather & battery content size: ${Prefs.topInfoSize(this@MainActivity)}%"
             textSize = 15f
@@ -921,7 +921,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(48)))
+        }, LinearLayout.LayoutParams(-1, dp(40)))
         appearanceCard.addView(guardianSwitch().apply {
             text = "Show weather in pill"
             setTextColor(Appearance.text(this@MainActivity))
@@ -993,7 +993,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(48)))
+        }, LinearLayout.LayoutParams(-1, dp(40)))
         appearanceCard.addView(guardianSwitch().apply {
             text = "Show media player while D2 is locked"
             setTextColor(Appearance.text(this@MainActivity))
@@ -1054,7 +1054,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(48)))
+        }, LinearLayout.LayoutParams(-1, dp(40)))
         privacyCard.addView(TextView(this).apply {
             text = "Notification glass: ${Prefs.notificationGlass(this@MainActivity)}%"
             textSize = 15f
@@ -1077,7 +1077,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(48)))
+        }, LinearLayout.LayoutParams(-1, dp(40)))
         privacyCard.addView(TextView(this).apply {
             text = "Public only shows text from apps that mark it public. All previews can show private messages before you authenticate with D2. Apps marked secret stay hidden."
             textSize = 13f
@@ -1157,7 +1157,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) { refreshAppearance() }
             })
-        }, LinearLayout.LayoutParams(-1, dp(48)))
+        }, LinearLayout.LayoutParams(-1, dp(40)))
         addButton(root, "Reset D2 app wallpaper") {
             Prefs.clearAppWallpaper(this)
             showD2Message("D2 app wallpaper reset")
@@ -1399,7 +1399,7 @@ class MainActivity : Activity() {
         fun setOnSeekBarChangeListener(value: SeekBar.OnSeekBarChangeListener?) { listener = value }
 
         init {
-            minimumHeight = dp(56)
+            minimumHeight = dp(44)
             isClickable = true
             isFocusable = true
         }
@@ -1411,7 +1411,7 @@ class MainActivity : Activity() {
             val cy = height / 2f
             // Match the new Guardian switches: slimmer One UI 9-style glass rail
             // with a restrained thumb instead of the oversized generic SeekBar look.
-            val trackH = dp(8).toFloat()
+            val trackH = dp(5).toFloat()
             val radius = trackH / 2f
             val fraction = (progress.toFloat() / max.coerceAtLeast(1)).coerceIn(0f, 1f)
             val thumbX = left + (right - left) * fraction
@@ -1431,10 +1431,10 @@ class MainActivity : Activity() {
 
             // Compact Guardian thumb: same visual family as the custom switches.
             ring.color = if (Appearance.dark(this@MainActivity)) 0xaaffffff.toInt() else 0x88000000.toInt()
-            canvas.drawCircle(thumbX, cy, dp(11).toFloat(), paint)
-            canvas.drawCircle(thumbX, cy, dp(11).toFloat(), ring)
+            canvas.drawCircle(thumbX, cy, dp(8).toFloat(), paint)
+            canvas.drawCircle(thumbX, cy, dp(8).toFloat(), ring)
             paint.color = 0x66ffffff
-            canvas.drawCircle(thumbX - dp(3), cy - dp(3), dp(3).toFloat(), paint)
+            canvas.drawCircle(thumbX - dp(2), cy - dp(2), dp(2).toFloat(), paint)
         }
 
         override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
