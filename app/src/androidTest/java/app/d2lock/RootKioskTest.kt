@@ -105,7 +105,10 @@ class RootKioskTest {
             var decor: android.view.View? = null
             scenario.onActivity { task = it.taskId; decor = it.window.decorView }
             TestDevice.focusTask(task)
-            SystemClock.sleep(500)
+            waitFor("D2 must regain focus after recreate") {
+                scenario.state == Lifecycle.State.RESUMED &&
+                    runCatching { decor?.hasWindowFocus() == true }.getOrDefault(false)
+            }
             onView(withText("PIN")).inRoot(withDecorView(sameInstance(decor))).perform(click())
             onView(withId(app.d2lock.R.id.d2_pin_input)).inRoot(isDialog()).perform(typeText("111111"), closeSoftKeyboard())
             onView(withText("Unlock")).inRoot(isDialog()).perform(click())
