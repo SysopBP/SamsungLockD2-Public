@@ -688,10 +688,12 @@ class LockScreenActivity : Activity() {
         // credential sheet takes focus so onResume/focus recovery cannot re-attach
         // or reassert kiosk while the user is drawing a pattern or entering a PIN.
         unlocking = true
+        GuardianWatchdog.beginTrustedAuthentication()
         handler.removeCallbacks(quickSettingsGuard)
 
         val cancelled = {
             unlocking = false
+            GuardianWatchdog.endTrustedAuthentication("auth_cancelled")
             pinDialog = null
             if (!preview && Prefs.quickSettingsGuard(this)) handler.post(quickSettingsGuard)
             if (!preview && Prefs.kiosk(this)) {
@@ -699,6 +701,7 @@ class LockScreenActivity : Activity() {
             }
         }
         val unlocked = {
+            GuardianWatchdog.endTrustedAuthentication("auth_success")
             playUnlockHaptic()
             RootKiosk.unlock(this) {
                 app.d2lock.bridge.IslandBridge.setLocked(this, false)
