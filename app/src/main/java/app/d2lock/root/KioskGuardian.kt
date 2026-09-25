@@ -23,6 +23,7 @@ object KioskD2Guardian {
     private var enabled = false
     private var lastRepairAt = 0L
     private var lostFocusAt = 0L
+    private var trustedFocusTransition = false
     private const val CHECK_MS = 750L
     private const val REPAIR_COOLDOWN_MS = 1500L
     private const val FOCUS_GRACE_MS = 1200L
@@ -37,10 +38,24 @@ object KioskD2Guardian {
         main.post(check)
     }
 
+    /** Suppress focus-only recovery while a trusted D2-owned surface (PIN/pattern) has focus. */
+    fun beginTrustedFocusTransition(reason: String) {
+        trustedFocusTransition = true
+        lostFocusAt = 0L
+        Log.i(TAG, "GUARDIAN_TRUSTED_FOCUS_BEGIN reason=$reason")
+    }
+
+    fun endTrustedFocusTransition(reason: String) {
+        trustedFocusTransition = false
+        lostFocusAt = 0L
+        Log.i(TAG, "GUARDIAN_TRUSTED_FOCUS_END reason=$reason")
+    }
+
     fun stop(activity: Activity) {
         if (owner.get() === activity) owner.clear()
         enabled = false
         lostFocusAt = 0L
+        trustedFocusTransition = false
         main.removeCallbacks(check)
         Log.i(TAG, "GUARDIAN_WATCHDOG_STOPPED")
     }
@@ -71,13 +86,14 @@ object KioskD2Guardian {
                     lostFocusAt = 0L
                 }
                 val staleFocus = lostFocusAt != 0L && now - lostFocusAt >= FOCUS_GRACE_MS
-                if (callActive && staleFocus && !modeLost) {
-                    Log.i(TAG, "GUARDIAN_FOCUS_DEFERRED reason=active_call")
+                val focusRecoverySuppressed = callActive || trustedFocusTransition
+                if (staleFocus && focusRecoverySuppressed && !modeLost) {
+                    Log.i(TAG, "GUARDIAN_FOCUS_DEFERRED reason=${if (callActive) "active_call" else "trusted_d2_surface"}")
                 }
-                if ((modeLost || (staleFocus && !callActive)) && now - lastRepairAt >= REPAIR_COOLDOWN_MS) {
+                if ((modeLost || (staleFocus && !focusRecoverySuppressed)) && now - lastRepairAt >= REPAIR_COOLDOWN_MS) {
                     lastRepairAt = now
                     Log.w(TAG, "GUARDIAN_REASSERT reason=${if (modeLost) "lock_task_lost" else "focus_lost"} mode=${manager.lockTaskModeState}")
-                    RootKiosk.reassert(activity, bringToFront = staleFocus)
+                    RootKiosk.reassert(activity, bringToFront = staleFocus && !focusRecoverySuppressed)
                 }
             } else {
                 lostFocusAt = 0L
