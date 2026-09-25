@@ -1327,6 +1327,9 @@ class MainActivity : Activity() {
         init {
             showText = false
             minimumHeight = dp(48)
+            // Reserve a dedicated lane for the custom control so long labels never
+            // render underneath the Guardian toggle.
+            setPadding(paddingLeft, paddingTop, dp(72), paddingBottom)
             // Keep Switch's text/listener API for all existing settings, but make its
             // Samsung-rendered switch assets invisible. Guardian draws the control itself.
             trackDrawable = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
