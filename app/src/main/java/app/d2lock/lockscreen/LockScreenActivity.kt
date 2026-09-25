@@ -42,6 +42,7 @@ import android.widget.Toast
 import app.d2lock.Prefs
 import app.d2lock.MainActivity
 import app.d2lock.root.RootKiosk
+import app.d2lock.root.KioskD2Guardian
 import app.d2lock.security.PinStore
 import app.d2lock.security.PinUi
 import app.d2lock.security.PatternStore
@@ -79,6 +80,7 @@ class LockScreenActivity : Activity() {
     private var torchOn = false
     private var preview = false
     private var unlocking = false
+    private var healthyReported = false
     private lateinit var kioskStatus: TextView
     private var pinDialog: AlertDialog? = null
     private var wallpaperActive = false
@@ -177,6 +179,15 @@ class LockScreenActivity : Activity() {
         if (!preview && Prefs.quickSettingsGuard(this)) handler.post(quickSettingsGuard)
         if (!preview && !unlocking && Prefs.kiosk(this)) {
             RootKiosk.attach(this) { kioskStatus.text = it }
+            KioskD2Guardian.start(this)
+        }
+        if (!preview && !healthyReported) {
+            healthyReported = true
+            window.decorView.postDelayed({
+                if (!isDestroyed && !isFinishing && hasWindowFocus()) {
+                    LockScreenService.markHealthy(this)
+                } else healthyReported = false
+            }, 1500)
         }
     }
 
@@ -231,6 +242,7 @@ class LockScreenActivity : Activity() {
         if (NotificationStore.onChanged != null) NotificationStore.onChanged = null
         app.d2lock.notifications.CallNotificationStore.onChanged = null
         NotificationStore.onPosted = null
+        KioskD2Guardian.stop(this)
         super.onDestroy()
     }
 
