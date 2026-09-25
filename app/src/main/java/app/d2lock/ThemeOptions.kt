@@ -15,6 +15,17 @@ object ThemeOptions {
         fun dp(v: Int) = (v*c.resources.displayMetrics.density).toInt()
         fun label(value: String) = TextView(c).apply { text=value; textSize=15f; setTextColor(Appearance.text(c)); setPadding(dp(8),dp(12),dp(8),dp(6)) }
         fun ui9Card() = Appearance.glass(c, 28f, 34, true)
+        fun description(value: String) = TextView(c).apply {
+            text = value
+            textSize = 12f
+            setTextColor(Appearance.secondary(c))
+            setPadding(0, dp(3), 0, 0)
+        }
+        val choiceDescriptions = mapOf(
+            "App theme" to "Choose the overall look for Kiosk D2 Guardian.",
+            "Accent color" to "Used for highlights, sliders and buttons.",
+            "Notification colors" to "Choose how notification colors are applied."
+        )
         fun choice(title: String, values: List<String>, selected: Int, key: String) {
             // Match the compact Haptics preference: one clean row, then a
             // single-choice Guardian glass sheet instead of an expanded list.
@@ -25,16 +36,22 @@ object ThemeOptions {
                 background = ui9Card()
                 isClickable = true
                 isFocusable = true
-                addView(TextView(c).apply {
-                    text = title
-                    textSize = 16f
-                    setTextColor(Appearance.text(c))
+                addView(LinearLayout(c).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(TextView(c).apply {
+                        text = title
+                        textSize = 16f
+                        setTextColor(Appearance.text(c))
+                    })
+                    choiceDescriptions[title]?.let { addView(description(it)) }
                 }, LinearLayout.LayoutParams(0, -2, 1f))
                 addView(TextView(c).apply {
                     text = values.getOrElse(selected) { values.firstOrNull().orEmpty() } + "  ›"
                     textSize = 14f
-                    gravity = android.view.Gravity.END
-                    setTextColor(Appearance.secondary(c))
+                    gravity = android.view.Gravity.CENTER
+                    setPadding(dp(14), dp(10), dp(14), dp(10))
+                    setTextColor(Appearance.text(c))
+                    background = Appearance.glass(c, 22f, 26, true)
                 }, LinearLayout.LayoutParams(-2, -2))
                 setOnClickListener {
                     val dialog = AlertDialog.Builder(c)
@@ -52,7 +69,7 @@ object ThemeOptions {
                     }
                     dialog.show()
                 }
-            }, LinearLayout.LayoutParams(-1, dp(58)).apply { bottomMargin = dp(8) })
+            }, LinearLayout.LayoutParams(-1, dp(78)).apply { bottomMargin = dp(10) })
         }
         choice("App theme",listOf("Follow system","Light","Dark","AMOLED Black","One UI Dark","Graphite","Frosted Glass","Smoke","Wine Red","System (Dynamic)"),Appearance.mode(c),"mode")
         choice("Accent color",listOf("System wallpaper","Blue","Teal","Lavender","Rose","Amber","Sage","Wine Red","Deep Blue","Emerald","Purple","Custom color"),Appearance.accentChoice(c),"accent")
