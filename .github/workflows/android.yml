@@ -70,7 +70,9 @@ jobs:
           # merge that drops one of them must fail before an APK can be published.
           checks = {
               "app/src/main/java/app/d2lock/lockscreen/LockScreenActivity.kt": [
-                  "Prefs.notificationCardAlpha",
+                  "Prefs.notificationDensity",
+                  "Prefs.notificationRadius",
+                  "Prefs.notificationGlass",
                   "Prefs.mediaLayout",
                   "Prefs.clockStyle",
                   "Prefs.clockLayout",
@@ -78,7 +80,9 @@ jobs:
                   "Prefs.glassShimmer",
               ],
               "app/src/main/java/app/d2lock/Prefs.kt": [
-                  "notificationCardAlpha",
+                  "notificationDensity",
+                  "notificationRadius",
+                  "notificationGlass",
                   "mediaLayout",
                   "clockStyle",
                   "clockLayout",
