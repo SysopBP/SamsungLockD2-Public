@@ -700,7 +700,9 @@ class LockScreenActivity : Activity() {
                     tracker?.recycle(); tracker = null
                     val dx = event.x - downX
                     val dy = event.y - downY
-                    if (kotlin.math.abs(dx) > card.width * .08f || (kotlin.math.abs(dx) > dp(8) && kotlin.math.abs(velocityX) > dp(280))) {
+                    // One UI-style forgiving dismissal: a short deliberate drag or a quick flick
+                    // in either direction should dismiss without requiring a slow full-width swipe.
+                    if (kotlin.math.abs(dx) > card.width * .06f || (kotlin.math.abs(dx) > dp(6) && kotlin.math.abs(velocityX) > dp(220))) {
                         card.animate().translationX(if (dx >= 0f) card.width.toFloat() else -card.width.toFloat()).alpha(0f).setDuration(120).withEndAction {
                             NotificationStore.listener?.dismiss(item.key)
                             NotificationStore.items.removeAll { it.key == item.key }
