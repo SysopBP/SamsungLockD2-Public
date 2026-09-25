@@ -178,7 +178,7 @@ class LockScreenActivity : Activity() {
             batteryReceiver.onReceive(this, it)
         }
         handler.post(ticker)
-        if (!preview && Prefs.quickSettingsGuard(this)) handler.post(quickSettingsGuard)
+        if (!preview && !unlocking && Prefs.quickSettingsGuard(this)) handler.post(quickSettingsGuard)
         if (!preview && !unlocking && Prefs.kiosk(this)) {
             RootKiosk.attach(this) { kioskStatus.text = it }
             KioskD2Guardian.start(this)
@@ -216,8 +216,8 @@ class LockScreenActivity : Activity() {
         super.onWindowFocusChanged(hasFocus)
         if (!preview && Prefs.kiosk(this)) {
             Log.i("SamsungLockD2", if (hasFocus) "GUARDIAN_WINDOW_FOCUS_GAINED" else "GUARDIAN_WINDOW_FOCUS_LOST")
-            if (hasFocus && RootKiosk.isEnforced()) {
-                window.decorView.post { if (!isDestroyed && !isFinishing) RootKiosk.reassert(this) }
+            if (hasFocus && !unlocking && RootKiosk.isEnforced()) {
+                window.decorView.post { if (!isDestroyed && !isFinishing && !unlocking) RootKiosk.reassert(this) }
             }
         }
     }
