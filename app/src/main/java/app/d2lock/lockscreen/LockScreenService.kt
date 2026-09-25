@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.IBinder
+import android.os.SystemClock
 import android.util.Log
 import app.d2lock.MainActivity
 import app.d2lock.Prefs
