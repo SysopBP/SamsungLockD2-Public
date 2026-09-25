@@ -22,6 +22,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.VibrationEffect
+import android.util.Log
 import android.os.Vibrator
 import android.os.PowerManager
 import android.provider.MediaStore
@@ -195,11 +196,10 @@ class LockScreenActivity : Activity() {
         super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
         if (isInMultiWindowMode && !preview && Prefs.kiosk(this)) {
             // A kiosk lock screen must never remain usable as one pane of multi-window.
-            // Reassert the task/window immediately; RootKiosk continues verifying LOCK_TASK_MODE_LOCKED.
+            Log.w("SamsungLockD2", "GUARDIAN_MULTIWINDOW_DETECTED")
             window.decorView.post {
                 if (!isDestroyed && !isFinishing) {
-                    runCatching { startLockTask() }
-                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                    RootKiosk.reassert(this, bringToFront = true)
                 }
             }
         }
