@@ -1286,6 +1286,9 @@ class MainActivity : Activity() {
         var progressTintList: android.content.res.ColorStateList? = null
         var thumbTintList: android.content.res.ColorStateList? = null
         private var listener: SeekBar.OnSeekBarChangeListener? = null
+        // Some existing listeners are typed to SeekBar and may dereference the callback argument.
+        // Keep a detached compatibility instance so the custom View never sends a null SeekBar.
+        private val compatSeekBar: SeekBar by lazy { SeekBar(this@MainActivity).apply { max = this@GuardianSlider.max } }
         private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
         private val glassPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
         private val ring = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
@@ -1337,7 +1340,7 @@ class MainActivity : Activity() {
             when (event.actionMasked) {
                 android.view.MotionEvent.ACTION_DOWN -> {
                     parent?.requestDisallowInterceptTouchEvent(true)
-                    listener?.onStartTrackingTouch(null)
+                    // Custom view has no framework SeekBar instance; do not pass null into callbacks.
                     updateFromTouch(event.x, true)
                     return true
                 }
@@ -1347,13 +1350,13 @@ class MainActivity : Activity() {
                 }
                 android.view.MotionEvent.ACTION_UP -> {
                     updateFromTouch(event.x, true)
-                    listener?.onStopTrackingTouch(null)
+                    // Tracking completion is handled locally; avoid null SeekBar callbacks.
                     parent?.requestDisallowInterceptTouchEvent(false)
                     performClick()
                     return true
                 }
                 android.view.MotionEvent.ACTION_CANCEL -> {
-                    listener?.onStopTrackingTouch(null)
+                    // Tracking completion is handled locally; avoid null SeekBar callbacks.
                     parent?.requestDisallowInterceptTouchEvent(false)
                     return true
                 }
@@ -1368,7 +1371,7 @@ class MainActivity : Activity() {
             val value = kotlin.math.round(fraction * max).toInt()
             if (value != progress) {
                 progress = value
-                listener?.onProgressChanged(null, value, fromUser)
+                listener?.onProgressChanged(compatSeekBar, value, fromUser)
             }
         }
 
