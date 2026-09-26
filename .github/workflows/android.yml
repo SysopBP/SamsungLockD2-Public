@@ -12,6 +12,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      SESL_GITHUB_USER: ${{ github.actor }}
+      SESL_GITHUB_TOKEN: ${{ secrets.SESL_GITHUB_TOKEN }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
