@@ -1687,7 +1687,7 @@ class MainActivity : Activity() {
                                     showD2Message("${names[i]} profile applied"); refreshAppearance()
                                 }
                             }.setNegativeButton("Cancel", null).create().also {
-                                it.setOnShowListener { it.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true)) }; it.show()
+                                it.setOnShowListener { _ -> it.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true)) }; it.show()
                             }
                         "Delete custom profile" -> AlertDialog.Builder(this).setTitle("Delete profile")
                             .setItems(names.toTypedArray()) { _, i ->
