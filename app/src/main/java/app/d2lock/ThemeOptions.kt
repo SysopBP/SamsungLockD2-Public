@@ -9,7 +9,6 @@ import android.widget.*
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.AppCompatSeekBar
-import android.content.res.ColorStateList
 
 object ThemeOptions {
     fun add(activity: Activity, parent: LinearLayout, refresh: () -> Unit) {
