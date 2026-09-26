@@ -502,34 +502,55 @@ class MainActivity : Activity() {
         root.addView(android.view.View(this).apply {
             setBackgroundColor((0x22 shl 24) or (Appearance.text(this@MainActivity) and 0xffffff))
         }, LinearLayout.LayoutParams(-1, dp(1)).apply { topMargin = dp(8); bottomMargin = dp(10) })
-        section(root, "SHIZUKU")
+        section(root, "SYSTEM INTEGRATION")
         root.getChildAt(root.childCount - 1).tag = "root_shizuku"
-        root.addView(guardianSwitch().apply {
-            text = "Use Shizuku in Kiosk D2 Guardian"
-            textSize = 17f
-            setTextColor(Appearance.text(this@MainActivity))
-            isChecked = Prefs.shizukuEnabled(this@MainActivity)
-            setOnCheckedChangeListener { _, checked ->
-                Prefs.setShizukuEnabled(this@MainActivity, checked)
-                Toast.makeText(this@MainActivity, if (checked) "D2 Shizuku integration enabled" else "D2 Shizuku integration disabled", Toast.LENGTH_SHORT).show()
-                refreshShizukuUi()
-            }
-        }, rowParams())
-        root.addView(shizukuCard(), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
-
-        val rootMode = guardianSwitch().apply {
-            text = "Optional KernelSU root mode"
-            textSize = 17f
-            setTextColor(Appearance.text(this@MainActivity))
-            isChecked = Prefs.rootMode(this@MainActivity)
-            setOnCheckedChangeListener { _, checked ->
-                if (checked && !RootManager.isAvailable()) {
-                    isChecked = false
-                    Toast.makeText(this@MainActivity, "Root shell was not detected", Toast.LENGTH_LONG).show()
-                } else Prefs.setRootMode(this@MainActivity, checked)
-            }
-        }
-        root.addView(rootMode, rowParams())
+        root.addView(LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL
+            setPadding(dp(18),dp(14),dp(18),dp(14))
+            background=Appearance.glass(this@MainActivity,30f,38,true)
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL
+                addView(ImageView(this@MainActivity).apply {
+                    setImageResource(R.drawable.ic_guardian_shizuku)
+                    imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
+                addView(TextView(this@MainActivity).apply {
+                    text="System Integration Center"; textSize=18f; setTextColor(Appearance.text(this@MainActivity))
+                })
+            })
+            addView(TextView(this@MainActivity).apply {
+                text="Shizuku · KernelSU root · LSPosed-ready integration"
+                textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,dp(4),0,dp(8))
+            })
+            addView(guardianSwitch().apply {
+                text="Use Shizuku"
+                textSize=16f; setTextColor(Appearance.text(this@MainActivity))
+                isChecked=Prefs.shizukuEnabled(this@MainActivity)
+                setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_guardian_shizuku,0,0,0)
+                compoundDrawableTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                compoundDrawablePadding=dp(8)
+                setOnCheckedChangeListener { _,checked ->
+                    Prefs.setShizukuEnabled(this@MainActivity,checked)
+                    Toast.makeText(this@MainActivity,if(checked) "D2 Shizuku integration enabled" else "D2 Shizuku integration disabled",Toast.LENGTH_SHORT).show()
+                    refreshShizukuUi()
+                }
+            },rowParams())
+            addView(shizukuCard(),LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
+            addView(guardianSwitch().apply {
+                text="Optional KernelSU root mode"
+                textSize=16f; setTextColor(Appearance.text(this@MainActivity))
+                isChecked=Prefs.rootMode(this@MainActivity)
+                setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_guardian_root,0,0,0)
+                compoundDrawableTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                compoundDrawablePadding=dp(8)
+                setOnCheckedChangeListener { _,checked ->
+                    if(checked && !RootManager.isAvailable()) {
+                        isChecked=false
+                        Toast.makeText(this@MainActivity,"Root shell was not detected",Toast.LENGTH_LONG).show()
+                    } else Prefs.setRootMode(this@MainActivity,checked)
+                }
+            },rowParams())
+        },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
 
         section(root, "RECOVERY & SAFETY")
         root.getChildAt(root.childCount - 1).tag = "recovery_safety"
