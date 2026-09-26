@@ -37,6 +37,17 @@ class SeslPreviewActivity : Activity() {
             Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
         }.getOrDefault(false)
         val kiosk = Prefs.kiosk(this)
+        val bridgeHealth = getSharedPreferences("guardian_xposed_health", Context.MODE_PRIVATE)
+        val bridgeLastEvent = bridgeHealth.getLong("last_systemui_event_ms", 0L)
+        val bridgeAgeMs = if (bridgeLastEvent > 0L) System.currentTimeMillis() - bridgeLastEvent else Long.MAX_VALUE
+        val bridgeReady = Prefs.xposedMaster(this) && bridgeAgeMs <= 10 * 60 * 1000L
+        val bridgeChip = if (bridgeReady) "READY" else "WAITING"
+        val bridgeDetail = when {
+            !Prefs.xposedMaster(this) -> "Integration disabled · enable LSPosed integration to verify SystemUI"
+            bridgeLastEvent == 0L -> "Waiting for first verified SystemUI/module event"
+            bridgeReady -> "Verified SystemUI/module heartbeat · never required to unlock"
+            else -> "Last SystemUI heartbeat is stale · restart SystemUI or soft reboot"
+        }
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -49,8 +60,8 @@ class SeslPreviewActivity : Activity() {
             addView(statusCard("Root / KernelSU", rootOk,
                 if (rootOk) "Root shell available · privileged recovery ready"
                 else "Root unavailable · D2 authentication remains independent"))
-            addView(statusCard("LSPosed Bridge", false,
-                "Bridge health is verified from SystemUI/module events · never required to unlock", "CHECK"))
+            addView(statusCard("LSPosed Bridge", bridgeReady,
+                bridgeDetail, bridgeChip))
             addView(statusCard("Shizuku", shizukuGranted,
                 when {
                     shizukuGranted -> "Service running · authorized"
@@ -69,7 +80,7 @@ class SeslPreviewActivity : Activity() {
             val secondary = LinearLayout(this@SeslPreviewActivity).apply {
                 orientation = LinearLayout.HORIZONTAL
                 addView(tonalAction("Copy diagnostics") {
-                    val report = "Guardian Recovery\nRoot=$rootOk\nShizukuRunning=$shizukuRunning\nShizukuAuthorized=$shizukuGranted\nKiosk=$kiosk\nLSPosed=verify from D2XposedBridge/SystemUI log"
+                    val report = "Guardian Recovery\nRoot=$rootOk\nShizukuRunning=$shizukuRunning\nShizukuAuthorized=$shizukuGranted\nKiosk=$kiosk\nLSPosedReady=$bridgeReady\nLSPosedLastEventMs=$bridgeLastEvent"
                     (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
                         .setPrimaryClip(ClipData.newPlainText("Guardian diagnostics", report))
                 }, LinearLayout.LayoutParams(0, dp(52), 1f).apply { rightMargin = dp(6) })
