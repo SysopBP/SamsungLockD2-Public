@@ -110,7 +110,7 @@ class GuardianXposedBridge : XposedModule() {
             "com.android.systemui.biometrics.AuthController",
             "com.android.systemui.biometrics.UdfpsController"
         )
-        val nameHints = listOf("fingerprint", "udfps", "biometric", "enrolled", "enabled", "listen", "listening", "authenticate")
+        val nameHints = listOf("fingerprint", "udfps", "biometric", "enrolled", "enabled", "listen", "listening", "authenticate", "start", "update")
         var installed = 0
 
         candidates.forEach { className ->
@@ -123,7 +123,7 @@ class GuardianXposedBridge : XposedModule() {
                 .filter { method ->
                     nameHints.any { hint -> method.name.contains(hint, ignoreCase = true) } &&
                         method.name != "getBypassEnabled" &&
-                        method.parameterCount <= 6
+                        method.parameterCount <= 8
                 }
                 .distinctBy { it.toGenericString() }
                 .forEach { method ->
@@ -145,7 +145,7 @@ class GuardianXposedBridge : XposedModule() {
                                         else -> arg.javaClass.name
                                     }
                                 }
-                                log(Log.INFO, TAG, "GUARDIAN_XPOSED_FPSTATE_CALL target=${owner.name}#${method.name} args=[$argsText] result=$resultText")
+                                log(Log.INFO, TAG, "GUARDIAN_XPOSED_FPSTATE_CALL target=${owner.name}#${method.name} signature=${method.toGenericString()} args=[$argsText] result=$resultText")
                                 result
                             }
                         installed++
