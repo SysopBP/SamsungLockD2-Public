@@ -125,7 +125,12 @@ class LockScreenActivity : Activity() {
             val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
             val charging = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) in listOf(BatteryManager.BATTERY_STATUS_CHARGING, BatteryManager.BATTERY_STATUS_FULL)
             val percent = if (Prefs.showBatteryPercent(this@LockScreenActivity)) "  $level%" else ""
-            battery.text = if (charging) "▰  ⚡$percent" else "▰$percent"
+            battery.text = if (charging) "  $percent · Charging" else "  $percent"
+            battery.setCompoundDrawablesWithIntrinsicBounds(app.d2lock.R.drawable.ic_lock_battery, 0, 0, 0)
+            battery.compoundDrawableTintList = android.content.res.ColorStateList.valueOf(Appearance.text(this@LockScreenActivity, true))
+            battery.compoundDrawablePadding = dp(4)
+            battery.background = Appearance.glass(this@LockScreenActivity, 18f, 26, false)
+            battery.setPadding(dp(9), dp(4), dp(9), dp(4))
             if (charging && level >= 0) {
                 LiveHubStore.publish(LiveHubCard("charging", LiveHubKind.CHARGING, "Charging", "$level%", level / 100f))
             } else LiveHubStore.remove("charging")
