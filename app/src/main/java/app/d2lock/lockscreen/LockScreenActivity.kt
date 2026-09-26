@@ -14,6 +14,8 @@ import android.content.IntentFilter
 import app.d2lock.Appearance
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.hardware.biometrics.BiometricManager
+import android.hardware.biometrics.BiometricPrompt
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.net.Uri
@@ -21,6 +23,7 @@ import android.os.BatteryManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.CancellationSignal
 import android.os.VibrationEffect
 import android.util.Log
 import android.os.Vibrator
@@ -91,6 +94,8 @@ class LockScreenActivity : Activity() {
     private var healthyReported = false
     private lateinit var kioskStatus: TextView
     private var pinDialog: AlertDialog? = null
+    private var biometricCancel: CancellationSignal? = null
+    private var biometricRunning = false
     private var wallpaperActive = false
     private var emptyTapAt = 0L
     private val wallpaperExecutor = Executors.newSingleThreadExecutor()
@@ -231,6 +236,7 @@ class LockScreenActivity : Activity() {
             RootKiosk.attach(this) { kioskStatus.text = it }
             KioskD2Guardian.start(this)
         }
+        if (!preview && !unlocking && !biometricRunning) startGuardianFingerprint()
         if (!preview && !healthyReported) {
             healthyReported = true
             window.decorView.postDelayed({
@@ -281,6 +287,7 @@ class LockScreenActivity : Activity() {
         handler.removeCallbacks(ticker)
         handler.removeCallbacks(quickSettingsGuard)
         runCatching { unregisterReceiver(batteryReceiver) }
+        cancelGuardianFingerprint("activity_paused")
         super.onPause()
     }
 
@@ -313,6 +320,7 @@ class LockScreenActivity : Activity() {
         if (NotificationStore.onChanged != null) NotificationStore.onChanged = null
         app.d2lock.notifications.CallNotificationStore.onChanged = null
         NotificationStore.onPosted = null
+        cancelGuardianFingerprint("activity_destroyed")
         KioskD2Guardian.stop(this)
         super.onDestroy()
     }
@@ -886,6 +894,73 @@ class LockScreenActivity : Activity() {
             try { app.d2lock.notifications.CallNotificationStore.send(this, pending) }
             catch (_: Exception) { Toast.makeText(this, "Notification is no longer available", Toast.LENGTH_SHORT).show() }
         }
+    }
+
+    private fun startGuardianFingerprint() {
+        if (preview || unlocking || biometricRunning || isFinishing || isDestroyed) return
+
+        val manager = getSystemService(BiometricManager::class.java)
+        val status = manager?.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+            ?: BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE
+        Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_CAN_AUTH status=$status")
+        if (status != BiometricManager.BIOMETRIC_SUCCESS) return
+
+        val cancel = CancellationSignal()
+        biometricCancel = cancel
+        biometricRunning = true
+        Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_REQUESTED")
+
+        val prompt = BiometricPrompt.Builder(this)
+            .setTitle("Kiosk D2 Guardian")
+            .setSubtitle("Fingerprint unlock")
+            .setDescription("Use an enrolled fingerprint or cancel to use your Guardian PIN/pattern.")
+            .setNegativeButton("Use PIN / pattern", mainExecutor) { _, _ ->
+                biometricRunning = false
+                biometricCancel = null
+                Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_FALLBACK")
+                if (!isFinishing && !isDestroyed) authenticate()
+            }
+            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+            .build()
+
+        prompt.authenticate(cancel, mainExecutor, object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                super.onAuthenticationSucceeded(result)
+                if (!biometricRunning || unlocking || isFinishing || isDestroyed) return
+                biometricRunning = false
+                biometricCancel = null
+                unlocking = true
+                GuardianWatchdog.beginTrustedAuthentication()
+                handler.removeCallbacks(quickSettingsGuard)
+                Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_SUCCESS type=${result.authenticationType}")
+                GuardianWatchdog.endTrustedAuthentication("auth_success")
+                playUnlockHaptic()
+                RootKiosk.unlock(this@LockScreenActivity) {
+                    app.d2lock.bridge.IslandBridge.setLocked(this@LockScreenActivity, false)
+                    finish()
+                }
+            }
+
+            override fun onAuthenticationFailed() {
+                super.onAuthenticationFailed()
+                Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_FAILED")
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                super.onAuthenticationError(errorCode, errString)
+                biometricRunning = false
+                biometricCancel = null
+                Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_ERROR code=$errorCode message=$errString")
+            }
+        })
+    }
+
+    private fun cancelGuardianFingerprint(reason: String) {
+        if (!biometricRunning && biometricCancel == null) return
+        Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_CANCEL reason=$reason")
+        biometricRunning = false
+        biometricCancel?.cancel()
+        biometricCancel = null
     }
 
     private fun authenticate(afterUnlock: (() -> Unit)? = null) {
