@@ -25,7 +25,7 @@ class SeslPreviewActivity : Activity() {
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        setTheme(if (Appearance.dark(this)) app.d2lock.R.style.Theme_D2_Dark else app.d2lock.R.style.Theme_SamsungLock)
+        setTheme(app.d2lock.R.style.Theme_D2_SeslPreview)
         super.onCreate(savedInstanceState)
         Appearance.apply(this)
 
