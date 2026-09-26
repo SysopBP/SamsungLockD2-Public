@@ -646,7 +646,9 @@ class MainActivity : Activity() {
             setOnClickListener {
                 val content=LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.VERTICAL
-                    setPadding(dp(18),dp(8),dp(18),dp(28))
+                    // Guardian dialog standard: comfortable side gutters and
+                    // extra bottom clearance above the fixed navigation surface.
+                    setPadding(dp(18),dp(8),dp(18),dp(72))
                 }
                 ThemeOptions.add(this@MainActivity,content,::refreshAppearance)
                 val scroll=ScrollView(this@MainActivity).apply {
