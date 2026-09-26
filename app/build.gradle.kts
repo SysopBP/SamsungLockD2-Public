@@ -49,6 +49,8 @@ dependencies {
     // SESL9 preview only. Keep production Guardian/auth surfaces untouched.
     // SESL_GITHUB_TOKEN is supplied by CI/local environment; repository credentials are configured in settings.gradle.kts.
     implementation("sesl.androidx.appcompat:appcompat:1.8.0+1.0.38-sesl9+rev1")
+    // Isolated Material 3 comparison preview only; no production Guardian surface uses this yet.
+    implementation("com.google.android.material:material:1.13.0")
 
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
