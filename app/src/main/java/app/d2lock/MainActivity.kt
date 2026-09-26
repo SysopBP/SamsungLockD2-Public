@@ -1357,21 +1357,43 @@ class MainActivity : Activity() {
     }
 
     private fun guardianSlider(): GuardianSlider = GuardianSlider(this).apply {
-        background = Appearance.glass(this@MainActivity, 30f, 22, true)
         setPadding(dp(10), 0, dp(10), 0)
         minimumHeight = dp(40)
 
-        // SESL supplies Samsung's default blue tint unless we explicitly override it.
-        // Keep this visual-only so the known-good #141 listener/unlock behavior is untouched.
+        // One UI 9 glass treatment without SESL's restricted tint APIs.
         val accent = Appearance.accent(this@MainActivity)
         val inactive = Appearance.blend(
             Appearance.secondary(this@MainActivity),
             Appearance.background(this@MainActivity),
             .45f
         )
-        progressTintList = android.content.res.ColorStateList.valueOf(accent)
-        progressBackgroundTintList = android.content.res.ColorStateList.valueOf(inactive)
-        thumbTintList = android.content.res.ColorStateList.valueOf(accent)
+        progressDrawable = android.graphics.drawable.LayerDrawable(arrayOf(
+            android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                cornerRadius = dp(12).toFloat()
+                setColor((0x38 shl 24) or (inactive and 0x00ffffff))
+                setStroke(dp(1), (0x55 shl 24) or (Appearance.text(this@MainActivity) and 0x00ffffff))
+            },
+            android.graphics.drawable.ClipDrawable(
+                android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = dp(12).toFloat()
+                    setColor((0x88 shl 24) or (accent and 0x00ffffff))
+                    setStroke(dp(1), (0x99 shl 24) or (accent and 0x00ffffff))
+                },
+                android.view.Gravity.START,
+                android.graphics.drawable.ClipDrawable.HORIZONTAL
+            )
+        )).apply {
+            setId(0, android.R.id.background)
+            setId(1, android.R.id.progress)
+        }
+        thumb = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setSize(dp(22), dp(22))
+            setColor((0xdd shl 24) or (accent and 0x00ffffff))
+            setStroke(dp(2), (0xaa shl 24) or (Appearance.text(this@MainActivity) and 0x00ffffff))
+        }
     }
 
     private fun showQuickSettingsSheet(root: LinearLayout, scroll: ScrollView) {
