@@ -203,8 +203,7 @@ class MainActivity : Activity() {
             val shizuku = if (Prefs.shizukuEnabled(this@MainActivity)) "✓" else "○"
             val root = if (Prefs.rootMode(this@MainActivity)) "✓" else "○"
             val xp = if (Prefs.xposedMaster(this@MainActivity)) "✓" else "○"
-            content.text = "WHAT'S NEXT\n\n$lock Set up D2 authentication\n$wake Enable lock on wake\n$kiosk Configure kiosk protection\n$shizuku Connect Shizuku\n$root Verify optional KernelSU/root integration\n$xp LSPosed/SystemUI integration enabled\n✓ Guardian fingerprint unlock verified on-device
-○ Reduce remaining Samsung biometric presentation dependency\n○ Verify paired Galaxy Island glass and pop-out behavior\n○ Customize your lock screen\n○ Test your recovery path"
+            content.text = "WHAT'S NEXT\n\n$lock Set up D2 authentication\n$wake Enable lock on wake\n$kiosk Configure kiosk protection\n$shizuku Connect Shizuku\n$root Verify optional KernelSU/root integration\n$xp LSPosed/SystemUI integration enabled\n✓ Guardian fingerprint unlock verified on-device\n○ Reduce remaining Samsung biometric presentation dependency\n○ Verify paired Galaxy Island glass and pop-out behavior\n○ Customize your lock screen\n○ Test your recovery path"
         }
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun tab(label: String, action: () -> Unit) = TextView(this).apply {
