@@ -480,7 +480,18 @@ class MainActivity : Activity() {
                 setOnClickListener {
                     performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
                     val fp=fingerprintIdentity
-                    val fingerprintText=if(fp!=null) "\n\nFingerprint hardware\nProduct: ${fp.productId}\nHardware Sensor ID: ${fp.hardwareSensorId}\nChip SN: ${fp.chipSn}\nFirmware: ${fp.firmwareVersion}\nTemplates supported: ${fp.maxTemplates}\nProvider: ${fp.provider}\nHAL deaths: ${fp.halDeaths}" else "\n\nFingerprint hardware: root diagnostic unavailable"
+                    val fingerprintText=if(fp!=null) buildString {
+                        append("\n\nFingerprint hardware")
+                        fun line(label:String,value:String) { if(value != "Not reported" && value != "Unknown") append("\n$label: $value") }
+                        line("Product",fp.productId)
+                        line("Hardware Sensor ID",fp.hardwareSensorId)
+                        line("Framework Sensor ID",fp.frameworkSensorId)
+                        line("Chip SN",fp.chipSn)
+                        line("Firmware",fp.firmwareVersion)
+                        line("Templates supported",fp.maxTemplates)
+                        line("Provider",fp.provider)
+                        line("HAL deaths",fp.halDeaths)
+                    } else "\n\nFingerprint hardware\nRoot diagnostic unavailable"
                     AlertDialog.Builder(this@MainActivity)
                         .setTitle("Device Identity")
                         .setMessage("Manufacturer: ${android.os.Build.MANUFACTURER}\nModel: ${android.os.Build.MODEL}\nProduct: ${android.os.Build.PRODUCT}\nDevice: ${android.os.Build.DEVICE}\nAndroid: ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})\nBuild: ${android.os.Build.DISPLAY}"+fingerprintText)
