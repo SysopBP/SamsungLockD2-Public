@@ -8,7 +8,7 @@ import android.text.InputFilter
 import android.widget.*
 import android.view.View
 import android.view.ViewGroup
-import androidx.appcompat.widget.AppCompatSeekBar
+import androidx.appcompat.widget.SeslSeekBar
 
 object ThemeOptions {
     fun add(activity: Activity, parent: LinearLayout, refresh: () -> Unit) {
@@ -105,21 +105,13 @@ object ThemeOptions {
             var currentValue = value.coerceIn(min, max)
             val heading=label("$title: $currentValue$suffix")
             parent.addView(heading)
-            parent.addView(AppCompatSeekBar(c).apply {
+            parent.addView(SeslSeekBar(c).apply {
                 this.max = (max - min).coerceAtLeast(1)
                 progress = currentValue - min
                 contentDescription = title
                 minimumHeight = dp(44)
-                // SESL9 can inherit a nearly transparent tint from Guardian's
-                // glass/dynamic theme. Give the production slider an explicit
-                // visible SESL tint while preserving the native widget geometry.
-                progressTintList = ColorStateList.valueOf(Appearance.accent(c))
-                thumbTintList = ColorStateList.valueOf(Appearance.accent(c))
-                progressBackgroundTintList = ColorStateList.valueOf(
-                    if (Appearance.dark(c)) 0x55ffffff else 0x55000000
-                )
-                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                setOnSeekBarChangeListener(object : SeslSeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(seekBar: SeslSeekBar?, progress: Int, fromUser: Boolean) {
                         if (!fromUser) return
                         val next = min + progress
                         if (next == currentValue) return
@@ -129,8 +121,8 @@ object ThemeOptions {
                         if(key.startsWith("bar_")) barPreview.background=Appearance.floatingBar(c)
                         else preview.background=Appearance.panel(c,"theme.preview",banner=key=="banners")
                     }
-                    override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
-                    override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+                    override fun onStartTrackingTouch(seekBar: SeslSeekBar?) = Unit
+                    override fun onStopTrackingTouch(seekBar: SeslSeekBar?) = Unit
                 })
             },LinearLayout.LayoutParams(-1,dp(56)))
         }
