@@ -748,8 +748,6 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.wallpaperDim(this@MainActivity)
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -770,8 +768,6 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.lockGlass(this@MainActivity) - 20
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -795,8 +791,6 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 30
             progress = Prefs.lockScale(this@MainActivity) - 85
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -834,8 +828,6 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 50
             progress = Prefs.clockScale(this@MainActivity) - 80
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -863,8 +855,6 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.componentGlass(this@MainActivity, "top_info") - 20
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -886,8 +876,6 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.componentGlass(this@MainActivity, "media") - 20
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -909,8 +897,6 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 40
             progress = Prefs.topInfoSize(this@MainActivity) - 80
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -981,8 +967,6 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 40
             progress = Prefs.mediaButtonsScale(this@MainActivity) - 80
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -1042,8 +1026,6 @@ class MainActivity : Activity() {
         privacyCard.addView(guardianSlider().apply {
             max = 24
             progress = Prefs.notificationRadius(this@MainActivity) - 16
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -1065,8 +1047,6 @@ class MainActivity : Activity() {
         privacyCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.notificationGlass(this@MainActivity) - 20
-            progressTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-            thumbTintList = progressTintList
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
@@ -1379,115 +1359,36 @@ class MainActivity : Activity() {
 
     private fun guardianSwitch(): Switch = GuardianSwitch(this)
 
-    private inner class GuardianSlider(context: android.content.Context) : android.view.View(context) {
-        var max: Int = 100
-            set(value) { field = value.coerceAtLeast(1); progress = progress.coerceAtMost(field); invalidate() }
-        var progress: Int = 0
-            set(value) { field = value.coerceIn(0, max); invalidate() }
-
-        // Compatibility properties let existing settings blocks migrate without carrying
-        // Android's SeekBar renderer into the new control.
-        var progressTintList: android.content.res.ColorStateList? = null
-        var thumbTintList: android.content.res.ColorStateList? = null
-        private var listener: SeekBar.OnSeekBarChangeListener? = null
-        // Some existing listeners are typed to SeekBar and may dereference the callback argument.
-        // Keep a detached compatibility instance so the custom View never sends a null SeekBar.
-        private val compatSeekBar: SeekBar by lazy { SeekBar(this@MainActivity).apply { max = this@GuardianSlider.max } }
-        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-        private val glassPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-        private val ring = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            style = android.graphics.Paint.Style.STROKE
-            strokeWidth = dp(2).toFloat()
-        }
-
-        fun setOnSeekBarChangeListener(value: SeekBar.OnSeekBarChangeListener?) { listener = value }
+    private inner class GuardianSlider(context: android.content.Context) : androidx.appcompat.widget.SeslSeekBar(context) {
+        // Keep the existing settings call sites/listeners intact while using the
+        // genuine SESL9 slider renderer everywhere in MainActivity.
+        var progressTintListCompat: android.content.res.ColorStateList? = null
+        private var legacyListener: SeekBar.OnSeekBarChangeListener? = null
 
         init {
             minimumHeight = dp(44)
-            isClickable = true
-            isFocusable = true
+            setOnSeekBarChangeListener(object : androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: androidx.appcompat.widget.SeslSeekBar?, progress: Int, fromUser: Boolean) {
+                    legacyListener?.onProgressChanged(null, progress, fromUser)
+                }
+                override fun onStartTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar?) {
+                    legacyListener?.onStartTrackingTouch(null)
+                }
+                override fun onStopTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar?) {
+                    legacyListener?.onStopTrackingTouch(null)
+                }
+            })
         }
 
-        override fun onDraw(canvas: android.graphics.Canvas) {
-            super.onDraw(canvas)
-            val left = dp(10).toFloat()
-            val right = width - dp(10).toFloat()
-            val cy = height / 2f
-            // Match the new Guardian switches: slimmer One UI 9-style glass rail
-            // with a restrained thumb instead of the oversized generic SeekBar look.
-            val trackH = dp(5).toFloat()
-            val radius = trackH / 2f
-            val fraction = (progress.toFloat() / max.coerceAtLeast(1)).coerceIn(0f, 1f)
-            val thumbX = left + (right - left) * fraction
-
-            // Glass capsule: translucent body, soft highlight and subtle outline.
-            glassPaint.color = if (Appearance.dark(this@MainActivity)) 0x2effffff else 0x26000000
-            canvas.drawRoundRect(android.graphics.RectF(left, cy - trackH / 2f, right, cy + trackH / 2f), radius, radius, glassPaint)
-            ring.color = if (Appearance.dark(this@MainActivity)) 0x55ffffff else 0x44000000
-            canvas.drawRoundRect(android.graphics.RectF(left, cy - trackH / 2f, right, cy + trackH / 2f), radius, radius, ring)
-            glassPaint.color = 0x24ffffff
-            canvas.drawRoundRect(android.graphics.RectF(left + dp(2), cy - trackH / 2f + dp(2), right - dp(2), cy - dp(1)), radius, radius, glassPaint)
-
-            paint.color = (Appearance.accent(this@MainActivity) and 0x00ffffff) or 0xcc000000.toInt()
-            if (thumbX > left) {
-                canvas.drawRoundRect(android.graphics.RectF(left, cy - trackH / 2f, thumbX, cy + trackH / 2f), radius, radius, paint)
-            }
-
-            // Compact Guardian thumb: same visual family as the custom switches.
-            ring.color = if (Appearance.dark(this@MainActivity)) 0xaaffffff.toInt() else 0x88000000.toInt()
-            canvas.drawCircle(thumbX, cy, dp(8).toFloat(), paint)
-            canvas.drawCircle(thumbX, cy, dp(8).toFloat(), ring)
-            paint.color = 0x66ffffff
-            canvas.drawCircle(thumbX - dp(2), cy - dp(2), dp(2).toFloat(), paint)
-        }
-
-        override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
-            if (!isEnabled) return false
-            when (event.actionMasked) {
-                android.view.MotionEvent.ACTION_DOWN -> {
-                    parent?.requestDisallowInterceptTouchEvent(true)
-                    // Custom view has no framework SeekBar instance; do not pass null into callbacks.
-                    updateFromTouch(event.x, true)
-                    return true
-                }
-                android.view.MotionEvent.ACTION_MOVE -> {
-                    updateFromTouch(event.x, true)
-                    return true
-                }
-                android.view.MotionEvent.ACTION_UP -> {
-                    updateFromTouch(event.x, true)
-                    // Tracking completion is handled locally; avoid null SeekBar callbacks.
-                    parent?.requestDisallowInterceptTouchEvent(false)
-                    performClick()
-                    return true
-                }
-                android.view.MotionEvent.ACTION_CANCEL -> {
-                    // Tracking completion is handled locally; avoid null SeekBar callbacks.
-                    parent?.requestDisallowInterceptTouchEvent(false)
-                    return true
-                }
-            }
-            return super.onTouchEvent(event)
-        }
-
-        private fun updateFromTouch(x: Float, fromUser: Boolean) {
-            val left = dp(10).toFloat()
-            val widthAvailable = (width - dp(20)).coerceAtLeast(1)
-            val fraction = ((x - left) / widthAvailable).coerceIn(0f, 1f)
-            val value = kotlin.math.round(fraction * max).toInt()
-            if (value != progress) {
-                progress = value
-                listener?.onProgressChanged(compatSeekBar, value, fromUser)
-            }
-        }
-
-        override fun performClick(): Boolean {
-            super.performClick()
-            return true
+        fun setOnSeekBarChangeListener(value: SeekBar.OnSeekBarChangeListener?) {
+            legacyListener = value
         }
     }
 
-    private fun guardianSlider(): GuardianSlider = GuardianSlider(this)
+    private fun guardianSlider(): GuardianSlider = GuardianSlider(this).apply {
+        background = Appearance.glass(this@MainActivity, 24f, 26, true)
+        setPadding(dp(14), 0, dp(14), 0)
+    }
 
     private fun showQuickSettingsSheet(root: LinearLayout, scroll: ScrollView) {
         val panel = LinearLayout(this).apply {
