@@ -105,7 +105,13 @@ object ThemeOptions {
             var currentValue = value.coerceIn(min, max)
             val heading=label("$title: $currentValue$suffix")
             parent.addView(heading)
-            parent.addView(SeslSeekBar(c).apply {
+            val glassSlider = LinearLayout(c).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(dp(14), 0, dp(14), 0)
+                background = Appearance.glass(c, 26f, 34, true)
+            }
+            glassSlider.addView(SeslSeekBar(c).apply {
                 this.max = (max - min).coerceAtLeast(1)
                 progress = currentValue - min
                 contentDescription = title
@@ -124,7 +130,10 @@ object ThemeOptions {
                     override fun onStartTrackingTouch(seekBar: SeslSeekBar?) = Unit
                     override fun onStopTrackingTouch(seekBar: SeslSeekBar?) = Unit
                 })
-            },LinearLayout.LayoutParams(-1,dp(56)))
+            }, LinearLayout.LayoutParams(-1, dp(48)))
+            parent.addView(glassSlider, LinearLayout.LayoutParams(-1, dp(58)).apply {
+                bottomMargin = dp(8)
+            })
         }
         slider("Card opacity","cards",20,100,Appearance.cardOpacity(c),"%")
         slider("Banner opacity","banners",40,100,Appearance.bannerOpacity(c),"%")
