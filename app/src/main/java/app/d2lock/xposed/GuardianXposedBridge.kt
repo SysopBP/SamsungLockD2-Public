@@ -37,6 +37,7 @@ class GuardianXposedBridge : XposedModule() {
         if (param.packageName != SYSTEM_UI) return
 
         log(Log.INFO, TAG, "GUARDIAN_XPOSED_743_SYSTEMUI_READY package=${param.packageName}")
+        signalGuardianKeyguard("HEARTBEAT", "SystemUI#packageReady")
         installPowerDiagnostics()
         installSystemUiNotificationDiagnostics(param.classLoader)
         installGuardianSystemUiHooks(param.classLoader)
