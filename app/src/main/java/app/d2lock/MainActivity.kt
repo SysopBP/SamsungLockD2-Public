@@ -1300,46 +1300,87 @@ class MainActivity : Activity() {
             startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
         }
         addButton(root, "Grant optional feature permissions") { requestRuntimePermissions() }
-        addButton(root, "Choose wallpaper") {
-            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "image/*"
-            }, wallpaperPicker)
-        }
-        section(root, "D2 APP BACKGROUND")
-        addButton(root, "Choose D2 app wallpaper") {
-            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "image/*"
-            }, appWallpaperPicker)
-        }
-        root.addView(TextView(this).apply {
-            text = "D2 background dim: ${Prefs.appWallpaperDim(this@MainActivity)}%"
-            textSize = 14f
-            setTextColor(Appearance.secondary(this@MainActivity))
-            tag = "d2_app_wallpaper_dim_label"
-        })
-        root.addView(guardianSlider().apply {
-            max = 90
-            progress = Prefs.appWallpaperDim(this@MainActivity)
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
-                    if (!fromUser) return
-                    Prefs.setAppWallpaperDim(this@MainActivity, value)
-                    root.findViewWithTag<TextView>("d2_app_wallpaper_dim_label")?.text = "D2 background dim: $value%"
-                }
-                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
-                override fun onStopTrackingTouch(seekBar: SeekBar?) { refreshAppearance() }
+        section(root, "WALLPAPER CENTER")
+        root.getChildAt(root.childCount - 1).tag = "app_theme"
+        root.addView(LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL
+            setPadding(dp(18),dp(14),dp(18),dp(14))
+            background=Appearance.glass(this@MainActivity,30f,38,true)
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.HORIZONTAL
+                gravity=Gravity.CENTER_VERTICAL
+                addView(ImageView(this@MainActivity).apply {
+                    setImageResource(R.drawable.ic_guardian_wallpaper)
+                    imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                    contentDescription=null
+                },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
+                addView(TextView(this@MainActivity).apply {
+                    text="Wallpaper Center"
+                    textSize=18f
+                    setTextColor(Appearance.text(this@MainActivity))
+                })
             })
-        }, LinearLayout.LayoutParams(-1, dp(40)))
-        addButton(root, "Reset D2 app wallpaper") {
-            Prefs.clearAppWallpaper(this)
-            showD2Message("D2 app wallpaper reset")
-            refreshAppearance()
-        }
-        addButton(root, "Preview lock screen") {
-            startActivity(Intent(this, LockScreenActivity::class.java).putExtra("preview", true))
-        }
+            addView(TextView(this@MainActivity).apply {
+                text=(if(Prefs.wallpaper(this@MainActivity)!=null) "Lock screen set" else "Lock screen default")+
+                    "  ·  "+(if(Prefs.appWallpaper(this@MainActivity)!=null) "D2 app set" else "D2 app default")
+                textSize=12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0,dp(5),0,dp(10))
+            })
+            fun wallpaperAction(label:String, action:()->Unit)=TextView(this@MainActivity).apply {
+                text=label
+                textSize=15f
+                gravity=Gravity.CENTER
+                setTextColor(Appearance.text(this@MainActivity))
+                background=Appearance.glass(this@MainActivity,22f,26,true)
+                setPadding(dp(14),dp(10),dp(14),dp(10))
+                setOnClickListener { performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK); action() }
+            }
+            addView(wallpaperAction("Change lock-screen wallpaper") {
+                startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE); type="image/*"
+                },wallpaperPicker)
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
+            addView(wallpaperAction("Change D2 app wallpaper") {
+                startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE); type="image/*"
+                },appWallpaperPicker)
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
+            addView(TextView(this@MainActivity).apply {
+                text="D2 app wallpaper dim · ${Prefs.appWallpaperDim(this@MainActivity)}%"
+                textSize=13f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                tag="d2_app_wallpaper_dim_label"
+            })
+            addView(guardianSlider().apply {
+                max=90
+                progress=Prefs.appWallpaperDim(this@MainActivity)
+                setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(seekBar:SeekBar?,value:Int,fromUser:Boolean) {
+                        if(!fromUser) return
+                        Prefs.setAppWallpaperDim(this@MainActivity,value)
+                        root.findViewWithTag<TextView>("d2_app_wallpaper_dim_label")?.text="D2 app wallpaper dim · $value%"
+                        if(value%10==0) seekBar?.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                    }
+                    override fun onStartTrackingTouch(seekBar:SeekBar?)=Unit
+                    override fun onStopTrackingTouch(seekBar:SeekBar?) { refreshAppearance() }
+                })
+            },LinearLayout.LayoutParams(-1,dp(44)))
+            val actions=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL }
+            actions.addView(wallpaperAction("Reset D2 app") {
+                Prefs.clearAppWallpaper(this@MainActivity)
+                showD2Message("D2 app wallpaper reset")
+                refreshAppearance()
+            },LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(4) })
+            actions.addView(wallpaperAction("Preview") {
+                startActivity(Intent(this@MainActivity,LockScreenActivity::class.java).putExtra("preview",true))
+            }.apply {
+                setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_guardian_preview,0,0,0)
+                compoundDrawableTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                compoundDrawablePadding=dp(5)
+            },LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(4) })
+            addView(actions)
+        },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
         section(root, "ADVANCED / EXPERIMENTAL")
         root.getChildAt(root.childCount - 1).tag = "advanced_settings"
         addButton(root, "SESL9 × MATERIAL 3 PREVIEW · NEW") {
