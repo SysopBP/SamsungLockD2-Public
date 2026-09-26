@@ -9,6 +9,7 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Binder
 import android.os.Bundle
+import app.d2lock.Prefs
 import app.d2lock.security.PinStore
 
 /** Grants the paired Galaxy Island build an immutable lock-only launch capability. */
@@ -23,7 +24,24 @@ class IslandProvider : ContentProvider() {
             ctx.packageManager.checkSignatures("app.cutout.ringpreview", ctx.packageName) == PackageManager.SIGNATURE_MATCH) {
             "Galaxy Island caller required"
         }
-        require(method == "state") { "Unsupported bridge operation" }
+        require(method == "state" || method == "xposed_config") { "Unsupported bridge operation" }
+
+        if (method == "xposed_config") {
+            return Bundle().apply {
+                putInt("protocol", 2)
+                putBoolean("master", Prefs.xposedMaster(ctx))
+                putBoolean("galaxy_island", Prefs.xposedGalaxyIsland(ctx))
+                putBoolean("notifications", Prefs.xposedIslandNotifications(ctx))
+                putBoolean("media", Prefs.xposedIslandMedia(ctx))
+                putBoolean("charging", Prefs.xposedIslandCharging(ctx))
+                putBoolean("calls", Prefs.xposedIslandCalls(ctx))
+                putBoolean("screen_state", Prefs.xposedIslandScreenState(ctx))
+                putBoolean("positioning", Prefs.xposedIslandPositioning(ctx))
+                putBoolean("guardian_sync", Prefs.xposedIslandGuardianSync(ctx))
+                putBoolean("fallback", Prefs.xposedIslandFallback(ctx))
+            }
+        }
+
         val ready = IslandBridge.enabled(ctx) && PinStore(ctx).configured()
         return Bundle().apply {
             putInt("protocol", 1)
