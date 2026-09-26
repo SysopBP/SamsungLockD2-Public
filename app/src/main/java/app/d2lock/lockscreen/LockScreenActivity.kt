@@ -471,12 +471,15 @@ class LockScreenActivity : Activity() {
             background = Appearance.glass(this@LockScreenActivity, 34f, Prefs.componentGlass(this@LockScreenActivity, "media"), true)
             elevation = dp(8).toFloat()
         }
-        mediaPanel.addView(label("♫", 25f, Color.WHITE).apply {
-            gravity = Gravity.CENTER
+        mediaPanel.addView(ImageView(this).apply {
+            setImageResource(app.d2lock.R.drawable.ic_media_music)
+            imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            setPadding(dp(13), dp(13), dp(13), dp(13))
             background = GradientDrawable().apply {
                 cornerRadius = dp(17).toFloat()
                 setColor(0xff41475d.toInt())
             }
+            contentDescription = "Media"
         }, LinearLayout.LayoutParams(dp(if (mediaCompact) 48 else if (mediaLarge) 70 else 62), dp(if (mediaCompact) 48 else if (mediaLarge) 70 else 62)))
         val mediaDetails = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
