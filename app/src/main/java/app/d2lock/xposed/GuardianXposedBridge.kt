@@ -55,6 +55,12 @@ class GuardianXposedBridge : XposedModule() {
                 "com.android.systemui.keyguard.WakefulnessLifecycle" to listOf("dispatchStartedWakingUp", "dispatchFinishedWakingUp", "dispatchStartedGoingToSleep", "dispatchFinishedGoingToSleep"),
                 "com.android.systemui.keyguard.ScreenLifecycle" to listOf("dispatchScreenTurningOn", "dispatchScreenTurnedOn", "dispatchScreenTurningOff", "dispatchScreenTurnedOff")
             ))
+        installNamedProbes(classLoader, "FINGERPRINT",
+            listOf(
+                "com.android.keyguard.KeyguardUpdateMonitor" to listOf("onBiometricAuthenticated", "onBiometricAuthFailed", "onBiometricAcquired", "onBiometricError", "handleFingerprintAuthenticated", "handleFingerprintAuthFailed"),
+                "com.android.systemui.biometrics.AuthController" to listOf("onBiometricAuthenticated", "onBiometricError", "onBiometricHelp"),
+                "com.android.systemui.biometrics.UdfpsController" to listOf("onFingerDown", "onFingerUp", "onAcquired")
+            ))
         installNamedProbes(classLoader, "KEYGUARD",
             listOf(
                 "com.android.systemui.statusbar.policy.KeyguardStateControllerImpl" to listOf("notifyKeyguardState", "notifyKeyguardGoingAway"),
