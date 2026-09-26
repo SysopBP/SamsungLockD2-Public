@@ -33,6 +33,11 @@ android {
 }
 
 dependencies {
+    // SESL9 preview only. Keep production Guardian/auth surfaces untouched.
+    if (!System.getenv("SESL_GITHUB_TOKEN").isNullOrBlank() || providers.gradleProperty("sesl.github.token").isPresent) {
+        implementation("sesl.androidx.appcompat:appcompat:1.8.0+1.0.38-sesl9+rev1")
+    }
+
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
     implementation("androidx.credentials:credentials:1.7.0-alpha03")
