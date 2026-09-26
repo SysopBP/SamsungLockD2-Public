@@ -203,6 +203,41 @@ jobs:
               )
               strings_ui.write_text(strings_text)
 
+          # Theme sync: prefer supported Android theme state and dynamic color, with
+          # Samsung/root diagnostics available later as an optional enhancement. This keeps
+          # Galaxy Island functional without root while matching Guardian/SystemUI closely.
+          theme_file = root / "app/src/main/java/com/ekoehler/expressivecutout/ui/GuardianThemeSync.kt"
+          theme_file.write_text("""package com.ekoehler.expressivecutout.ui
+
+import android.app.WallpaperManager
+import android.content.Context
+import android.content.res.Configuration
+import android.provider.Settings
+
+object GuardianThemeSync {
+    data class Snapshot(
+        val dark: Boolean,
+        val systemPalette: String?,
+        val themeStyle: String?,
+        val wallpaperPrimary: Int?,
+    )
+
+    fun snapshot(context: Context): Snapshot {
+        val dark = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val raw = runCatching {
+            Settings.Secure.getString(context.contentResolver, "theme_customization_overlay_packages")
+        }.getOrNull()
+        fun jsonValue(key: String): String? = raw?.let { text ->
+            Regex("\\\"$key\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"").find(text)?.groupValues?.getOrNull(1)
+        }
+        val wallpaper = runCatching {
+            WallpaperManager.getInstance(context).getWallpaperColors(WallpaperManager.FLAG_SYSTEM)?.primaryColor?.toArgb()
+        }.getOrNull()
+        return Snapshot(dark, jsonValue("android.theme.customization.system_palette"), jsonValue("android.theme.customization.theme_style"), wallpaper)
+    }
+}
+""")
+
           # Guardian / LSPosed bridge groundwork. Keep the Galaxy Island APK functional
           # without LSPosed; when the framework is present these hooks provide a verified,
           # read-only SystemUI event stream instead of relying on polling/guesswork.
