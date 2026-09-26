@@ -1391,11 +1391,9 @@ class MainActivity : Activity() {
         background = Appearance.glass(this@MainActivity, 30f, 24, true)
         setPadding(dp(12), 0, dp(12), 0)
         minimumHeight = dp(40)
-        val glassActive = Color.argb(210, 226, 232, 238)
-        val glassInactive = Color.argb(72, 226, 232, 238)
-        progressTintList = android.content.res.ColorStateList.valueOf(glassActive)
-        thumbTintList = android.content.res.ColorStateList.valueOf(glassActive)
-        progressBackgroundTintList = android.content.res.ColorStateList.valueOf(glassInactive)
+        // SESL marks its tint setters RestrictedApi, so keep native SESL drawing here.
+        // The neutral glass capsule supplies the Guardian visual treatment without
+        // calling library-internal tint APIs.
     }
 
     private fun showQuickSettingsSheet(root: LinearLayout, scroll: ScrollView) {
