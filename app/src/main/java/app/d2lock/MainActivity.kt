@@ -179,7 +179,7 @@ class MainActivity : Activity() {
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(8), dp(14), dp(12))
-            background = Appearance.glass(this@MainActivity, 30f, 40, true)
+            background = Appearance.glass(this@MainActivity, 30f, 58, true)
         }
         val title = TextView(this).apply {
             text = "KIOSK D2 GUARDIAN"; textSize = 12f; letterSpacing = .08f
@@ -194,7 +194,7 @@ class MainActivity : Activity() {
             setPadding(dp(16), dp(14), dp(16), dp(18)); background = Appearance.glass(this@MainActivity, 26f, 28, true)
         }
         fun whatsNew() {
-            content.text = "WHAT'S NEW SINCE BETA.1  •  D2 ${versionName ?: "current"}\n\n• LSPosed/Xposed SystemUI integration and diagnostics\n• Experimental fingerprint authentication groundwork and SystemUI callback diagnostics\n• New System Integration Center for Root, Shizuku, Xposed and Galaxy Island\n• Automatic integration fallback protection\n• Guardian/Kiosk call, focus, relock and boot-protection improvements\n• Recovery & Safety Center with system-health and USB/ADB recovery status\n• Compact glass settings, dialogs, fixed navigation and section highlighting\n• Lock & Wake and Widget Manager cleanup\n• Galaxy Island pairing, Xposed controls and Guardian glass integration\n• Continued PIN/pattern, notification, icon and One UI 9 interface refinements"
+            content.text = "WHAT'S NEW SINCE BETA.1  •  D2 ${versionName ?: "current"}\n\n• LSPosed/Xposed SystemUI integration and diagnostics\n• Verified Guardian fingerprint unlock using an enrolled Samsung fingerprint, with clean PIN/pattern fallback\n• New System Integration Center for Root, Shizuku, Xposed and Galaxy Island\n• Automatic integration fallback protection\n• Guardian/Kiosk call, focus, relock and boot-protection improvements\n• Recovery & Safety Center with system-health and USB/ADB recovery status\n• Compact glass settings, dialogs, fixed navigation and section highlighting\n• Lock & Wake and Widget Manager cleanup\n• Galaxy Island pairing, Xposed controls and Guardian glass integration\n• Continued PIN/pattern, notification, icon and One UI 9 interface refinements"
         }
         fun whatsNext() {
             val lock = if (PinStore(this@MainActivity).configured()) "✓" else "○"
@@ -203,7 +203,8 @@ class MainActivity : Activity() {
             val shizuku = if (Prefs.shizukuEnabled(this@MainActivity)) "✓" else "○"
             val root = if (Prefs.rootMode(this@MainActivity)) "✓" else "○"
             val xp = if (Prefs.xposedMaster(this@MainActivity)) "✓" else "○"
-            content.text = "WHAT'S NEXT\n\n$lock Set up D2 authentication\n$wake Enable lock on wake\n$kiosk Configure kiosk protection\n$shizuku Connect Shizuku\n$root Verify optional KernelSU/root integration\n$xp LSPosed/SystemUI integration enabled\n○ Complete secure fingerprint unlock integration\n○ Verify paired Galaxy Island glass and pop-out behavior\n○ Customize your lock screen\n○ Test your recovery path"
+            content.text = "WHAT'S NEXT\n\n$lock Set up D2 authentication\n$wake Enable lock on wake\n$kiosk Configure kiosk protection\n$shizuku Connect Shizuku\n$root Verify optional KernelSU/root integration\n$xp LSPosed/SystemUI integration enabled\n✓ Guardian fingerprint unlock verified on-device
+○ Reduce remaining Samsung biometric presentation dependency\n○ Verify paired Galaxy Island glass and pop-out behavior\n○ Customize your lock screen\n○ Test your recovery path"
         }
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun tab(label: String, action: () -> Unit) = TextView(this).apply {
@@ -388,7 +389,7 @@ class MainActivity : Activity() {
             val dialogBody = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(14), dp(10), dp(14), dp(14))
-                background = Appearance.glass(this@MainActivity, 30f, 40, true)
+                background = Appearance.glass(this@MainActivity, 30f, 58, true)
 
                 addView(TextView(this@MainActivity).apply {
                     text = "KIOSK D2 GUARDIAN"
@@ -457,7 +458,7 @@ class MainActivity : Activity() {
             val statusCard = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(18), dp(14), dp(18), dp(14))
-                background = Appearance.glass(this@MainActivity, 30f, 40, true)
+                background = Appearance.glass(this@MainActivity, 30f, 58, true)
                 addView(TextView(this@MainActivity).apply { text = "D2 STATUS"; textSize = 13f; setTextColor(Appearance.secondary(this@MainActivity)) })
                 addView(TextView(this@MainActivity).apply {
                     text = "D2 Protected  •  " + Prefs.unlockMethod(this@MainActivity).replaceFirstChar { it.uppercase() }
@@ -2278,7 +2279,7 @@ class MainActivity : Activity() {
         val islandPaired=app.d2lock.bridge.IslandBridge.enabled(this); val islandSync=!islandPaired || Prefs.xposedIslandGuardianSync(this)
         val healthy=authReady && wakeReady && (!Prefs.rootMode(this) || rootAvailable) && (!Prefs.shizukuEnabled(this) || shizukuAvailable) && (!Prefs.xposedMaster(this) || Prefs.xposedAutomaticFallback(this)) && islandSync
         val body=LinearLayout(this).apply {
-            orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(16)); background=Appearance.glass(this@MainActivity,32f,46,true)
+            orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(16)); background=Appearance.glass(this@MainActivity,32f,64,true)
             addView(TextView(this@MainActivity).apply { text=if(healthy) "◆  GUARDIAN PROTECTED" else "◆  GUARDIAN ATTENTION"; textSize=13f; setTextColor(if(healthy) Color.rgb(102,220,132) else Appearance.accent(this@MainActivity)) })
             addView(TextView(this@MainActivity).apply { text="Guardian Core"; textSize=24f; setTextColor(Appearance.text(this@MainActivity)); setPadding(0,dp(3),0,dp(12)) })
             fun status(title:String,detail:String,ok:Boolean) { addView(TextView(this@MainActivity).apply { text=(if(ok) "●  " else "○  ")+title+"\n    "+detail; textSize=14f; setTextColor(if(ok) Appearance.text(this@MainActivity) else Appearance.accent(this@MainActivity)); setPadding(dp(13),dp(9),dp(13),dp(9)); background=Appearance.glass(this@MainActivity,24f,28,true) },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(6) }) }
@@ -2290,9 +2291,9 @@ class MainActivity : Activity() {
             status("Galaxy Island",if(islandPaired) "Paired · Guardian sync "+if(islandSync) "ready" else "needs attention" else "Not paired · optional",islandSync)
             status("Kiosk protection",if(Prefs.kiosk(this@MainActivity)) "Kiosk enabled" else "Kiosk currently off",!Prefs.kiosk(this@MainActivity)||rootAvailable)
             status("Recovery path",if(rootAvailable||Prefs.adbRecovery(this@MainActivity)) "Root or ADB recovery available" else "Verify recovery before kiosk use",rootAvailable||Prefs.adbRecovery(this@MainActivity))
-            status("Fingerprint","Experimental · genuine SystemUI success callback not linked yet",true)
+            status("Fingerprint","Verified · Guardian unlock succeeds with an enrolled Samsung fingerprint · PIN/pattern fallback retained",true)
         }
-        AlertDialog.Builder(this).setView(body).setNegativeButton("Close",null).create().also { d -> d.setOnShowListener { d.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)) }; d.show() }
+        AlertDialog.Builder(this).setView(body).setNegativeButton("Close",null).create().also { d -> d.setOnShowListener { d.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 34f, 84, true)); d.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Appearance.accent(this@MainActivity)) }; d.show() }
     }
 
     private fun settingsHost(root: LinearLayout): ViewGroup {
@@ -2656,7 +2657,7 @@ class MainActivity : Activity() {
                     setPadding(dp(14), dp(8), dp(14), dp(8))
                     background = Appearance.glass(this@MainActivity, 30f, if (index == current) 58 else 32, true)
                 }
-                val radio = com.google.android.material.radiobutton.MaterialRadioButton(this).apply {
+                val radio = RadioButton(this).apply {
                     isChecked = index == current
                     buttonTintList = android.content.res.ColorStateList(
                         arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
