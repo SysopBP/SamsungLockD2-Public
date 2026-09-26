@@ -2332,19 +2332,40 @@ class MainActivity : Activity() {
         // Beta.2 Guardian Dock: the center core is a live health surface, not a fake
         // security indicator. Green requires the configured protection stack; amber
         // means Guardian is usable but one or more optional integrations are absent.
+        val rootAvailable = RootManager.isAvailable()
+        val shizukuAvailable = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+        val islandPaired = app.d2lock.bridge.IslandBridge.enabled(this)
+        val islandSync = !islandPaired || Prefs.xposedIslandGuardianSync(this)
         val guardianHealthy = Prefs.enabled(this) && PinStore(this).configured() &&
-            (!Prefs.kiosk(this) || Prefs.rootMode(this)) &&
-            (!Prefs.xposedMaster(this) || Prefs.xposedAutomaticFallback(this))
-        val core = TextView(this).apply {
-            text = "◆"
-            textSize = 17f
+            (!Prefs.rootMode(this) || rootAvailable) &&
+            (!Prefs.shizukuEnabled(this) || shizukuAvailable) &&
+            (!Prefs.kiosk(this) || rootAvailable) &&
+            (!Prefs.xposedMaster(this) || Prefs.xposedAutomaticFallback(this)) &&
+            islandSync
+        val core = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            contentDescription = if (guardianHealthy) "Guardian Core protected" else "Guardian Core needs attention"
-            setTextColor(if (guardianHealthy) Color.rgb(102, 220, 132) else Appearance.accent(this@MainActivity))
-            background = Appearance.glass(this@MainActivity, 30f, 64, true)
+            contentDescription = if (guardianHealthy) "Guardian Core protected. Tap for system health." else "Guardian Core needs attention. Tap for system health."
+            background = Appearance.glass(this@MainActivity, 32f, 72, true)
             elevation = dp(30).toFloat()
+            addView(TextView(this@MainActivity).apply {
+                text = "◆"
+                textSize = 15f
+                gravity = Gravity.CENTER
+                setTextColor(if (guardianHealthy) Color.rgb(102, 220, 132) else Appearance.accent(this@MainActivity))
+            }, LinearLayout.LayoutParams(-1, dp(23)))
+            addView(TextView(this@MainActivity).apply {
+                text = if (guardianHealthy) "CORE" else "CHECK"
+                textSize = 8f
+                letterSpacing = .08f
+                gravity = Gravity.CENTER
+                setTextColor(Appearance.text(this@MainActivity))
+            }, LinearLayout.LayoutParams(-1, dp(15)))
             setOnClickListener {
                 performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+                animate().cancel()
+                scaleX = .90f; scaleY = .90f
+                animate().scaleX(1f).scaleY(1f).setDuration(160).start()
                 showGuardianCoreHealth()
             }
         }
@@ -2419,8 +2440,8 @@ class MainActivity : Activity() {
         host.addView(nav, android.widget.FrameLayout.LayoutParams(-1, dp(72), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
             setMargins(dp(18), 0, dp(18), dp(18))
         })
-        host.addView(core, android.widget.FrameLayout.LayoutParams(dp(46), dp(46), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
-            setMargins(0, 0, 0, dp(66))
+        host.addView(core, android.widget.FrameLayout.LayoutParams(dp(58), dp(58), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
+            setMargins(0, 0, 0, dp(62))
         })
         host.setOnApplyWindowInsetsListener { _, insets ->
             val bars = insets.getInsets(android.view.WindowInsets.Type.systemBars())
@@ -2429,7 +2450,7 @@ class MainActivity : Activity() {
                 nav.layoutParams = params
             }
             (core.layoutParams as? android.widget.FrameLayout.LayoutParams)?.let { params ->
-                params.bottomMargin = dp(66) + bars.bottom
+                params.bottomMargin = dp(62) + bars.bottom
                 core.layoutParams = params
             }
             insets
