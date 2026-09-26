@@ -185,6 +185,12 @@ object Prefs {
         .remove("wallpaper_amoled").remove("wallpaper_dim").remove("wallpaper_parallax").apply()
     fun glassShimmer(context: Context) = prefs(context).getBoolean("glass_shimmer", false)
     fun setGlassShimmer(context: Context, value: Boolean) = prefs(context).edit().putBoolean("glass_shimmer", value).apply()
+    fun experimentalAdaptiveGlass(context: Context) = prefs(context).getBoolean("experimental_adaptive_glass", false)
+    fun setExperimentalAdaptiveGlass(context: Context, value: Boolean) = prefs(context).edit().putBoolean("experimental_adaptive_glass", value).apply()
+    fun experimentalEnhancedHaptics(context: Context) = prefs(context).getBoolean("experimental_enhanced_haptics", false)
+    fun setExperimentalEnhancedHaptics(context: Context, value: Boolean) = prefs(context).edit().putBoolean("experimental_enhanced_haptics", value).apply()
+    fun experimentalLockMotion(context: Context) = prefs(context).getBoolean("experimental_lock_motion", false)
+    fun setExperimentalLockMotion(context: Context, value: Boolean) = prefs(context).edit().putBoolean("experimental_lock_motion", value).apply()
     fun doubleTapSleep(context: Context) = prefs(context).getBoolean("double_tap_sleep", false)
     fun setDoubleTapSleep(context: Context, value: Boolean) = prefs(context).edit().putBoolean("double_tap_sleep", value).apply()
     fun unlockHaptics(context: Context) = prefs(context).getString("unlock_haptics", "off") ?: "off"
