@@ -1148,7 +1148,7 @@ class MainActivity : Activity() {
         }
         section(root, "ADVANCED / EXPERIMENTAL")
         root.getChildAt(root.childCount - 1).tag = "advanced_settings"
-        addButton(root, "SESL9 UI Preview · REAL") {
+        addButton(root, "SESL9 × MATERIAL 3 PREVIEW · NEW") {
             startActivity(Intent(this, app.d2lock.ui.SeslPreviewActivity::class.java))
         }
         root.getChildAt(root.childCount - 1).tag = "advanced_settings"
