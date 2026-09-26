@@ -316,71 +316,128 @@ class MainActivity : Activity() {
             })
         }
         if (configured) {
-            section(root, "UNLOCK METHOD")
+            section(root, "SECURITY CENTER")
             root.getChildAt(root.childCount - 1).tag = "lock_screen_settings"
-            val methods = listOf("PIN", "Pattern")
-            addChoice(root, "D2 unlock method", methods, if (Prefs.unlockMethod(this) == "pattern") 1 else 0) { selected ->
-                if (selected == 0) {
-                    Prefs.setUnlockMethod(this, "pin")
-                } else if (PatternStore(this).configured()) {
-                    Prefs.setUnlockMethod(this, "pattern")
-                } else {
-                    PatternUi.show(this, setup = true, success = {
-                        Prefs.setUnlockMethod(this, "pattern")
-                        setContentView(buildSettings())
-                    })
-                }
-            }
-            if (PatternStore(this).configured()) {
-                addButton(root, "Replace D2 pattern") {
-                    // Keep the existing PIN as the recovery method. A new pattern file is created after app-data reset;
-                    // changing an existing pattern is intentionally deferred rather than weakening verification.
-                    Toast.makeText(this, "To replace the pattern, switch to PIN first. Pattern reset support is coming next.", Toast.LENGTH_LONG).show()
-                }
-            }
-            section(root, "PASSKEY MANAGER")
             val passkeys = runCatching { D2PasskeyStore(this).list() }.getOrDefault(emptyList())
-            root.addView(TextView(this).apply {
-                text = if (passkeys.isEmpty()) "No D2 passkeys saved yet." else "${passkeys.size} D2 passkey${if (passkeys.size == 1) "" else "s"} saved."
-                textSize = 14f
-                setTextColor(Appearance.secondary(this@MainActivity))
-                setPadding(dp(6), 0, dp(6), dp(8))
-            })
-            passkeys.forEach { record ->
-                addButton(root, "${record.userName.ifBlank { record.displayName.ifBlank { "Passkey" } }} · ${record.rpId}") {
-                    AlertDialog.Builder(this)
-                        .setTitle(record.userName.ifBlank { "D2 passkey" })
-                        .setMessage("Site / app: ${record.rpId}\nDisplay name: ${record.displayName.ifBlank { "Not provided" }}")
-                        .setNegativeButton("Close", null)
-                        .setPositiveButton("Delete") { _, _ ->
-                            runCatching { D2PasskeyStore(this).delete(record.id) }
-                            setContentView(buildSettings())
-                        }
-                        .show()
-                }
-            }
-            addButton(root, "Credential provider settings") {
-                val intents = listOf(
-                    Intent("android.settings.CREDENTIAL_PROVIDER"),
-                    Intent(Settings.ACTION_SECURITY_SETTINGS)
-                )
-                val target = intents.firstOrNull { it.resolveActivity(packageManager) != null }
-                if (target != null) startActivity(target)
-                else Toast.makeText(this, "Credential provider settings are unavailable on this build.", Toast.LENGTH_LONG).show()
-            }
-            root.addView(TextView(this).apply {
-                text = "New passkeys are created when a compatible app or website asks Android Credential Manager to save one with D2."
-                textSize = 13f
-                setTextColor(Appearance.secondary(this@MainActivity))
-                setPadding(dp(6), 0, dp(6), dp(12))
-            })
+            root.addView(LinearLayout(this).apply {
+                orientation=LinearLayout.VERTICAL
+                setPadding(dp(18),dp(14),dp(18),dp(14))
+                background=Appearance.glass(this@MainActivity,30f,38,true)
 
-            root.addView(TextView(this).apply {
-                text = "Pattern is independent of Samsung Keyguard. Your 6-digit D2 PIN remains available as the recovery unlock method."
-                textSize = 13f
-                setTextColor(Appearance.secondary(this@MainActivity))
-                setPadding(dp(6), 0, dp(6), dp(12))
-            })
+                addView(LinearLayout(this@MainActivity).apply {
+                    orientation=LinearLayout.HORIZONTAL
+                    gravity=Gravity.CENTER_VERTICAL
+                    addView(ImageView(this@MainActivity).apply {
+                        setImageResource(R.drawable.ic_lock_security)
+                        imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                        contentDescription=null
+                    },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
+                    addView(TextView(this@MainActivity).apply {
+                        text="Security Center"
+                        textSize=18f
+                        setTextColor(Appearance.text(this@MainActivity))
+                    })
+                })
+                addView(TextView(this@MainActivity).apply {
+                    val method=if(Prefs.unlockMethod(this@MainActivity)=="pattern") "Pattern" else "PIN"
+                    text="$method unlock  ·  "+if(passkeys.isEmpty()) "No passkeys" else "${passkeys.size} passkey${if(passkeys.size==1) "" else "s"}"
+                    textSize=12f
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                    setPadding(0,dp(5),0,dp(10))
+                })
+
+                addView(TextView(this@MainActivity).apply {
+                    text="Unlock method"
+                    textSize=15f
+                    setTextColor(Appearance.text(this@MainActivity))
+                    gravity=Gravity.CENTER
+                    background=Appearance.glass(this@MainActivity,22f,26,true)
+                    setPadding(dp(14),dp(10),dp(14),dp(10))
+                    setOnClickListener {
+                        val methods=arrayOf("PIN","Pattern")
+                        val current=if(Prefs.unlockMethod(this@MainActivity)=="pattern") 1 else 0
+                        val dialog=AlertDialog.Builder(this@MainActivity)
+                            .setTitle("D2 unlock method")
+                            .setSingleChoiceItems(methods,current) { d,which ->
+                                if(which==0) {
+                                    Prefs.setUnlockMethod(this@MainActivity,"pin")
+                                    d.dismiss()
+                                    setContentView(buildSettings())
+                                } else if(PatternStore(this@MainActivity).configured()) {
+                                    Prefs.setUnlockMethod(this@MainActivity,"pattern")
+                                    d.dismiss()
+                                    setContentView(buildSettings())
+                                } else {
+                                    d.dismiss()
+                                    PatternUi.show(this@MainActivity,setup=true,success={
+                                        Prefs.setUnlockMethod(this@MainActivity,"pattern")
+                                        setContentView(buildSettings())
+                                    })
+                                }
+                            }.setNegativeButton("Cancel",null).create()
+                        dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,30f,76,true)) }
+                        dialog.show()
+                    }
+                },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
+
+                addView(TextView(this@MainActivity).apply {
+                    text="Manage passkeys"
+                    textSize=15f
+                    setTextColor(Appearance.text(this@MainActivity))
+                    gravity=Gravity.CENTER
+                    background=Appearance.glass(this@MainActivity,22f,26,true)
+                    setPadding(dp(14),dp(10),dp(14),dp(10))
+                    setOnClickListener {
+                        val content=LinearLayout(this@MainActivity).apply {
+                            orientation=LinearLayout.VERTICAL
+                            setPadding(dp(18),dp(10),dp(18),dp(24))
+                        }
+                        content.addView(TextView(this@MainActivity).apply {
+                            text=if(passkeys.isEmpty()) "No D2 passkeys saved yet." else "${passkeys.size} saved D2 passkey${if(passkeys.size==1) "" else "s"}"
+                            textSize=14f
+                            setTextColor(Appearance.secondary(this@MainActivity))
+                            setPadding(0,0,0,dp(8))
+                        })
+                        passkeys.forEach { record ->
+                            content.addView(TextView(this@MainActivity).apply {
+                                text="${record.userName.ifBlank { record.displayName.ifBlank { "Passkey" } }}  ·  ${record.rpId}"
+                                textSize=14f
+                                setTextColor(Appearance.text(this@MainActivity))
+                                background=Appearance.glass(this@MainActivity,20f,24,true)
+                                setPadding(dp(14),dp(11),dp(14),dp(11))
+                                setOnClickListener {
+                                    AlertDialog.Builder(this@MainActivity)
+                                        .setTitle(record.userName.ifBlank { "D2 passkey" })
+                                        .setMessage("Site / app: ${record.rpId}\nDisplay name: ${record.displayName.ifBlank { "Not provided" }}")
+                                        .setNegativeButton("Close",null)
+                                        .setPositiveButton("Delete") { _,_ ->
+                                            runCatching { D2PasskeyStore(this@MainActivity).delete(record.id) }
+                                            setContentView(buildSettings())
+                                        }.show()
+                                }
+                            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(7) })
+                        }
+                        val dialog=AlertDialog.Builder(this@MainActivity)
+                            .setTitle("Passkey Manager")
+                            .setView(content)
+                            .setNegativeButton("Close",null)
+                            .setPositiveButton("Credential settings") { _,_ ->
+                                val intents=listOf(Intent("android.settings.CREDENTIAL_PROVIDER"),Intent(Settings.ACTION_SECURITY_SETTINGS))
+                                val target=intents.firstOrNull { it.resolveActivity(packageManager)!=null }
+                                if(target!=null) startActivity(target)
+                                else Toast.makeText(this@MainActivity,"Credential provider settings are unavailable on this build.",Toast.LENGTH_LONG).show()
+                            }.create()
+                        dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,30f,76,true)) }
+                        dialog.show()
+                    }
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text="Your 6-digit D2 PIN remains the recovery unlock method. D2 authentication stays independent of Samsung Keyguard."
+                    textSize=12f
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                    setPadding(dp(4),dp(10),dp(4),0)
+                })
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
         }
         if (!configured) {
             root.addView(TextView(this).apply {
