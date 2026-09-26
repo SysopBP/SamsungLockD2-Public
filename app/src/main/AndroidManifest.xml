@@ -101,6 +101,14 @@
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-enabled companion lock-screen experience" />
         </service>
         <receiver
+            android:name=".lockscreen.KeyguardSignalReceiver"
+            android:directBootAware="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="app.d2lock.action.XPOSED_KEYGUARD_STATE" />
+            </intent-filter>
+        </receiver>
+        <receiver
             android:name=".lockscreen.CompanionStartupReceiver"
             android:directBootAware="true"
             android:exported="false">
