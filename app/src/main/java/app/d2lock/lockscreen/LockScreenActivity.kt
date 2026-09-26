@@ -76,6 +76,7 @@ class LockScreenActivity : Activity() {
     }
     private lateinit var mediaTitle: TextView
     private lateinit var mediaArtist: TextView
+    private lateinit var mediaPanel: LinearLayout
     private lateinit var playPause: TextView
     private lateinit var media: MediaControllerBridge
     private var torchOn = false
@@ -102,6 +103,17 @@ class LockScreenActivity : Activity() {
             mediaTitle.text = media.title().ifBlank { "Media" }
             mediaArtist.text = media.artist().ifBlank { "Play music to show it here" }
             playPause.text = if (media.isPlaying()) "Ⅱ" else "▶"
+            if (::mediaPanel.isInitialized) {
+                val active = media.title().isNotBlank() || media.isPlaying()
+                val requested = Prefs.mediaLayout(this@LockScreenActivity)
+                val target = if (!active) 72 else if (requested == "compact") 74 else if (requested == "large") 108 else 94
+                val lp = mediaPanel.layoutParams
+                if (lp != null && lp.height != dp(target)) {
+                    lp.height = dp(target)
+                    mediaPanel.layoutParams = lp
+                }
+                mediaArtist.visibility = if (active) View.VISIBLE else View.GONE
+            }
             val mediaName = media.title()
             if (mediaName.isNotBlank()) {
                 LiveHubStore.publish(LiveHubCard("media", LiveHubKind.MEDIA, mediaName, media.artist()))
@@ -437,8 +449,10 @@ class LockScreenActivity : Activity() {
         }
         content.addView(clock)
         content.addView(date)
-        kioskStatus = label(if (preview) "Preview • unlocked" else if (Prefs.kiosk(this)) "Starting root kiosk…" else "App-only mode • Home/Recents can exit", 12f, Appearance.text(this, true)).apply {
+        kioskStatus = label(if (preview) "Preview • unlocked" else if (Prefs.kiosk(this)) "Starting root kiosk…" else "App-only mode • Home/Recents can exit", 11f, Appearance.secondary(this, true)).apply {
             gravity = Gravity.CENTER
+            background = Appearance.glass(this@LockScreenActivity, 18f, 18, false)
+            setPadding(dp(12), dp(4), dp(12), dp(4))
         }
         content.addView(kioskStatus)
         if (preview) {
@@ -459,7 +473,7 @@ class LockScreenActivity : Activity() {
         notifications = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(12), 0, dp(12))
+            setPadding(0, dp(8), 0, dp(8))
         }
         val notificationScroll = android.widget.ScrollView(this).apply {
             isFillViewport = true
@@ -471,7 +485,7 @@ class LockScreenActivity : Activity() {
         val mediaLayout = Prefs.mediaLayout(this)
         val mediaCompact = mediaLayout == "compact"
         val mediaLarge = mediaLayout == "large"
-        val mediaPanel = LinearLayout(this).apply {
+        mediaPanel = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(if (mediaCompact) 10 else 14), dp(if (mediaCompact) 8 else if (mediaLarge) 15 else 12), dp(10), dp(if (mediaCompact) 8 else if (mediaLarge) 15 else 12))
@@ -522,7 +536,7 @@ class LockScreenActivity : Activity() {
             elevation = dp(16).toFloat()
             addView(shortcutButton("left"), LinearLayout.LayoutParams(dp(58), dp(58)))
             addView(TextView(this@LockScreenActivity).apply {
-                text = if (Prefs.unlockMethod(this@LockScreenActivity) == "pattern") "PATTERN" else "PIN"
+                text = if (Prefs.unlockMethod(this@LockScreenActivity) == "pattern") "⌁  Pattern" else "•  PIN"
                 textSize = 14f
                 gravity = Gravity.CENTER
                 setTextColor(Color.WHITE)
