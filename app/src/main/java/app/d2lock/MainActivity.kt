@@ -285,6 +285,33 @@ class MainActivity : Activity() {
         })
     }
 
+    private fun runGuardianEnrollmentComponentTest() {
+        val component = ComponentName(
+            "com.samsung.android.biometrics.app.setting",
+            "com.samsung.android.biometrics.app.setting.fingerprint.enroll.FingerprintEnrollActivity"
+        )
+        val intent = Intent(Intent.ACTION_MAIN).apply {
+            setComponent(component)
+            addCategory(Intent.CATEGORY_DEFAULT)
+        }
+        Log.i("D2FingerprintLab", "GUARDIAN_ENROLL_COMPONENT_REQUESTED component=$component")
+        try {
+            startActivity(intent)
+            Log.i("D2FingerprintLab", "GUARDIAN_ENROLL_COMPONENT_LAUNCHED")
+            Toast.makeText(
+                this,
+                "Enrollment component launched. Diagnostic only — do not enroll another fingerprint.",
+                Toast.LENGTH_LONG
+            ).show()
+        } catch (e: SecurityException) {
+            Log.e("D2FingerprintLab", "GUARDIAN_ENROLL_COMPONENT_BLOCKED_SECURITY", e)
+            Toast.makeText(this, "Enrollment component blocked by Android security", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Log.e("D2FingerprintLab", "GUARDIAN_ENROLL_COMPONENT_FAILED", e)
+            Toast.makeText(this, "Enrollment component launch failed: ${e.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+        }
+    }
+
     private fun buildLockedBackdrop(): ViewGroup {
         // Optional user-selected D2 app wallpaper behind the protected PIN sheet.
         // With no wallpaper selected this remains a neutral AMOLED-style background.
@@ -992,6 +1019,9 @@ class MainActivity : Activity() {
         })
         addButton(root, "Test Android Fingerprint") {
             runGuardianBiometricTest()
+        }
+        addButton(root, "Launch Samsung Enrollment Component") {
+            runGuardianEnrollmentComponentTest()
         }
 
         section(root, "GUARDIAN RECOVERY")
