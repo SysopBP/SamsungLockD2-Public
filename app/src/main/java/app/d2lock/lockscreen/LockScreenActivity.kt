@@ -668,10 +668,20 @@ class LockScreenActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(horizontalPad), dp(verticalPad), dp(horizontalPad), dp(verticalPad))
                 background = Appearance.glass(this@LockScreenActivity, Prefs.notificationRadius(this@LockScreenActivity).toFloat(), Prefs.notificationGlass(this@LockScreenActivity), true)
-                addView(notificationLabel(item.app, 12f))
+                addView(notificationLabel(item.app, 11f).apply {
+                    alpha = .78f
+                    setPadding(0, 0, 0, dp(2))
+                })
                 if (privacy == 4 || (privacy == 3 && item.visibility == Notification.VISIBILITY_PUBLIC)) {
-                    addView(notificationLabel(item.title.ifBlank { item.text }, 16f))
-                    if (item.title.isNotBlank() && item.text.isNotBlank()) addView(notificationLabel(item.text, 13f))
+                    addView(notificationLabel(item.title.ifBlank { item.text }, 16f).apply {
+                        setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    })
+                    if (item.title.isNotBlank() && item.text.isNotBlank()) {
+                        addView(notificationLabel(item.text, 13f).apply {
+                            alpha = .88f
+                            setPadding(0, dp(2), 0, 0)
+                        })
+                    }
                 }
             }
             if (item.contentIntent != null) card.setOnClickListener { openNotification(item) }
@@ -686,15 +696,30 @@ class LockScreenActivity : Activity() {
         private var downX = 0f
         private var downY = 0f
         private var tracker: VelocityTracker? = null
+        private var thresholdHaptic = false
         override fun onTouch(v: View, event: MotionEvent): Boolean {
             when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> { downX = event.x; downY = event.y; tracker?.recycle(); tracker = VelocityTracker.obtain().also { it.addMovement(event) }; return true }
+                MotionEvent.ACTION_DOWN -> {
+                    downX = event.x
+                    downY = event.y
+                    thresholdHaptic = false
+                    tracker?.recycle()
+                    tracker = VelocityTracker.obtain().also { it.addMovement(event) }
+                    return true
+                }
                 MotionEvent.ACTION_MOVE -> {
                     tracker?.addMovement(event)
                     val dx = event.x - downX
                     if (kotlin.math.abs(dx) > dp(2)) {
                         card.translationX = dx
-                        card.alpha = (1f - kotlin.math.abs(dx) / (card.width.coerceAtLeast(1) * .65f)).coerceIn(.22f, 1f)
+                        card.alpha = (1f - kotlin.math.abs(dx) / (card.width.coerceAtLeast(1) * .55f)).coerceIn(.18f, 1f)
+                        val crossed = kotlin.math.abs(dx) > card.width * .055f
+                        if (crossed && !thresholdHaptic) {
+                            card.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                            thresholdHaptic = true
+                        } else if (!crossed) {
+                            thresholdHaptic = false
+                        }
                     }
                     return true
                 }
@@ -707,7 +732,7 @@ class LockScreenActivity : Activity() {
                     val dy = event.y - downY
                     // One UI-style forgiving dismissal: a short deliberate drag or a quick flick
                     // in either direction should dismiss without requiring a slow full-width swipe.
-                    if (kotlin.math.abs(dx) > card.width * .06f || (kotlin.math.abs(dx) > dp(6) && kotlin.math.abs(velocityX) > dp(220))) {
+                    if (kotlin.math.abs(dx) > card.width * .055f || (kotlin.math.abs(dx) > dp(5) && kotlin.math.abs(velocityX) > dp(190))) {
                         card.animate().translationX(if (dx >= 0f) card.width.toFloat() else -card.width.toFloat()).alpha(0f).setDuration(120).withEndAction {
                             NotificationStore.listener?.dismiss(item.key)
                             NotificationStore.items.removeAll { it.key == item.key }
