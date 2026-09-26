@@ -58,9 +58,11 @@ class GuardianXposedBridge : XposedModule() {
             ))
         installNamedProbes(classLoader, "FINGERPRINT",
             listOf(
-                "com.android.keyguard.KeyguardUpdateMonitor" to listOf("onBiometricAuthenticated", "onBiometricAuthFailed", "onBiometricAcquired", "onBiometricError", "handleFingerprintAuthenticated", "handleFingerprintAuthFailed"),
-                "com.android.systemui.biometrics.AuthController" to listOf("onBiometricAuthenticated", "onBiometricError", "onBiometricHelp"),
-                "com.android.systemui.biometrics.UdfpsController" to listOf("onFingerDown", "onFingerUp", "onAcquired")
+                "com.android.keyguard.KeyguardUpdateMonitor" to listOf("onBiometricAuthenticated", "onBiometricAuthFailed", "onBiometricAcquired", "onBiometricError", "handleFingerprintAuthenticated", "handleFingerprintAuthFailed", "onFingerprintAuthenticated", "onFingerprintAuthFailed", "handleFingerprintAcquired", "handleFingerprintError"),
+                "com.android.systemui.biometrics.AuthController" to listOf("onBiometricAuthenticated", "onBiometricError", "onBiometricHelp", "onFingerprintAuthenticated"),
+                "com.android.systemui.biometrics.UdfpsController" to listOf("onFingerDown", "onFingerUp", "onAcquired", "onAuthenticated"),
+                "com.android.systemui.keyguard.data.repository.DeviceEntryFingerprintAuthRepositoryImpl" to listOf("onAuthenticationSucceeded", "onAuthenticationFailed", "onAuthenticationError", "onAuthenticationAcquired"),
+                "com.android.systemui.keyguard.domain.interactor.DeviceEntryFingerprintAuthInteractor" to listOf("onAuthenticationSucceeded", "onAuthenticationFailed")
             ))
         installNamedProbes(classLoader, "KEYGUARD",
             listOf(
@@ -120,6 +122,7 @@ class GuardianXposedBridge : XposedModule() {
             owner.declaredMethods
                 .filter { method ->
                     nameHints.any { hint -> method.name.contains(hint, ignoreCase = true) } &&
+                        method.name != "getBypassEnabled" &&
                         method.parameterCount <= 6
                 }
                 .distinctBy { it.toGenericString() }
