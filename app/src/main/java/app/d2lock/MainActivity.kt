@@ -1381,12 +1381,77 @@ class MainActivity : Activity() {
             },LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(4) })
             addView(actions)
         },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
-        section(root, "ADVANCED / EXPERIMENTAL")
+        section(root, "EXPERIMENTAL LAB")
         root.getChildAt(root.childCount - 1).tag = "advanced_settings"
-        addButton(root, "SESL9 × MATERIAL 3 PREVIEW · NEW") {
-            startActivity(Intent(this, app.d2lock.ui.SeslPreviewActivity::class.java))
-        }
-        root.getChildAt(root.childCount - 1).tag = "advanced_settings"
+        root.addView(LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL
+            setPadding(dp(18),dp(14),dp(18),dp(14))
+            background=Appearance.glass(this@MainActivity,30f,38,true)
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.HORIZONTAL
+                gravity=Gravity.CENTER_VERTICAL
+                addView(ImageView(this@MainActivity).apply {
+                    setImageResource(R.drawable.ic_guardian_advanced)
+                    imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                    contentDescription=null
+                },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
+                addView(TextView(this@MainActivity).apply {
+                    text="Experimental Lab"
+                    textSize=18f
+                    setTextColor(Appearance.text(this@MainActivity))
+                })
+            })
+            addView(TextView(this@MainActivity).apply {
+                text="Opt-in Guardian UI experiments. Disable any feature that behaves unexpectedly."
+                textSize=12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0,dp(5),0,dp(8))
+            })
+            addView(guardianSwitch().apply {
+                text="Adaptive Glass"
+                textSize=16f
+                setTextColor(Appearance.text(this@MainActivity))
+                isChecked=Prefs.experimentalAdaptiveGlass(this@MainActivity)
+                setOnCheckedChangeListener { _,v -> Prefs.setExperimentalAdaptiveGlass(this@MainActivity,v) }
+            },rowParams())
+            addView(TextView(this@MainActivity).apply {
+                text="Allows Guardian surfaces to increase contrast when a wallpaper is visually busy."
+                textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(4),0,dp(4),dp(6))
+            })
+            addView(guardianSwitch().apply {
+                text="Enhanced Haptics"
+                textSize=16f
+                setTextColor(Appearance.text(this@MainActivity))
+                isChecked=Prefs.experimentalEnhancedHaptics(this@MainActivity)
+                setOnCheckedChangeListener { _,v -> Prefs.setExperimentalEnhancedHaptics(this@MainActivity,v) }
+            },rowParams())
+            addView(TextView(this@MainActivity).apply {
+                text="Enables additional restrained tactile feedback for Guardian UI interactions."
+                textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(4),0,dp(4),dp(6))
+            })
+            addView(guardianSwitch().apply {
+                text="Lock-screen Motion"
+                textSize=16f
+                setTextColor(Appearance.text(this@MainActivity))
+                isChecked=Prefs.experimentalLockMotion(this@MainActivity)
+                setOnCheckedChangeListener { _,v -> Prefs.setExperimentalLockMotion(this@MainActivity,v) }
+            },rowParams())
+            addView(TextView(this@MainActivity).apply {
+                text="Enables subtle entrance and depth motion on supported lock-screen surfaces."
+                textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(4),0,dp(4),dp(10))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text="Guardian UI Preview"
+                textSize=15f
+                gravity=Gravity.CENTER
+                setTextColor(Appearance.text(this@MainActivity))
+                background=Appearance.glass(this@MainActivity,22f,26,true)
+                setPadding(dp(14),dp(10),dp(14),dp(10))
+                setOnClickListener {
+                    startActivity(Intent(this@MainActivity,app.d2lock.ui.SeslPreviewActivity::class.java))
+                }
+            })
+        },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
         section(root, "LOCK-SCREEN PROFILES")
         root.getChildAt(root.childCount - 1).tag = "advanced_settings"
         val profileLabels = listOf("Daily", "AMOLED", "Minimal", "Night")
