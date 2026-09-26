@@ -1383,55 +1383,95 @@ class MainActivity : Activity() {
     private fun showQuickSettingsSheet(root: LinearLayout, scroll: ScrollView) {
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(14), dp(18), dp(18))
-            background = Appearance.glass(this@MainActivity, 34f, 86, true)
+            setPadding(dp(16), dp(14), dp(16), dp(18))
+            background = Appearance.glass(this@MainActivity, 36f, 90, true)
         }
         panel.addView(TextView(this).apply {
-            text = "Quick Settings"
+            text = "All Settings"
             textSize = 22f
             setTextColor(Appearance.text(this@MainActivity))
-            setPadding(dp(4), dp(2), dp(4), dp(10))
+            setPadding(dp(4), dp(2), dp(4), dp(2))
         })
         panel.addView(TextView(this).apply {
-            text = "Jump straight to the D2 controls you use most."
+            text = "Jump to a Guardian settings section"
             textSize = 13f
             setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(dp(4), 0, dp(4), dp(10))
+            setPadding(dp(4), 0, dp(4), dp(12))
         })
-        val dialog = AlertDialog.Builder(this).setView(panel).create()
+
+        val grid = android.widget.GridLayout(this).apply {
+            columnCount = 2
+            alignmentMode = android.widget.GridLayout.ALIGN_BOUNDS
+            useDefaultMargins = false
+        }
+        panel.addView(grid, LinearLayout.LayoutParams(-1, -2))
+
         val shortcuts = listOf(
-            "Lock-screen profiles" to "main_settings",
-            "Clock & Weather" to "clock_weather",
-            "Notifications" to "notifications",
-            "Theme & Glass" to "app_theme",
-            "Floating Bar & Apps" to "floating_bar"
+            Triple("◉", "Lock Screen", "lock_screen_settings"),
+            Triple("✦", "Appearance", "app_theme"),
+            Triple("▣", "Notifications", "notifications"),
+            Triple("▬", "Shortcuts & Bar", "floating_bar"),
+            Triple("◆", "Guardian & Kiosk", "guardian_kiosk"),
+            Triple("⌁", "Root & Shizuku", "root_shizuku"),
+            Triple("＋", "Recovery & Safety", "recovery_safety"),
+            Triple("⚙", "Advanced", "advanced_settings")
         )
-        shortcuts.forEach { (label, target) ->
-            addButton(panel, label) {
-                dialog.dismiss()
-                root.findViewWithTag<android.view.View>(target)?.let { view ->
-                    scroll.post {
-                        scroll.smoothScrollTo(0, (view.top - dp(16)).coerceAtLeast(0))
-                        view.postDelayed({ flashSettingsTarget(view) }, 280)
+        val dialog = AlertDialog.Builder(this).setView(panel).create()
+        shortcuts.forEachIndexed { index, (icon, label, target) ->
+            val bubble = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                isClickable = true
+                isFocusable = true
+                setPadding(dp(10), dp(12), dp(10), dp(10))
+                background = Appearance.glass(this@MainActivity, 32f, 46, true)
+                addView(TextView(this@MainActivity).apply {
+                    text = icon
+                    textSize = 22f
+                    gravity = Gravity.CENTER
+                    setTextColor(Appearance.text(this@MainActivity))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = label
+                    textSize = 13f
+                    gravity = Gravity.CENTER
+                    maxLines = 2
+                    setTextColor(Appearance.text(this@MainActivity))
+                    setPadding(0, dp(4), 0, 0)
+                })
+                setOnClickListener {
+                    performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+                    dialog.dismiss()
+                    root.findViewWithTag<android.view.View>(target)?.let { view ->
+                        scroll.post {
+                            val rect = android.graphics.Rect()
+                            view.getDrawingRect(rect)
+                            root.offsetDescendantRectToMyCoords(view, rect)
+                            scroll.smoothScrollTo(0, (rect.top - dp(18)).coerceAtLeast(0))
+                            view.postDelayed({ flashSettingsTarget(view) }, 280)
+                        }
                     }
                 }
             }
-        }
-        addButton(panel, "Full Settings") {
-            dialog.dismiss()
-            root.findViewWithTag<android.view.View>("settings")?.let { view ->
-                scroll.post { scroll.smoothScrollTo(0, (view.top - dp(16)).coerceAtLeast(0)) }
+            val lp = android.widget.GridLayout.LayoutParams(
+                android.widget.GridLayout.spec(index / 2),
+                android.widget.GridLayout.spec(index % 2, 1f)
+            ).apply {
+                width = 0
+                height = dp(78)
+                setMargins(dp(4), dp(4), dp(4), dp(4))
             }
+            grid.addView(bubble, lp)
         }
         dialog.setOnShowListener {
             dialog.window?.apply {
                 setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
-                setDimAmount(0.30f)
+                setDimAmount(0.34f)
                 attributes = attributes.apply { gravity = Gravity.BOTTOM }
             }
-            panel.translationY = dp(40).toFloat()
+            panel.translationY = dp(36).toFloat()
             panel.alpha = 0f
-            panel.animate().translationY(0f).alpha(1f).setDuration(220).start()
+            panel.animate().translationY(0f).alpha(1f).setDuration(210).start()
         }
         dialog.show()
     }
