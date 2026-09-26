@@ -19,6 +19,7 @@ class GuardianXposedBridge : XposedModule() {
     companion object {
         private const val TAG = "D2XposedBridge"
         private const val SYSTEM_UI = "com.android.systemui"
+        private const val SAMSUNG_BIOMETRIC_UI = "com.samsung.android.biometrics.app.setting"
     }
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
@@ -26,13 +27,64 @@ class GuardianXposedBridge : XposedModule() {
     }
 
     override fun onPackageReady(param: PackageReadyParam) {
-        if (param.packageName != SYSTEM_UI) return
+        when (param.packageName) {
+            SYSTEM_UI -> {
+                log(Log.INFO, TAG, "GUARDIAN_XPOSED_SYSTEMUI_READY package=${param.packageName}")
+                installPowerDiagnostics()
+                installSystemUiNotificationDiagnostics(param.classLoader)
+                installGuardianSystemUiHooks(param.classLoader)
+                installFingerprintStateDiagnostics(param.classLoader)
+            }
+            SAMSUNG_BIOMETRIC_UI -> {
+                log(Log.INFO, TAG, "GUARDIAN_XPOSED_BIOMETRIC_APP_READY package=${param.packageName}")
+                installSamsungBiometricUiDiagnostics(param.classLoader)
+            }
+        }
+    }
 
-        log(Log.INFO, TAG, "GUARDIAN_XPOSED_SYSTEMUI_READY package=${param.packageName}")
-        installPowerDiagnostics()
-        installSystemUiNotificationDiagnostics(param.classLoader)
-        installGuardianSystemUiHooks(param.classLoader)
-        installFingerprintStateDiagnostics(param.classLoader)
+    /**
+     * Read-only probes for Samsung's privileged biometric presentation process.
+     * Every hook calls the original implementation unchanged.
+     */
+    private fun installSamsungBiometricUiDiagnostics(classLoader: ClassLoader) {
+        val candidates = listOf(
+            "com.samsung.android.biometrics.app.setting.BssApplication",
+            "com.samsung.android.biometrics.app.setting.BiometricsUIService",
+            "com.samsung.android.biometrics.app.setting.fingerprint.UdfpsWindow",
+            "com.samsung.android.biometrics.app.setting.fingerprint.UdfpsKeyguardClient",
+            "com.samsung.android.biometrics.app.setting.fingerprint.UdfpsAuthClient"
+        )
+        val hints = listOf("create", "show", "hide", "dismiss", "start", "stop", "auth", "finger", "sensor", "window", "attach", "detach")
+        var classes = 0
+        var hooks = 0
+        candidates.forEach { className ->
+            val owner = runCatching { Class.forName(className, false, classLoader) }.getOrNull()
+            if (owner == null) {
+                log(Log.INFO, TAG, "GUARDIAN_XPOSED_BIOMETRIC_CLASS_MISSING target=$className")
+                return@forEach
+            }
+            classes++
+            log(Log.INFO, TAG, "GUARDIAN_XPOSED_BIOMETRIC_CLASS target=${owner.name}")
+            owner.declaredMethods
+                .filter { m -> m.parameterCount <= 8 && hints.any { m.name.contains(it, true) } }
+                .distinctBy { it.toGenericString() }
+                .forEach { method ->
+                    try {
+                        method.isAccessible = true
+                        hook(method)
+                            .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                            .intercept { chain ->
+                                log(Log.INFO, TAG, "GUARDIAN_XPOSED_BIOMETRIC_UI target=${owner.name}#${method.name}")
+                                chain.proceed()
+                            }
+                        hooks++
+                        log(Log.INFO, TAG, "GUARDIAN_XPOSED_BIOMETRIC_HOOK_INSTALLED target=${owner.name}#${method.name}")
+                    } catch (t: Throwable) {
+                        log(Log.WARN, TAG, "GUARDIAN_XPOSED_BIOMETRIC_HOOK_FAILED target=${owner.name}#${method.name}", t)
+                    }
+                }
+        }
+        log(Log.INFO, TAG, "GUARDIAN_XPOSED_BIOMETRIC_DIAGNOSTICS_READY classes=$classes hooks=$hooks")
     }
 
     /**
