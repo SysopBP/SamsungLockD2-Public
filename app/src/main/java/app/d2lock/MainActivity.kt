@@ -77,7 +77,7 @@ class MainActivity : Activity() {
                         runCatching { LockScreenService.start(this) }
                     }
                     setContentView(buildSettings())
-                    maybeShowWhatsNew()
+                    if (!Prefs.setupWizardSeen(this)) showSetupWizard() else maybeShowWhatsNew()
                 }, cancel = { finish() })
             } else {
                 // Upgrades must not leave the old unprotected service enabled.
@@ -86,6 +86,80 @@ class MainActivity : Activity() {
                 setContentView(buildSettings())
                 maybeShowWhatsNew()
             }
+        }
+    }
+
+    private fun showSetupWizard(step: Int = 0) {
+        Prefs.setSetupWizardSeen(this, true)
+        val titles = listOf("Welcome", "D2 authentication", "Recovery readiness", "System integrations", "Lock behavior", "Test before kiosk", "Ready")
+        val messages = listOf(
+            "Kiosk D2 Guardian can become your primary rooted lock surface. Complete and test D2 authentication and your recovery path before enabling full kiosk protection.",
+            if (PinStore(this).configured()) "D2 authentication is configured. You can continue." else "Create a D2 PIN before full Guardian protection can be enabled. Pattern can be selected later in Security Center.",
+            buildString {
+                append(if (RootManager.isAvailable()) "✓ Root shell detected" else "○ Root shell not detected")
+                append("\n")
+                append(if (Prefs.adbRecovery(this@MainActivity)) "✓ ADB / USB recovery configured" else "○ ADB / USB recovery is optional and currently off")
+                append("\n\nConfirm you know your reboot/root recovery path before using kiosk protection.")
+            },
+            buildString {
+                append(if (runCatching { Shizuku.pingBinder() }.getOrDefault(false)) "✓ Shizuku connected" else "○ Shizuku not connected")
+                append("\n")
+                append(if (Prefs.xposedMaster(this@MainActivity)) "✓ LSPosed/Xposed integration configured" else "○ Xposed integration disabled")
+                append("\n")
+                append(if (app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)) "✓ Galaxy Island paired" else "○ Galaxy Island pairing optional")
+                append("\n\nFingerprint unlock remains experimental and is not enabled by this wizard.")
+            },
+            "Recommended starting point: enable Show D2 when the screen wakes, keep Automatic fallback on, and verify call/relock behavior before enabling kiosk authentication.",
+            "Use Test Guardian to open the lock surface and successfully return with your D2 credential. Full kiosk protection stays unchanged until you explicitly enable it after this test.",
+            "Setup review is complete. Guardian will not silently enable kiosk mode. When your authentication and recovery tests pass, enable full kiosk protection from Guardian & Kiosk."
+        )
+        val body = LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL
+            setPadding(dp(18),dp(12),dp(18),dp(12))
+            background=Appearance.glass(this@MainActivity,30f,42,true)
+            addView(TextView(this@MainActivity).apply {
+                text="SETUP  ${step+1} / ${titles.size}"; textSize=12f; letterSpacing=.08f
+                setTextColor(Appearance.secondary(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text=titles[step]; textSize=22f; setTextColor(Appearance.text(this@MainActivity)); setPadding(0,dp(4),0,dp(10))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text=messages[step]; textSize=14f; setLineSpacing(0f,1.14f); setTextColor(Appearance.text(this@MainActivity))
+            })
+            if(step==1 && !PinStore(this@MainActivity).configured()) addView(TextView(this@MainActivity).apply {
+                text="Create D2 PIN"; textSize=15f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
+                background=Appearance.glass(this@MainActivity,22f,30,true); setPadding(dp(12),dp(11),dp(12),dp(11))
+                setOnClickListener { PinUi.show(this@MainActivity,setup=true,success={ showSetupWizard(2) }) }
+            },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
+            if(step==4) addView(guardianSwitch().apply {
+                text="Show D2 when the screen wakes"; setTextColor(Appearance.text(this@MainActivity)); isChecked=Prefs.enabled(this@MainActivity)
+                setOnCheckedChangeListener { _,checked ->
+                    Prefs.setEnabled(this@MainActivity,checked)
+                    if(checked) LockScreenService.start(this@MainActivity) else LockScreenService.stop(this@MainActivity)
+                }
+            },rowParams())
+            if(step==5) addView(TextView(this@MainActivity).apply {
+                text="Test Guardian"; textSize=15f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
+                background=Appearance.glass(this@MainActivity,22f,30,true); setPadding(dp(12),dp(11),dp(12),dp(11))
+                setOnClickListener { startActivity(Intent(this@MainActivity,LockScreenActivity::class.java)) }
+            },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
+        }
+        val builder=AlertDialog.Builder(this).setView(body)
+        if(step>0) builder.setNegativeButton("Back") { _,_ -> showSetupWizard(step-1) } else builder.setNegativeButton("Later",null)
+        if(step<titles.lastIndex) builder.setPositiveButton("Next") { _,_ ->
+            if(step==1 && !PinStore(this).configured()) {
+                showD2Message("Create and verify your D2 PIN before continuing")
+                showSetupWizard(1)
+            } else showSetupWizard(step+1)
+        } else builder.setPositiveButton("Finish") { _,_ ->
+            Prefs.setSetupWizardComplete(this,true)
+            setContentView(buildSettings())
+            showD2Message("Guardian setup review complete")
+        }
+        builder.create().also { dialog ->
+            dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,34f,82,true)) }
+            dialog.show()
         }
     }
 
@@ -741,6 +815,11 @@ class MainActivity : Activity() {
                         setTextColor(Appearance.text(this@MainActivity))
                     })
                 })
+            addView(TextView(this@MainActivity).apply {
+                text="Run Setup Wizard Again"; textSize=14f; gravity=Gravity.CENTER
+                setTextColor(Appearance.text(this@MainActivity)); background=Appearance.glass(this@MainActivity,22f,28,true)
+                setPadding(dp(12),dp(10),dp(12),dp(10)); setOnClickListener { showSetupWizard() }
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
             addView(TextView(this@MainActivity).apply {
                 val rootReady=RootManager.isAvailable()
                 val adb=Prefs.adbRecovery(this@MainActivity)
