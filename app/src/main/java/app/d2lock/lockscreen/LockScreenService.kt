@@ -11,6 +11,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.IBinder
 import android.os.SystemClock
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import app.d2lock.MainActivity
 import app.d2lock.Prefs
@@ -19,6 +21,7 @@ import app.d2lock.root.RootManager
 import app.d2lock.security.PinStore
 
 class LockScreenService : Service() {
+    private val handler = Handler(Looper.getMainLooper())
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == Intent.ACTION_SCREEN_ON && Prefs.enabled(context) && PinStore(context).configured()) {
@@ -57,6 +60,22 @@ class LockScreenService : Service() {
         Log.i(TAG, "GUARDIAN_SERVICE_STARTED action=$action postBoot=$postBoot")
         if (action == ACTION_LOCK_SURFACE_HEALTHY) {
             markLockSurfaceHealthy()
+            return START_STICKY
+        }
+        if (action == ACTION_LOCK_SURFACE_LOST) {
+            val reason = intent?.getStringExtra(EXTRA_REASON) ?: "unknown"
+            Log.w(TAG, "GUARDIAN_SURFACE_LOST reason=$reason")
+            handler.removeCallbacksAndMessages(SURFACE_RECOVERY_TOKEN)
+            handler.postAtTime({
+                if (Prefs.enabled(this) && PinStore(this).configured() && app.d2lock.notifications.CallNotificationStore.items.isEmpty()) {
+                    val launched = Prefs.rootMode(this) && RootManager.launchCompanion()
+                    Log.i(TAG, "GUARDIAN_SURFACE_RECOVERY reason=$reason path=${if (launched) "root" else "activity"}")
+                    if (!launched) runCatching {
+                        startActivity(Intent(this, LockScreenActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP))
+                    }
+                }
+            }, SURFACE_RECOVERY_TOKEN, SystemClock.uptimeMillis() + 120L)
             return START_STICKY
         }
         if (!Prefs.enabled(this) || !PinStore(this).configured()) {
@@ -117,8 +136,12 @@ class LockScreenService : Service() {
         private const val MAX_BOOT_ATTEMPTS = 2
         private const val EXTRA_POST_BOOT = "d2_post_boot"
         private const val ACTION_LOCK_SURFACE_HEALTHY = "app.d2lock.action.LOCK_SURFACE_HEALTHY"
+        private const val ACTION_LOCK_SURFACE_LOST = "app.d2lock.action.LOCK_SURFACE_LOST"
+        private const val EXTRA_REASON = "reason"
+        private val SURFACE_RECOVERY_TOKEN = Any()
         fun start(context: Context, postBoot: Boolean = false) = context.startForegroundService(Intent(context, LockScreenService::class.java).putExtra(EXTRA_POST_BOOT, postBoot))
         fun markHealthy(context: Context) = context.startService(Intent(context, LockScreenService::class.java).setAction(ACTION_LOCK_SURFACE_HEALTHY))
+        fun surfaceLost(context: Context, reason: String) = context.startService(Intent(context, LockScreenService::class.java).setAction(ACTION_LOCK_SURFACE_LOST).putExtra(EXTRA_REASON, reason))
         fun stop(context: Context) = context.stopService(Intent(context, LockScreenService::class.java))
     }
 }
