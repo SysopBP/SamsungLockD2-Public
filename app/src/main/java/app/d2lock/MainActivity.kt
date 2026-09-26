@@ -1419,6 +1419,17 @@ class MainActivity : Activity() {
                 textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(4),0,dp(4),dp(6))
             })
             addView(guardianSwitch().apply {
+                text="Dynamic Accent"
+                textSize=16f
+                setTextColor(Appearance.text(this@MainActivity))
+                isChecked=Prefs.experimentalDynamicAccent(this@MainActivity)
+                setOnCheckedChangeListener { _,v -> Prefs.setExperimentalDynamicAccent(this@MainActivity,v); refreshAppearance() }
+            },rowParams())
+            addView(TextView(this@MainActivity).apply {
+                text="Allows supported Guardian surfaces to derive an accent from the selected wallpaper."
+                textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(4),0,dp(4),dp(6))
+            })
+            addView(guardianSwitch().apply {
                 text="Enhanced Haptics"
                 textSize=16f
                 setTextColor(Appearance.text(this@MainActivity))
@@ -1438,6 +1449,17 @@ class MainActivity : Activity() {
             },rowParams())
             addView(TextView(this@MainActivity).apply {
                 text="Enables subtle entrance and depth motion on supported lock-screen surfaces."
+                textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(4),0,dp(4),dp(10))
+            })
+            addView(guardianSwitch().apply {
+                text="Adaptive Notification Stack"
+                textSize=16f
+                setTextColor(Appearance.text(this@MainActivity))
+                isChecked=Prefs.experimentalAdaptiveNotifications(this@MainActivity)
+                setOnCheckedChangeListener { _,v -> Prefs.setExperimentalAdaptiveNotifications(this@MainActivity,v) }
+            },rowParams())
+            addView(TextView(this@MainActivity).apply {
+                text="Lets the lock screen tighten notification spacing as the visible stack grows."
                 textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(4),0,dp(4),dp(10))
             })
             addView(TextView(this@MainActivity).apply {
