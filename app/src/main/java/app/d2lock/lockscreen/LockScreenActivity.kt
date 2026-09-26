@@ -151,7 +151,14 @@ class LockScreenActivity : Activity() {
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
         media = MediaControllerBridge(this)
-        setContentView(buildUi())
+        val guardianUi = buildUi()
+        setContentView(guardianUi)
+        if (Prefs.experimentalLockMotion(this)) {
+            guardianUi.alpha = 0f
+            guardianUi.scaleX = .985f
+            guardianUi.scaleY = .985f
+            guardianUi.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(260).start()
+        }
         if (android.os.Build.VERSION.SDK_INT >= 33) {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT) {
                 if (preview) finish() else authenticate()
@@ -421,7 +428,7 @@ class LockScreenActivity : Activity() {
                 visibility = if (Prefs.showWeather(this@LockScreenActivity)) View.VISIBLE else View.GONE
             }
             battery = label("▰  —%", 15f * topInfoScale, Appearance.text(this@LockScreenActivity, true)).apply { gravity = Gravity.CENTER }
-            background = Appearance.glass(this@LockScreenActivity, 30f, Prefs.componentGlass(this@LockScreenActivity, "top_info"), true)
+            background = Appearance.glass(this@LockScreenActivity, 30f, adaptiveGlass(Prefs.componentGlass(this@LockScreenActivity, "top_info")), true)
             if (Prefs.showWeather(this@LockScreenActivity)) {
                 addView(weather, LinearLayout.LayoutParams(0, dp(42), 1f))
                 addView(divider, LinearLayout.LayoutParams(dp(1), dp(20)))
@@ -468,7 +475,7 @@ class LockScreenActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(if (mediaCompact) 10 else 14), dp(if (mediaCompact) 8 else if (mediaLarge) 15 else 12), dp(10), dp(if (mediaCompact) 8 else if (mediaLarge) 15 else 12))
-            background = Appearance.glass(this@LockScreenActivity, 34f, Prefs.componentGlass(this@LockScreenActivity, "media"), true)
+            background = Appearance.glass(this@LockScreenActivity, 34f, adaptiveGlass(Prefs.componentGlass(this@LockScreenActivity, "media")), true)
             elevation = dp(8).toFloat()
         }
         mediaPanel.addView(ImageView(this).apply {
@@ -670,7 +677,7 @@ class LockScreenActivity : Activity() {
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(horizontalPad), dp(verticalPad), dp(horizontalPad), dp(verticalPad))
-                background = Appearance.glass(this@LockScreenActivity, Prefs.notificationRadius(this@LockScreenActivity).toFloat(), Prefs.notificationGlass(this@LockScreenActivity), true)
+                background = Appearance.glass(this@LockScreenActivity, Prefs.notificationRadius(this@LockScreenActivity).toFloat(), adaptiveGlass(Prefs.notificationGlass(this@LockScreenActivity)), true)
                 addView(notificationLabel(item.app, 11f).apply {
                     alpha = .78f
                     setPadding(0, 0, 0, dp(2))
@@ -718,7 +725,9 @@ class LockScreenActivity : Activity() {
                         card.alpha = (1f - kotlin.math.abs(dx) / (card.width.coerceAtLeast(1) * .55f)).coerceIn(.18f, 1f)
                         val crossed = kotlin.math.abs(dx) > card.width * .055f
                         if (crossed && !thresholdHaptic) {
-                            card.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                            if (Prefs.experimentalEnhancedHaptics(this@LockScreenActivity)) {
+                                card.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                            }
                             thresholdHaptic = true
                         } else if (!crossed) {
                             thresholdHaptic = false
@@ -953,8 +962,11 @@ class LockScreenActivity : Activity() {
     private fun notificationPanel(app: String?, banner: Boolean = false, call: Boolean = false) =
         Appearance.panel(this, app, banner, call)
 
+    private fun adaptiveGlass(base: Int): Int =
+        if (Prefs.experimentalAdaptiveGlass(this)) (base + 16).coerceAtMost(100) else base
+
     private fun glassPanel(radius: Float = 28f) =
-        Appearance.glass(this, radius, 36, true)
+        Appearance.glass(this, radius, adaptiveGlass(36), true)
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 }
