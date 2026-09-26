@@ -39,7 +39,10 @@ object Appearance {
             else -> true
         }
     fun accent(c: Context): Int {
-        if (Prefs.experimentalDynamicAccent(c)) {
+        // CORE owns the live accent. "System wallpaper" always follows the
+        // current wallpaper/One UI palette; the experimental switch can also
+        // opt fixed presets into wallpaper-derived accenting.
+        if (accentChoice(c) == 0 || Prefs.experimentalDynamicAccent(c)) {
             runCatching {
                 val colors = android.app.WallpaperManager.getInstance(c)
                     .getWallpaperColors(android.app.WallpaperManager.FLAG_SYSTEM)
