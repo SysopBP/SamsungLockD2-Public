@@ -31,6 +31,7 @@ class GuardianXposedBridge : XposedModule() {
         log(Log.INFO, TAG, "GUARDIAN_XPOSED_SYSTEMUI_READY package=${param.packageName}")
         installPowerDiagnostics()
         installSystemUiNotificationDiagnostics(param.classLoader)
+        installGuardianSystemUiHooks(param.classLoader)
     }
 
     /**
@@ -41,6 +42,92 @@ class GuardianXposedBridge : XposedModule() {
      * add/update/remove method that carries a StatusBarNotification. This remains
      * read-only: the original SystemUI method always proceeds unchanged.
      */
+
+    /**
+     * Stage 3b: broad read-only SystemUI discovery hooks. These are deliberately
+     * observational: no result is replaced and every original method proceeds.
+     * Samsung moves implementation classes between One UI releases, so each
+     * feature has multiple candidates and silently skips unavailable targets.
+     */
+    private fun installGuardianSystemUiHooks(classLoader: ClassLoader) {
+        installNamedProbes(classLoader, "SCREEN",
+            listOf(
+                "com.android.systemui.keyguard.WakefulnessLifecycle" to listOf("dispatchStartedWakingUp", "dispatchFinishedWakingUp", "dispatchStartedGoingToSleep", "dispatchFinishedGoingToSleep"),
+                "com.android.systemui.keyguard.ScreenLifecycle" to listOf("dispatchScreenTurningOn", "dispatchScreenTurnedOn", "dispatchScreenTurningOff", "dispatchScreenTurnedOff")
+            ))
+        installNamedProbes(classLoader, "KEYGUARD",
+            listOf(
+                "com.android.systemui.statusbar.policy.KeyguardStateControllerImpl" to listOf("notifyKeyguardState", "notifyKeyguardGoingAway"),
+                "com.android.systemui.keyguard.KeyguardViewMediator" to listOf("showLocked", "hideLocked", "onStartedGoingToSleep", "onStartedWakingUp")
+            ))
+        installNamedProbes(classLoader, "SHADE_BARS",
+            listOf(
+                "com.android.systemui.statusbar.CommandQueue" to listOf("animateCollapsePanels", "animateExpandNotificationsPanel", "animateExpandSettingsPanel"),
+                "com.android.systemui.shade.NotificationPanelViewController" to listOf("expand", "collapse", "fling")
+            ))
+        installNamedProbes(classLoader, "MEDIA",
+            listOf(
+                "com.android.systemui.media.controls.pipeline.MediaDataManager" to listOf("onNotificationAdded", "onNotificationRemoved", "onNotificationUpdated", "setTimedOut")
+            ))
+        installNamedProbes(classLoader, "CHARGING",
+            listOf(
+                "com.android.systemui.statusbar.policy.BatteryControllerImpl" to listOf("fireBatteryLevelChanged", "firePowerSaveChanged", "onReceive")
+            ))
+        installNamedProbes(classLoader, "CALL",
+            listOf(
+                "com.android.systemui.statusbar.phone.ongoingcall.OngoingCallController" to listOf("updateChip", "removeChip"),
+                "com.android.systemui.statusbar.phone.ongoingcall.OngoingCallControllerImpl" to listOf("updateChip", "removeChip")
+            ))
+        installNamedProbes(classLoader, "HOME_RECENTS",
+            listOf(
+                "com.android.systemui.recents.OverviewProxyService" to listOf("onConnectionChanged", "notifyToggleRecentApps", "notifyOverviewShown")
+            ))
+        installNamedProbes(classLoader, "GESTURE",
+            listOf(
+                "com.android.systemui.navigationbar.gestural.EdgeBackGestureHandler" to listOf("onMotionEvent", "onNavBarAttached", "onNavBarDetached")
+            ))
+        installNamedProbes(classLoader, "SYSTEMUI_RECOVERY",
+            listOf(
+                "com.android.systemui.SystemUIApplication" to listOf("onCreate", "startServicesIfNeeded"),
+                "com.android.systemui.SystemUIService" to listOf("onCreate")
+            ))
+    }
+
+    private fun installNamedProbes(
+        classLoader: ClassLoader,
+        event: String,
+        targets: List<Pair<String, List<String>>>
+    ) {
+        var installed = 0
+        targets.forEach { (className, methodNames) ->
+            val owner = runCatching { Class.forName(className, false, classLoader) }.getOrNull()
+                ?: return@forEach
+            owner.declaredMethods
+                .filter { it.name in methodNames }
+                .distinctBy { it.toGenericString() }
+                .forEach { method ->
+                    try {
+                        method.isAccessible = true
+                        hook(method)
+                            .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                            .intercept { chain ->
+                                log(Log.INFO, TAG, "GUARDIAN_XPOSED_${event} method=${method.name}")
+                                chain.proceed()
+                            }
+                        installed++
+                        log(Log.INFO, TAG, "GUARDIAN_XPOSED_${event}_HOOK_INSTALLED target=${owner.name}#${method.name}")
+                    } catch (t: Throwable) {
+                        log(Log.ERROR, TAG, "GUARDIAN_XPOSED_${event}_HOOK_FAILED target=${owner.name}#${method.name}", t)
+                    }
+                }
+        }
+        if (installed == 0) {
+            log(Log.WARN, TAG, "GUARDIAN_XPOSED_${event}_UNAVAILABLE")
+        } else {
+            log(Log.INFO, TAG, "GUARDIAN_XPOSED_${event}_READY hooks=$installed")
+        }
+    }
+
     private fun installSystemUiNotificationDiagnostics(classLoader: ClassLoader) {
         val candidates = listOf(
             "com.android.systemui.statusbar.notification.collection.NotifCollection",
