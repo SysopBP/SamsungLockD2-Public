@@ -8,6 +8,7 @@ import android.text.InputFilter
 import android.widget.*
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.widget.AppCompatSeekBar
 
 object ThemeOptions {
     fun add(activity: Activity, parent: LinearLayout, refresh: () -> Unit) {
@@ -101,78 +102,28 @@ object ThemeOptions {
             setPadding(dp(8),dp(16),dp(8),dp(16))
         }
         fun slider(title:String,key:String,min:Int,max:Int,value:Int,suffix:String) {
-            val heading=label("$title: $value$suffix")
+            var currentValue = value.coerceIn(min, max)
+            val heading=label("$title: $currentValue$suffix")
             parent.addView(heading)
-            parent.addView(object : View(c) {
-                private var sliderValue = value.coerceIn(min, max)
-                private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-                private val outline = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    style = android.graphics.Paint.Style.STROKE
-                    strokeWidth = dp(2).toFloat()
-                }
-
-                init {
-                    contentDescription = title
-                    minimumHeight = dp(44)
-                    isClickable = true
-                    isFocusable = true
-                }
-
-                override fun onDraw(canvas: android.graphics.Canvas) {
-                    super.onDraw(canvas)
-                    val left = dp(10).toFloat()
-                    val right = width - dp(10).toFloat()
-                    val cy = height / 2f
-                    val trackH = dp(5).toFloat()
-                    val radius = trackH / 2f
-                    val fraction = ((sliderValue - min).toFloat() / (max - min).coerceAtLeast(1)).coerceIn(0f, 1f)
-                    val thumbX = left + (right - left) * fraction
-
-                    // Same Guardian glass capsule used by the main settings sliders.
-                    paint.color = if (Appearance.dark(c)) 0x4dffffff else 0x3dffffff
-                    canvas.drawRoundRect(android.graphics.RectF(left, cy-trackH/2f, right, cy+trackH/2f), radius, radius, paint)
-                    outline.color = if (Appearance.dark(c)) 0x66ffffff else 0x55000000
-                    canvas.drawRoundRect(android.graphics.RectF(left, cy-trackH/2f, right, cy+trackH/2f), radius, radius, outline)
-                    paint.color = 0x38ffffff
-                    canvas.drawRoundRect(android.graphics.RectF(left+dp(2), cy-trackH/2f+dp(2), right-dp(2), cy-dp(1)), radius, radius, paint)
-
-                    paint.color = (Appearance.accent(c) and 0x00ffffff) or 0x99000000.toInt()
-                    if (thumbX > left) canvas.drawRoundRect(android.graphics.RectF(left, cy-trackH/2f, thumbX, cy+trackH/2f), radius, radius, paint)
-
-                    paint.color = if (Appearance.dark(c)) 0x88ffffff.toInt() else 0xb8ffffff.toInt()
-                    canvas.drawCircle(thumbX, cy, dp(8).toFloat(), paint)
-                    outline.color = if (Appearance.dark(c)) 0xddffffff.toInt() else 0xcc000000.toInt()
-                    canvas.drawCircle(thumbX, cy, dp(8).toFloat(), outline)
-                    paint.color = 0x55ffffff
-                    canvas.drawCircle(thumbX-dp(2), cy-dp(2), dp(2).toFloat(), paint)
-                }
-
-                private fun updateFromTouch(x: Float) {
-                    val left = dp(10).toFloat()
-                    val available = (width-dp(20)).coerceAtLeast(1)
-                    val fraction = ((x-left)/available).coerceIn(0f,1f)
-                    val next = min + kotlin.math.round(fraction*(max-min)).toInt()
-                    if (next != sliderValue) {
-                        sliderValue = next
+            parent.addView(AppCompatSeekBar(c).apply {
+                this.max = (max - min).coerceAtLeast(1)
+                progress = currentValue - min
+                contentDescription = title
+                minimumHeight = dp(44)
+                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                        if (!fromUser) return
+                        val next = min + progress
+                        if (next == currentValue) return
+                        currentValue = next
                         Appearance.set(c,key,next)
                         heading.text="$title: $next$suffix"
                         if(key.startsWith("bar_")) barPreview.background=Appearance.floatingBar(c)
                         else preview.background=Appearance.panel(c,"theme.preview",banner=key=="banners")
-                        invalidate()
                     }
-                }
-
-                override fun onTouchEvent(e: android.view.MotionEvent): Boolean {
-                    when(e.actionMasked) {
-                        android.view.MotionEvent.ACTION_DOWN -> { parent?.requestDisallowInterceptTouchEvent(true); updateFromTouch(e.x); return true }
-                        android.view.MotionEvent.ACTION_MOVE -> { updateFromTouch(e.x); return true }
-                        android.view.MotionEvent.ACTION_UP -> { updateFromTouch(e.x); parent?.requestDisallowInterceptTouchEvent(false); performClick(); return true }
-                        android.view.MotionEvent.ACTION_CANCEL -> { parent?.requestDisallowInterceptTouchEvent(false); return true }
-                    }
-                    return super.onTouchEvent(e)
-                }
-
-                override fun performClick(): Boolean { super.performClick(); return true }
+                    override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                    override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+                })
             },LinearLayout.LayoutParams(-1,dp(56)))
         }
         slider("Card opacity","cards",20,100,Appearance.cardOpacity(c),"%")
