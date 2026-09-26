@@ -66,6 +66,10 @@ import java.util.Locale
 import java.util.concurrent.Executors
 
 class LockScreenActivity : Activity() {
+    companion object {
+        private val fingerprintSessionLock = Any()
+        @Volatile private var fingerprintSessionActive = false
+    }
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var clock: TextView
     private lateinit var date: TextView
@@ -96,6 +100,7 @@ class LockScreenActivity : Activity() {
     private var pinDialog: AlertDialog? = null
     private var biometricCancel: CancellationSignal? = null
     private var biometricRunning = false
+    private var ownsBiometricSession = false
     private var fingerprintGlass: LinearLayout? = null
     private var fingerprintGlyph: TextView? = null
     private var fingerprintStatus: TextView? = null
@@ -279,6 +284,10 @@ class LockScreenActivity : Activity() {
             Log.i("SamsungLockD2", "GUARDIAN_NEW_INTENT_DEFERRED_AUTH")
             return
         }
+        if (fingerprintSessionActive) {
+            Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_SUPPRESS_DUPLICATE source=new_intent")
+            return
+        }
         recreate()
     }
 
@@ -334,7 +343,14 @@ class LockScreenActivity : Activity() {
         if (NotificationStore.onChanged != null) NotificationStore.onChanged = null
         app.d2lock.notifications.CallNotificationStore.onChanged = null
         NotificationStore.onPosted = null
-        cancelGuardianFingerprint("activity_destroyed")
+        // A watchdog/shell reassert can recreate this Activity while Samsung's
+        // biometric surface still owns authentication. Do not cancel that session
+        // merely because the Activity instance is being replaced.
+        if (isChangingConfigurations || fingerprintSessionActive) {
+            Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_PRESERVE_ON_DESTROY active=$fingerprintSessionActive changingConfig=$isChangingConfigurations")
+        } else {
+            cancelGuardianFingerprint("activity_destroyed")
+        }
         KioskD2Guardian.stop(this)
         super.onDestroy()
     }
@@ -999,12 +1015,21 @@ class LockScreenActivity : Activity() {
 
     private fun startGuardianFingerprint() {
         if (preview || unlocking || biometricRunning || isFinishing || isDestroyed) return
+        synchronized(fingerprintSessionLock) {
+            if (fingerprintSessionActive) {
+                Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_SUPPRESS_DUPLICATE source=start")
+                return
+            }
+            fingerprintSessionActive = true
+            ownsBiometricSession = true
+        }
 
         val manager = getSystemService(BiometricManager::class.java)
         val status = manager?.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
             ?: BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE
         Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_CAN_AUTH status=$status")
         if (status != BiometricManager.BIOMETRIC_SUCCESS) {
+            clearFingerprintSession("unavailable")
             setFingerprintGlassState("unavailable")
             return
         }
@@ -1026,6 +1051,7 @@ class LockScreenActivity : Activity() {
             .setNegativeButton("Use PIN / pattern", mainExecutor) { _, _ ->
                 biometricRunning = false
                 biometricCancel = null
+                clearFingerprintSession("fallback")
                 Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_FALLBACK")
                 if (!isFinishing && !isDestroyed) authenticate()
             }
@@ -1038,6 +1064,7 @@ class LockScreenActivity : Activity() {
                 if (!biometricRunning || unlocking || isFinishing || isDestroyed) return
                 biometricRunning = false
                 biometricCancel = null
+                clearFingerprintSession("success")
                 unlocking = true
                 GuardianWatchdog.beginTrustedAuthentication()
                 handler.removeCallbacks(quickSettingsGuard)
@@ -1061,6 +1088,7 @@ class LockScreenActivity : Activity() {
                 super.onAuthenticationError(errorCode, errString)
                 biometricRunning = false
                 biometricCancel = null
+                clearFingerprintSession("error_$errorCode")
                 Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_ERROR code=$errorCode message=$errString")
                 if (!unlocking) {
                     setFingerprintGlassState("unavailable")
@@ -1070,12 +1098,21 @@ class LockScreenActivity : Activity() {
         })
     }
 
+    private fun clearFingerprintSession(reason: String) {
+        if (ownsBiometricSession) {
+            synchronized(fingerprintSessionLock) { fingerprintSessionActive = false }
+            ownsBiometricSession = false
+            Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_SESSION_CLEARED reason=$reason")
+        }
+    }
+
     private fun cancelGuardianFingerprint(reason: String) {
         if (!biometricRunning && biometricCancel == null) return
         Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_CANCEL reason=$reason")
         biometricRunning = false
         biometricCancel?.cancel()
         biometricCancel = null
+        clearFingerprintSession(reason)
     }
 
     private fun authenticate(afterUnlock: (() -> Unit)? = null) {
