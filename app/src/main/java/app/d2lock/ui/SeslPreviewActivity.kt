@@ -8,9 +8,9 @@ import android.os.Bundle
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
-import android.widget.RadioButton
-import android.widget.SeekBar
-import android.widget.Switch
+import androidx.appcompat.widget.AppCompatRadioButton
+import androidx.appcompat.widget.AppCompatSeekBar
+import androidx.appcompat.widget.SwitchCompat
 import android.widget.TextView
 import app.d2lock.Appearance
 
@@ -35,19 +35,19 @@ class SeslPreviewActivity : Activity() {
             setBackgroundColor(Appearance.background(this@SeslPreviewActivity))
         }
         root.addView(TextView(this).apply {
-            text = "SESL9 UI Preview"
+            text = "SESL9 UI Preview · REAL"
             textSize = 30f
             setTextColor(Appearance.text(this@SeslPreviewActivity))
         })
         root.addView(TextView(this).apply {
-            text = "Isolated compatibility lab · no Guardian or authentication logic"
+            text = "Genuine SESL9 AppCompat controls · isolated from Guardian/authentication"
             textSize = 14f
             setTextColor(Appearance.secondary(this@SeslPreviewActivity))
             setPadding(0, dp(4), 0, dp(22))
         })
 
         root.addView(card("Switch", "Samsung-style toggle candidate").apply {
-            addView(Switch(this@SeslPreviewActivity).apply {
+            addView(SwitchCompat(this@SeslPreviewActivity).apply {
                 text = "Preview toggle"
                 isChecked = true
                 setTextColor(Appearance.text(this@SeslPreviewActivity))
@@ -55,7 +55,7 @@ class SeslPreviewActivity : Activity() {
         })
 
         root.addView(card("Slider", "Slim control candidate").apply {
-            addView(SeekBar(this@SeslPreviewActivity).apply {
+            addView(AppCompatSeekBar(this@SeslPreviewActivity).apply {
                 max = 100
                 progress = 64
             })
@@ -77,7 +77,7 @@ class SeslPreviewActivity : Activity() {
 
         root.addView(card("Radio controls", "Selection-row candidate").apply {
             listOf("Glass", "Monochrome", "Adaptive").forEachIndexed { index, label ->
-                addView(RadioButton(this@SeslPreviewActivity).apply {
+                addView(AppCompatRadioButton(this@SeslPreviewActivity).apply {
                     text = label
                     isChecked = index == 0
                     setTextColor(Appearance.text(this@SeslPreviewActivity))
