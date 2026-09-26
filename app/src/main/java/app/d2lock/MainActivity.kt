@@ -1010,55 +1010,114 @@ class MainActivity : Activity() {
             })
         },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
 
-        section(root, "FINGERPRINT LAB")
-        root.addView(TextView(this).apply {
-            text = "Diagnostic only. Requests a genuine Android BIOMETRIC_STRONG authentication and logs the framework callback. This test does not unlock Guardian or modify SystemUI/keyguard state."
-            textSize = 13f
-            setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(dp(6), 0, dp(6), dp(10))
-        })
-        addButton(root, "Test Android Fingerprint") {
-            runGuardianBiometricTest()
-        }
-        addButton(root, "Launch Samsung Enrollment Component") {
-            runGuardianEnrollmentComponentTest()
-        }
+        section(root, "FINGERPRINT CENTER")
+        root.addView(LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL
+            setPadding(dp(18),dp(14),dp(18),dp(14))
+            background=Appearance.glass(this@MainActivity,30f,38,true)
+            addView(TextView(this@MainActivity).apply {
+                text="Fingerprint Center"
+                textSize=18f
+                setTextColor(Appearance.text(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text="BIOMETRIC_STRONG  •  Diagnostic ready"
+                textSize=12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0,dp(4),0,dp(12))
+            })
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.HORIZONTAL
+                val test=TextView(this@MainActivity).apply {
+                    text="Test Fingerprint"
+                    textSize=14f
+                    gravity=Gravity.CENTER
+                    setTextColor(Appearance.text(this@MainActivity))
+                    background=Appearance.glass(this@MainActivity,22f,28,true)
+                    setPadding(dp(10),dp(13),dp(10),dp(13))
+                    isClickable=true
+                    isFocusable=true
+                    setOnClickListener { performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK); runGuardianBiometricTest() }
+                }
+                val enroll=TextView(this@MainActivity).apply {
+                    text="Enrollment"
+                    textSize=14f
+                    gravity=Gravity.CENTER
+                    setTextColor(Appearance.text(this@MainActivity))
+                    background=Appearance.glass(this@MainActivity,22f,28,true)
+                    setPadding(dp(10),dp(13),dp(10),dp(13))
+                    isClickable=true
+                    isFocusable=true
+                    setOnClickListener { performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK); runGuardianEnrollmentComponentTest() }
+                }
+                addView(test,LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(6) })
+                addView(enroll,LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(6) })
+            })
+            addView(TextView(this@MainActivity).apply {
+                text="ⓘ Diagnostic only • does not unlock Guardian or change SystemUI/keyguard state"
+                textSize=11f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0,dp(10),0,0)
+            })
+        },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
 
-        section(root, "GUARDIAN RECOVERY")
-        root.addView(TextView(this).apply {
-            text = "Root-only recovery tools. Restart System UI is useful after SystemUI/LSPosed changes. Soft Reboot restarts the Android framework without a full hardware reboot."
-            textSize = 13f
-            setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(dp(6), 0, dp(6), dp(10))
-        })
-        addButton(root, "Restart System UI") {
-            if (!RootManager.isAvailable()) {
-                Toast.makeText(this@MainActivity, "KernelSU/root access is required", Toast.LENGTH_LONG).show()
-            } else {
-                android.app.AlertDialog.Builder(this@MainActivity)
-                    .setTitle("Restart System UI?")
-                    .setMessage("System UI will briefly disappear and reload. Kiosk D2 Guardian itself will not be reset.")
-                    .setNegativeButton("Cancel", null)
-                    .setPositiveButton("Restart") { _, _ ->
-                        val result = RootManager.restartSystemUi()
-                        Toast.makeText(this@MainActivity, result.second, Toast.LENGTH_LONG).show()
-                    }.show()
-            }
-        }
-        addButton(root, "Soft Reboot Android") {
-            if (!RootManager.isAvailable()) {
-                Toast.makeText(this@MainActivity, "KernelSU/root access is required", Toast.LENGTH_LONG).show()
-            } else {
-                android.app.AlertDialog.Builder(this@MainActivity)
-                    .setTitle("Soft reboot Android?")
-                    .setMessage("Android's framework will restart. Unsaved work in other apps may be lost. Guardian will restore through its existing startup path.")
-                    .setNegativeButton("Cancel", null)
-                    .setPositiveButton("Soft reboot") { _, _ ->
-                        val result = RootManager.softReboot()
-                        if (!result.first) Toast.makeText(this@MainActivity, result.second, Toast.LENGTH_LONG).show()
-                    }.show()
-            }
-        }
+        section(root, "RECOVERY CENTER")
+        root.addView(LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL
+            setPadding(dp(18),dp(14),dp(18),dp(14))
+            background=Appearance.glass(this@MainActivity,30f,38,true)
+            addView(TextView(this@MainActivity).apply {
+                text="Recovery Center"
+                textSize=18f
+                setTextColor(Appearance.text(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text=if(RootManager.isAvailable()) "Root available  •  Recovery ready" else "Root unavailable  •  Recovery actions disabled"
+                textSize=12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0,dp(4),0,dp(12))
+            })
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.HORIZONTAL
+                fun recoveryAction(label:String, action:()->Unit)=TextView(this@MainActivity).apply {
+                    text=label
+                    textSize=14f
+                    gravity=Gravity.CENTER
+                    setTextColor(Appearance.text(this@MainActivity))
+                    background=Appearance.glass(this@MainActivity,22f,28,true)
+                    setPadding(dp(10),dp(13),dp(10),dp(13))
+                    isClickable=true
+                    isFocusable=true
+                    setOnClickListener { performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK); action() }
+                }
+                val systemUi=recoveryAction("Restart SystemUI") {
+                    if(!RootManager.isAvailable()) Toast.makeText(this@MainActivity,"KernelSU/root access is required",Toast.LENGTH_LONG).show()
+                    else android.app.AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Restart System UI?")
+                        .setMessage("System UI will briefly disappear and reload. Kiosk D2 Guardian itself will not be reset.")
+                        .setNegativeButton("Cancel",null)
+                        .setPositiveButton("Restart") { _,_-> val result=RootManager.restartSystemUi(); Toast.makeText(this@MainActivity,result.second,Toast.LENGTH_LONG).show() }
+                        .show()
+                }
+                val reboot=recoveryAction("Soft Reboot") {
+                    if(!RootManager.isAvailable()) Toast.makeText(this@MainActivity,"KernelSU/root access is required",Toast.LENGTH_LONG).show()
+                    else android.app.AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Soft reboot Android?")
+                        .setMessage("Android's framework will restart. Unsaved work in other apps may be lost. Guardian will restore through its existing startup path.")
+                        .setNegativeButton("Cancel",null)
+                        .setPositiveButton("Soft reboot") { _,_-> val result=RootManager.softReboot(); if(!result.first) Toast.makeText(this@MainActivity,result.second,Toast.LENGTH_LONG).show() }
+                        .show()
+                }
+                addView(systemUi,LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(6) })
+                addView(reboot,LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(6) })
+            })
+            addView(TextView(this@MainActivity).apply {
+                text="Root-only recovery • confirmation required"
+                textSize=11f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0,dp(10),0,0)
+            })
+        },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
 
         section(root, "ADB / USB RECOVERY")
         root.addView(LinearLayout(this).apply {
