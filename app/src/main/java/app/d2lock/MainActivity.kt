@@ -409,7 +409,41 @@ class MainActivity : Activity() {
         // Category navigation now lives in the fixed All dock dialog. Keep the
         // actual tagged sections in the scroll view so Search and jump targets work.
 
-        addButton(root, "Legal, privacy & licenses") {
+        if (configured) {
+            val statusCard = LinearLayout(this).apply {
+                orientation=LinearLayout.VERTICAL
+                setPadding(dp(18),dp(14),dp(18),dp(14))
+                background=Appearance.glass(this@MainActivity,30f,58,true)
+                isClickable=true
+                isFocusable=true
+                addView(TextView(this@MainActivity).apply { text="GUARDIAN OVERVIEW"; textSize=13f; setTextColor(Appearance.secondary(this@MainActivity)) })
+                addView(TextView(this@MainActivity).apply {
+                    text="Protected  •  "+Prefs.unlockMethod(this@MainActivity).replaceFirstChar { it.uppercase() }
+                    textSize=19f; setTextColor(Appearance.text(this@MainActivity)); setPadding(0,dp(4),0,dp(8))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    val states=listOf(
+                        if(Prefs.kiosk(this@MainActivity)) "Kiosk ✓" else "Kiosk —",
+                        if(Prefs.rootMode(this@MainActivity)) "Root ✓" else "Root —",
+                        if(Prefs.shizukuEnabled(this@MainActivity)) "Shizuku ✓" else "Shizuku —",
+                        "LSPosed • check"
+                    )
+                    text=states.joinToString("   ")
+                    textSize=12f; setTextColor(Appearance.secondary(this@MainActivity))
+                })
+                addView(guardianSwitch().apply {
+                    text=if(app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)) "Galaxy Island  •  Connected" else "Galaxy Island  •  Disconnected"
+                    textSize=14f
+                    setTextColor(Appearance.text(this@MainActivity))
+                    isChecked=app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)
+                    setOnCheckedChangeListener { _,value -> app.d2lock.bridge.IslandBridge.setEnabled(this@MainActivity,value) }
+                },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(8) })
+                setOnClickListener { performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK) }
+            }
+            root.addView(statusCard,LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
+        }
+
+        addButton(root, "Legal & privacy") {
             val notice = assets.open("THIRD_PARTY_NOTICES.txt").bufferedReader().use { it.readText() }
             val agreement = assets.open("D2_USER_AGREEMENT.txt").bufferedReader().use { it.readText() }
             val dialogBody = LinearLayout(this).apply {
@@ -479,37 +513,6 @@ class MainActivity : Activity() {
                 }
             }
             dialog.show()
-        }
-        if (configured) {
-            val statusCard = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(18), dp(14), dp(18), dp(14))
-                background = Appearance.glass(this@MainActivity, 30f, 58, true)
-                addView(TextView(this@MainActivity).apply { text = "D2 STATUS"; textSize = 13f; setTextColor(Appearance.secondary(this@MainActivity)) })
-                addView(TextView(this@MainActivity).apply {
-                    text = "D2 Protected  •  " + Prefs.unlockMethod(this@MainActivity).replaceFirstChar { it.uppercase() }
-                    textSize = 18f; setTextColor(Appearance.text(this@MainActivity)); setPadding(0, dp(4), 0, dp(5))
-                })
-                addView(TextView(this@MainActivity).apply {
-                    val k = if (Prefs.kiosk(this@MainActivity)) "Kiosk on" else "Kiosk off"
-                    val r = if (Prefs.rootMode(this@MainActivity)) "Root on" else "Root off"
-                    val s = if (Prefs.shizukuEnabled(this@MainActivity)) "Shizuku on" else "Shizuku off"
-                    text = k + "  •  " + r + "  •  " + s
-                    textSize = 14f; setTextColor(Appearance.secondary(this@MainActivity))
-                })
-            }
-            root.addView(statusCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
-        }
-
-        if (configured) {
-            root.addView(guardianSwitch().apply {
-                text = "Connect Galaxy Island (paired build)"
-                setTextColor(Appearance.text(this@MainActivity))
-                isChecked = app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)
-                setOnCheckedChangeListener { _, value ->
-                    app.d2lock.bridge.IslandBridge.setEnabled(this@MainActivity, value)
-                }
-            })
         }
         if (!configured) addButton(root, "Create D2 PIN") {
             pinDialog = PinUi.show(this, setup = true, change = false, success = {
