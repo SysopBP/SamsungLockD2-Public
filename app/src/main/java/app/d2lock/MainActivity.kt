@@ -1359,26 +1359,41 @@ class MainActivity : Activity() {
 
     private fun guardianSwitch(): Switch = GuardianSwitch(this)
 
-    private inner class GuardianSlider(context: android.content.Context) : androidx.appcompat.widget.SeslSeekBar(context) {
-        // Keep the existing settings call sites/listeners intact while using the
-        // genuine SESL9 slider renderer everywhere in MainActivity.
-        var progressTintListCompat: android.content.res.ColorStateList? = null
+    private inner class GuardianSlider(context: android.content.Context) : com.google.android.material.slider.Slider(context) {
         private var legacyListener: SeekBar.OnSeekBarChangeListener? = null
 
         init {
-            minimumHeight = dp(44)
-            setOnSeekBarChangeListener(object : androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: androidx.appcompat.widget.SeslSeekBar?, progress: Int, fromUser: Boolean) {
-                    legacyListener?.onProgressChanged(null, progress, fromUser)
-                }
-                override fun onStartTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar?) {
+            valueFrom = 0f
+            valueTo = 100f
+            stepSize = 1f
+            trackHeight = dp(4)
+            thumbRadius = dp(8)
+            haloRadius = dp(18)
+            minimumHeight = dp(40)
+            setTrackActiveTintList(android.content.res.ColorStateList.valueOf(Color.argb(220, 232, 236, 240)))
+            setTrackInactiveTintList(android.content.res.ColorStateList.valueOf(Color.argb(58, 232, 236, 240)))
+            setThumbTintList(android.content.res.ColorStateList.valueOf(Color.argb(238, 242, 245, 248)))
+            setHaloTintList(android.content.res.ColorStateList.valueOf(Color.argb(46, 232, 236, 240)))
+            addOnChangeListener { _, v, fromUser ->
+                legacyListener?.onProgressChanged(null, v.toInt(), fromUser)
+            }
+            addOnSliderTouchListener(object : com.google.android.material.slider.Slider.OnSliderTouchListener {
+                override fun onStartTrackingTouch(slider: com.google.android.material.slider.Slider) {
                     legacyListener?.onStartTrackingTouch(null)
                 }
-                override fun onStopTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar?) {
+                override fun onStopTrackingTouch(slider: com.google.android.material.slider.Slider) {
                     legacyListener?.onStopTrackingTouch(null)
                 }
             })
         }
+
+        var max: Int
+            get() = valueTo.toInt()
+            set(v) { valueTo = v.coerceAtLeast(1).toFloat() }
+
+        var progress: Int
+            get() = value.toInt()
+            set(v) { value = v.coerceIn(valueFrom.toInt(), valueTo.toInt()).toFloat() }
 
         fun setOnSeekBarChangeListener(value: SeekBar.OnSeekBarChangeListener?) {
             legacyListener = value
@@ -1386,27 +1401,9 @@ class MainActivity : Activity() {
     }
 
     private fun guardianSlider(): GuardianSlider = GuardianSlider(this).apply {
-        // Compact neutral-glass SESL slider: keep the Samsung renderer, but
-        // remove the default blue accent so controls match Guardian glass.
-        background = Appearance.glass(this@MainActivity, 30f, 24, true)
-        setPadding(dp(12), 0, dp(12), 0)
+        background = Appearance.glass(this@MainActivity, 30f, 22, true)
+        setPadding(dp(10), 0, dp(10), 0)
         minimumHeight = dp(40)
-        // SESL's public tint properties are lint-restricted. Apply the inherited
-        // framework tint setters through reflection so the real SESL9 renderer stays
-        // in place while Guardian controls use a neutral frosted-glass palette.
-        val active = android.content.res.ColorStateList.valueOf(Color.argb(220, 232, 236, 240))
-        val inactive = android.content.res.ColorStateList.valueOf(Color.argb(62, 232, 236, 240))
-        runCatching {
-            android.widget.ProgressBar::class.java
-                .getMethod("setProgressTintList", android.content.res.ColorStateList::class.java)
-                .invoke(this, active)
-            android.widget.ProgressBar::class.java
-                .getMethod("setProgressBackgroundTintList", android.content.res.ColorStateList::class.java)
-                .invoke(this, inactive)
-            android.widget.AbsSeekBar::class.java
-                .getMethod("setThumbTintList", android.content.res.ColorStateList::class.java)
-                .invoke(this, active)
-        }
     }
 
     private fun showQuickSettingsSheet(root: LinearLayout, scroll: ScrollView) {
