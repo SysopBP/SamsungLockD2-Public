@@ -3,6 +3,10 @@ package app.d2lock
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.hardware.biometrics.BiometricManager
+import android.hardware.biometrics.BiometricPrompt
+import android.os.CancellationSignal
+import android.util.Log
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.os.SystemClock
@@ -237,6 +241,48 @@ class MainActivity : Activity() {
         pinDialog?.dismiss()
         pinDialog = null
         setContentView(buildLockedBackdrop())
+    }
+
+    private fun runGuardianBiometricTest() {
+        val manager = getSystemService(BiometricManager::class.java)
+        val status = manager?.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+            ?: BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE
+        Log.i("D2FingerprintLab", "GUARDIAN_BIOMETRIC_TEST_CAN_AUTH status=$status")
+        if (status != BiometricManager.BIOMETRIC_SUCCESS) {
+            Toast.makeText(this, "Android biometric unavailable (status $status)", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val cancel = CancellationSignal()
+        val prompt = BiometricPrompt.Builder(this)
+            .setTitle("Guardian fingerprint test")
+            .setSubtitle("Diagnostic only — Guardian will not unlock")
+            .setDescription("Authenticate with an enrolled strong biometric.")
+            .setNegativeButton("Cancel", mainExecutor) { _, _ ->
+                Log.i("D2FingerprintLab", "GUARDIAN_BIOMETRIC_TEST_CANCELLED")
+            }
+            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+            .build()
+
+        Log.i("D2FingerprintLab", "GUARDIAN_BIOMETRIC_TEST_REQUESTED")
+        prompt.authenticate(cancel, mainExecutor, object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                super.onAuthenticationSucceeded(result)
+                Log.i("D2FingerprintLab", "GUARDIAN_BIOMETRIC_TEST_SUCCESS type=${result.authenticationType}")
+                Toast.makeText(this@MainActivity, "Fingerprint test: genuine Android success", Toast.LENGTH_LONG).show()
+            }
+
+            override fun onAuthenticationFailed() {
+                super.onAuthenticationFailed()
+                Log.i("D2FingerprintLab", "GUARDIAN_BIOMETRIC_TEST_FAILED")
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                super.onAuthenticationError(errorCode, errString)
+                Log.i("D2FingerprintLab", "GUARDIAN_BIOMETRIC_TEST_ERROR code=$errorCode message=$errString")
+                Toast.makeText(this@MainActivity, "Fingerprint test error $errorCode: $errString", Toast.LENGTH_LONG).show()
+            }
+        })
     }
 
     private fun buildLockedBackdrop(): ViewGroup {
@@ -936,6 +982,17 @@ class MainActivity : Activity() {
                 setPadding(dp(4),0,dp(4),0)
             })
         },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
+
+        section(root, "FINGERPRINT LAB")
+        root.addView(TextView(this).apply {
+            text = "Diagnostic only. Requests a genuine Android BIOMETRIC_STRONG authentication and logs the framework callback. This test does not unlock Guardian or modify SystemUI/keyguard state."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(6), 0, dp(6), dp(10))
+        })
+        addButton(root, "Test Android Fingerprint") {
+            runGuardianBiometricTest()
+        }
 
         section(root, "GUARDIAN RECOVERY")
         root.addView(TextView(this).apply {
