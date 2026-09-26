@@ -38,7 +38,15 @@ object Appearance {
             1 -> false
             else -> true
         }
-    fun accent(c: Context): Int = when(accentChoice(c)) {
+    fun accent(c: Context): Int {
+        if (Prefs.experimentalDynamicAccent(c)) {
+            runCatching {
+                val colors = android.app.WallpaperManager.getInstance(c)
+                    .getWallpaperColors(android.app.WallpaperManager.FLAG_SYSTEM)
+                colors?.primaryColor?.toArgb()
+            }.getOrNull()?.let { return it }
+        }
+        return when(accentChoice(c)) {
         0 -> c.getColor(android.R.color.system_accent1_400)
         1 -> 0xff608ec7.toInt()
         2 -> 0xff529f9c.toInt()
@@ -51,6 +59,7 @@ object Appearance {
         9 -> 0xff198754.toInt()
         10 -> 0xff7137a8.toInt()
         else -> custom(c) or 0xff000000.toInt()
+        }
     }
     fun blend(a: Int, b: Int, amount: Float): Int = Color.rgb(
         (Color.red(a)*(1-amount)+Color.red(b)*amount).toInt(),
