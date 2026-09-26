@@ -1755,12 +1755,50 @@ class MainActivity : Activity() {
                 dialog.show()
             }
         }
-        section(root, "MAIN · ACCESS & PREVIEW")
+        section(root, "ACCESS CENTER")
         root.getChildAt(root.childCount - 1).tag = "main_settings"
-        addButton(root, "Grant notification and media access") {
-            startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
-        }
-        addButton(root, "Grant optional feature permissions") { requestRuntimePermissions() }
+        root.addView(LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL
+            setPadding(dp(18),dp(14),dp(18),dp(14))
+            background=Appearance.glass(this@MainActivity,30f,38,true)
+            addView(TextView(this@MainActivity).apply {
+                text="Access Center"
+                textSize=18f
+                setTextColor(Appearance.text(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text="Notifications  •  Media  •  Optional features"
+                textSize=12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0,dp(4),0,dp(12))
+            })
+            fun accessAction(label:String, action:()->Unit)=TextView(this@MainActivity).apply {
+                text=label
+                textSize=14f
+                gravity=Gravity.CENTER
+                setTextColor(Appearance.text(this@MainActivity))
+                background=Appearance.glass(this@MainActivity,22f,28,true)
+                setPadding(dp(10),dp(13),dp(10),dp(13))
+                isClickable=true
+                isFocusable=true
+                setOnClickListener { performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK); action() }
+            }
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.HORIZONTAL
+                addView(accessAction("Notification & Media") {
+                    startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
+                },LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(6) })
+                addView(accessAction("Optional Access") {
+                    requestRuntimePermissions()
+                },LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(6) })
+            })
+            addView(TextView(this@MainActivity).apply {
+                text="Only permissions used by enabled Guardian features are required."
+                textSize=11f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0,dp(10),0,0)
+            })
+        },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
         section(root, "WALLPAPER CENTER")
         root.getChildAt(root.childCount - 1).tag = "app_theme"
         root.addView(LinearLayout(this).apply {
