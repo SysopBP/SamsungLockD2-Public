@@ -1338,7 +1338,7 @@ class MainActivity : Activity() {
 
         init {
             minimumHeight = dp(40)
-            super.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            super.setLegacyOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     legacyListener?.onProgressChanged(seekBar, progress, fromUser)
                 }
@@ -1351,7 +1351,7 @@ class MainActivity : Activity() {
             })
         }
 
-        override fun setOnSeekBarChangeListener(value: SeekBar.OnSeekBarChangeListener?) {
+        fun setLegacyOnSeekBarChangeListener(value: SeekBar.OnSeekBarChangeListener?) {
             legacyListener = value
         }
     }
