@@ -1741,12 +1741,12 @@ class MainActivity : Activity() {
             elevation = dp(24).toFloat()
         }
         val destinations = listOf(
-            Triple("⌂", "Main", "main_settings"),
-            Triple("◷", "Clock", "clock_weather"),
-            Triple("▣", "Alerts", "notifications"),
-            Triple("✦", "Theme", "app_theme"),
-            Triple("▬", "Bar", "floating_bar"),
-            Triple("⚙", "All", "settings")
+            Triple(R.drawable.ic_nav_home, "Main", "main_settings"),
+            Triple(R.drawable.ic_nav_clock, "Clock", "clock_weather"),
+            Triple(R.drawable.ic_guardian_notifications, "Alerts", "notifications"),
+            Triple(R.drawable.ic_palette, "Theme", "app_theme"),
+            Triple(R.drawable.ic_nav_bar, "Bar", "floating_bar"),
+            Triple(R.drawable.ic_nav_settings, "All", "settings")
         )
         val items = mutableListOf<LinearLayout>()
         fun select(item: LinearLayout) {
@@ -1755,10 +1755,10 @@ class MainActivity : Activity() {
                 candidate.background = null
                 candidate.scaleX = 1f
                 candidate.scaleY = 1f
-                (candidate.getChildAt(0) as? TextView)?.setTextColor(Appearance.secondary(this@MainActivity))
+                (candidate.getChildAt(0) as? ImageView)?.imageTintList = android.content.res.ColorStateList.valueOf(Appearance.secondary(this@MainActivity))
             }
             item.background = Appearance.glass(this@MainActivity, 28f, 48, true)
-            (item.getChildAt(0) as? TextView)?.setTextColor(Appearance.accent(this@MainActivity))
+            (item.getChildAt(0) as? ImageView)?.imageTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
             item.scaleX = .88f
             item.scaleY = .88f
             item.animate().scaleX(1f).scaleY(1f).setDuration(180).start()
@@ -1770,11 +1770,13 @@ class MainActivity : Activity() {
                 isClickable = true
                 isFocusable = true
                 contentDescription = label
-                addView(TextView(this@MainActivity).apply {
-                    text = icon
-                    textSize = if (label == "Bar") 17f else 21f
-                    gravity = Gravity.CENTER
-                    setTextColor(if (index == 0) Appearance.accent(this@MainActivity) else Appearance.secondary(this@MainActivity))
+                addView(ImageView(this@MainActivity).apply {
+                    setImageResource(icon)
+                    imageTintList = android.content.res.ColorStateList.valueOf(
+                        if (index == 0) Appearance.accent(this@MainActivity) else Appearance.secondary(this@MainActivity)
+                    )
+                    setPadding(dp(5), dp(5), dp(5), dp(5))
+                    contentDescription = null
                 }, LinearLayout.LayoutParams(-1, dp(29)))
                 addView(TextView(this@MainActivity).apply {
                     text = label
