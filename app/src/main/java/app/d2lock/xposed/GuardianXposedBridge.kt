@@ -32,6 +32,7 @@ class GuardianXposedBridge : XposedModule() {
         installPowerDiagnostics()
         installSystemUiNotificationDiagnostics(param.classLoader)
         installGuardianSystemUiHooks(param.classLoader)
+        installFingerprintStateDiagnostics(param.classLoader)
     }
 
     /**
@@ -97,6 +98,61 @@ class GuardianXposedBridge : XposedModule() {
                 "com.android.systemui.SystemUIApplication" to listOf("onCreate", "startServicesIfNeeded"),
                 "com.android.systemui.SystemUIService" to listOf("onCreate")
             ))
+    }
+
+    /** Read-only Samsung fingerprint eligibility diagnostics. */
+    private fun installFingerprintStateDiagnostics(classLoader: ClassLoader) {
+        val candidates = listOf(
+            "com.android.keyguard.KeyguardUpdateMonitor",
+            "com.android.systemui.statusbar.phone.KeyguardBypassController",
+            "com.android.systemui.biometrics.AuthController",
+            "com.android.systemui.biometrics.UdfpsController"
+        )
+        val nameHints = listOf("fingerprint", "udfps", "biometric", "enrolled", "enabled", "listen", "listening", "authenticate")
+        var installed = 0
+
+        candidates.forEach { className ->
+            val owner = runCatching { Class.forName(className, false, classLoader) }.getOrNull()
+            if (owner == null) {
+                log(Log.INFO, TAG, "GUARDIAN_XPOSED_FPSTATE_CLASS_MISSING target=$className")
+                return@forEach
+            }
+            owner.declaredMethods
+                .filter { method ->
+                    nameHints.any { hint -> method.name.contains(hint, ignoreCase = true) } &&
+                        method.parameterCount <= 6
+                }
+                .distinctBy { it.toGenericString() }
+                .forEach { method ->
+                    try {
+                        method.isAccessible = true
+                        hook(method)
+                            .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                            .intercept { chain ->
+                                val result = chain.proceed()
+                                val resultText = when (result) {
+                                    null -> "null"
+                                    is Boolean, is Number, is String, is Enum<*> -> result.toString()
+                                    else -> result.javaClass.name
+                                }
+                                val argsText = chain.args.joinToString(",") { arg ->
+                                    when (arg) {
+                                        null -> "null"
+                                        is Boolean, is Number, is String, is Enum<*> -> arg.toString()
+                                        else -> arg.javaClass.name
+                                    }
+                                }
+                                log(Log.INFO, TAG, "GUARDIAN_XPOSED_FPSTATE_CALL target=${owner.name}#${method.name} args=[$argsText] result=$resultText")
+                                result
+                            }
+                        installed++
+                        log(Log.INFO, TAG, "GUARDIAN_XPOSED_FPSTATE_HOOK_INSTALLED target=${owner.name}#${method.name}")
+                    } catch (t: Throwable) {
+                        log(Log.WARN, TAG, "GUARDIAN_XPOSED_FPSTATE_HOOK_FAILED target=${owner.name}#${method.name}", t)
+                    }
+                }
+        }
+        log(Log.INFO, TAG, "GUARDIAN_XPOSED_FPSTATE_READY hooks=$installed")
     }
 
     private fun installNamedProbes(
