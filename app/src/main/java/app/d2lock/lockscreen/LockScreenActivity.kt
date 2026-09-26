@@ -1266,8 +1266,7 @@ class LockScreenActivity : Activity() {
                     // here as a biometric error. Keep fingerprint dismissed for this
                     // lock session so Guardian cannot trap the user in a reopen loop.
                     val userCancelled = errorCode == BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED ||
-                        errorCode == BiometricPrompt.BIOMETRIC_ERROR_CANCELED ||
-                        errorCode == BiometricPrompt.BIOMETRIC_ERROR_NEGATIVE_BUTTON
+                        errorCode == BiometricPrompt.BIOMETRIC_ERROR_CANCELED
                     if (userCancelled) {
                         fingerprintDismissed = true
                         Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_USER_DISMISSED code=$errorCode")
