@@ -241,34 +241,8 @@ class MainActivity : Activity() {
         ) else emptyList()
         settingsSearch.isEnabled = configured
         settingsSearch.alpha = if (configured) 1f else 0.55f
-        categories.forEach { (label, description, target) ->
-            val card = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(18), dp(13), dp(18), dp(13))
-                background = Appearance.glass(this@MainActivity, 30f, 36, true)
-                addView(TextView(this@MainActivity).apply {
-                    text = "$label   ›"
-                    textSize = 17f
-                    setTextColor(Appearance.text(this@MainActivity))
-                })
-                addView(TextView(this@MainActivity).apply {
-                    text = description
-                    textSize = 13f
-                    setTextColor(Appearance.secondary(this@MainActivity))
-                    setPadding(0, dp(3), 0, 0)
-                })
-                setOnClickListener {
-                    root.findViewWithTag<android.view.View>(target)?.let { view ->
-                        val rect = android.graphics.Rect()
-                        view.getDrawingRect(rect)
-                        root.offsetDescendantRectToMyCoords(view, rect)
-                        (root.parent as? ScrollView)?.smoothScrollTo(0, (rect.top - dp(18)).coerceAtLeast(0))
-                        view.postDelayed({ flashSettingsTarget(view) }, 280)
-                    }
-                }
-            }
-            root.addView(card, LinearLayout.LayoutParams(-1, dp(76)).apply { bottomMargin = dp(8) })
-        }
+        // Category navigation now lives in the fixed All dock dialog. Keep the
+        // actual tagged sections in the scroll view so Search and jump targets work.
 
         addButton(root, "Licenses and credits") {
             val notice = assets.open("THIRD_PARTY_NOTICES.txt").bufferedReader().use { it.readText() }
