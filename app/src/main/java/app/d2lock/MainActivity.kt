@@ -1463,7 +1463,7 @@ class MainActivity : Activity() {
                 textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(4),0,dp(4),dp(10))
             })
             addView(TextView(this@MainActivity).apply {
-                text="Guardian UI Preview"
+                text="Guardian Recovery"
                 textSize=15f
                 gravity=Gravity.CENTER
                 setTextColor(Appearance.text(this@MainActivity))
