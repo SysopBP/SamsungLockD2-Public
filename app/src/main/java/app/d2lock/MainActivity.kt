@@ -608,6 +608,70 @@ class MainActivity : Activity() {
                 textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,dp(5),0,dp(10))
             })
             addView(TextView(this@MainActivity).apply {
+                val rootOk = !Prefs.rootMode(this@MainActivity) || RootManager.isAvailable()
+                val shizukuOk = !Prefs.shizukuEnabled(this@MainActivity) || runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+                val islandOk = !app.d2lock.bridge.IslandBridge.enabled(this@MainActivity) || Prefs.xposedGalaxyIsland(this@MainActivity)
+                val attention = buildList {
+                    if (!rootOk) add("Root unavailable")
+                    if (!shizukuOk) add("Shizuku unavailable")
+                    if (!islandOk) add("Galaxy Island bridge needs attention")
+                }
+                text = if (attention.isEmpty()) "Guardian Health  •  integrations ready" else "Guardian Health  •  " + attention.joinToString("  •  ")
+                textSize=12f
+                setTextColor(if (attention.isEmpty()) Appearance.secondary(this@MainActivity) else Appearance.accent(this@MainActivity))
+                setPadding(0,0,0,dp(10))
+            })
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.HORIZONTAL
+                fun healthBubble(label:String, action:()->Unit)=TextView(this@MainActivity).apply {
+                    text=label; textSize=13f; gravity=Gravity.CENTER
+                    setTextColor(Appearance.text(this@MainActivity))
+                    background=Appearance.glass(this@MainActivity,22f,28,true)
+                    setPadding(dp(10),dp(10),dp(10),dp(10))
+                    setOnClickListener { action() }
+                }
+                addView(healthBubble("Test setup") {
+                    val checks = listOf(
+                        "D2 authentication" to PinStore(this@MainActivity).configured(),
+                        "Lock on wake" to Prefs.enabled(this@MainActivity),
+                        "Kiosk protection" to Prefs.kiosk(this@MainActivity),
+                        "Root integration" to (!Prefs.rootMode(this@MainActivity) || RootManager.isAvailable()),
+                        "Shizuku" to (!Prefs.shizukuEnabled(this@MainActivity) || runCatching { Shizuku.pingBinder() }.getOrDefault(false)),
+                        "Xposed configuration" to Prefs.xposedMaster(this@MainActivity),
+                        "Automatic fallback" to Prefs.xposedAutomaticFallback(this@MainActivity),
+                        "Galaxy Island sync" to (!app.d2lock.bridge.IslandBridge.enabled(this@MainActivity) || Prefs.xposedIslandGuardianSync(this@MainActivity))
+                    )
+                    val report = checks.joinToString("\n") { (name, ok) -> (if(ok) "✓ " else "○ ") + name }
+                    AlertDialog.Builder(this@MainActivity).setTitle("Guardian setup test")
+                        .setMessage(report + "\n\nFingerprint unlock remains experimental until the authenticated SystemUI callback is verified.")
+                        .setPositiveButton("Done",null).create().also {
+                            it.setOnShowListener { _ -> it.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,30f,76,true)) }
+                            it.show()
+                        }
+                },LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(5) })
+                addView(healthBubble("Copy diagnostics") {
+                    val info=runCatching { packageManager.getPackageInfo(packageName,0) }.getOrNull()
+                    val report=buildString {
+                        appendLine("Kiosk D2 Guardian diagnostics")
+                        appendLine("Version: ${info?.versionName ?: "unknown"}")
+                        appendLine("Android: ${android.os.Build.VERSION.RELEASE}")
+                        appendLine("Device: ${android.os.Build.MODEL}")
+                        appendLine("D2 enabled: ${Prefs.enabled(this@MainActivity)}")
+                        appendLine("Kiosk: ${Prefs.kiosk(this@MainActivity)}")
+                        appendLine("Root configured/available: ${Prefs.rootMode(this@MainActivity)}/${RootManager.isAvailable()}")
+                        appendLine("Shizuku configured/available: ${Prefs.shizukuEnabled(this@MainActivity)}/${runCatching { Shizuku.pingBinder() }.getOrDefault(false)}")
+                        appendLine("Xposed configured: ${Prefs.xposedMaster(this@MainActivity)}")
+                        appendLine("Automatic fallback: ${Prefs.xposedAutomaticFallback(this@MainActivity)}")
+                        appendLine("Galaxy Island paired: ${app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)}")
+                        appendLine("Galaxy Island Guardian sync: ${Prefs.xposedIslandGuardianSync(this@MainActivity)}")
+                        appendLine("Fingerprint unlock: experimental/not enabled")
+                    }
+                    val clipboard=getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Kiosk D2 Guardian diagnostics",report))
+                    showD2Message("Sanitized Guardian diagnostics copied")
+                },LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(5) })
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
+            addView(TextView(this@MainActivity).apply {
                 text="Open integrations"; textSize=15f; gravity=Gravity.CENTER
                 setTextColor(Appearance.text(this@MainActivity)); background=Appearance.glass(this@MainActivity,22f,28,true)
                 setPadding(dp(14),dp(10),dp(14),dp(10))
