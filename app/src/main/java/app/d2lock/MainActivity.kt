@@ -1360,6 +1360,18 @@ class MainActivity : Activity() {
         background = Appearance.glass(this@MainActivity, 30f, 22, true)
         setPadding(dp(10), 0, dp(10), 0)
         minimumHeight = dp(40)
+
+        // SESL supplies Samsung's default blue tint unless we explicitly override it.
+        // Keep this visual-only so the known-good #141 listener/unlock behavior is untouched.
+        val accent = Appearance.accent(this@MainActivity)
+        val inactive = Appearance.blend(
+            Appearance.secondary(this@MainActivity),
+            Appearance.background(this@MainActivity),
+            .45f
+        )
+        progressTintList = android.content.res.ColorStateList.valueOf(accent)
+        progressBackgroundTintList = android.content.res.ColorStateList.valueOf(inactive)
+        thumbTintList = android.content.res.ColorStateList.valueOf(accent)
     }
 
     private fun showQuickSettingsSheet(root: LinearLayout, scroll: ScrollView) {
