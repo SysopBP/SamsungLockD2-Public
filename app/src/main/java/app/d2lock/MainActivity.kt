@@ -722,14 +722,14 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.wallpaperDim(this@MainActivity)
-            setLegacyOnSeekBarChangeListener(object : androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: androidx.appcompat.widget.SeslSeekBar, value: Int, fromUser: Boolean) {
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     Prefs.setWallpaperDim(this@MainActivity, value)
                     (root.findViewWithTag<TextView>("wallpaper_dim_label"))?.text = "Dim wallpaper: $value%"
                 }
-                override fun onStartTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
-                override fun onStopTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(40)).apply { bottomMargin = dp(8) })
         appearanceCard.addView(TextView(this).apply {
@@ -742,8 +742,8 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.lockGlass(this@MainActivity) - 20
-            setLegacyOnSeekBarChangeListener(object : androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: androidx.appcompat.widget.SeslSeekBar, value: Int, fromUser: Boolean) {
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val glass = value + 20
                     Prefs.setLockGlass(this@MainActivity, glass)
@@ -751,8 +751,8 @@ class MainActivity : Activity() {
                     // Apply the visual change live without rebuilding the activity/view hierarchy.
                     applyLiveGlassOpacity(root, glass)
                 }
-                override fun onStartTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
-                override fun onStopTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(40)))
         appearanceCard.addView(TextView(this).apply {
@@ -765,15 +765,15 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 30
             progress = Prefs.lockScale(this@MainActivity) - 85
-            setLegacyOnSeekBarChangeListener(object : androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: androidx.appcompat.widget.SeslSeekBar, value: Int, fromUser: Boolean) {
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val scale = value + 85
                     Prefs.setLockScale(this@MainActivity, scale)
                     root.findViewWithTag<TextView>("lock_scale_label")?.text = "Lock-screen UI scale: $scale%"
                 }
-                override fun onStartTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
-                override fun onStopTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(40)).apply { bottomMargin = dp(8) })
         section(appearanceCard, "CLOCK & WEATHER")
@@ -802,15 +802,15 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 50
             progress = Prefs.clockScale(this@MainActivity) - 80
-            setLegacyOnSeekBarChangeListener(object : androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: androidx.appcompat.widget.SeslSeekBar, value: Int, fromUser: Boolean) {
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val scale = value + 80
                     Prefs.setClockScale(this@MainActivity, scale)
                     root.findViewWithTag<TextView>("clock_scale_label")?.text = "Clock size: $scale%"
                 }
-                override fun onStartTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
-                override fun onStopTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(40)))
         appearanceCard.addView(guardianSwitch().apply {
@@ -829,15 +829,15 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.componentGlass(this@MainActivity, "top_info") - 20
-            setLegacyOnSeekBarChangeListener(object : androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: androidx.appcompat.widget.SeslSeekBar, value: Int, fromUser: Boolean) {
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val glass = value + 20
                     Prefs.setComponentGlass(this@MainActivity, "top_info", glass)
                     root.findViewWithTag<TextView>("top_info_glass_label")?.text = "Weather & battery glass: $glass%"
                 }
-                override fun onStartTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
-                override fun onStopTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(40)))
         appearanceCard.addView(TextView(this).apply {
@@ -850,15 +850,15 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.componentGlass(this@MainActivity, "media") - 20
-            setLegacyOnSeekBarChangeListener(object : androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: androidx.appcompat.widget.SeslSeekBar, value: Int, fromUser: Boolean) {
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val glass = value + 20
                     Prefs.setComponentGlass(this@MainActivity, "media", glass)
                     root.findViewWithTag<TextView>("media_glass_label")?.text = "Media player glass: $glass%"
                 }
-                override fun onStartTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
-                override fun onStopTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(40)))
         appearanceCard.addView(TextView(this).apply {
@@ -871,15 +871,15 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 40
             progress = Prefs.topInfoSize(this@MainActivity) - 80
-            setLegacyOnSeekBarChangeListener(object : androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: androidx.appcompat.widget.SeslSeekBar, value: Int, fromUser: Boolean) {
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val scale = value + 80
                     Prefs.setTopInfoSize(this@MainActivity, scale)
                     root.findViewWithTag<TextView>("top_info_size_label")?.text = "Weather & battery content size: $scale%"
                 }
-                override fun onStartTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
-                override fun onStopTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(40)))
         appearanceCard.addView(guardianSwitch().apply {
@@ -941,15 +941,15 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 40
             progress = Prefs.mediaButtonsScale(this@MainActivity) - 80
-            setLegacyOnSeekBarChangeListener(object : androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: androidx.appcompat.widget.SeslSeekBar, value: Int, fromUser: Boolean) {
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val scale = value + 80
                     Prefs.setMediaButtonsScale(this@MainActivity, scale)
                     root.findViewWithTag<TextView>("media_button_scale_label")?.text = "Media button size: $scale%"
                 }
-                override fun onStartTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
-                override fun onStopTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(40)))
         appearanceCard.addView(guardianSwitch().apply {
@@ -1000,15 +1000,15 @@ class MainActivity : Activity() {
         privacyCard.addView(guardianSlider().apply {
             max = 24
             progress = Prefs.notificationRadius(this@MainActivity) - 16
-            setLegacyOnSeekBarChangeListener(object : androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: androidx.appcompat.widget.SeslSeekBar, value: Int, fromUser: Boolean) {
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val radius = value + 16
                     Prefs.setNotificationRadius(this@MainActivity, radius)
                     root.findViewWithTag<TextView>("notification_radius_label")?.text = "Notification corner radius: ${radius}dp"
                 }
-                override fun onStartTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
-                override fun onStopTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(40)))
         privacyCard.addView(TextView(this).apply {
@@ -1021,15 +1021,15 @@ class MainActivity : Activity() {
         privacyCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.notificationGlass(this@MainActivity) - 20
-            setLegacyOnSeekBarChangeListener(object : androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: androidx.appcompat.widget.SeslSeekBar, value: Int, fromUser: Boolean) {
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val glass = value + 20
                     Prefs.setNotificationGlass(this@MainActivity, glass)
                     root.findViewWithTag<TextView>("notification_glass_label")?.text = "Notification glass: $glass%"
                 }
-                override fun onStartTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
-                override fun onStopTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
         }, LinearLayout.LayoutParams(-1, dp(40)))
         privacyCard.addView(TextView(this).apply {
@@ -1102,14 +1102,14 @@ class MainActivity : Activity() {
         root.addView(guardianSlider().apply {
             max = 90
             progress = Prefs.appWallpaperDim(this@MainActivity)
-            setLegacyOnSeekBarChangeListener(object : androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: androidx.appcompat.widget.SeslSeekBar, value: Int, fromUser: Boolean) {
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     Prefs.setAppWallpaperDim(this@MainActivity, value)
                     root.findViewWithTag<TextView>("d2_app_wallpaper_dim_label")?.text = "D2 background dim: $value%"
                 }
-                override fun onStartTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) = Unit
-                override fun onStopTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) { refreshAppearance() }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) { refreshAppearance() }
             })
         }, LinearLayout.LayoutParams(-1, dp(40)))
         addButton(root, "Reset D2 app wallpaper") {
