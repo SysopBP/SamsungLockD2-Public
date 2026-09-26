@@ -138,12 +138,12 @@ if "Galaxy Island Setup" not in appearance_text:
     # Reuse the existing settings-card vocabulary and put a concise setup checklist
     # ahead of appearance controls. Users can revisit it from Appearance at any time.
     setup_card = (
-        '        SettingsInfoCard(\n'
+        '        SettingsSectionCard(\n'
         '            shape = RoundedCornerShape(24.dp),\n'
         '            title = "What’s New Since Beta.1",\n'
         '            description = "Guardian Glass and One UI 9 styling\\\\n• Persistent glass appearance controls\\\\n• Camera / Island X and Y positioning with live preview\\\\n• Reset to camera / device default\\\\n• Refined glass cards, typography and controls\\\\n• Notification pop-out and transparency refinements\\\\n• Kiosk D2 Guardian pairing and synchronization groundwork\\\\n• Xposed integration gates for notifications, media, charging, calls, screen state and positioning\\\\n• Guardian fallback bridge\\\\n• New Galaxy Island setup guidance",\n'
         '        )\n\n'
-        '        SettingsInfoCard(\n'
+        '        SettingsSectionCard(\n'
         '            shape = RoundedCornerShape(24.dp),\n'
         '            title = "Galaxy Island Setup",\n'
         '            description = "1  Allow required notification/overlay access\\\\n2  Position the island around your camera\\\\n3  Choose Guardian glass and transparency\\\\n4  Review notification privacy\\\\n5  Pair Kiosk D2 Guardian when installed\\\\n6  Test media, charging, calls and notification pop-outs",\n'
@@ -191,7 +191,7 @@ object GuardianThemeSync {
   Settings.Secure.getString(context.contentResolver, "theme_customization_overlay_packages")
         }.getOrNull()
         fun jsonValue(key: String): String? = raw?.let { text ->
-  Regex("\\\"$key\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"").find(text)?.groupValues?.getOrNull(1)
+  Regex(""""$key"\\s*:\\s*"([^"]+)"""").find(text)?.groupValues?.getOrNull(1)
         }
         val wallpaper = runCatching {
   WallpaperManager.getInstance(context).getWallpaperColors(WallpaperManager.FLAG_SYSTEM)?.primaryColor?.toArgb()
