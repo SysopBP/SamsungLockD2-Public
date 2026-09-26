@@ -13,11 +13,13 @@ object GuardianWatchdog {
 
     private const val TAG = "SamsungLockD2"
     private const val REASSERT_COOLDOWN_MS = 750L
+    private const val TRUSTED_AUTH_TIMEOUT_MS = 15_000L
 
     @Volatile private var state = State.PROTECTED
     @Volatile private var lastReassertAt = 0L
     @Volatile private var lastReason = "startup"
     @Volatile private var trustedAuthentication = false
+    @Volatile private var trustedAuthenticationStartedAt = 0L
 
     @Synchronized
     fun reassert(context: Context, reason: String, callActive: Boolean = false): Boolean {
@@ -57,17 +59,32 @@ object GuardianWatchdog {
 
     @Synchronized fun beginTrustedAuthentication() {
         trustedAuthentication = true
+        trustedAuthenticationStartedAt = SystemClock.elapsedRealtime()
         transition(State.TRUSTED_UI, "authentication")
         Log.i(TAG, "GUARDIAN_AUTH_BEGIN")
     }
 
     @Synchronized fun endTrustedAuthentication(reason: String) {
         trustedAuthentication = false
+        trustedAuthenticationStartedAt = 0L
         transition(State.PROTECTED, reason)
         Log.i(TAG, "GUARDIAN_AUTH_END reason=$reason")
     }
 
-    fun isTrustedAuthenticationActive(): Boolean = trustedAuthentication
+    fun isTrustedAuthenticationActive(): Boolean {
+        if (!trustedAuthentication) return false
+        val elapsed = SystemClock.elapsedRealtime() - trustedAuthenticationStartedAt
+        if (elapsed <= TRUSTED_AUTH_TIMEOUT_MS) return true
+        synchronized(this) {
+            if (trustedAuthentication && SystemClock.elapsedRealtime() - trustedAuthenticationStartedAt > TRUSTED_AUTH_TIMEOUT_MS) {
+                trustedAuthentication = false
+                trustedAuthenticationStartedAt = 0L
+                transition(State.PROTECTED, "auth_timeout")
+                Log.w(TAG, "GUARDIAN_AUTH_TIMEOUT")
+            }
+        }
+        return trustedAuthentication
+    }
 
     @Synchronized fun markProtected(reason: String) = transition(State.PROTECTED, reason)
     @Synchronized fun markTrustedUi(reason: String) = transition(State.TRUSTED_UI, reason)
