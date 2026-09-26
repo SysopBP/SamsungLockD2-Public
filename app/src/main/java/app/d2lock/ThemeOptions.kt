@@ -8,7 +8,8 @@ import android.text.InputFilter
 import android.widget.*
 import android.view.View
 import android.view.ViewGroup
-import androidx.appcompat.widget.SeslSeekBar
+import android.graphics.Canvas
+import android.graphics.Paint
 
 object ThemeOptions {
     fun add(activity: Activity, parent: LinearLayout, refresh: () -> Unit) {
@@ -74,14 +75,23 @@ object ThemeOptions {
         }
         choice("App theme",listOf("Follow system","Light","Dark","AMOLED Black","One UI Dark","Graphite","Frosted Glass","Smoke","Wine Red","System (Dynamic)"),Appearance.mode(c),"mode")
         choice("Accent color",listOf("System wallpaper","Blue","Teal","Lavender","Rose","Amber","Sage","Wine Red","Deep Blue","Emerald","Purple","Custom color"),Appearance.accentChoice(c),"accent")
-        if(Appearance.accentChoice(c)==11) parent.addView(Button(c).apply {
-            text="Custom accent: #%06X".format(Appearance.custom(c) and 0xffffff)
+        if(Appearance.accentChoice(c)==11) parent.addView(TextView(c).apply {
+            text="Custom accent   #%06X   ›".format(Appearance.custom(c) and 0xffffff)
+            textSize=14f
+            gravity=android.view.Gravity.CENTER_VERTICAL
+            setPadding(dp(18),0,dp(18),0)
             setTextColor(Appearance.text(c))
+            background=Appearance.glass(c,22f,28,true)
+            isClickable=true
+            isFocusable=true
             setOnClickListener {
                 val field=EditText(c).apply { setSingleLine(); hint="#RRGGBB"; setText("%06X".format(Appearance.custom(c) and 0xffffff)); filters=arrayOf(InputFilter.LengthFilter(7)) }
                 val dialog=AlertDialog.Builder(c).setTitle("Custom accent").setView(field).setNegativeButton("Cancel",null).setPositiveButton("Apply",null).create()
                 dialog.setOnShowListener {
                     dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                    dialog.window?.setBackgroundDrawable(Appearance.glass(c,30f,76,true))
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(c))
+                    dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Appearance.accent(c))
                     dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                         val hex=field.text.toString().trim().removePrefix("#")
                         if(!hex.matches(Regex("[0-9a-fA-F]{6}"))) field.error="Enter six hexadecimal digits"
@@ -89,7 +99,7 @@ object ThemeOptions {
                     }
                 }; dialog.show()
             }
-        },LinearLayout.LayoutParams(-1,dp(44)))
+        },LinearLayout.LayoutParams(-1,dp(50)).apply { leftMargin=dp(8); rightMargin=dp(8); bottomMargin=dp(10) })
         choice("Notification colors",listOf("Different colors per app","Use accent color","Monochrome","System colors","Custom color"),Appearance.notificationStyle(c),"notifications")
         val preview=TextView(c).apply {
             text="Notification preview\nA sample message in your chosen style"
@@ -101,39 +111,73 @@ object ThemeOptions {
             setTextColor(Color.WHITE); background=Appearance.floatingBar(c)
             setPadding(dp(8),dp(16),dp(8),dp(16))
         }
+        class GlassThemeSlider(context: android.content.Context) : SeekBar(context) {
+            private val fill=Paint(Paint.ANTI_ALIAS_FLAG)
+            private val outline=Paint(Paint.ANTI_ALIAS_FLAG).apply { style=Paint.Style.STROKE; strokeWidth=dp(1).toFloat() }
+            init {
+                progressDrawable=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                thumb=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                splitTrack=false
+                minimumHeight=dp(38)
+                setPadding(dp(12),0,dp(12),0)
+            }
+            override fun onDraw(canvas: Canvas) {
+                val left=paddingLeft.toFloat()
+                val right=(width-paddingRight).toFloat()
+                val cy=height/2f
+                val railH=dp(5).toFloat()
+                val radius=railH/2f
+                val fraction=if(max>0) progress.toFloat()/max.toFloat() else 0f
+                val x=left+(right-left)*fraction
+                fill.style=Paint.Style.FILL
+                fill.color=if(Appearance.dark(c)) 0x30ffffff else 0x24000000
+                canvas.drawRoundRect(left,cy-railH/2f,right,cy+railH/2f,radius,radius,fill)
+                outline.color=if(Appearance.dark(c)) 0x55ffffff else 0x44000000
+                canvas.drawRoundRect(left,cy-railH/2f,right,cy+railH/2f,radius,radius,outline)
+                if(x>left) {
+                    fill.color=(Appearance.accent(c) and 0x00ffffff) or 0xb8000000.toInt()
+                    canvas.drawRoundRect(left,cy-railH/2f,x,cy+railH/2f,radius,radius,fill)
+                }
+                val thumbR=dp(9).toFloat()
+                fill.color=(Appearance.accent(c) and 0x00ffffff) or 0xe6000000.toInt()
+                canvas.drawCircle(x,cy,thumbR,fill)
+                outline.color=0x99ffffff.toInt()
+                canvas.drawCircle(x,cy,thumbR,outline)
+                fill.color=0x42ffffff
+                canvas.drawCircle(x-dp(3),cy-dp(3),dp(2).toFloat(),fill)
+            }
+        }
         fun slider(title:String,key:String,min:Int,max:Int,value:Int,suffix:String) {
-            var currentValue = value.coerceIn(min, max)
+            var currentValue=value.coerceIn(min,max)
             val heading=label("$title: $currentValue$suffix")
             parent.addView(heading)
-            val glassSlider = LinearLayout(c).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = android.view.Gravity.CENTER_VERTICAL
-                setPadding(dp(12), 0, dp(12), 0)
-                background = Appearance.glass(c, 32f, 30, true)
+            val glassSlider=LinearLayout(c).apply {
+                gravity=android.view.Gravity.CENTER_VERTICAL
+                setPadding(dp(8),0,dp(8),0)
+                background=Appearance.glass(c,24f,22,true)
             }
-            glassSlider.addView(SeslSeekBar(c).apply {
-                this.max = (max - min).coerceAtLeast(1)
-                progress = currentValue - min
-                contentDescription = title
-                minimumHeight = dp(44)
-                setOnSeekBarChangeListener(object : SeslSeekBar.OnSeekBarChangeListener {
-                    override fun onProgressChanged(seekBar: SeslSeekBar?, progress: Int, fromUser: Boolean) {
-                        if (!fromUser) return
-                        val next = min + progress
-                        if (next == currentValue) return
-                        currentValue = next
+            glassSlider.addView(GlassThemeSlider(c).apply {
+                this.max=(max-min).coerceAtLeast(1)
+                progress=currentValue-min
+                contentDescription=title
+                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                        if(!fromUser) return
+                        val next=min+progress
+                        if(next==currentValue) return
+                        currentValue=next
                         Appearance.set(c,key,next)
                         heading.text="$title: $next$suffix"
                         if(key.startsWith("bar_")) barPreview.background=Appearance.floatingBar(c)
                         else preview.background=Appearance.panel(c,"theme.preview",banner=key=="banners")
                     }
-                    override fun onStartTrackingTouch(seekBar: SeslSeekBar?) = Unit
-                    override fun onStopTrackingTouch(seekBar: SeslSeekBar?) = Unit
+                    override fun onStartTrackingTouch(seekBar: SeekBar?)=Unit
+                    override fun onStopTrackingTouch(seekBar: SeekBar?)=Unit
                 })
-            }, LinearLayout.LayoutParams(-1, dp(44)))
-            parent.addView(glassSlider, LinearLayout.LayoutParams(-1, dp(58)).apply {
-                topMargin = dp(4)
-                bottomMargin = dp(14)
+            },LinearLayout.LayoutParams(-1,dp(38)))
+            parent.addView(glassSlider,LinearLayout.LayoutParams(-1,dp(46)).apply {
+                topMargin=dp(2)
+                bottomMargin=dp(10)
             })
         }
         slider("Card opacity","cards",20,100,Appearance.cardOpacity(c),"%")
