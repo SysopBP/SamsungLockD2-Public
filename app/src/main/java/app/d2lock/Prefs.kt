@@ -305,6 +305,11 @@ object Prefs {
     fun setShortcut(context: Context, side: String, value: String) =
         prefs(context).edit().putString("shortcut_$side", value).apply()
 
+    fun setupWizardComplete(context: Context) = prefs(context).getBoolean("setup_wizard_complete", false)
+    fun setSetupWizardComplete(context: Context, value: Boolean) = prefs(context).edit().putBoolean("setup_wizard_complete", value).apply()
+    fun setupWizardSeen(context: Context) = prefs(context).getBoolean("setup_wizard_seen", false)
+    fun setSetupWizardSeen(context: Context, value: Boolean) = prefs(context).edit().putBoolean("setup_wizard_seen", value).apply()
+
     fun introSeenVersion(context: Context) = prefs(context).getInt("intro_seen_version", 0)
     fun setIntroSeenVersion(context: Context, value: Int) = prefs(context).edit().putInt("intro_seen_version", value).apply()
     fun introDismissed(context: Context) = prefs(context).getBoolean("intro_dismissed", false)
