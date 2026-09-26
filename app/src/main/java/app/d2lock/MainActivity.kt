@@ -1023,11 +1023,37 @@ class MainActivity : Activity() {
                 textSize=18f
                 setTextColor(Appearance.text(this@MainActivity))
             })
+            val fingerprintHardware=RootManager.fingerprintHardwareInfo()
             addView(TextView(this@MainActivity).apply {
-                text="BIOMETRIC_STRONG  •  Diagnostic ready"
+                text=if(fingerprintHardware!=null) {
+                    "BIOMETRIC_STRONG  •  ${fingerprintHardware.productId}  •  Sensor ${fingerprintHardware.frameworkSensorId}"
+                } else "BIOMETRIC_STRONG  •  Diagnostic ready"
                 textSize=12f
                 setTextColor(Appearance.secondary(this@MainActivity))
-                setPadding(0,dp(4),0,dp(12))
+                setPadding(0,dp(4),0,dp(10))
+            })
+            if(fingerprintHardware!=null) addView(TextView(this@MainActivity).apply {
+                val id=fingerprintHardware.hardwareSensorId
+                val shortId=if(id.length>16) id.take(8)+"…"+id.takeLast(6) else id
+                text="Hardware ID  •  $shortId   Firmware  •  ${fingerprintHardware.firmwareVersion}   HAL deaths  •  ${fingerprintHardware.halDeaths}"
+                textSize=11f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0,0,0,dp(12))
+                isClickable=true
+                isFocusable=true
+                setOnClickListener {
+                    performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Fingerprint Hardware")
+                        .setMessage("Product ID: ${fingerprintHardware.productId}\nHardware Sensor ID: ${fingerprintHardware.hardwareSensorId}\nFramework Sensor ID: ${fingerprintHardware.frameworkSensorId}\nChip SN: ${fingerprintHardware.chipSn}\nFirmware: ${fingerprintHardware.firmwareVersion}\nMax templates: ${fingerprintHardware.maxTemplates}\nProvider: ${fingerprintHardware.provider}\nHAL deaths since reboot: ${fingerprintHardware.halDeaths}")
+                        .setPositiveButton("Copy hardware ID") { _, _ ->
+                            val clipboard=getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Fingerprint hardware sensor ID",fingerprintHardware.hardwareSensorId))
+                            Toast.makeText(this@MainActivity,"Fingerprint hardware ID copied",Toast.LENGTH_SHORT).show()
+                        }
+                        .setNegativeButton("Close",null)
+                        .show()
+                }
             })
             addView(LinearLayout(this@MainActivity).apply {
                 orientation=LinearLayout.HORIZONTAL
