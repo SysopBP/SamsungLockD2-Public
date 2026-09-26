@@ -304,4 +304,9 @@ object Prefs {
         prefs(context).getString("shortcut_$side", if (side == "left") "Camera" else "Flashlight") ?: "None"
     fun setShortcut(context: Context, side: String, value: String) =
         prefs(context).edit().putString("shortcut_$side", value).apply()
+
+    fun introSeenVersion(context: Context) = prefs(context).getInt("intro_seen_version", 0)
+    fun setIntroSeenVersion(context: Context, value: Int) = prefs(context).edit().putInt("intro_seen_version", value).apply()
+    fun introDismissed(context: Context) = prefs(context).getBoolean("intro_dismissed", false)
+    fun setIntroDismissed(context: Context, value: Boolean) = prefs(context).edit().putBoolean("intro_dismissed", value).apply()
 }
