@@ -1495,6 +1495,56 @@ class MainActivity : Activity() {
                 }
             })
         },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
+        section(root, "XPOSED INTEGRATION")
+        root.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(14), dp(18), dp(14))
+            background = Appearance.glass(this@MainActivity, 30f, 38, true)
+
+            addView(TextView(this@MainActivity).apply {
+                text = "Guardian Xposed Integration"
+                textSize = 18f
+                setTextColor(Appearance.text(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = "Enable and validate one integration at a time. Behavioral hooks remain off by default; Guardian root/kiosk recovery stays available as fallback."
+                textSize = 12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0, dp(5), 0, dp(8))
+            })
+
+            fun xposedToggle(title: String, checked: () -> Boolean, changed: (Boolean) -> Unit) {
+                addView(guardianSwitch().apply {
+                    text = title
+                    textSize = 15f
+                    setTextColor(Appearance.text(this@MainActivity))
+                    isChecked = checked()
+                    setOnCheckedChangeListener { _, value -> changed(value) }
+                }, rowParams())
+            }
+
+            xposedToggle("Master Xposed integration", { Prefs.xposedMaster(this@MainActivity) }) { Prefs.setXposedMaster(this@MainActivity, it) }
+            xposedToggle("Safe diagnostics only", { Prefs.xposedSafeDiagnostics(this@MainActivity) }) { Prefs.setXposedSafeDiagnostics(this@MainActivity, it) }
+            xposedToggle("Screen / wake awareness", { Prefs.xposedScreenAwareness(this@MainActivity) }) { Prefs.setXposedScreenAwareness(this@MainActivity, it) }
+            xposedToggle("Immediate relock", { Prefs.xposedImmediateRelock(this@MainActivity) }) { Prefs.setXposedImmediateRelock(this@MainActivity, it) }
+            xposedToggle("Home / Recents protection", { Prefs.xposedHomeRecents(this@MainActivity) }) { Prefs.setXposedHomeRecents(this@MainActivity, it) }
+            xposedToggle("Gesture coordination", { Prefs.xposedGestureCoordination(this@MainActivity) }) { Prefs.setXposedGestureCoordination(this@MainActivity, it) }
+            xposedToggle("Notification integration", { Prefs.xposedNotifications(this@MainActivity) }) { Prefs.setXposedNotifications(this@MainActivity, it) }
+            xposedToggle("Media integration", { Prefs.xposedMedia(this@MainActivity) }) { Prefs.setXposedMedia(this@MainActivity, it) }
+            xposedToggle("Call-state coordination", { Prefs.xposedCalls(this@MainActivity) }) { Prefs.setXposedCalls(this@MainActivity, it) }
+            xposedToggle("SystemUI restart recovery", { Prefs.xposedSystemUiRecovery(this@MainActivity) }) { Prefs.setXposedSystemUiRecovery(this@MainActivity, it) }
+            xposedToggle("Quick Settings / status-bar guard", { Prefs.xposedBarsGuard(this@MainActivity) }) { Prefs.setXposedBarsGuard(this@MainActivity, it) }
+            xposedToggle("Native lifecycle integration", { Prefs.xposedNativeLifecycle(this@MainActivity) }) { Prefs.setXposedNativeLifecycle(this@MainActivity, it) }
+            xposedToggle("Automatic Guardian fallback", { Prefs.xposedAutomaticFallback(this@MainActivity) }) { Prefs.setXposedAutomaticFallback(this@MainActivity, it) }
+
+            addView(TextView(this@MainActivity).apply {
+                text = "Stage 2 test order: leave Safe diagnostics only ON. Test Screen / wake awareness first. The remaining switches are configuration gates and will be wired to their hooks incrementally after each previous stage passes."
+                textSize = 12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(dp(4), dp(8), dp(4), 0)
+            })
+        }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+
         section(root, "LOCK-SCREEN PROFILES")
         root.getChildAt(root.childCount - 1).tag = "advanced_settings"
         val profileLabels = listOf("Daily", "AMOLED", "Minimal", "Night")
