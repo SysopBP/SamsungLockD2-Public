@@ -1391,9 +1391,22 @@ class MainActivity : Activity() {
         background = Appearance.glass(this@MainActivity, 30f, 24, true)
         setPadding(dp(12), 0, dp(12), 0)
         minimumHeight = dp(40)
-        // SESL marks its tint setters RestrictedApi, so keep native SESL drawing here.
-        // The neutral glass capsule supplies the Guardian visual treatment without
-        // calling library-internal tint APIs.
+        // SESL's public tint properties are lint-restricted. Apply the inherited
+        // framework tint setters through reflection so the real SESL9 renderer stays
+        // in place while Guardian controls use a neutral frosted-glass palette.
+        val active = android.content.res.ColorStateList.valueOf(Color.argb(220, 232, 236, 240))
+        val inactive = android.content.res.ColorStateList.valueOf(Color.argb(62, 232, 236, 240))
+        runCatching {
+            android.widget.ProgressBar::class.java
+                .getMethod("setProgressTintList", android.content.res.ColorStateList::class.java)
+                .invoke(this, active)
+            android.widget.ProgressBar::class.java
+                .getMethod("setProgressBackgroundTintList", android.content.res.ColorStateList::class.java)
+                .invoke(this, inactive)
+            android.widget.AbsSeekBar::class.java
+                .getMethod("setThumbTintList", android.content.res.ColorStateList::class.java)
+                .invoke(this, active)
+        }
     }
 
     private fun showQuickSettingsSheet(root: LinearLayout, scroll: ScrollView) {
