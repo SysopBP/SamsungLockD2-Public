@@ -12,6 +12,9 @@ import androidx.appcompat.widget.AppCompatRadioButton
 import androidx.appcompat.widget.AppCompatSeekBar
 import androidx.appcompat.widget.SwitchCompat
 import android.widget.TextView
+import com.google.android.material.slider.Slider
+import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.radiobutton.MaterialRadioButton
 import app.d2lock.Appearance
 
 /**
@@ -35,12 +38,12 @@ class SeslPreviewActivity : Activity() {
             setBackgroundColor(Appearance.background(this@SeslPreviewActivity))
         }
         root.addView(TextView(this).apply {
-            text = "SESL9 UI Preview · REAL"
+            text = "SESL9 × Material 3 Preview"
             textSize = 30f
             setTextColor(Appearance.text(this@SeslPreviewActivity))
         })
         root.addView(TextView(this).apply {
-            text = "Genuine SESL9 AppCompat controls · isolated from Guardian/authentication"
+            text = "On-device comparison · isolated from Guardian/authentication"
             textSize = 14f
             setTextColor(Appearance.secondary(this@SeslPreviewActivity))
             setPadding(0, dp(4), 0, dp(22))
@@ -58,6 +61,30 @@ class SeslPreviewActivity : Activity() {
             addView(AppCompatSeekBar(this@SeslPreviewActivity).apply {
                 max = 100
                 progress = 64
+            })
+        })
+
+        root.addView(card("Material 3 slider", "Compare geometry, thumb, track and theming on-device").apply {
+            addView(Slider(this@SeslPreviewActivity).apply {
+                valueFrom = 0f
+                valueTo = 100f
+                value = 64f
+            })
+        })
+
+        root.addView(card("Material 3 switch", "Compare against the SESL9 switch above").apply {
+            addView(MaterialSwitch(this@SeslPreviewActivity).apply {
+                text = "Material preview toggle"
+                isChecked = true
+                setTextColor(Appearance.text(this@SeslPreviewActivity))
+            })
+        })
+
+        root.addView(card("Material 3 radio", "Compare selection styling before any production migration").apply {
+            addView(MaterialRadioButton(this@SeslPreviewActivity).apply {
+                text = "Material glass candidate"
+                isChecked = true
+                setTextColor(Appearance.text(this@SeslPreviewActivity))
             })
         })
 
