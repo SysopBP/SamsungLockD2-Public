@@ -476,8 +476,68 @@ class MainActivity : Activity() {
 
         section(root, "RECOVERY & SAFETY")
         root.getChildAt(root.childCount - 1).tag = "recovery_safety"
-        root.addView(systemHealthCard(), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
-        addButton(root, "Refresh system health") { refreshShizukuUi() }
+        root.addView(LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL
+            setPadding(dp(18),dp(14),dp(18),dp(14))
+            background=Appearance.glass(this@MainActivity,30f,38,true)
+            addView(TextView(this@MainActivity).apply {
+                text="🛡  Safety Center"
+                textSize=18f
+                setTextColor(Appearance.text(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                val rootReady=RootManager.isAvailable()
+                val adb=Prefs.adbRecovery(this@MainActivity)
+                text=listOf(
+                    if(rootReady) "Root available" else "Root unavailable",
+                    if(adb) "ADB recovery configured" else "ADB recovery off",
+                    if(Prefs.kiosk(this@MainActivity)) "Kiosk protection on" else "Kiosk protection off"
+                ).joinToString("  ·  ")
+                textSize=12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0,dp(5),0,dp(12))
+            })
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.HORIZONTAL
+                gravity=Gravity.CENTER_VERTICAL
+                val health=TextView(this@MainActivity).apply {
+                    text="✓  System health"
+                    textSize=14f
+                    setTextColor(Appearance.text(this@MainActivity))
+                    gravity=Gravity.CENTER
+                    background=Appearance.glass(this@MainActivity,22f,26,true)
+                    setPadding(dp(14),dp(10),dp(14),dp(10))
+                    setOnClickListener {
+                        val content=LinearLayout(this@MainActivity).apply {
+                            orientation=LinearLayout.VERTICAL
+                            setPadding(dp(16),dp(8),dp(16),dp(20))
+                            addView(systemHealthCard())
+                        }
+                        val dialog=AlertDialog.Builder(this@MainActivity)
+                            .setTitle("System health")
+                            .setView(content)
+                            .setPositiveButton("Done",null)
+                            .create()
+                        dialog.setOnShowListener {
+                            dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,32f,82,true))
+                            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(this@MainActivity))
+                        }
+                        dialog.show()
+                    }
+                }
+                addView(health,LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(6) })
+                val refresh=TextView(this@MainActivity).apply {
+                    text="↻  Refresh"
+                    textSize=14f
+                    setTextColor(Appearance.accent(this@MainActivity))
+                    gravity=Gravity.CENTER
+                    background=Appearance.glass(this@MainActivity,22f,26,true)
+                    setPadding(dp(14),dp(10),dp(14),dp(10))
+                    setOnClickListener { refreshShizukuUi() }
+                }
+                addView(refresh,LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(6) })
+            })
+        },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
 
         section(root, "GUARDIAN & KIOSK")
         root.getChildAt(root.childCount - 1).tag = "guardian_kiosk"
