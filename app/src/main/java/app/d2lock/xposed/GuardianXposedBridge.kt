@@ -173,7 +173,14 @@ class GuardianXposedBridge : XposedModule() {
                         hook(method)
                             .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                             .intercept { chain ->
-                                log(Log.INFO, TAG, "GUARDIAN_XPOSED_${event} method=${method.name}")
+                                val argsText = chain.args.joinToString(",") { arg ->
+                                    when (arg) {
+                                        null -> "null"
+                                        is Boolean, is Number, is String, is Enum<*> -> arg.toString()
+                                        else -> arg.javaClass.name
+                                    }
+                                }
+                                log(Log.INFO, TAG, "GUARDIAN_XPOSED_${event} method=${method.name} target=${owner.name} args=[$argsText]")
                                 chain.proceed()
                             }
                         installed++
