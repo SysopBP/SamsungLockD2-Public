@@ -937,6 +937,42 @@ class MainActivity : Activity() {
             })
         },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
 
+        section(root, "GUARDIAN RECOVERY")
+        root.addView(TextView(this).apply {
+            text = "Root-only recovery tools. Restart System UI is useful after SystemUI/LSPosed changes. Soft Reboot restarts the Android framework without a full hardware reboot."
+            textSize = 13f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(6), 0, dp(6), dp(10))
+        })
+        addButton(root, "Restart System UI") {
+            if (!RootManager.isAvailable()) {
+                Toast.makeText(this@MainActivity, "KernelSU/root access is required", Toast.LENGTH_LONG).show()
+            } else {
+                android.app.AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Restart System UI?")
+                    .setMessage("System UI will briefly disappear and reload. Kiosk D2 Guardian itself will not be reset.")
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton("Restart") { _, _ ->
+                        val result = RootManager.restartSystemUi()
+                        Toast.makeText(this@MainActivity, result.second, Toast.LENGTH_LONG).show()
+                    }.show()
+            }
+        }
+        addButton(root, "Soft Reboot Android") {
+            if (!RootManager.isAvailable()) {
+                Toast.makeText(this@MainActivity, "KernelSU/root access is required", Toast.LENGTH_LONG).show()
+            } else {
+                android.app.AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Soft reboot Android?")
+                    .setMessage("Android's framework will restart. Unsaved work in other apps may be lost. Guardian will restore through its existing startup path.")
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton("Soft reboot") { _, _ ->
+                        val result = RootManager.softReboot()
+                        if (!result.first) Toast.makeText(this@MainActivity, result.second, Toast.LENGTH_LONG).show()
+                    }.show()
+            }
+        }
+
         section(root, "ADB / USB RECOVERY")
         root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
