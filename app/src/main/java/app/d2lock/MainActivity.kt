@@ -1611,10 +1611,10 @@ class MainActivity : Activity() {
             refreshAppearance()
         }
         root.addView(TextView(this).apply {
-            text = "Profiles instantly tune the clock, glass, wallpaper dimming, notifications, media and Floating Bar behavior. Individual changes remain available afterward."
+            text = "Quick presets for clock, glass, wallpaper, notifications, media and Floating Bar."
             textSize = 13f
             setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(dp(4), dp(2), dp(4), dp(12))
+            setPadding(dp(4), dp(2), dp(4), dp(8))
         })
         addButton(root, "Save current as custom profile") {
             val input = android.widget.EditText(this).apply {
@@ -1721,12 +1721,25 @@ class MainActivity : Activity() {
             }
             dialog.show()
         }
-        root.addView(TextView(this).apply {
-            text = "Double-tap the D2 button or its home-screen widget to open the PIN screen. Taps elsewhere on the home screen are controlled by your launcher.\\n\\nD2 uses its own PIN and does not turn the display off. Optional kiosk mode uses Android task restrictions and interacts with keyguard internally.\\n\\nWithout active kiosk, Home/Recents can bypass D2. Root, recovery, and reboot remain bypasses in either mode. D2 cannot repair firmware or guarantee prevention of download-mode errors."
-            textSize = 14f
-            setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(dp(4), dp(28), dp(4), dp(10))
-        })
+        addButton(root, "About D2 protection") {
+            val info = TextView(this).apply {
+                text = "Double-tap the D2 button or home-screen widget to open D2 authentication. D2 uses its own PIN or pattern. Optional kiosk mode uses Android task restrictions and coordinates with keyguard.\n\nWithout active kiosk, Home/Recents can bypass D2. Root, recovery and reboot remain privileged bypass paths. D2 cannot repair firmware or guarantee prevention of download-mode errors."
+                textSize = 14f
+                setTextColor(Appearance.text(this@MainActivity))
+                setLineSpacing(0f, 1.14f)
+                setPadding(dp(18), dp(14), dp(18), dp(18))
+            }
+            val dialog = AlertDialog.Builder(this)
+                .setTitle("About D2 protection")
+                .setView(info)
+                .setPositiveButton("Done", null)
+                .create()
+            dialog.setOnShowListener {
+                dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true))
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(this@MainActivity))
+            }
+            dialog.show()
+        }
         return settingsHost(root)
     }
 
