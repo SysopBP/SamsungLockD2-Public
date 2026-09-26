@@ -113,6 +113,7 @@ class LockScreenActivity : Activity() {
     private var fingerprintLoading: ProgressBar? = null
     private var fingerprintStatus: TextView? = null
     private var fingerprintPulse: ObjectAnimator? = null
+    private var fingerprintDismissed = false
     private var wallpaperActive = false
     private var emptyTapAt = 0L
     private val wallpaperExecutor = Executors.newSingleThreadExecutor()
@@ -698,10 +699,10 @@ class LockScreenActivity : Activity() {
         // authentication itself remains Android/Samsung BIOMETRIC_STRONG.
         if (!preview && app.d2lock.root.RootManager.isAvailable()) {
             fingerprintGlass = buildFingerprintGlass().also { glass ->
-                frame.addView(glass, FrameLayout.LayoutParams(dp(238), dp(126), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
+                frame.addView(glass, FrameLayout.LayoutParams(dp(228), dp(58), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
                     // Samsung test device reports FOD center at y=2410 on a 3120px panel.
                     // Scale the normalized location so the D2 visual follows resolution changes.
-                    topMargin = ((resources.displayMetrics.heightPixels * .772f) - dp(63)).toInt().coerceAtLeast(dp(120))
+                    topMargin = ((resources.displayMetrics.heightPixels * .772f) - dp(29)).toInt().coerceAtLeast(dp(120))
                 })
             }
         }
@@ -1010,25 +1011,23 @@ class LockScreenActivity : Activity() {
     }
 
     private fun buildFingerprintGlass(): LinearLayout = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER
-        setPadding(dp(18), dp(10), dp(18), dp(10))
-        background = Appearance.glass(this@LockScreenActivity, 32f, 42, true)
-        elevation = dp(18).toFloat()
-        alpha = .96f
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(14), dp(6), dp(14), dp(6))
+        background = Appearance.glass(this@LockScreenActivity, 24f, 34, true)
+        elevation = dp(14).toFloat()
+        alpha = .94f
+        contentDescription = "Fingerprint unlock. Swipe left or right to dismiss."
 
         fingerprintGlyph = TextView(this@LockScreenActivity).apply {
             text = "◎"
-            textSize = 34f
+            textSize = 25f
             gravity = Gravity.CENTER
             setTextColor(Appearance.text(this@LockScreenActivity, true))
             contentDescription = "Fingerprint sensor"
         }
-        addView(fingerprintGlyph, LinearLayout.LayoutParams(dp(58), dp(50)))
+        addView(fingerprintGlyph, LinearLayout.LayoutParams(dp(42), dp(42)))
 
-        // Native framework indeterminate circle. On Samsung/SESL themed builds
-        // this inherits the One UI progress-circle treatment instead of drawing
-        // a custom spinner.
         fingerprintLoading = ProgressBar(
             this@LockScreenActivity,
             null,
@@ -1038,26 +1037,70 @@ class LockScreenActivity : Activity() {
             visibility = View.GONE
             contentDescription = "Starting fingerprint"
         }
-        addView(fingerprintLoading, LinearLayout.LayoutParams(dp(34), dp(34)).apply {
-            gravity = Gravity.CENTER_HORIZONTAL
+        addView(fingerprintLoading, LinearLayout.LayoutParams(dp(28), dp(28)).apply {
+            marginStart = dp(4)
+            marginEnd = dp(6)
         })
 
-        fingerprintStatus = label("Touch fingerprint sensor", 14f, Appearance.text(this@LockScreenActivity, true)).apply {
-            gravity = Gravity.CENTER
+        fingerprintStatus = label("Touch sensor", 13f, Appearance.text(this@LockScreenActivity, true)).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
         }
-        addView(fingerprintStatus, LinearLayout.LayoutParams(-1, dp(28)))
+        addView(fingerprintStatus, LinearLayout.LayoutParams(0, dp(42), 1f))
 
-        addView(label("PIN / Pattern", 12f, Appearance.secondary(this@LockScreenActivity, true)).apply {
+        addView(label("×", 22f, Appearance.secondary(this@LockScreenActivity, true)).apply {
             gravity = Gravity.CENTER
+            contentDescription = "Dismiss fingerprint"
             isClickable = true
             isFocusable = true
-            setPadding(dp(10), dp(3), dp(10), dp(3))
-            setOnClickListener {
-                performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                cancelGuardianFingerprint("guardian_fallback_tapped")
-                authenticate()
+            setOnClickListener { dismissFingerprintGlass("close_button") }
+        }, LinearLayout.LayoutParams(dp(36), dp(42)))
+
+        var downX = 0f
+        var downY = 0f
+        setOnTouchListener { view, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    downX = event.rawX
+                    downY = event.rawY
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = event.rawX - downX
+                    view.translationX = dx
+                    view.alpha = (1f - kotlin.math.abs(dx) / dp(220).toFloat()).coerceIn(.35f, .94f)
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    val dx = event.rawX - downX
+                    val dy = event.rawY - downY
+                    if (kotlin.math.abs(dx) >= dp(72) && kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
+                        performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                        view.animate().translationX(if (dx < 0) -width.toFloat() else width.toFloat())
+                            .alpha(0f).setDuration(160).withEndAction {
+                                dismissFingerprintGlass("swipe")
+                            }.start()
+                    } else {
+                        view.animate().translationX(0f).alpha(.94f).setDuration(140).start()
+                    }
+                    true
+                }
+                else -> false
             }
-        }, LinearLayout.LayoutParams(-1, dp(30)))
+        }
+    }
+
+    private fun dismissFingerprintGlass(reason: String) {
+        fingerprintDismissed = true
+        cancelGuardianFingerprint("guardian_dismissed_$reason")
+        fingerprintGlass?.animate()?.cancel()
+        fingerprintGlass?.visibility = View.GONE
+        GuardianWatchdog.endTrustedAuthentication("biometric_dismissed")
+        window.decorView.post {
+            if (!isFinishing && !isDestroyed) window.decorView.requestFocus()
+        }
+        Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_DISMISSED reason=$reason")
     }
 
     private fun setFingerprintGlassState(state: String) {
@@ -1108,7 +1151,7 @@ class LockScreenActivity : Activity() {
     }
 
     private fun startGuardianFingerprint() {
-        if (preview || unlocking || biometricRunning || isFinishing || isDestroyed) return
+        if (preview || unlocking || biometricRunning || fingerprintDismissed || isFinishing || isDestroyed) return
         synchronized(fingerprintSessionLock) {
             if (fingerprintSessionActive) {
                 Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_SUPPRESS_DUPLICATE source=start")
