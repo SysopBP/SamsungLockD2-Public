@@ -176,6 +176,12 @@ jobs:
               # ahead of appearance controls. Users can revisit it from Appearance at any time.
               setup_card = '''        SettingsInfoCard(
             shape = RoundedCornerShape(24.dp),
+            title = "What's New Since Beta.1",
+            description = "Guardian Glass and One UI 9 styling\\n• Persistent glass appearance controls\\n• Camera / Island X and Y positioning with live preview\\n• Reset to camera / device default\\n• Refined glass cards, typography and controls\\n• Notification pop-out and transparency refinements\\n• Kiosk D2 Guardian pairing and synchronization groundwork\\n• Xposed integration gates for notifications, media, charging, calls, screen state and positioning\\n• Guardian fallback bridge\\n• New Galaxy Island setup guidance",
+        )
+
+        SettingsInfoCard(
+            shape = RoundedCornerShape(24.dp),
             title = "Galaxy Island Setup",
             description = "1  Allow required notification/overlay access\\n2  Position the island around your camera\\n3  Choose Guardian glass and transparency\\n4  Review notification privacy\\n5  Pair Kiosk D2 Guardian when installed\\n6  Test media, charging, calls and notification pop-outs",
         )
