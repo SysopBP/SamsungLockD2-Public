@@ -1,6 +1,9 @@
 package app.d2lock.xposed
 
 import android.os.PowerManager
+import android.content.Context
+import android.content.Intent
+import android.content.ComponentName
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import io.github.libxposed.api.XposedInterface
@@ -37,6 +40,7 @@ class GuardianXposedBridge : XposedModule() {
         installPowerDiagnostics()
         installSystemUiNotificationDiagnostics(param.classLoader)
         installGuardianSystemUiHooks(param.classLoader)
+        installKeyguardHandoffHooks(param.classLoader)
         installFingerprintStateDiagnostics(param.classLoader)
     }
 
@@ -69,11 +73,6 @@ class GuardianXposedBridge : XposedModule() {
                 "com.android.systemui.keyguard.data.repository.DeviceEntryFingerprintAuthRepositoryImpl" to listOf("onAuthenticationSucceeded", "onAuthenticationFailed", "onAuthenticationError", "onAuthenticationAcquired"),
                 "com.android.systemui.keyguard.domain.interactor.DeviceEntryFingerprintAuthInteractor" to listOf("onAuthenticationSucceeded", "onAuthenticationFailed")
             ))
-        installNamedProbes(classLoader, "KEYGUARD",
-            listOf(
-                "com.android.systemui.statusbar.policy.KeyguardStateControllerImpl" to listOf("notifyKeyguardState", "notifyKeyguardGoingAway"),
-                "com.android.systemui.keyguard.KeyguardViewMediator" to listOf("showLocked", "hideLocked", "onStartedGoingToSleep", "onStartedWakingUp")
-            ))
         installNamedProbes(classLoader, "SHADE_BARS",
             listOf(
                 "com.android.systemui.statusbar.CommandQueue" to listOf("animateCollapsePanels", "animateExpandNotificationsPanel", "animateExpandSettingsPanel"),
@@ -105,6 +104,58 @@ class GuardianXposedBridge : XposedModule() {
                 "com.android.systemui.SystemUIApplication" to listOf("onCreate", "startServicesIfNeeded"),
                 "com.android.systemui.SystemUIService" to listOf("onCreate")
             ))
+    }
+
+    /**
+     * Build 744: turn the already-proven SystemUI keyguard probes into a narrow
+     * state signal for Guardian. No SystemUI return value is changed.
+     */
+    private fun installKeyguardHandoffHooks(classLoader: ClassLoader) {
+        val targets = listOf(
+            "com.android.systemui.statusbar.policy.KeyguardStateControllerImpl" to listOf("notifyKeyguardGoingAway", "notifyKeyguardState"),
+            "com.android.systemui.keyguard.KeyguardViewMediator" to listOf("showLocked", "hideLocked")
+        )
+        var installed = 0
+        targets.forEach { (className, methodNames) ->
+            val owner = runCatching { Class.forName(className, false, classLoader) }.getOrNull() ?: return@forEach
+            owner.declaredMethods.filter { it.name in methodNames }.distinctBy { it.toGenericString() }.forEach { method ->
+                try {
+                    method.isAccessible = true
+                    hook(method).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
+                        val result = chain.proceed()
+                        val state = when (method.name) {
+                            "showLocked" -> "SHOWING"
+                            "notifyKeyguardGoingAway" -> "GOING_AWAY"
+                            "hideLocked" -> "CLEAR"
+                            else -> "STATE_CHANGED"
+                        }
+                        log(Log.INFO, TAG, "GUARDIAN_XPOSED_KEYGUARD_SIGNAL state=$state target=${owner.name}#${method.name}")
+                        signalGuardianKeyguard(state, owner.name + "#" + method.name)
+                        result
+                    }
+                    installed++
+                    log(Log.INFO, TAG, "GUARDIAN_XPOSED_KEYGUARD_HANDOFF_HOOK_INSTALLED target=${owner.name}#${method.name}")
+                } catch (t: Throwable) {
+                    log(Log.WARN, TAG, "GUARDIAN_XPOSED_KEYGUARD_HANDOFF_HOOK_FAILED target=${owner.name}#${method.name}", t)
+                }
+            }
+        }
+        log(Log.INFO, TAG, "GUARDIAN_XPOSED_KEYGUARD_HANDOFF_READY hooks=$installed")
+    }
+
+    private fun signalGuardianKeyguard(state: String, source: String) {
+        runCatching {
+            val activityThread = Class.forName("android.app.ActivityThread")
+            val app = activityThread.getDeclaredMethod("currentApplication").invoke(null) as? Context
+                ?: error("SystemUI application unavailable")
+            val intent = Intent("app.d2lock.action.XPOSED_KEYGUARD_STATE")
+                .setComponent(ComponentName("app.d2lock", "app.d2lock.lockscreen.KeyguardSignalReceiver"))
+                .putExtra("state", state)
+                .putExtra("source", source)
+            app.sendBroadcast(intent)
+        }.onFailure {
+            log(Log.WARN, TAG, "GUARDIAN_XPOSED_KEYGUARD_SIGNAL_FAILED state=$state", it)
+        }
     }
 
     /** Read-only Samsung fingerprint eligibility diagnostics. */
