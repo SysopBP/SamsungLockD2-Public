@@ -203,6 +203,95 @@ jobs:
               )
               strings_ui.write_text(strings_text)
 
+          # Guardian / LSPosed bridge groundwork. Keep the Galaxy Island APK functional
+          # without LSPosed; when the framework is present these hooks provide a verified,
+          # read-only SystemUI event stream instead of relying on polling/guesswork.
+          module = root / "app/src/main/java/com/ekoehler/expressivecutout/xposed/GalaxyIslandXposedBridge.kt"
+          module.parent.mkdir(parents=True, exist_ok=True)
+          module.write_text("""package com.ekoehler.expressivecutout.xposed
+
+import android.util.Log
+import io.github.libxposed.api.XposedInterface
+import io.github.libxposed.api.XposedModule
+import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
+import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
+
+class GalaxyIslandXposedBridge : XposedModule() {
+    companion object {
+        private const val TAG = "GalaxyIslandXposed"
+        private const val SYSTEM_UI = "com.android.systemui"
+    }
+
+    override fun onModuleLoaded(param: ModuleLoadedParam) {
+        log(Log.INFO, TAG, "GALAXY_ISLAND_XPOSED_LOADED api=$apiVersion framework=$frameworkName")
+    }
+
+    override fun onPackageReady(param: PackageReadyParam) {
+        if (param.packageName != SYSTEM_UI) return
+        log(Log.INFO, TAG, "GALAXY_ISLAND_XPOSED_SYSTEMUI_READY")
+        installProbes(param.classLoader)
+    }
+
+    private fun installProbes(loader: ClassLoader) {
+        val groups = mapOf(
+            "SCREEN" to listOf(
+                "com.android.systemui.keyguard.WakefulnessLifecycle" to listOf("dispatchStartedWakingUp", "dispatchFinishedWakingUp", "dispatchStartedGoingToSleep", "dispatchFinishedGoingToSleep"),
+                "com.android.systemui.keyguard.ScreenLifecycle" to listOf("dispatchScreenTurningOn", "dispatchScreenTurnedOn", "dispatchScreenTurningOff", "dispatchScreenTurnedOff")
+            ),
+            "MEDIA" to listOf("com.android.systemui.media.controls.pipeline.MediaDataManager" to listOf("onNotificationAdded", "onNotificationRemoved", "onNotificationUpdated", "setTimedOut")),
+            "CHARGING" to listOf("com.android.systemui.statusbar.policy.BatteryControllerImpl" to listOf("fireBatteryLevelChanged", "firePowerSaveChanged", "onReceive")),
+            "CALL" to listOf(
+                "com.android.systemui.statusbar.phone.ongoingcall.OngoingCallController" to listOf("updateChip", "removeChip"),
+                "com.android.systemui.statusbar.phone.ongoingcall.OngoingCallControllerImpl" to listOf("updateChip", "removeChip")
+            ),
+            "KEYGUARD" to listOf(
+                "com.android.systemui.statusbar.policy.KeyguardStateControllerImpl" to listOf("notifyKeyguardGoingAway", "notifyKeyguardState"),
+                "com.android.systemui.keyguard.KeyguardViewMediator" to listOf("showLocked", "hideLocked")
+            ),
+            "SYSTEMUI" to listOf(
+                "com.android.systemui.SystemUIApplication" to listOf("onCreate", "startServicesIfNeeded"),
+                "com.android.systemui.SystemUIService" to listOf("onCreate")
+            )
+        )
+        groups.forEach { (event, targets) -> installNamedProbes(loader, event, targets) }
+    }
+
+    private fun installNamedProbes(loader: ClassLoader, event: String, targets: List<Pair<String, List<String>>>) {
+        var installed = 0
+        targets.forEach { (className, names) ->
+            val owner = runCatching { Class.forName(className, false, loader) }.getOrNull() ?: return@forEach
+            owner.declaredMethods.filter { it.name in names }.distinctBy { it.toGenericString() }.forEach { method ->
+                runCatching {
+                    method.isAccessible = true
+                    hook(method).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
+                        log(Log.INFO, TAG, "GALAXY_ISLAND_XPOSED_$event target=${owner.name}#${method.name}")
+                        chain.proceed()
+                    }
+                    installed++
+                }.onFailure { log(Log.WARN, TAG, "GALAXY_ISLAND_XPOSED_${event}_HOOK_FAILED target=${owner.name}#${method.name}", it) }
+            }
+        }
+        log(if (installed > 0) Log.INFO else Log.WARN, TAG, "GALAXY_ISLAND_XPOSED_${event}_READY hooks=$installed")
+    }
+}
+""")
+
+          xposed_res = root / "app/src/main/resources/META-INF/xposed"
+          xposed_res.mkdir(parents=True, exist_ok=True)
+          (xposed_res / "java_init.list").write_text("com.ekoehler.expressivecutout.xposed.GalaxyIslandXposedBridge\\n")
+          (xposed_res / "scope.list").write_text("com.android.systemui\\n")
+          (xposed_res / "module.prop").write_text("minApiVersion=101\\ntargetApiVersion=102\\nstaticScope=true\\n")
+
+          # Add libxposed only as a compile-time API; LSPosed supplies it at runtime.
+          gradle = root / "app/build.gradle.kts"
+          gradle_text = gradle.read_text()
+          if "io.github.libxposed:api:102.0.0" not in gradle_text:
+              dep_anchor = "dependencies {"
+              if dep_anchor not in gradle_text:
+                  raise SystemExit("Galaxy Island source drift: dependencies block not found")
+              gradle_text = gradle_text.replace(dep_anchor, dep_anchor + '\\n    compileOnly("io.github.libxposed:api:102.0.0")', 1)
+              gradle.write_text(gradle_text)
+
           island = "app/src/main/java/com/ekoehler/expressivecutout/overlay/DynamicIsland.kt"
           edit(island, [
               ("    val border = if (appearance.strokeEnabled) {", "    val border = if (appearance.glassEnabled) {\n        BorderStroke(1.dp, Color.White.copy(alpha = 0.24f))\n    } else if (appearance.strokeEnabled) {"),
