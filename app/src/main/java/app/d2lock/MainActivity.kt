@@ -2723,7 +2723,17 @@ class MainActivity : Activity() {
             textSize = 16f
             setTextColor(Appearance.text(this@MainActivity))
             background = Appearance.glass(this@MainActivity, 28f, 34, true)
-            setOnClickListener { action() }
+            setOnTouchListener { v, event ->
+                when(event.actionMasked) {
+                    android.view.MotionEvent.ACTION_DOWN -> v.animate().scaleX(.985f).scaleY(.985f).alpha(.88f).setDuration(70).start()
+                    android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> v.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(130).start()
+                }
+                false
+            }
+            setOnClickListener {
+                performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                action()
+            }
         }, rowParams())
     }
 
