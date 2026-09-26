@@ -60,6 +60,22 @@ object RootManager {
         return ok to if (ok) "ADB disabled" else "Could not disable ADB: $output"
     }
 
+    /** Restart SystemUI without rebooting Android. Intended for root/LSPosed integration testing. */
+    fun restartSystemUi(): Pair<Boolean, String> {
+        if (!isAvailable()) return false to "Root shell was not detected"
+        val (ok, output) = root("pkill -f com.android.systemui", 5)
+        return ok to if (ok) "System UI restart requested" else "Could not restart System UI: $output"
+    }
+
+    /** Request Android's framework soft reboot. This does not perform a hardware reboot. */
+    fun softReboot(): Pair<Boolean, String> {
+        if (!isAvailable()) return false to "Root shell was not detected"
+        // setprop ctl.restart zygote is the direct Android framework restart path and
+        // avoids relying on device-specific toolbox 'reboot' aliases.
+        val (ok, output) = root("setprop ctl.restart zygote", 5)
+        return ok to if (ok) "Soft reboot requested" else "Could not request soft reboot: $output"
+    }
+
     /** Uses root only to request the companion Activity launch; never touches keyguard data. */
     fun launchCompanion(): Boolean {
         val (ok, output) = root("am start -n app.d2lock/.lockscreen.LockScreenActivity --activity-single-top")
