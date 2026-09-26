@@ -130,8 +130,8 @@ object ThemeOptions {
                     override fun onStartTrackingTouch(seekBar: SeslSeekBar?) = Unit
                     override fun onStopTrackingTouch(seekBar: SeslSeekBar?) = Unit
                 })
-            }, LinearLayout.LayoutParams(-1, dp(40)))
-            parent.addView(glassSlider, LinearLayout.LayoutParams(-1, dp(48)).apply {
+            }, LinearLayout.LayoutParams(-1, dp(44)))
+            parent.addView(glassSlider, LinearLayout.LayoutParams(-1, dp(54)).apply {
                 bottomMargin = dp(8)
             })
         }
