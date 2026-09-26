@@ -9,6 +9,7 @@ import android.widget.*
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.AppCompatSeekBar
+import android.content.res.ColorStateList
 
 object ThemeOptions {
     fun add(activity: Activity, parent: LinearLayout, refresh: () -> Unit) {
@@ -110,6 +111,14 @@ object ThemeOptions {
                 progress = currentValue - min
                 contentDescription = title
                 minimumHeight = dp(44)
+                // SESL9 can inherit a nearly transparent tint from Guardian's
+                // glass/dynamic theme. Give the production slider an explicit
+                // visible SESL tint while preserving the native widget geometry.
+                progressTintList = ColorStateList.valueOf(Appearance.accent(c))
+                thumbTintList = ColorStateList.valueOf(Appearance.accent(c))
+                progressBackgroundTintList = ColorStateList.valueOf(
+                    if (Appearance.dark(c)) 0x55ffffff else 0x55000000
+                )
                 setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                         if (!fromUser) return
