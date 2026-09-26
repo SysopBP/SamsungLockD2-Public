@@ -90,44 +90,62 @@ class MainActivity : Activity() {
     }
 
     private fun maybeShowWhatsNew() {
-        val version = runCatching {
-            packageManager.getPackageInfo(packageName, 0).versionName ?: "current"
-        }.getOrDefault("current")
-        val prefs = getSharedPreferences("d2_whats_new", MODE_PRIVATE)
-        if (prefs.getString("shown_version", "") == version) return
+        val info = runCatching { packageManager.getPackageInfo(packageName, 0) }.getOrNull()
+        val versionName = info?.versionName ?: "current"
+        val versionCode = if (android.os.Build.VERSION.SDK_INT >= 28) info?.longVersionCode?.toInt() ?: 0 else @Suppress("DEPRECATION") (info?.versionCode ?: 0)
+        if (Prefs.introSeenVersion(this) == versionCode || Prefs.introDismissed(this)) return
+        showWhatsNewNext(versionName, versionCode)
+    }
 
-        val content = LinearLayout(this).apply {
+    private fun showWhatsNewNext(versionName: String? = null, versionCode: Int? = null) {
+        val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(8), dp(20), dp(8))
-            addView(TextView(this@MainActivity).apply {
-                text = "D2 $version"
-                textSize = 13f
-                setTextColor(Appearance.accent(this@MainActivity))
-            })
-            addView(TextView(this@MainActivity).apply {
-                text = "New in this build"
-                textSize = 22f
-                setTextColor(Appearance.text(this@MainActivity))
-                setPadding(0, dp(4), 0, dp(12))
-            })
-            addView(TextView(this@MainActivity).apply {
-                text = "• Floating glass settings navigation\n• Settings search\n• UI9 glass confirmation messages\n• Tap or slide Floating Bar unlock\n• Launcher icon preview and diagnostics\n• Settings backup and restore"
-                textSize = 15f
-                setLineSpacing(dp(4).toFloat(), 1f)
-                setTextColor(Appearance.text(this@MainActivity))
-            })
+            setPadding(dp(14), dp(8), dp(14), dp(12))
+            background = Appearance.glass(this@MainActivity, 30f, 40, true)
         }
-        val dialog = AlertDialog.Builder(this)
-            .setTitle("What's New")
-            .setView(content)
-            .setPositiveButton("Got it") { _, _ ->
-                prefs.edit().putString("shown_version", version).apply()
-            }
+        val title = TextView(this).apply {
+            text = "KIOSK D2 GUARDIAN"; textSize = 12f; letterSpacing = .08f
+            setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(4), 0, dp(4), dp(4))
+        }
+        val heading = TextView(this).apply {
+            text = "What's New & Next"; textSize = 22f; setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(4), 0, dp(4), dp(10))
+        }
+        val content = TextView(this).apply {
+            textSize = 14f; setTextColor(Appearance.text(this@MainActivity)); setLineSpacing(0f, 1.14f)
+            setPadding(dp(16), dp(14), dp(16), dp(18)); background = Appearance.glass(this@MainActivity, 26f, 28, true)
+        }
+        fun whatsNew() {
+            content.text = "WHAT'S NEW  •  D2 ${versionName ?: "current"}\n\n• Guardian/Xposed integration center with individually gated features\n• Galaxy Island Xposed controls and safe fallback path\n• D2 Legal, Privacy & Licenses center\n• Compact Profile Manager and Backup & Restore controls\n• Continued One UI 9 / Guardian glass interface cleanup"
+        }
+        fun whatsNext() {
+            val lock = if (PinStore(this@MainActivity).configured()) "✓" else "○"
+            val wake = if (Prefs.enabled(this@MainActivity)) "✓" else "○"
+            val kiosk = if (Prefs.kiosk(this@MainActivity)) "✓" else "○"
+            val shizuku = if (Prefs.shizukuEnabled(this@MainActivity)) "✓" else "○"
+            val root = if (Prefs.rootMode(this@MainActivity)) "✓" else "○"
+            val xp = if (Prefs.xposedMaster(this@MainActivity)) "✓" else "○"
+            content.text = "WHAT'S NEXT\n\n$lock Set up D2 authentication\n$wake Enable lock on wake\n$kiosk Configure kiosk protection\n$shizuku Connect Shizuku\n$root Verify optional KernelSU/root integration\n$xp Test LSPosed/Xposed integration\n○ Configure Galaxy Island integration\n○ Customize your lock screen\n○ Test your recovery path"
+        }
+        val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        fun tab(label: String, action: () -> Unit) = TextView(this).apply {
+            text = label; textSize = 14f; gravity = Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
+            background = Appearance.glass(this@MainActivity, 22f, 30, true); setPadding(dp(12), dp(11), dp(12), dp(11))
+            setOnClickListener { action() }
+        }
+        tabs.addView(tab("What's New") { whatsNew() }, LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(6) })
+        tabs.addView(tab("What's Next") { whatsNext() }, LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(6) })
+        body.addView(title); body.addView(heading); body.addView(tabs, LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) }); body.addView(content)
+        whatsNew()
+        val dialog = AlertDialog.Builder(this).setView(body)
+            .setNeutralButton("Don't show again") { _, _ -> Prefs.setIntroDismissed(this, true) }
+            .setNegativeButton("Later", null)
+            .setPositiveButton("Done") { _, _ -> if (versionCode != null) Prefs.setIntroSeenVersion(this, versionCode) }
             .create()
-        dialog.setOnCancelListener { prefs.edit().putString("shown_version", version).apply() }
         dialog.setOnShowListener {
-            dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 32f, 82, true))
+            dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 34f, 82, true))
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(this@MainActivity))
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(Appearance.secondary(this@MainActivity))
         }
         dialog.show()
     }
