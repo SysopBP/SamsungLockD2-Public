@@ -19,16 +19,21 @@ class GuardianXposedBridge : XposedModule() {
     companion object {
         private const val TAG = "D2XposedBridge"
         private const val SYSTEM_UI = "com.android.systemui"
+        private const val SAMSUNG_BIOMETRICS = "com.samsung.android.biometrics.app.setting"
     }
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
-        log(Log.INFO, TAG, "GUARDIAN_XPOSED_LOADED api=$apiVersion framework=$frameworkName")
+        log(Log.INFO, TAG, "GUARDIAN_XPOSED_743_LOADED api=$apiVersion framework=$frameworkName")
     }
 
     override fun onPackageReady(param: PackageReadyParam) {
+        if (param.packageName == SAMSUNG_BIOMETRICS) {
+            log(Log.INFO, TAG, "GUARDIAN_XPOSED_743_BIOMETRICS_READY package=${param.packageName}")
+            return
+        }
         if (param.packageName != SYSTEM_UI) return
 
-        log(Log.INFO, TAG, "GUARDIAN_XPOSED_SYSTEMUI_READY package=${param.packageName}")
+        log(Log.INFO, TAG, "GUARDIAN_XPOSED_743_SYSTEMUI_READY package=${param.packageName}")
         installPowerDiagnostics()
         installSystemUiNotificationDiagnostics(param.classLoader)
         installGuardianSystemUiHooks(param.classLoader)
