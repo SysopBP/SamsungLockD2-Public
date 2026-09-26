@@ -522,6 +522,10 @@ class MainActivity : Activity() {
         }
         return settingsHost(root)
         }
+        addButton(root, "What's New & Next") {
+            val info = runCatching { packageManager.getPackageInfo(packageName, 0) }.getOrNull()
+            showWhatsNewNext(info?.versionName ?: "current", null)
+        }
         val taps = DoubleTap()
         addButton(root, "Double-tap to lock D2") {
             if (taps.tap(SystemClock.elapsedRealtime())) {
