@@ -1014,6 +1014,10 @@ class LockScreenActivity : Activity() {
         biometricRunning = true
         Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_REQUESTED")
         setFingerprintGlassState("scanning")
+        // Samsung renders its own secure biometric surface. Hide Guardian's
+        // fingerprint glass while that prompt owns authentication so we never
+        // stack two fingerprint UIs on top of each other.
+        fingerprintGlass?.visibility = View.INVISIBLE
 
         val prompt = BiometricPrompt.Builder(this)
             .setTitle("Kiosk D2 Guardian")
@@ -1058,7 +1062,10 @@ class LockScreenActivity : Activity() {
                 biometricRunning = false
                 biometricCancel = null
                 Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_ERROR code=$errorCode message=$errString")
-                if (!unlocking) setFingerprintGlassState("unavailable")
+                if (!unlocking) {
+                    setFingerprintGlassState("unavailable")
+                    fingerprintGlass?.visibility = View.VISIBLE
+                }
             }
         })
     }
