@@ -101,6 +101,7 @@ class LockScreenActivity : Activity() {
     private var biometricCancel: CancellationSignal? = null
     private var biometricRunning = false
     private var ownsBiometricSession = false
+    private var fingerprintRestartPending = false
     private var fingerprintGlass: LinearLayout? = null
     private var fingerprintGlyph: TextView? = null
     private var fingerprintStatus: TextView? = null
@@ -284,11 +285,12 @@ class LockScreenActivity : Activity() {
             Log.i("SamsungLockD2", "GUARDIAN_NEW_INTENT_DEFERRED_AUTH")
             return
         }
-        if (fingerprintSessionActive) {
-            Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_SUPPRESS_DUPLICATE source=new_intent")
-            return
+        // Keep the existing singleTask Activity during screen-on/reassert intents.
+        // Recreating here races Samsung keyguard and can expose the Bouncer.
+        Log.i("SamsungLockD2", "GUARDIAN_NEW_INTENT_REUSED")
+        if (!preview && Prefs.kiosk(this) && hasWindowFocus() && RootKiosk.isEnforced()) {
+            window.decorView.post { if (!isDestroyed && !isFinishing) RootKiosk.reassert(this) }
         }
-        recreate()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -297,6 +299,17 @@ class LockScreenActivity : Activity() {
             Log.i("SamsungLockD2", if (hasFocus) "GUARDIAN_WINDOW_FOCUS_GAINED" else "GUARDIAN_WINDOW_FOCUS_LOST")
             if (hasFocus && RootKiosk.isEnforced()) {
                 window.decorView.post { if (!isDestroyed && !isFinishing) RootKiosk.reassert(this) }
+            }
+            if (hasFocus && fingerprintRestartPending && !unlocking && !biometricRunning) {
+                fingerprintRestartPending = false
+                window.decorView.postDelayed({
+                    if (!isDestroyed && !isFinishing && hasWindowFocus() && !unlocking && !biometricRunning) {
+                        Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_RESTART_AFTER_FOCUS")
+                        startGuardianFingerprint()
+                    } else if (!isDestroyed && !isFinishing && !unlocking) {
+                        fingerprintRestartPending = true
+                    }
+                }, 250)
             }
         }
     }
@@ -1090,7 +1103,19 @@ class LockScreenActivity : Activity() {
                 biometricCancel = null
                 clearFingerprintSession("error_$errorCode")
                 Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_ERROR code=$errorCode message=$errString")
-                if (!unlocking) {
+                if (errorCode == BiometricPrompt.BIOMETRIC_ERROR_CANCELED && !unlocking && !isFinishing && !isDestroyed) {
+                    fingerprintRestartPending = true
+                    Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_RESTART_PENDING reason=error_10 focus=" + hasWindowFocus())
+                    if (hasWindowFocus()) {
+                        window.decorView.postDelayed({
+                            if (fingerprintRestartPending && hasWindowFocus() && !unlocking && !biometricRunning && !isFinishing && !isDestroyed) {
+                                fingerprintRestartPending = false
+                                Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_RESTART_AFTER_FOCUS")
+                                startGuardianFingerprint()
+                            }
+                        }, 250)
+                    }
+                } else if (!unlocking) {
                     setFingerprintGlassState("unavailable")
                     fingerprintGlass?.visibility = View.VISIBLE
                 }
