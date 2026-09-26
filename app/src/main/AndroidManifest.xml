@@ -45,7 +45,8 @@
             android:launchMode="singleTask"
             android:resizeableActivity="false"
             android:supportsPictureInPicture="false"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|uiMode|density|fontScale|keyboard|keyboardHidden|navigation" />
         <activity android:name=".widget.WidgetConfigActivity" android:exported="true" android:theme="@style/Theme.SamsungLock">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
         </activity>
