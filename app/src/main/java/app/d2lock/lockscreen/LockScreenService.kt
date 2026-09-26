@@ -62,10 +62,43 @@ class LockScreenService : Service() {
             markLockSurfaceHealthy()
             return START_STICKY
         }
+        if (action == ACTION_XPOSED_KEYGUARD_STATE) {
+            val state = intent?.getStringExtra(EXTRA_KEYGUARD_STATE) ?: "UNKNOWN"
+            val source = intent?.getStringExtra(EXTRA_KEYGUARD_SOURCE) ?: "unknown"
+            Log.i(TAG, "GUARDIAN_KEYGUARD_HANDOFF state=$state source=$source")
+            when (state) {
+                "SHOWING", "GOING_AWAY" -> {
+                    handler.removeCallbacksAndMessages(SURFACE_RECOVERY_TOKEN)
+                    keyguardHandoffActive = true
+                    Log.i(TAG, "GUARDIAN_BOOT_WAIT_KEYGUARD state=$state")
+                }
+                "CLEAR" -> {
+                    handler.removeCallbacksAndMessages(SURFACE_RECOVERY_TOKEN)
+                    keyguardHandoffActive = false
+                    handler.postAtTime({
+                        if (Prefs.enabled(this) && PinStore(this).configured() &&
+                            app.d2lock.notifications.CallNotificationStore.items.isEmpty()) {
+                            Log.i(TAG, "GUARDIAN_KEYGUARD_CLEAR launch=single")
+                            val launched = Prefs.rootMode(this) && RootManager.launchCompanion()
+                            Log.i(TAG, "GUARDIAN_D2_HANDOFF_LAUNCH path=${if (launched) "root" else "activity"}")
+                            if (!launched) runCatching {
+                                startActivity(Intent(this, LockScreenActivity::class.java)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP))
+                            }
+                        }
+                    }, SURFACE_RECOVERY_TOKEN, SystemClock.uptimeMillis() + KEYGUARD_CLEAR_SETTLE_MS)
+                }
+            }
+            return START_STICKY
+        }
         if (action == ACTION_LOCK_SURFACE_LOST) {
             val reason = intent?.getStringExtra(EXTRA_REASON) ?: "unknown"
             Log.w(TAG, "GUARDIAN_SURFACE_LOST reason=$reason")
             handler.removeCallbacksAndMessages(SURFACE_RECOVERY_TOKEN)
+            if (keyguardHandoffActive) {
+                Log.i(TAG, "GUARDIAN_SURFACE_RECOVERY_DEFERRED reason=$reason keyguardHandoff=true")
+                return START_STICKY
+            }
             handler.postAtTime({
                 if (Prefs.enabled(this) && PinStore(this).configured() && app.d2lock.notifications.CallNotificationStore.items.isEmpty()) {
                     val launched = Prefs.rootMode(this) && RootManager.launchCompanion()
@@ -137,11 +170,21 @@ class LockScreenService : Service() {
         private const val EXTRA_POST_BOOT = "d2_post_boot"
         private const val ACTION_LOCK_SURFACE_HEALTHY = "app.d2lock.action.LOCK_SURFACE_HEALTHY"
         private const val ACTION_LOCK_SURFACE_LOST = "app.d2lock.action.LOCK_SURFACE_LOST"
+        private const val ACTION_XPOSED_KEYGUARD_STATE = "app.d2lock.action.XPOSED_KEYGUARD_STATE_INTERNAL"
         private const val EXTRA_REASON = "reason"
+        private const val EXTRA_KEYGUARD_STATE = "keyguard_state"
+        private const val EXTRA_KEYGUARD_SOURCE = "keyguard_source"
+        private const val KEYGUARD_CLEAR_SETTLE_MS = 180L
+        @Volatile private var keyguardHandoffActive = false
         private val SURFACE_RECOVERY_TOKEN = Any()
         fun start(context: Context, postBoot: Boolean = false) = context.startForegroundService(Intent(context, LockScreenService::class.java).putExtra(EXTRA_POST_BOOT, postBoot))
         fun markHealthy(context: Context) = context.startService(Intent(context, LockScreenService::class.java).setAction(ACTION_LOCK_SURFACE_HEALTHY))
         fun surfaceLost(context: Context, reason: String) = context.startService(Intent(context, LockScreenService::class.java).setAction(ACTION_LOCK_SURFACE_LOST).putExtra(EXTRA_REASON, reason))
+        fun keyguardSignal(context: Context, state: String, source: String) =
+            context.startService(Intent(context, LockScreenService::class.java)
+                .setAction(ACTION_XPOSED_KEYGUARD_STATE)
+                .putExtra(EXTRA_KEYGUARD_STATE, state)
+                .putExtra(EXTRA_KEYGUARD_SOURCE, source))
         fun stop(context: Context) = context.stopService(Intent(context, LockScreenService::class.java))
     }
 }
