@@ -488,10 +488,10 @@ class LockScreenActivity : Activity() {
         mediaPanel.addView(mediaDetails, LinearLayout.LayoutParams(0, -2, 1f))
         val controls = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
-            addView(mediaButton("◀|") { media.previous() })
+            addView(mediaIconButton(app.d2lock.R.drawable.ic_media_previous, "Previous") { media.previous() })
             playPause = mediaButton("▶", true) { media.toggle() }
             addView(playPause)
-            addView(mediaButton("|▶") { media.next() })
+            addView(mediaIconButton(app.d2lock.R.drawable.ic_media_next, "Next") { media.next() })
             val buttonScale = Prefs.mediaButtonsScale(this@LockScreenActivity) / 100f
             scaleX = buttonScale
             scaleY = buttonScale
@@ -852,6 +852,27 @@ class LockScreenActivity : Activity() {
         background = glassPanel(32f)
         isClickable = true
         isFocusable = true
+        setOnClickListener {
+            performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+            click()
+        }
+    }
+
+    private fun mediaIconButton(icon: Int, description: String, click: () -> Unit) = ImageView(this).apply {
+        setImageResource(icon)
+        imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+        contentDescription = description
+        setPadding(dp(12), dp(12), dp(12), dp(12))
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(0x24ffffff)
+            setStroke(dp(1), 0x52ffffff)
+        }
+        layoutParams = LinearLayout.LayoutParams(dp(46), dp(46)).apply {
+            marginStart = dp(3)
+            marginEnd = dp(3)
+        }
+        isClickable = true
         setOnClickListener {
             performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
             click()
