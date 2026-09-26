@@ -2617,7 +2617,7 @@ class MainActivity : Activity() {
                 text = "◆"
                 textSize = 15f
                 gravity = Gravity.CENTER
-                setTextColor(if (guardianHealthy) Color.rgb(102, 220, 132) else Appearance.accent(this@MainActivity))
+                setTextColor(Appearance.accent(this@MainActivity))
             }, LinearLayout.LayoutParams(-1, dp(23)))
             addView(TextView(this@MainActivity).apply {
                 text = if (guardianHealthy) "CORE" else "CHECK"
