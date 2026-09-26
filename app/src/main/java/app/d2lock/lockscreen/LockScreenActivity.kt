@@ -96,6 +96,10 @@ class LockScreenActivity : Activity() {
     private var pinDialog: AlertDialog? = null
     private var biometricCancel: CancellationSignal? = null
     private var biometricRunning = false
+    private var fingerprintGlass: LinearLayout? = null
+    private var fingerprintGlyph: TextView? = null
+    private var fingerprintStatus: TextView? = null
+    private var fingerprintPulse: ObjectAnimator? = null
     private var wallpaperActive = false
     private var emptyTapAt = 0L
     private val wallpaperExecutor = Executors.newSingleThreadExecutor()
@@ -595,6 +599,17 @@ class LockScreenActivity : Activity() {
         if (Prefs.showMedia(this)) content.addView(mediaPanel,
             LinearLayout.LayoutParams(-1, dp(if (mediaCompact) 126 else if (mediaLarge) 174 else 154)).apply { bottomMargin = dp(12) })
         frame.addView(content, FrameLayout.LayoutParams(-1, -1))
+
+        // Guardian fingerprint glass: this is D2's visual layer. The secure
+        // authentication itself remains Android/Samsung BIOMETRIC_STRONG.
+        if (!preview) {
+            fingerprintGlass = buildFingerprintGlass().also { glass ->
+                frame.addView(glass, FrameLayout.LayoutParams(dp(238), dp(126), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
+                    bottomMargin = dp(104)
+                })
+            }
+        }
+
         val floatingBar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(9), dp(7), dp(9), dp(7))
@@ -898,6 +913,82 @@ class LockScreenActivity : Activity() {
         }
     }
 
+    private fun buildFingerprintGlass(): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
+        setPadding(dp(18), dp(10), dp(18), dp(10))
+        background = Appearance.glass(this@LockScreenActivity, 32f, 42, true)
+        elevation = dp(18).toFloat()
+        alpha = .96f
+
+        fingerprintGlyph = TextView(this@LockScreenActivity).apply {
+            text = "◎"
+            textSize = 34f
+            gravity = Gravity.CENTER
+            setTextColor(Appearance.text(this@LockScreenActivity, true))
+            contentDescription = "Fingerprint sensor"
+        }
+        addView(fingerprintGlyph, LinearLayout.LayoutParams(dp(58), dp(50)))
+
+        fingerprintStatus = label("Touch fingerprint sensor", 14f, Appearance.text(this@LockScreenActivity, true)).apply {
+            gravity = Gravity.CENTER
+        }
+        addView(fingerprintStatus, LinearLayout.LayoutParams(-1, dp(28)))
+
+        addView(label("PIN / Pattern", 12f, Appearance.secondary(this@LockScreenActivity, true)).apply {
+            gravity = Gravity.CENTER
+            isClickable = true
+            isFocusable = true
+            setPadding(dp(10), dp(3), dp(10), dp(3))
+            setOnClickListener {
+                performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                cancelGuardianFingerprint("guardian_fallback_tapped")
+                authenticate()
+            }
+        }, LinearLayout.LayoutParams(-1, dp(30)))
+    }
+
+    private fun setFingerprintGlassState(state: String) {
+        val status = fingerprintStatus ?: return
+        val glyph = fingerprintGlyph ?: return
+        fingerprintPulse?.cancel()
+        fingerprintPulse = null
+        when (state) {
+            "scanning" -> {
+                status.text = "Touch fingerprint sensor"
+                glyph.alpha = 1f
+                fingerprintPulse = ObjectAnimator.ofFloat(glyph, View.SCALE_X, .90f, 1.10f, .90f).apply {
+                    duration = 1250
+                    repeatCount = ValueAnimator.INFINITE
+                    start()
+                }
+                ObjectAnimator.ofFloat(glyph, View.SCALE_Y, .90f, 1.10f, .90f).apply {
+                    duration = 1250
+                    repeatCount = ValueAnimator.INFINITE
+                    start()
+                    fingerprintPulse?.addListener(object : android.animation.AnimatorListenerAdapter() {
+                        override fun onAnimationEnd(animation: android.animation.Animator) { cancel() }
+                    })
+                }
+            }
+            "failed" -> {
+                status.text = "Not recognized • try again"
+                glyph.animate().rotationBy(8f).setDuration(70).withEndAction {
+                    glyph.animate().rotation(0f).setDuration(110).start()
+                }.start()
+            }
+            "success" -> {
+                status.text = "Fingerprint verified"
+                glyph.text = "✓"
+                glyph.animate().scaleX(1.16f).scaleY(1.16f).setDuration(120).start()
+            }
+            "unavailable" -> {
+                status.text = "Fingerprint unavailable"
+                glyph.alpha = .55f
+            }
+        }
+    }
+
     private fun startGuardianFingerprint() {
         if (preview || unlocking || biometricRunning || isFinishing || isDestroyed) return
 
@@ -905,12 +996,16 @@ class LockScreenActivity : Activity() {
         val status = manager?.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
             ?: BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE
         Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_CAN_AUTH status=$status")
-        if (status != BiometricManager.BIOMETRIC_SUCCESS) return
+        if (status != BiometricManager.BIOMETRIC_SUCCESS) {
+            setFingerprintGlassState("unavailable")
+            return
+        }
 
         val cancel = CancellationSignal()
         biometricCancel = cancel
         biometricRunning = true
         Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_REQUESTED")
+        setFingerprintGlassState("scanning")
 
         val prompt = BiometricPrompt.Builder(this)
             .setTitle("Kiosk D2 Guardian")
@@ -935,6 +1030,7 @@ class LockScreenActivity : Activity() {
                 GuardianWatchdog.beginTrustedAuthentication()
                 handler.removeCallbacks(quickSettingsGuard)
                 Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_SUCCESS type=${result.authenticationType}")
+                setFingerprintGlassState("success")
                 GuardianWatchdog.endTrustedAuthentication("auth_success")
                 playUnlockHaptic()
                 RootKiosk.unlock(this@LockScreenActivity) {
@@ -946,6 +1042,7 @@ class LockScreenActivity : Activity() {
             override fun onAuthenticationFailed() {
                 super.onAuthenticationFailed()
                 Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_FAILED")
+                setFingerprintGlassState("failed")
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
@@ -953,6 +1050,7 @@ class LockScreenActivity : Activity() {
                 biometricRunning = false
                 biometricCancel = null
                 Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_ERROR code=$errorCode message=$errString")
+                if (!unlocking) setFingerprintGlassState("unavailable")
             }
         })
     }
