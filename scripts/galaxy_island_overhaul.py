@@ -287,7 +287,7 @@ if "io.github.libxposed:api:102.0.0" not in gradle_text:
     dep_anchor = "dependencies {"
     if dep_anchor not in gradle_text:
         raise SystemExit("Galaxy Island source drift: dependencies block not found")
-    gradle_text = gradle_text.replace(dep_anchor, dep_anchor + '\\n    compileOnly("io.github.libxposed:api:102.0.0")', 1)
+    gradle_text = gradle_text.replace(dep_anchor, dep_anchor + '\n    compileOnly("io.github.libxposed:api:102.0.0")', 1)
     gradle.write_text(gradle_text)
 
 island = "app/src/main/java/com/ekoehler/expressivecutout/overlay/DynamicIsland.kt"
