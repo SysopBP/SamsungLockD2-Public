@@ -1131,6 +1131,11 @@ class LockScreenActivity : Activity() {
         val cancel = CancellationSignal()
         biometricCancel = cancel
         biometricRunning = true
+        // Samsung's BiometricPrompt intentionally owns foreground focus while
+        // authentication is active. Tell Guardian before launching it so kiosk
+        // recovery does not fight the trusted system surface.
+        GuardianWatchdog.beginTrustedAuthentication()
+        Log.i("SamsungLockD2", "GUARDIAN_BIOMETRIC_HANDOFF_BEGIN focus=" + hasWindowFocus())
         Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_REQUESTED")
         setFingerprintGlassState("starting")
         window.decorView.postDelayed({
@@ -1151,8 +1156,16 @@ class LockScreenActivity : Activity() {
                 biometricRunning = false
                 biometricCancel = null
                 clearFingerprintSession("fallback")
+                GuardianWatchdog.endTrustedAuthentication("biometric_fallback")
+                Log.i("SamsungLockD2", "GUARDIAN_BIOMETRIC_HANDOFF_END reason=fallback")
                 Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_FALLBACK")
-                if (!isFinishing && !isDestroyed) authenticate()
+                fingerprintGlass?.visibility = View.VISIBLE
+                if (!isFinishing && !isDestroyed) {
+                    window.decorView.post {
+                        window.decorView.requestFocus()
+                        authenticate()
+                    }
+                }
             }
             .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
             .build()
@@ -1165,7 +1178,6 @@ class LockScreenActivity : Activity() {
                 biometricCancel = null
                 clearFingerprintSession("success")
                 unlocking = true
-                GuardianWatchdog.beginTrustedAuthentication()
                 handler.removeCallbacks(quickSettingsGuard)
                 val keyguard = getSystemService(android.app.KeyguardManager::class.java)
                 Log.i(
@@ -1175,6 +1187,7 @@ class LockScreenActivity : Activity() {
                 Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_SUCCESS type=${result.authenticationType}")
                 setFingerprintGlassState("success")
                 GuardianWatchdog.endTrustedAuthentication("auth_success")
+                Log.i("SamsungLockD2", "GUARDIAN_BIOMETRIC_HANDOFF_END reason=success")
                 playUnlockHaptic()
                 RootKiosk.unlock(this@LockScreenActivity) {
                     app.d2lock.bridge.IslandBridge.setLocked(this@LockScreenActivity, false)
@@ -1194,21 +1207,17 @@ class LockScreenActivity : Activity() {
                 biometricCancel = null
                 clearFingerprintSession("error_$errorCode")
                 Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_ERROR code=$errorCode message=$errString")
-                if (errorCode == BiometricPrompt.BIOMETRIC_ERROR_CANCELED && !unlocking && !isFinishing && !isDestroyed) {
-                    fingerprintRestartPending = true
-                    Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_RESTART_PENDING reason=error_10 focus=" + hasWindowFocus())
-                    if (hasWindowFocus()) {
-                        window.decorView.postDelayed({
-                            if (fingerprintRestartPending && hasWindowFocus() && !unlocking && !biometricRunning && !isFinishing && !isDestroyed) {
-                                fingerprintRestartPending = false
-                                Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_RESTART_AFTER_FOCUS")
-                                startGuardianFingerprint()
-                            }
-                        }, 250)
-                    }
-                } else if (!unlocking) {
+                GuardianWatchdog.endTrustedAuthentication("biometric_error_$errorCode")
+                Log.i("SamsungLockD2", "GUARDIAN_BIOMETRIC_HANDOFF_END reason=error_$errorCode")
+                fingerprintRestartPending = false
+                if (!unlocking) {
+                    // A cancelled/failed Samsung prompt must settle back onto D2
+                    // rather than immediately reopening and creating a focus loop.
                     setFingerprintGlassState("unavailable")
                     fingerprintGlass?.visibility = View.VISIBLE
+                    window.decorView.post {
+                        if (!isDestroyed && !isFinishing) window.decorView.requestFocus()
+                    }
                 }
             }
         })
@@ -1229,6 +1238,9 @@ class LockScreenActivity : Activity() {
         biometricCancel?.cancel()
         biometricCancel = null
         clearFingerprintSession(reason)
+        GuardianWatchdog.endTrustedAuthentication("biometric_cancel_$reason")
+        Log.i("SamsungLockD2", "GUARDIAN_BIOMETRIC_HANDOFF_END reason=cancel_$reason")
+        fingerprintGlass?.visibility = View.VISIBLE
     }
 
     private fun authenticate(afterUnlock: (() -> Unit)? = null) {
