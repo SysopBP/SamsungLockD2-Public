@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import app.d2lock.lockscreen.GuardianWatchdog
 import java.lang.ref.WeakReference
 
 /**
@@ -53,6 +54,12 @@ object KioskD2Guardian {
             val manager = activity.getSystemService(ActivityManager::class.java)
             val now = SystemClock.elapsedRealtime()
             if (RootKiosk.isEnforced()) {
+                if (GuardianWatchdog.isTrustedAuthenticationActive()) {
+                    if (lostFocusAt != 0L) lostFocusAt = 0L
+                    Log.i(TAG, "GUARDIAN_WATCHDOG_DEFERRED_AUTH")
+                    main.postDelayed(this, CHECK_MS)
+                    return
+                }
                 val modeLost = manager.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_LOCKED
                 val focusLost = !activity.hasWindowFocus()
                 if (focusLost) {
