@@ -125,7 +125,7 @@ object ThemeOptions {
                 val left=paddingLeft.toFloat()
                 val right=(width-paddingRight).toFloat()
                 val cy=height/2f
-                val railH=dp(4).toFloat()
+                val railH=dp(8).toFloat()
                 val radius=railH/2f
                 val fraction=if(max>0) progress.toFloat()/max.toFloat() else 0f
                 val x=left+(right-left)*fraction
@@ -138,7 +138,7 @@ object ThemeOptions {
                     fill.color=(Appearance.accent(c) and 0x00ffffff) or 0xb8000000.toInt()
                     canvas.drawRoundRect(left,cy-railH/2f,x,cy+railH/2f,radius,radius,fill)
                 }
-                val thumbR=dp(8).toFloat()
+                val thumbR=dp(9).toFloat()
                 fill.color=(Appearance.accent(c) and 0x00ffffff) or 0xe6000000.toInt()
                 canvas.drawCircle(x,cy,thumbR,fill)
                 outline.color=0x99ffffff.toInt()
@@ -165,9 +165,20 @@ object ThemeOptions {
                         if(!fromUser) return
                         val next=min+progress
                         if(next==currentValue) return
+                        val oldValue=currentValue
                         currentValue=next
                         Appearance.set(c,key,next)
                         heading.text="$title: $next$suffix"
+                        val span=(max-min).coerceAtLeast(1)
+                        val step=(span/10).coerceAtLeast(1)
+                        val crossedTick=(oldValue-min)/step != (next-min)/step
+                        val edge=next==min || next==max
+                        if(crossedTick || edge) {
+                            seekBar?.performHapticFeedback(
+                                if(edge) android.view.HapticFeedbackConstants.CONFIRM
+                                else android.view.HapticFeedbackConstants.CLOCK_TICK
+                            )
+                        }
                         if(key.startsWith("bar_")) barPreview.background=Appearance.floatingBar(c)
                         else preview.background=Appearance.panel(c,"theme.preview",banner=key=="banners")
                     }
