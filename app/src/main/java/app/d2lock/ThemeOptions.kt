@@ -109,7 +109,7 @@ object ThemeOptions {
                 orientation = LinearLayout.VERTICAL
                 gravity = android.view.Gravity.CENTER_VERTICAL
                 setPadding(dp(12), 0, dp(12), 0)
-                background = Appearance.glass(c, 24f, 24, true)
+                background = Appearance.glass(c, 32f, 30, true)
             }
             glassSlider.addView(SeslSeekBar(c).apply {
                 this.max = (max - min).coerceAtLeast(1)
@@ -131,8 +131,9 @@ object ThemeOptions {
                     override fun onStopTrackingTouch(seekBar: SeslSeekBar?) = Unit
                 })
             }, LinearLayout.LayoutParams(-1, dp(44)))
-            parent.addView(glassSlider, LinearLayout.LayoutParams(-1, dp(54)).apply {
-                bottomMargin = dp(8)
+            parent.addView(glassSlider, LinearLayout.LayoutParams(-1, dp(58)).apply {
+                topMargin = dp(4)
+                bottomMargin = dp(14)
             })
         }
         slider("Card opacity","cards",20,100,Appearance.cardOpacity(c),"%")
