@@ -1693,7 +1693,7 @@ class MainActivity : Activity() {
                             .setItems(names.toTypedArray()) { _, i ->
                                 Prefs.deleteCustomProfile(this, names[i]); showD2Message("${names[i]} profile deleted"); refreshAppearance()
                             }.setNegativeButton("Cancel", null).create().also {
-                                it.setOnShowListener { it.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true)) }; it.show()
+                                it.setOnShowListener { _ -> it.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true)) }; it.show()
                             }
                     }
                 }.setNegativeButton("Done", null).create()
