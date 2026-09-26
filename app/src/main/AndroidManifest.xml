@@ -104,7 +104,8 @@
         <receiver
             android:name=".lockscreen.KeyguardSignalReceiver"
             android:directBootAware="true"
-            android:exported="true">
+            android:exported="true"
+            android:permission="android.permission.STATUS_BAR">
             <intent-filter>
                 <action android:name="app.d2lock.action.XPOSED_KEYGUARD_STATE" />
             </intent-filter>
