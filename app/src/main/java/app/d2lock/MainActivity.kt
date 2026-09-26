@@ -364,8 +364,8 @@ class MainActivity : Activity() {
                 }
             })
         }
-        addButton(root, if (configured) "Change D2 PIN" else "Create D2 PIN") {
-            pinDialog = PinUi.show(this, setup = !configured, change = configured, success = {
+        if (!configured) addButton(root, "Create D2 PIN") {
+            pinDialog = PinUi.show(this, setup = true, change = false, success = {
                 authorized = true
                 setContentView(buildSettings())
             })
@@ -432,6 +432,21 @@ class MainActivity : Activity() {
                             }.setNegativeButton("Cancel",null).create()
                         dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,30f,76,true)) }
                         dialog.show()
+                    }
+                },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
+
+                addView(TextView(this@MainActivity).apply {
+                    text="Change PIN"
+                    textSize=15f
+                    setTextColor(Appearance.text(this@MainActivity))
+                    gravity=Gravity.CENTER
+                    background=Appearance.glass(this@MainActivity,22f,26,true)
+                    setPadding(dp(14),dp(10),dp(14),dp(10))
+                    setOnClickListener {
+                        pinDialog = PinUi.show(this@MainActivity, setup=false, change=true, success={
+                            authorized=true
+                            setContentView(buildSettings())
+                        })
                     }
                 },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
 
@@ -586,37 +601,60 @@ class MainActivity : Activity() {
                 })
             })
             addView(TextView(this@MainActivity).apply {
-                text="Shizuku · KernelSU root · LSPosed-ready integration"
-                textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,dp(4),0,dp(8))
+                val shizuku=if(Prefs.shizukuEnabled(this@MainActivity)) "Shizuku ON" else "Shizuku OFF"
+                val rootState=if(Prefs.rootMode(this@MainActivity) && RootManager.isAvailable()) "Root ON" else "Root OFF"
+                val xposed=if(Prefs.xposedMaster(this@MainActivity)) "Xposed ON" else "Xposed OFF"
+                text="$shizuku  •  $rootState  •  $xposed"
+                textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,dp(5),0,dp(10))
             })
-            addView(guardianSwitch().apply {
-                text="Use Shizuku"
-                textSize=16f; setTextColor(Appearance.text(this@MainActivity))
-                isChecked=Prefs.shizukuEnabled(this@MainActivity)
-                setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_guardian_shizuku,0,0,0)
-                compoundDrawableTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-                compoundDrawablePadding=dp(8)
-                setOnCheckedChangeListener { _,checked ->
-                    Prefs.setShizukuEnabled(this@MainActivity,checked)
-                    Toast.makeText(this@MainActivity,if(checked) "D2 Shizuku integration enabled" else "D2 Shizuku integration disabled",Toast.LENGTH_SHORT).show()
-                    refreshShizukuUi()
+            addView(TextView(this@MainActivity).apply {
+                text="Open integrations"; textSize=15f; gravity=Gravity.CENTER
+                setTextColor(Appearance.text(this@MainActivity)); background=Appearance.glass(this@MainActivity,22f,28,true)
+                setPadding(dp(14),dp(10),dp(14),dp(10))
+                setOnClickListener {
+                    val panel=LinearLayout(this@MainActivity).apply {
+                        orientation=LinearLayout.VERTICAL
+                        setPadding(dp(18),dp(8),dp(18),dp(20))
+                        addView(guardianSwitch().apply {
+                            text="Use Shizuku"; isChecked=Prefs.shizukuEnabled(this@MainActivity)
+                            setTextColor(Appearance.text(this@MainActivity))
+                            setOnCheckedChangeListener { _,checked -> Prefs.setShizukuEnabled(this@MainActivity,checked) }
+                        },rowParams())
+                        addView(guardianSwitch().apply {
+                            text="KernelSU root mode"; isChecked=Prefs.rootMode(this@MainActivity)
+                            setTextColor(Appearance.text(this@MainActivity))
+                            setOnCheckedChangeListener { _,checked ->
+                                if(checked && !RootManager.isAvailable()) {
+                                    isChecked=false
+                                    Toast.makeText(this@MainActivity,"Root shell was not detected",Toast.LENGTH_LONG).show()
+                                } else Prefs.setRootMode(this@MainActivity,checked)
+                            }
+                        },rowParams())
+                        addView(guardianSwitch().apply {
+                            text="Xposed integration"; isChecked=Prefs.xposedMaster(this@MainActivity)
+                            setTextColor(Appearance.text(this@MainActivity))
+                            setOnCheckedChangeListener { _,checked -> Prefs.setXposedMaster(this@MainActivity,checked) }
+                        },rowParams())
+                        addView(guardianSwitch().apply {
+                            text="Galaxy Island • Xposed"; isChecked=Prefs.xposedGalaxyIsland(this@MainActivity)
+                            setTextColor(Appearance.text(this@MainActivity))
+                            setOnCheckedChangeListener { _,checked -> Prefs.setXposedGalaxyIsland(this@MainActivity,checked) }
+                        },rowParams())
+                        addView(guardianSwitch().apply {
+                            text="Automatic fallback"; isChecked=Prefs.xposedAutomaticFallback(this@MainActivity)
+                            setTextColor(Appearance.text(this@MainActivity))
+                            setOnCheckedChangeListener { _,checked -> Prefs.setXposedAutomaticFallback(this@MainActivity,checked) }
+                        },rowParams())
+                    }
+                    val dialog=AlertDialog.Builder(this@MainActivity)
+                        .setTitle("System integrations")
+                        .setView(panel)
+                        .setPositiveButton("Done") { _,_ -> setContentView(buildSettings()) }
+                        .create()
+                    dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,30f,76,true)) }
+                    dialog.show()
                 }
-            },rowParams())
-            addView(shizukuCard(),LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
-            addView(guardianSwitch().apply {
-                text="Optional KernelSU root mode"
-                textSize=16f; setTextColor(Appearance.text(this@MainActivity))
-                isChecked=Prefs.rootMode(this@MainActivity)
-                setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_guardian_root,0,0,0)
-                compoundDrawableTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-                compoundDrawablePadding=dp(8)
-                setOnCheckedChangeListener { _,checked ->
-                    if(checked && !RootManager.isAvailable()) {
-                        isChecked=false
-                        Toast.makeText(this@MainActivity,"Root shell was not detected",Toast.LENGTH_LONG).show()
-                    } else Prefs.setRootMode(this@MainActivity,checked)
-                }
-            },rowParams())
+            })
         },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
 
         section(root, "RECOVERY & SAFETY")
