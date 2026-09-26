@@ -410,35 +410,74 @@ class MainActivity : Activity() {
         // actual tagged sections in the scroll view so Search and jump targets work.
 
         if (configured) {
+            val fingerprintIdentity=RootManager.fingerprintHardwareInfo()
+            val rootReady=RootManager.isAvailable()
+            val shizukuReady=Prefs.shizukuEnabled(this) && runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+            val xposedReady=Prefs.xposedMaster(this)
+            val kioskReady=Prefs.kiosk(this)
             val statusCard = LinearLayout(this).apply {
                 orientation=LinearLayout.VERTICAL
                 setPadding(dp(18),dp(14),dp(18),dp(14))
                 background=Appearance.glass(this@MainActivity,30f,58,true)
                 isClickable=true
                 isFocusable=true
-                addView(TextView(this@MainActivity).apply { text="GUARDIAN OVERVIEW"; textSize=13f; setTextColor(Appearance.secondary(this@MainActivity)) })
+                addView(TextView(this@MainActivity).apply {
+                    text="DEVICE IDENTITY"
+                    textSize=12f
+                    letterSpacing=.10f
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text="${android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${android.os.Build.MODEL}"
+                    textSize=20f
+                    setTextColor(Appearance.text(this@MainActivity))
+                    setPadding(0,dp(4),0,dp(2))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    val fp=fingerprintIdentity?.productId?.takeUnless { it=="Unknown" } ?: "Fingerprint available"
+                    text="Android ${android.os.Build.VERSION.RELEASE}  •  API ${android.os.Build.VERSION.SDK_INT}  •  $fp"
+                    textSize=12f
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                    setPadding(0,0,0,dp(10))
+                })
                 addView(TextView(this@MainActivity).apply {
                     text="Protected  •  "+Prefs.unlockMethod(this@MainActivity).replaceFirstChar { it.uppercase() }
-                    textSize=19f; setTextColor(Appearance.text(this@MainActivity)); setPadding(0,dp(4),0,dp(8))
+                    textSize=17f
+                    setTextColor(Appearance.text(this@MainActivity))
+                    setPadding(0,0,0,dp(8))
                 })
-                addView(TextView(this@MainActivity).apply {
-                    val states=listOf(
-                        if(Prefs.kiosk(this@MainActivity)) "Kiosk ✓" else "Kiosk —",
-                        if(Prefs.rootMode(this@MainActivity)) "Root ✓" else "Root —",
-                        if(Prefs.shizukuEnabled(this@MainActivity)) "Shizuku ✓" else "Shizuku —",
-                        "LSPosed • check"
-                    )
-                    text=states.joinToString("   ")
-                    textSize=12f; setTextColor(Appearance.secondary(this@MainActivity))
-                })
+                fun statusChip(label:String, ready:Boolean)=TextView(this@MainActivity).apply {
+                    text=label+"  "+if(ready) "✓" else "—"
+                    textSize=11f
+                    gravity=Gravity.CENTER
+                    setTextColor(if(ready) Appearance.text(this@MainActivity) else Appearance.secondary(this@MainActivity))
+                    background=Appearance.glass(this@MainActivity,18f,if(ready) 44 else 24,ready)
+                    setPadding(dp(9),dp(7),dp(9),dp(7))
+                }
+                addView(LinearLayout(this@MainActivity).apply {
+                    orientation=LinearLayout.HORIZONTAL
+                    addView(statusChip("Kiosk",kioskReady),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
+                    addView(statusChip("Root",rootReady),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3); rightMargin=dp(3) })
+                    addView(statusChip("Shizuku",shizukuReady),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3); rightMargin=dp(3) })
+                    addView(statusChip("LSPosed",xposedReady),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
+                },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
                 addView(guardianSwitch().apply {
                     text=if(app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)) "Galaxy Island  •  Connected" else "Galaxy Island  •  Disconnected"
                     textSize=14f
                     setTextColor(Appearance.text(this@MainActivity))
                     isChecked=app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)
                     setOnCheckedChangeListener { _,value -> app.d2lock.bridge.IslandBridge.setEnabled(this@MainActivity,value) }
-                },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(8) })
-                setOnClickListener { performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK) }
+                })
+                setOnClickListener {
+                    performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                    val fp=fingerprintIdentity
+                    val fingerprintText=if(fp!=null) "\n\nFingerprint hardware\nProduct: ${fp.productId}\nHardware Sensor ID: ${fp.hardwareSensorId}\nChip SN: ${fp.chipSn}\nFirmware: ${fp.firmwareVersion}\nTemplates supported: ${fp.maxTemplates}\nProvider: ${fp.provider}\nHAL deaths: ${fp.halDeaths}" else "\n\nFingerprint hardware: root diagnostic unavailable"
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Device Identity")
+                        .setMessage("Manufacturer: ${android.os.Build.MANUFACTURER}\nModel: ${android.os.Build.MODEL}\nProduct: ${android.os.Build.PRODUCT}\nDevice: ${android.os.Build.DEVICE}\nAndroid: ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})\nBuild: ${android.os.Build.DISPLAY}"+fingerprintText)
+                        .setPositiveButton("Close",null)
+                        .show()
+                }
             }
             root.addView(statusCard,LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
         }
