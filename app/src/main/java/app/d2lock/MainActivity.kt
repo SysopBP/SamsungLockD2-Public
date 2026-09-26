@@ -722,7 +722,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.wallpaperDim(this@MainActivity)
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            setLegacyOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     Prefs.setWallpaperDim(this@MainActivity, value)
@@ -742,7 +742,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.lockGlass(this@MainActivity) - 20
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            setLegacyOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val glass = value + 20
@@ -765,7 +765,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 30
             progress = Prefs.lockScale(this@MainActivity) - 85
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            setLegacyOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val scale = value + 85
@@ -802,7 +802,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 50
             progress = Prefs.clockScale(this@MainActivity) - 80
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            setLegacyOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val scale = value + 80
@@ -829,7 +829,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.componentGlass(this@MainActivity, "top_info") - 20
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            setLegacyOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val glass = value + 20
@@ -850,7 +850,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.componentGlass(this@MainActivity, "media") - 20
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            setLegacyOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val glass = value + 20
@@ -871,7 +871,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 40
             progress = Prefs.topInfoSize(this@MainActivity) - 80
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            setLegacyOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val scale = value + 80
@@ -941,7 +941,7 @@ class MainActivity : Activity() {
         appearanceCard.addView(guardianSlider().apply {
             max = 40
             progress = Prefs.mediaButtonsScale(this@MainActivity) - 80
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            setLegacyOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val scale = value + 80
@@ -1000,7 +1000,7 @@ class MainActivity : Activity() {
         privacyCard.addView(guardianSlider().apply {
             max = 24
             progress = Prefs.notificationRadius(this@MainActivity) - 16
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            setLegacyOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val radius = value + 16
@@ -1021,7 +1021,7 @@ class MainActivity : Activity() {
         privacyCard.addView(guardianSlider().apply {
             max = 80
             progress = Prefs.notificationGlass(this@MainActivity) - 20
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            setLegacyOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     val glass = value + 20
@@ -1102,7 +1102,7 @@ class MainActivity : Activity() {
         root.addView(guardianSlider().apply {
             max = 90
             progress = Prefs.appWallpaperDim(this@MainActivity)
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            setLegacyOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
                     if (!fromUser) return
                     Prefs.setAppWallpaperDim(this@MainActivity, value)
@@ -1338,7 +1338,7 @@ class MainActivity : Activity() {
 
         init {
             minimumHeight = dp(40)
-            super.setLegacyOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            super.setOnSeekBarChangeListener(object : androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     legacyListener?.onProgressChanged(seekBar, progress, fromUser)
                 }
