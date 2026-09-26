@@ -50,6 +50,16 @@ Captured from D2 v0.4.0 in an Android 16 emulator with sample media. These are n
   </tr>
 </table>
 
+## What's new on the Guardian fingerprint branch
+
+- **Guardian fingerprint unlock (experimental):** D2 now requests genuine Android/Samsung `BIOMETRIC_STRONG` authentication when the enhanced rooted path is available.
+- **Unique glass fingerprint surface:** the D2 lock screen adds a glass biometric card with scan feedback, success/failure states, and direct PIN/Pattern fallback. The secure fingerprint decision still comes from Android/Samsung; the glass surface is D2 presentation.
+- **Safe non-root fallback:** if temporary root is unavailable, D2 does not start its enhanced fingerprint session and falls back to the configured Guardian PIN or Pattern.
+- **Root-loss reboot recovery:** `LOCKED_BOOT_COMPLETED` records only a non-secret pending-restore marker in device-protected storage. Samsung/Android remains authoritative for the first device unlock; Guardian restores its existing service path afterward.
+- **Expanded Xposed fingerprint diagnostics:** listener/start/update method signatures are logged to identify the exact Samsung/SystemUI fingerprint-listening path before any narrow suppression hook is enabled.
+- **Single-scan integration is still experimental:** the current diagnostics are groundwork for preventing duplicate Samsung-keyguard + D2 scans. Do not treat the one-scan SystemUI integration as complete until it is validated on-device.
+- **Passkeys remain separate:** D2 passkeys are not the Guardian lock-screen unlock method and are not a substitute for PIN/Pattern fallback.
+
 ## Set up
 
 1. Exit active kiosk using your PIN and install the current paired D2 APK linked above. If Android reports a signature mismatch, stop: uninstalling clears your PIN and settings. For the optional combo, install the Galaxy Island themed APK linked above from Preview 1.
@@ -58,7 +68,18 @@ Captured from D2 v0.4.0 in an Android 16 emulator with sample media. These are n
 4. Double-tap **Double-tap to lock D2** in settings or Preview to open the D2 PIN screen.
 5. Tap **Add home-screen double-tap widget**, or add **D2 double-tap lock** from your launcher's widget list. Double-tap that widget within 0.9 seconds. D2 cannot intercept taps on other parts of the launcher. A single widget tap briefly opens a transparent activity to record the tap; it does not lock.
 6. Enable **Require PIN to leave D2 (root kiosk)** in authenticated settings, if wanted. Grant D2 root access in KernelSU. Lock D2 and wait for **Kiosk active • PIN required to leave**. Until that appears, Home/Recents are not protected. Preview never starts kiosk mode.
-7. To dismiss D2 and release kiosk mode, tap **PIN** and enter your six-digit D2 PIN. An incorrect PIN or Cancel leaves it locked.
+7. To dismiss D2 and release kiosk mode, use your configured Guardian unlock method. PIN/Pattern remains the recovery path; an incorrect credential or Cancel leaves D2 locked.
+8. **Fingerprint testing (experimental):** with root and the Guardian fingerprint integration available, lock D2 and use the glass fingerprint surface. Authentication remains Android/Samsung `BIOMETRIC_STRONG`; **PIN / Pattern** on the glass surface cancels fingerprint and opens the normal Guardian credential UI.
+9. **No-root behavior:** after a normal reboot that removes temporary root, expect fingerprint-enhanced Guardian behavior to be unavailable. Use the configured Guardian PIN/Pattern. D2 does not change fingerprint enrollment or weaken Samsung's device credential.
+10. **Full-reboot behavior:** before Android credential storage is unlocked, Samsung/Android keyguard remains authoritative. Guardian records only a pending restore state and resumes its existing service/fallback path after Android reports the user unlocked. Restore root/LSPosed afterward to return to enhanced integration.
+
+### Fingerprint test states
+
+**Root + integration available:** Guardian glass fingerprint UI + genuine biometric authentication.  
+**Root unavailable:** Guardian PIN/Pattern fallback; the enhanced fingerprint session is not started.  
+**Normal reboot with temporary root lost:** Samsung/Android handles the first device unlock, then Guardian restores; regain root/LSPosed for enhanced fingerprint integration.
+
+> The single-scan SystemUI work is under active testing. Current builds may still expose both Samsung keyguard authentication and D2 authentication until the exact Samsung/SystemUI fingerprint-listener hook is validated. Do not disable your known-working recovery path while testing.
 
 **Show D2 when the screen wakes** is optional. Android may block background launches. Optional KernelSU root mode only requests this app's Activity launch. The bridge module can restart the opted-in service after boot; it does not provide pre-boot protection. Widget/manual activation does not require root.
 
