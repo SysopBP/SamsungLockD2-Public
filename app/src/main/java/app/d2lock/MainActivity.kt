@@ -1484,7 +1484,7 @@ class MainActivity : Activity() {
             val right = (width - paddingRight).toFloat()
             val cy = height / 2f
             // Slim SESL/One UI-like geometry with Guardian glass materials.
-            val railH = dp(5).toFloat()
+            val railH = dp(8).toFloat()
             val radius = railH / 2f
             val fraction = if (max > 0) progress.toFloat() / max.toFloat() else 0f
             val x = left + (right - left) * fraction
