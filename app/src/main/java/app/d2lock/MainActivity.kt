@@ -1333,43 +1333,25 @@ class MainActivity : Activity() {
 
     private fun guardianSwitch(): Switch = GuardianSwitch(this)
 
-    private inner class GuardianSlider(context: android.content.Context) : com.google.android.material.slider.Slider(context) {
+    private inner class GuardianSlider(context: android.content.Context) : androidx.appcompat.widget.SeslSeekBar(context) {
         private var legacyListener: SeekBar.OnSeekBarChangeListener? = null
 
         init {
-            valueFrom = 0f
-            valueTo = 100f
-            stepSize = 1f
-            trackHeight = dp(4)
-            thumbRadius = dp(8)
-            haloRadius = dp(18)
             minimumHeight = dp(40)
-            setTrackActiveTintList(android.content.res.ColorStateList.valueOf(Color.argb(220, 232, 236, 240)))
-            setTrackInactiveTintList(android.content.res.ColorStateList.valueOf(Color.argb(58, 232, 236, 240)))
-            setThumbTintList(android.content.res.ColorStateList.valueOf(Color.argb(238, 242, 245, 248)))
-            setHaloTintList(android.content.res.ColorStateList.valueOf(Color.argb(46, 232, 236, 240)))
-            addOnChangeListener { _, v, fromUser ->
-                legacyListener?.onProgressChanged(null, v.toInt(), fromUser)
-            }
-            addOnSliderTouchListener(object : com.google.android.material.slider.Slider.OnSliderTouchListener {
-                override fun onStartTrackingTouch(slider: com.google.android.material.slider.Slider) {
-                    legacyListener?.onStartTrackingTouch(null)
+            super.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    legacyListener?.onProgressChanged(seekBar, progress, fromUser)
                 }
-                override fun onStopTrackingTouch(slider: com.google.android.material.slider.Slider) {
-                    legacyListener?.onStopTrackingTouch(null)
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                    legacyListener?.onStartTrackingTouch(seekBar)
+                }
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                    legacyListener?.onStopTrackingTouch(seekBar)
                 }
             })
         }
 
-        var max: Int
-            get() = valueTo.toInt()
-            set(v) { valueTo = v.coerceAtLeast(1).toFloat() }
-
-        var progress: Int
-            get() = value.toInt()
-            set(v) { value = v.coerceIn(valueFrom.toInt(), valueTo.toInt()).toFloat() }
-
-        fun setOnSeekBarChangeListener(value: SeekBar.OnSeekBarChangeListener?) {
+        override fun setOnSeekBarChangeListener(value: SeekBar.OnSeekBarChangeListener?) {
             legacyListener = value
         }
     }
