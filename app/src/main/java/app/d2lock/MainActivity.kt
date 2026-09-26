@@ -2179,6 +2179,29 @@ class MainActivity : Activity() {
         }.start()
     }
 
+    private fun showGuardianCoreHealth() {
+        val rootAvailable=RootManager.isAvailable(); val shizukuAvailable=runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+        val authReady=PinStore(this).configured(); val wakeReady=Prefs.enabled(this)
+        val islandPaired=app.d2lock.bridge.IslandBridge.enabled(this); val islandSync=!islandPaired || Prefs.xposedIslandGuardianSync(this)
+        val healthy=authReady && wakeReady && (!Prefs.rootMode(this) || rootAvailable) && (!Prefs.shizukuEnabled(this) || shizukuAvailable) && (!Prefs.xposedMaster(this) || Prefs.xposedAutomaticFallback(this)) && islandSync
+        val body=LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(16)); background=Appearance.glass(this@MainActivity,32f,46,true)
+            addView(TextView(this@MainActivity).apply { text=if(healthy) "◆  GUARDIAN PROTECTED" else "◆  GUARDIAN ATTENTION"; textSize=13f; setTextColor(if(healthy) Color.rgb(102,220,132) else Appearance.accent(this@MainActivity)) })
+            addView(TextView(this@MainActivity).apply { text="Guardian Core"; textSize=24f; setTextColor(Appearance.text(this@MainActivity)); setPadding(0,dp(3),0,dp(12)) })
+            fun status(title:String,detail:String,ok:Boolean) { addView(TextView(this@MainActivity).apply { text=(if(ok) "●  " else "○  ")+title+"\n    "+detail; textSize=14f; setTextColor(if(ok) Appearance.text(this@MainActivity) else Appearance.accent(this@MainActivity)); setPadding(dp(13),dp(9),dp(13),dp(9)); background=Appearance.glass(this@MainActivity,24f,28,true) },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(6) }) }
+            status("D2 authentication",if(authReady) "Credential configured" else "Create a D2 PIN",authReady)
+            status("Lock & wake",if(wakeReady) "Guardian armed for screen wake" else "Show D2 on wake is off",wakeReady)
+            status("Root / KernelSU",if(rootAvailable) "Root shell available" else "Root unavailable",!Prefs.rootMode(this@MainActivity)||rootAvailable)
+            status("Shizuku",if(shizukuAvailable) "Binder connected" else "Binder unavailable",!Prefs.shizukuEnabled(this@MainActivity)||shizukuAvailable)
+            status("LSPosed / Xposed",if(Prefs.xposedMaster(this@MainActivity)) "SystemUI integration configured" else "Optional integration off",!Prefs.xposedMaster(this@MainActivity)||Prefs.xposedAutomaticFallback(this@MainActivity))
+            status("Galaxy Island",if(islandPaired) "Paired · Guardian sync "+if(islandSync) "ready" else "needs attention" else "Not paired · optional",islandSync)
+            status("Kiosk protection",if(Prefs.kiosk(this@MainActivity)) "Kiosk enabled" else "Kiosk currently off",!Prefs.kiosk(this@MainActivity)||rootAvailable)
+            status("Recovery path",if(rootAvailable||Prefs.adbRecovery(this@MainActivity)) "Root or ADB recovery available" else "Verify recovery before kiosk use",rootAvailable||Prefs.adbRecovery(this@MainActivity))
+            status("Fingerprint","Experimental · genuine SystemUI success callback not linked yet",true)
+        }
+        AlertDialog.Builder(this).setView(body).setNegativeButton("Close",null).create().also { d -> d.setOnShowListener { d.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)) }; d.show() }
+    }
+
     private fun settingsHost(root: LinearLayout): ViewGroup {
         val host = android.widget.FrameLayout(this).apply {
             setBackgroundColor(Appearance.background(this@MainActivity))
@@ -2228,13 +2251,7 @@ class MainActivity : Activity() {
             elevation = dp(30).toFloat()
             setOnClickListener {
                 performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
-                root.findViewWithTag<android.view.View>("root_shizuku")?.let { view ->
-                    val rect = android.graphics.Rect()
-                    view.getDrawingRect(rect)
-                    root.offsetDescendantRectToMyCoords(view, rect)
-                    scroll.smoothScrollTo(0, (rect.top - dp(18)).coerceAtLeast(0))
-                    view.postDelayed({ flashSettingsTarget(view) }, 280)
-                }
+                showGuardianCoreHealth()
             }
         }
         val items = mutableListOf<LinearLayout>()
