@@ -104,6 +104,7 @@ class LockScreenActivity : Activity() {
     private var fingerprintRestartPending = false
     private var fingerprintGlass: LinearLayout? = null
     private var fingerprintGlyph: TextView? = null
+    private var fingerprintLoading: ProgressBar? = null
     private var fingerprintStatus: TextView? = null
     private var fingerprintPulse: ObjectAnimator? = null
     private var wallpaperActive = false
@@ -972,6 +973,22 @@ class LockScreenActivity : Activity() {
         }
         addView(fingerprintGlyph, LinearLayout.LayoutParams(dp(58), dp(50)))
 
+        // Native framework indeterminate circle. On Samsung/SESL themed builds
+        // this inherits the One UI progress-circle treatment instead of drawing
+        // a custom spinner.
+        fingerprintLoading = ProgressBar(
+            this@LockScreenActivity,
+            null,
+            android.R.attr.progressBarStyleSmall
+        ).apply {
+            isIndeterminate = true
+            visibility = View.GONE
+            contentDescription = "Starting fingerprint"
+        }
+        addView(fingerprintLoading, LinearLayout.LayoutParams(dp(34), dp(34)).apply {
+            gravity = Gravity.CENTER_HORIZONTAL
+        })
+
         fingerprintStatus = label("Touch fingerprint sensor", 14f, Appearance.text(this@LockScreenActivity, true)).apply {
             gravity = Gravity.CENTER
         }
@@ -995,7 +1012,13 @@ class LockScreenActivity : Activity() {
         val glyph = fingerprintGlyph ?: return
         fingerprintPulse?.cancel()
         fingerprintPulse = null
+        fingerprintLoading?.visibility = if (state == "starting") View.VISIBLE else View.GONE
+        glyph.visibility = if (state == "starting") View.GONE else View.VISIBLE
         when (state) {
+            "starting" -> {
+                status.text = "Starting fingerprint…"
+                Log.i("SamsungLockD2", "GUARDIAN_ONEUI_PROGRESS state=fingerprint_starting")
+            }
             "scanning" -> {
                 status.text = "Touch fingerprint sensor"
                 glyph.alpha = 1f
@@ -1056,7 +1079,12 @@ class LockScreenActivity : Activity() {
         biometricCancel = cancel
         biometricRunning = true
         Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_REQUESTED")
-        setFingerprintGlassState("scanning")
+        setFingerprintGlassState("starting")
+        window.decorView.postDelayed({
+            if (biometricRunning && !unlocking && !isFinishing && !isDestroyed) {
+                setFingerprintGlassState("scanning")
+            }
+        }, 180)
         // Samsung renders its own secure biometric surface. Hide Guardian's
         // fingerprint glass while that prompt owns authentication so we never
         // stack two fingerprint UIs on top of each other.
