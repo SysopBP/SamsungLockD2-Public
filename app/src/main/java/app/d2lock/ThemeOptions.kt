@@ -108,8 +108,8 @@ object ThemeOptions {
             val glassSlider = LinearLayout(c).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = android.view.Gravity.CENTER_VERTICAL
-                setPadding(dp(14), 0, dp(14), 0)
-                background = Appearance.glass(c, 26f, 34, true)
+                setPadding(dp(12), 0, dp(12), 0)
+                background = Appearance.glass(c, 24f, 24, true)
             }
             glassSlider.addView(SeslSeekBar(c).apply {
                 this.max = (max - min).coerceAtLeast(1)
@@ -130,8 +130,8 @@ object ThemeOptions {
                     override fun onStartTrackingTouch(seekBar: SeslSeekBar?) = Unit
                     override fun onStopTrackingTouch(seekBar: SeslSeekBar?) = Unit
                 })
-            }, LinearLayout.LayoutParams(-1, dp(48)))
-            parent.addView(glassSlider, LinearLayout.LayoutParams(-1, dp(58)).apply {
+            }, LinearLayout.LayoutParams(-1, dp(40)))
+            parent.addView(glassSlider, LinearLayout.LayoutParams(-1, dp(48)).apply {
                 bottomMargin = dp(8)
             })
         }
