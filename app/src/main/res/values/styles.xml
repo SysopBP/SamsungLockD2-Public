@@ -19,9 +19,13 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
-    <style name="Theme.D2.SeslPreview" parent="Theme.AppCompat.NoActionBar">
+    <!-- Preview only: Material widgets require a MaterialComponents/Material3 theme.
+         Keep this isolated from Theme.SamsungLock and every Guardian surface. -->
+    <style name="Theme.D2.SeslPreview" parent="Theme.Material3.Dark.NoActionBar">
         <item name="android:fontFamily">sans</item>
-        <item name="android:colorAccent">#FFC8A9FF</item>
+        <item name="android:colorAccent">#FFE8ECF0</item>
+        <item name="colorPrimary">#FFE8ECF0</item>
+        <item name="colorSecondary">#FFBFC7CF</item>
         <item name="android:navigationBarColor">#FF050507</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
