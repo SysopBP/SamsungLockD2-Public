@@ -1147,6 +1147,10 @@ class LockScreenActivity : Activity() {
                 status.text = "Fingerprint unavailable"
                 glyph.alpha = .55f
             }
+            "dismissed" -> {
+                status.text = "Fingerprint dismissed"
+                glyph.alpha = .55f
+            }
         }
     }
 
@@ -1196,6 +1200,10 @@ class LockScreenActivity : Activity() {
             .setSubtitle("Fingerprint unlock")
             .setDescription("Use an enrolled fingerprint or cancel to use your Guardian PIN/pattern.")
             .setNegativeButton("Use PIN / pattern", mainExecutor) { _, _ ->
+                // Treat explicit fallback as dismissal for this lock session so
+                // focus recovery cannot immediately reopen Samsung's prompt.
+                fingerprintDismissed = true
+                fingerprintRestartPending = false
                 biometricRunning = false
                 biometricCancel = null
                 clearFingerprintSession("fallback")
@@ -1254,10 +1262,20 @@ class LockScreenActivity : Activity() {
                 Log.i("SamsungLockD2", "GUARDIAN_BIOMETRIC_HANDOFF_END reason=error_$errorCode")
                 fingerprintRestartPending = false
                 if (!unlocking) {
+                    // System Back/gesture-back and Samsung prompt cancellation arrive
+                    // here as a biometric error. Keep fingerprint dismissed for this
+                    // lock session so Guardian cannot trap the user in a reopen loop.
+                    val userCancelled = errorCode == BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED ||
+                        errorCode == BiometricPrompt.BIOMETRIC_ERROR_CANCELED ||
+                        errorCode == BiometricPrompt.BIOMETRIC_ERROR_NEGATIVE_BUTTON
+                    if (userCancelled) {
+                        fingerprintDismissed = true
+                        Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_USER_DISMISSED code=$errorCode")
+                    }
                     // A cancelled/failed Samsung prompt must settle back onto D2
                     // rather than immediately reopening and creating a focus loop.
-                    setFingerprintGlassState("unavailable")
-                    fingerprintGlass?.visibility = View.VISIBLE
+                    setFingerprintGlassState(if (fingerprintDismissed) "dismissed" else "unavailable")
+                    fingerprintGlass?.visibility = if (fingerprintDismissed) View.GONE else View.VISIBLE
                     window.decorView.post {
                         if (!isDestroyed && !isFinishing) window.decorView.requestFocus()
                     }
