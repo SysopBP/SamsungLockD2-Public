@@ -1447,12 +1447,14 @@ class MainActivity : Activity() {
     }
 
     private fun flashSettingsTarget(view: android.view.View) {
-        val originalAlpha = view.alpha
-        view.animate().cancel()
-        view.animate().alpha(0.42f).setDuration(110).withEndAction {
-            view.animate().alpha(1f).setDuration(180).withEndAction {
-                view.animate().alpha(0.58f).setDuration(110).withEndAction {
-                    view.animate().alpha(originalAlpha).setDuration(220).start()
+        view.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+        val pulseTarget = (view.parent as? android.view.ViewGroup)?.takeUnless { it is ScrollView } ?: view
+        val originalAlpha = pulseTarget.alpha
+        pulseTarget.animate().cancel()
+        pulseTarget.animate().alpha(0.42f).setDuration(110).withEndAction {
+            pulseTarget.animate().alpha(1f).setDuration(180).withEndAction {
+                pulseTarget.animate().alpha(0.58f).setDuration(110).withEndAction {
+                    pulseTarget.animate().alpha(originalAlpha).setDuration(220).start()
                 }.start()
             }.start()
         }.start()
@@ -1489,7 +1491,7 @@ class MainActivity : Activity() {
             Triple("▣", "Alerts", "notifications"),
             Triple("✦", "Theme", "app_theme"),
             Triple("▬", "Bar", "floating_bar"),
-            Triple("⚙", "Settings", "settings")
+            Triple("⚙", "All", "settings")
         )
         val items = mutableListOf<LinearLayout>()
         fun select(item: LinearLayout) {
@@ -1526,6 +1528,7 @@ class MainActivity : Activity() {
                     setTextColor(Appearance.secondary(this@MainActivity))
                 }, LinearLayout.LayoutParams(-1, dp(18)))
                 setOnClickListener {
+                    performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
                     if (target == "settings") {
                         showQuickSettingsSheet(root, scroll)
                     } else {
