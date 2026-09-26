@@ -56,7 +56,7 @@ jobs:
           prefs = "app/src/main/java/com/ekoehler/expressivecutout/data/AppearancePreferences.kt"
           edit(prefs, [
               ("data class AppearanceSettings(\n    val shadowEnabled:", "data class AppearanceSettings(\n    val glassEnabled: Boolean = DEFAULT_GLASS_ENABLED,\n    val shadowEnabled:"),
-              ("companion object {\n        const val DEFAULT_SHADOW_ENABLED", "companion object {\n        const val DEFAULT_GLASS_ENABLED = false\n        const val DEFAULT_SHADOW_ENABLED"),
+              ("companion object {\n        const val DEFAULT_SHADOW_ENABLED", "companion object {\n        const val DEFAULT_GLASS_ENABLED = true\n        const val DEFAULT_SHADOW_ENABLED"),
               ("AppearanceSettings(\n            shadowEnabled =", "AppearanceSettings(\n            glassEnabled = prefs[GLASS_ENABLED] ?: AppearanceSettings.DEFAULT_GLASS_ENABLED,\n            shadowEnabled ="),
               ("return JSONObject().apply {\n            put(\"shadowEnabled\"", "return JSONObject().apply {\n            put(\"glassEnabled\", s.glassEnabled)\n            put(\"shadowEnabled\""),
               ("context.appearanceDataStore.edit {\n            if (obj.has(\"shadowEnabled\"))", "context.appearanceDataStore.edit {\n            if (obj.has(\"glassEnabled\")) it[GLASS_ENABLED] = obj.getBoolean(\"glassEnabled\")\n            if (obj.has(\"shadowEnabled\"))"),
@@ -164,7 +164,7 @@ jobs:
 
           strings = "app/src/main/res/values/strings.xml"
           edit(strings, [
-              ("    <string name=\"appearance_section_title\">Appearance</string>", "    <string name=\"appearance_section_title\">Appearance</string>\n    <string name=\"appearance_glass_title\">One UI 9 glass island</string>\n    <string name=\"appearance_glass_desc\">Use translucent glass surfaces, a soft highlight edge and deeper floating shadow for compact and expanded islands.</string>")
+              ("    <string name=\"appearance_section_title\">Appearance</string>", "    <string name=\"appearance_section_title\">Appearance</string>\n    <string name=\"appearance_glass_title\">Guardian glass</string>\n    <string name=\"appearance_glass_desc\">Match Kiosk D2 Guardian with translucent One UI 9 surfaces, soft highlight edges and floating depth.</string>")
           ])
 
           island = "app/src/main/java/com/ekoehler/expressivecutout/overlay/DynamicIsland.kt"
