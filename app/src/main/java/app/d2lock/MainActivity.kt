@@ -555,7 +555,57 @@ class MainActivity : Activity() {
         })
 
         section(root, "THEME & COLORS")
-        ThemeOptions.add(this, root, ::refreshAppearance)
+        root.addView(LinearLayout(this).apply {
+            orientation=LinearLayout.HORIZONTAL
+            gravity=Gravity.CENTER_VERTICAL
+            setPadding(dp(18),dp(12),dp(16),dp(12))
+            background=Appearance.glass(this@MainActivity,28f,34,true)
+            isClickable=true
+            isFocusable=true
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.VERTICAL
+                addView(TextView(this@MainActivity).apply {
+                    text="Appearance & Theme"
+                    textSize=17f
+                    setTextColor(Appearance.text(this@MainActivity))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text="Theme, accent, glass, colors and floating bar"
+                    textSize=12f
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                    setPadding(0,dp(3),0,0)
+                })
+            },LinearLayout.LayoutParams(0,-2,1f))
+            addView(TextView(this@MainActivity).apply {
+                text="Customize  ›"
+                textSize=14f
+                setTextColor(Appearance.accent(this@MainActivity))
+                background=Appearance.glass(this@MainActivity,22f,26,true)
+                setPadding(dp(14),dp(10),dp(14),dp(10))
+            })
+            setOnClickListener {
+                val content=LinearLayout(this@MainActivity).apply {
+                    orientation=LinearLayout.VERTICAL
+                    setPadding(dp(18),dp(8),dp(18),dp(28))
+                }
+                ThemeOptions.add(this@MainActivity,content,::refreshAppearance)
+                val scroll=ScrollView(this@MainActivity).apply {
+                    isFillViewport=true
+                    addView(content)
+                }
+                val dialog=AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Appearance & Theme")
+                    .setView(scroll)
+                    .setPositiveButton("Done",null)
+                    .create()
+                dialog.setOnShowListener {
+                    dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,32f,82,true))
+                    dialog.window?.setLayout((resources.displayMetrics.widthPixels*0.94f).toInt(),(resources.displayMetrics.heightPixels*0.86f).toInt())
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(this@MainActivity))
+                }
+                dialog.show()
+            }
+        },LinearLayout.LayoutParams(-1,dp(78)).apply { bottomMargin=dp(12) })
         section(root, "APP ICON")
         val iconOptions = IconManager.options
         val currentIcon = IconManager.selected(this)
