@@ -19,6 +19,9 @@ import android.hardware.biometrics.BiometricPrompt
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.net.Uri
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.app.AlarmManager
 import android.os.BatteryManager
 import android.os.Bundle
 import android.os.Handler
@@ -97,6 +100,9 @@ class LockScreenActivity : Activity() {
     private var unlocking = false
     private var healthyReported = false
     private lateinit var kioskStatus: TextView
+    private var chargingOverlay: LinearLayout? = null
+    private var chargingOverlayHide: Runnable? = null
+    private var lastChargingState = false
     private var pinDialog: AlertDialog? = null
     private var biometricCancel: CancellationSignal? = null
     private var biometricRunning = false
@@ -185,7 +191,9 @@ class LockScreenActivity : Activity() {
             battery.setPadding(dp(9), dp(4), dp(9), dp(4))
             if (charging && level >= 0) {
                 LiveHubStore.publish(LiveHubCard("charging", LiveHubKind.CHARGING, "Charging", "$level%", level / 100f))
+                if (!lastChargingState) showChargingOverlay(level)
             } else LiveHubStore.remove("charging")
+            lastChargingState = charging
         }
     }
 
@@ -528,6 +536,33 @@ class LockScreenActivity : Activity() {
             }
             addView(battery, LinearLayout.LayoutParams(0, dp(42), 1f))
         }
+        val statusRow = LinearLayout(this).apply {
+            gravity = Gravity.CENTER
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(dp(10), dp(5), dp(10), dp(5))
+            background = Appearance.glass(this@LockScreenActivity, 18f, 20, false)
+            fun statusIcon(res:Int, desc:String)=ImageView(this@LockScreenActivity).apply {
+                setImageResource(res)
+                imageTintList=android.content.res.ColorStateList.valueOf(Appearance.text(this@LockScreenActivity,true))
+                contentDescription=desc
+                setPadding(dp(3),dp(3),dp(3),dp(3))
+            }
+            addView(statusIcon(app.d2lock.R.drawable.ic_lock_guardian,"Guardian active"),LinearLayout.LayoutParams(dp(24),dp(24)))
+            val cm=getSystemService(ConnectivityManager::class.java)
+            val caps=runCatching { cm?.getNetworkCapabilities(cm.activeNetwork) }.getOrNull()
+            if(caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)==true) {
+                addView(statusIcon(app.d2lock.R.drawable.ic_lock_wifi,"Wi-Fi connected"),LinearLayout.LayoutParams(dp(24),dp(24)).apply { marginStart=dp(7) })
+            }
+            val nextAlarm=runCatching { getSystemService(AlarmManager::class.java)?.nextAlarmClock }.getOrNull()
+            if(nextAlarm!=null) {
+                addView(statusIcon(app.d2lock.R.drawable.ic_lock_alarm,"Alarm set"),LinearLayout.LayoutParams(dp(24),dp(24)).apply { marginStart=dp(7) })
+            }
+            isClickable=true
+            isFocusable=true
+            contentDescription="Guardian lock status. Long press for diagnostics."
+            setOnLongClickListener { showGuardianDiagnostics(); true }
+        }
+        content.addView(statusRow,LinearLayout.LayoutParams(-2,dp(34)).apply { bottomMargin=dp(7) })
         content.addView(clock)
         content.addView(date)
         kioskStatus = label(if (preview) "Preview • unlocked" else if (Prefs.kiosk(this)) "Starting root kiosk…" else "App-only mode • Home/Recents can exit", 12f, Appearance.text(this, true)).apply {
@@ -643,12 +678,30 @@ class LockScreenActivity : Activity() {
             LinearLayout.LayoutParams(-1, dp(if (mediaCompact) 126 else if (mediaLarge) 174 else 154)).apply { bottomMargin = dp(12) })
         frame.addView(content, FrameLayout.LayoutParams(-1, -1))
 
+        chargingOverlay = LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL
+            gravity=Gravity.CENTER
+            visibility=View.GONE
+            setPadding(dp(22),dp(14),dp(22),dp(14))
+            background=Appearance.glass(this@LockScreenActivity,30f,54,true)
+            elevation=dp(22).toFloat()
+            addView(ImageView(this@LockScreenActivity).apply {
+                setImageResource(app.d2lock.R.drawable.ic_lock_battery)
+                imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@LockScreenActivity))
+                contentDescription=null
+            },LinearLayout.LayoutParams(dp(28),dp(28)).apply { gravity=Gravity.CENTER_HORIZONTAL })
+            addView(label("Charging",16f,Appearance.text(this@LockScreenActivity,true)).apply { gravity=Gravity.CENTER })
+        }
+        frame.addView(chargingOverlay,FrameLayout.LayoutParams(dp(210),dp(92),Gravity.CENTER))
+
         // Guardian fingerprint glass: this is D2's visual layer. The secure
         // authentication itself remains Android/Samsung BIOMETRIC_STRONG.
         if (!preview && app.d2lock.root.RootManager.isAvailable()) {
             fingerprintGlass = buildFingerprintGlass().also { glass ->
-                frame.addView(glass, FrameLayout.LayoutParams(dp(238), dp(126), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
-                    bottomMargin = dp(104)
+                frame.addView(glass, FrameLayout.LayoutParams(dp(238), dp(126), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
+                    // Samsung test device reports FOD center at y=2410 on a 3120px panel.
+                    // Scale the normalized location so the D2 visual follows resolution changes.
+                    topMargin = ((resources.displayMetrics.heightPixels * .772f) - dp(63)).toInt().coerceAtLeast(dp(120))
                 })
             }
         }
@@ -1260,14 +1313,59 @@ class LockScreenActivity : Activity() {
         setOnClickListener { click() }
     }
 
+    private fun showChargingOverlay(level:Int) {
+        val overlay=chargingOverlay ?: return
+        chargingOverlayHide?.let { handler.removeCallbacks(it) }
+        (overlay.getChildAt(1) as? TextView)?.text="$level%  •  Charging"
+        overlay.visibility=View.VISIBLE
+        overlay.alpha=0f
+        overlay.scaleX=.92f
+        overlay.scaleY=.92f
+        overlay.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(220).start()
+        chargingOverlayHide=Runnable {
+            overlay.animate().alpha(0f).translationY(-dp(8).toFloat()).setDuration(240).withEndAction {
+                overlay.visibility=View.GONE
+                overlay.translationY=0f
+            }.start()
+        }.also { handler.postDelayed(it,2600) }
+    }
+
+    private fun showGuardianDiagnostics() {
+        val root=app.d2lock.root.RootManager.isAvailable()
+        val shizuku=Prefs.shizukuEnabled(this) && runCatching { rikka.shizuku.Shizuku.pingBinder() }.getOrDefault(false)
+        val biometric=getSystemService(BiometricManager::class.java)?.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)==BiometricManager.BIOMETRIC_SUCCESS
+        AlertDialog.Builder(this)
+            .setTitle("Guardian Diagnostics")
+            .setMessage("D2 surface  •  ACTIVE\nKiosk  •  "+if(Prefs.kiosk(this)) "ON" else "OFF"+
+                "\nRoot  •  "+if(root) "READY" else "OFF"+
+                "\nShizuku  •  "+if(shizuku) "READY" else "OFF"+
+                "\nLSPosed  •  "+if(Prefs.xposedMaster(this)) "ENABLED" else "OFF"+
+                "\nFingerprint  •  "+if(biometric) "BIOMETRIC_STRONG ready" else "Unavailable"+
+                "\nUnlock  •  "+Prefs.unlockMethod(this).uppercase())
+            .setPositiveButton("Close",null)
+            .show()
+    }
+
     private fun glassIconButton(icon: Int, description: String, click: () -> Unit) = ImageView(this).apply {
         setImageResource(icon)
         imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
         contentDescription = description
         setPadding(dp(16), dp(16), dp(16), dp(16))
-        background = glassPanel(32f)
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(0x2affffff)
+            setStroke(dp(1), 0x66ffffff)
+        }
+        elevation = dp(10).toFloat()
         isClickable = true
         isFocusable = true
+        setOnTouchListener { v,event ->
+            when(event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> v.animate().scaleX(.90f).scaleY(.90f).alpha(.78f).setDuration(80).start()
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> v.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(150).start()
+            }
+            false
+        }
         setOnClickListener {
             performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
             click()
