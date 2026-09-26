@@ -1797,9 +1797,9 @@ class MainActivity : Activity() {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
                     setPadding(dp(14), dp(8), dp(14), dp(8))
-                    background = Appearance.glass(this@MainActivity, 24f, if (index == current) 52 else 28, true)
+                    background = Appearance.glass(this@MainActivity, 30f, if (index == current) 58 else 32, true)
                 }
-                val radio = RadioButton(this).apply {
+                val radio = com.google.android.material.radiobutton.MaterialRadioButton(this).apply {
                     isChecked = index == current
                     buttonTintList = android.content.res.ColorStateList(
                         arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
