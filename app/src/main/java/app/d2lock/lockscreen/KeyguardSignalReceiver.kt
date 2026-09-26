@@ -3,22 +3,19 @@ package app.d2lock.lockscreen
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
-import android.os.Process
 import android.util.Log
 
 /**
  * Receives keyguard state emitted from D2's LSPosed code running inside SystemUI.
- * Exported only because the sender is a different process/package; reject any
- * sender that is not Android's system UID on platforms that expose sender UID.
+ * The exported receiver is protected by android.permission.STATUS_BAR in the
+ * manifest, so only privileged SystemUI/system senders can reach this code.
+ * Android 17 may report sentFromUid=-1 for this explicit cross-process broadcast;
+ * do not reject that framework sentinel after the manifest permission gate.
  */
 class KeyguardSignalReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != ACTION) return
-        if (Build.VERSION.SDK_INT >= 34 && sentFromUid != Process.SYSTEM_UID) {
-            Log.w("SamsungLockD2", "GUARDIAN_XPOSED_SIGNAL_REJECTED uid=$sentFromUid")
-            return
-        }
+        Log.i("SamsungLockD2", "GUARDIAN_XPOSED_SIGNAL_ACCEPTED uid=$sentFromUid permission=STATUS_BAR")
         val state = intent.getStringExtra("state") ?: return
         val source = intent.getStringExtra("source") ?: "unknown"
         Log.i("SamsungLockD2", "GUARDIAN_XPOSED_KEYGUARD_RECEIVED state=$state source=$source")
