@@ -192,7 +192,7 @@ class MainActivity : Activity() {
     private fun buildSettings(): ViewGroup {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(22), dp(56), dp(22), dp(118))
+            setPadding(dp(22), dp(56), dp(22), dp(164))
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
         }
         root.addView(TextView(this).apply {
@@ -527,40 +527,48 @@ class MainActivity : Activity() {
             showWhatsNewNext(info?.versionName ?: "current", null)
         }
         val taps = DoubleTap()
-        addButton(root, "Double-tap to lock D2") {
-            if (taps.tap(SystemClock.elapsedRealtime())) {
-                startActivity(Intent(this, LockScreenActivity::class.java))
-            }
-        }
+        section(root, "LOCK & WAKE")
+        root.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            background = Appearance.glass(this@MainActivity, 30f, 38, true)
+            addView(TextView(this@MainActivity).apply {
+                text = "Double-tap to lock D2"; textSize = 15f; gravity = Gravity.CENTER
+                setTextColor(Appearance.text(this@MainActivity))
+                background = Appearance.glass(this@MainActivity, 22f, 28, true)
+                setPadding(dp(12), dp(11), dp(12), dp(11))
+                setOnClickListener { if (taps.tap(SystemClock.elapsedRealtime())) startActivity(Intent(this@MainActivity, LockScreenActivity::class.java)) }
+            }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(6) })
+            addView(guardianSwitch().apply {
+                text = "Show D2 when the screen wakes"; textSize = 15f
+                setTextColor(Appearance.text(this@MainActivity)); isChecked = Prefs.enabled(this@MainActivity)
+                setOnCheckedChangeListener { _, checked ->
+                    Prefs.setEnabled(this@MainActivity, checked)
+                    if (checked) LockScreenService.start(this@MainActivity) else LockScreenService.stop(this@MainActivity)
+                }
+            }, rowParams())
+        }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+
         section(root, "HOME SCREEN WIDGET")
-        addButton(root, "Add customizable D2 widget") {
-            val manager = getSystemService(AppWidgetManager::class.java)
-            if (manager.isRequestPinAppWidgetSupported) {
-                manager.requestPinAppWidget(ComponentName(this, D2Widget::class.java), null, null)
-            } else Toast.makeText(this, "On your home screen, open Widgets and add the Kiosk D2 Guardian widget.", Toast.LENGTH_LONG).show()
-        }
         root.addView(TextView(this).apply {
-            text = "Each widget has its own settings for style, tap action and label. Long-press a placed widget and choose its widget settings when your launcher supports reconfiguration."
-            textSize = 13f
-            setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(dp(6), 0, dp(6), dp(12))
-        })
-
-        val enabled = guardianSwitch().apply {
-            text = "Show D2 when the screen wakes"
-            textSize = 17f
-            setTextColor(Appearance.text(this@MainActivity))
-            isChecked = Prefs.enabled(this@MainActivity)
-            setOnCheckedChangeListener { _, checked ->
-                Prefs.setEnabled(this@MainActivity, checked)
-                if (checked) LockScreenService.start(this@MainActivity) else LockScreenService.stop(this@MainActivity)
+            text = "Widget Manager"; textSize = 15f; gravity = Gravity.CENTER
+            setTextColor(Appearance.text(this@MainActivity)); background = Appearance.glass(this@MainActivity, 24f, 34, true)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            setOnClickListener {
+                val info = TextView(this@MainActivity).apply {
+                    text = "Add the customizable Kiosk D2 Guardian widget. Each placed widget can have its own style, tap action and label. Long-press a widget to open launcher reconfiguration when supported."
+                    textSize = 14f; setTextColor(Appearance.text(this@MainActivity)); setPadding(dp(18), dp(10), dp(18), dp(18))
+                }
+                val dialog = AlertDialog.Builder(this@MainActivity).setTitle("Widget Manager").setView(info)
+                    .setNegativeButton("Close", null).setPositiveButton("Add widget") { _, _ ->
+                        val manager = getSystemService(AppWidgetManager::class.java)
+                        if (manager.isRequestPinAppWidgetSupported) manager.requestPinAppWidget(ComponentName(this@MainActivity, D2Widget::class.java), null, null)
+                        else Toast.makeText(this@MainActivity, "Open your launcher's Widgets menu and add Kiosk D2 Guardian.", Toast.LENGTH_LONG).show()
+                    }.create()
+                dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true)) }
+                dialog.show()
             }
-        }
-        root.addView(enabled, rowParams())
-
-        root.addView(android.view.View(this).apply {
-            setBackgroundColor((0x22 shl 24) or (Appearance.text(this@MainActivity) and 0xffffff))
-        }, LinearLayout.LayoutParams(-1, dp(1)).apply { topMargin = dp(8); bottomMargin = dp(10) })
+        }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
         section(root, "SYSTEM INTEGRATION")
         root.getChildAt(root.childCount - 1).tag = "root_shizuku"
         root.addView(LinearLayout(this).apply {
