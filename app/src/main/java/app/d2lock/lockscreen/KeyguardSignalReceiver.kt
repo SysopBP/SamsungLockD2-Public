@@ -3,6 +3,7 @@ package app.d2lock.lockscreen
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.util.Log
 
 /**
@@ -15,7 +16,8 @@ import android.util.Log
 class KeyguardSignalReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != ACTION) return
-        Log.i("SamsungLockD2", "GUARDIAN_XPOSED_SIGNAL_ACCEPTED uid=$sentFromUid permission=STATUS_BAR")
+        val senderUid = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) sentFromUid else -1
+        Log.i("SamsungLockD2", "GUARDIAN_XPOSED_SIGNAL_ACCEPTED uid=$senderUid permission=STATUS_BAR")
         val state = intent.getStringExtra("state") ?: return
         val source = intent.getStringExtra("source") ?: "unknown"
         Log.i("SamsungLockD2", "GUARDIAN_XPOSED_KEYGUARD_RECEIVED state=$state source=$source")
