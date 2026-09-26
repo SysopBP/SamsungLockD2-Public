@@ -32,6 +32,19 @@ android {
     }
 }
 
+configurations.configureEach {
+    // SESL uses the AndroidX namespaces intentionally, so the stock equivalents
+    // must not coexist in the same APK on this isolated preview branch.
+    exclude(group = "androidx.core", module = "core")
+    exclude(group = "androidx.core", module = "core-ktx")
+    exclude(group = "androidx.customview", module = "customview")
+    exclude(group = "androidx.drawerlayout", module = "drawerlayout")
+    exclude(group = "androidx.viewpager", module = "viewpager")
+    exclude(group = "androidx.appcompat", module = "appcompat")
+    exclude(group = "androidx.fragment", module = "fragment")
+    exclude(group = "androidx.fragment", module = "fragment-ktx")
+}
+
 dependencies {
     // SESL9 preview only. Keep production Guardian/auth surfaces untouched.
     // SESL_GITHUB_TOKEN is supplied by CI/local environment; repository credentials are configured in settings.gradle.kts.
