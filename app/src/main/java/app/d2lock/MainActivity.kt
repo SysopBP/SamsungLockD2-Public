@@ -1227,7 +1227,7 @@ class MainActivity : Activity() {
                 dialog.show()
             }
         },LinearLayout.LayoutParams(-1,dp(78)).apply { bottomMargin=dp(12) })
-        section(root, "APP ICON")
+        section(root, "ICON CENTER")
         val iconOptions = IconManager.options
         val currentIcon = IconManager.selected(this)
         val iconPreview = LinearLayout(this).apply {
@@ -1241,14 +1241,14 @@ class MainActivity : Activity() {
             contentDescription = "Selected D2 launcher icon"
         }
         val iconPreviewText = TextView(this).apply {
-            text = iconOptions.firstOrNull { it.key == currentIcon }?.label ?: "Titanium Graphite"
+            text = (iconOptions.firstOrNull { it.key == currentIcon }?.label ?: "Titanium Graphite") + "  •  Active"
             textSize = 16f
             setTextColor(Appearance.text(this@MainActivity))
             setPadding(dp(14), 0, 0, 0)
         }
         iconPreview.addView(iconPreviewImage, LinearLayout.LayoutParams(dp(54), dp(54)))
         iconPreview.addView(iconPreviewText, LinearLayout.LayoutParams(0, -2, 1f))
-        root.addView(iconPreview, LinearLayout.LayoutParams(-1, dp(74)).apply { bottomMargin = dp(8) })
+        root.addView(iconPreview, LinearLayout.LayoutParams(-1, dp(66)).apply { bottomMargin = dp(4) })
         val iconPicker = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -1285,21 +1285,24 @@ class MainActivity : Activity() {
             cell.setOnClickListener {
                 IconManager.apply(this, option.key)
                 iconPreviewImage.setImageResource(IconManager.iconResource(option.key))
-                iconPreviewText.text = option.label
+                iconPreviewText.text = option.label + "  •  Active"
                 refreshIconPicker(option.key)
                 showD2Message(option.label + " applied")
             }
             iconCells[option.key] = cell
-            iconPicker.addView(cell, LinearLayout.LayoutParams(0, dp(72), 1f))
+            iconPicker.addView(cell, LinearLayout.LayoutParams(0, dp(64), 1f))
         }
         refreshIconPicker(currentIcon)
         root.addView(iconPicker, LinearLayout.LayoutParams(-1, -2))
 
-        addButton(root, "Reset Titanium icon") {
+        val iconActions = LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL }
+        val resetIconAction = TextView(this).apply { text="Reset"; textSize=14f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity)); background=Appearance.glass(this@MainActivity,22f,28,true); setPadding(dp(10),dp(12),dp(10),dp(12)); isClickable=true; isFocusable=true }
+        resetIconAction.setOnClickListener {
             IconManager.reset(this)
             showD2Message("Titanium Graphite restored")
         }
-        addButton(root, "Icon diagnostics") {
+        val diagnosticsAction = TextView(this).apply { text="Diagnostics"; textSize=14f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity)); background=Appearance.glass(this@MainActivity,22f,28,true); setPadding(dp(10),dp(12),dp(10),dp(12)); isClickable=true; isFocusable=true }
+        diagnosticsAction.setOnClickListener {
             val diagnosticContent = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(20), dp(8), dp(20), dp(10))
@@ -1342,11 +1345,15 @@ class MainActivity : Activity() {
             }
             dialog.show()
         }
+        iconActions.addView(resetIconAction,LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(6) })
+        iconActions.addView(diagnosticsAction,LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(6) })
+        root.addView(iconActions,LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
         root.addView(TextView(this).apply {
-            text = "Choose the D2 Titanium launcher color. Samsung Theme Park or another custom icon pack can override D2’s selected launcher icon. If the preview changes but the Home screen icon does not, temporarily apply Samsung’s default icons and test again."
-            textSize = 13f
+            text = "ⓘ Theme Park or another icon pack can override the selected D2 launcher icon."
+            textSize = 11f
             setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(dp(6), 0, dp(6), dp(12))
+            setPadding(dp(4), 0, dp(4), dp(10))
+            setOnClickListener { AlertDialog.Builder(this@MainActivity).setTitle("Launcher icon help").setMessage("If the preview changes but the Home screen icon does not, temporarily apply Samsung’s default icons and test again.").setPositiveButton("Done",null).show() }
         })
 
         section(root, "APP THEME")
