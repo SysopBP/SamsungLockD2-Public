@@ -37,7 +37,6 @@ class GuardianXposedBridge : XposedModule() {
         if (param.packageName != SYSTEM_UI) return
 
         log(Log.INFO, TAG, "GUARDIAN_XPOSED_743_SYSTEMUI_READY package=${param.packageName}")
-        signalGuardianKeyguard("HEARTBEAT", "SystemUI#packageReady")
         installPowerDiagnostics()
         installSystemUiNotificationDiagnostics(param.classLoader)
         installGuardianSystemUiHooks(param.classLoader)
@@ -241,7 +240,15 @@ class GuardianXposedBridge : XposedModule() {
                                     }
                                 }
                                 log(Log.INFO, TAG, "GUARDIAN_XPOSED_${event} method=${method.name} target=${owner.name} args=[$argsText]")
-                                chain.proceed()
+                                val result = chain.proceed()
+                                // SystemUI's Application is not guaranteed to exist at PackageReady.
+                                // Emit the first verified bridge heartbeat only after the real
+                                // SystemUI lifecycle has reached onCreate/startServicesIfNeeded.
+                                if (event == "SYSTEMUI_RECOVERY" &&
+                                    (method.name == "onCreate" || method.name == "startServicesIfNeeded")) {
+                                    signalGuardianKeyguard("HEARTBEAT", owner.name + "#" + method.name)
+                                }
+                                result
                             }
                         installed++
                         log(Log.INFO, TAG, "GUARDIAN_XPOSED_${event}_HOOK_INSTALLED target=${owner.name}#${method.name}")
