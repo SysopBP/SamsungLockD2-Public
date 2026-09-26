@@ -844,6 +844,20 @@ class LockScreenActivity : Activity() {
         setOnClickListener { click() }
     }
 
+    private fun glassIconButton(icon: Int, description: String, click: () -> Unit) = ImageView(this).apply {
+        setImageResource(icon)
+        imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+        contentDescription = description
+        setPadding(dp(16), dp(16), dp(16), dp(16))
+        background = glassPanel(32f)
+        isClickable = true
+        isFocusable = true
+        setOnClickListener {
+            performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+            click()
+        }
+    }
+
     private fun mediaButton(value: String, primary: Boolean = false, click: () -> Unit) = TextView(this).apply {
         text = value; textSize = if (primary) 27f else 25f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
         background = GradientDrawable().apply {
@@ -858,10 +872,10 @@ class LockScreenActivity : Activity() {
         setOnClickListener { click() }
     }
     private fun shortcutButton(side: String): View = when (Prefs.shortcut(this, side)) {
-        "Camera" -> roundButton("📷") {
+        "Camera" -> glassIconButton(app.d2lock.R.drawable.ic_lock_camera, "Camera, D2 authentication required") {
             if (preview) openCamera() else authenticate { openCamera() }
-        }.apply { contentDescription = "Camera, D2 authentication required" }
-        "Flashlight" -> roundButton("🔦") { toggleTorch() }.apply { contentDescription = "Flashlight" }
+        }
+        "Flashlight" -> glassIconButton(app.d2lock.R.drawable.ic_lock_flashlight, "Flashlight") { toggleTorch() }
         else -> {
             val value = Prefs.shortcut(this, side)
             if (!value.startsWith("app:")) View(this) else {
