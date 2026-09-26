@@ -118,14 +118,14 @@ object ThemeOptions {
                 progressDrawable=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 thumb=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 splitTrack=false
-                minimumHeight=dp(38)
+                minimumHeight=dp(44)
                 setPadding(dp(12),0,dp(12),0)
             }
             override fun onDraw(canvas: Canvas) {
                 val left=paddingLeft.toFloat()
                 val right=(width-paddingRight).toFloat()
                 val cy=height/2f
-                val railH=dp(5).toFloat()
+                val railH=dp(4).toFloat()
                 val radius=railH/2f
                 val fraction=if(max>0) progress.toFloat()/max.toFloat() else 0f
                 val x=left+(right-left)*fraction
@@ -138,7 +138,7 @@ object ThemeOptions {
                     fill.color=(Appearance.accent(c) and 0x00ffffff) or 0xb8000000.toInt()
                     canvas.drawRoundRect(left,cy-railH/2f,x,cy+railH/2f,radius,radius,fill)
                 }
-                val thumbR=dp(9).toFloat()
+                val thumbR=dp(8).toFloat()
                 fill.color=(Appearance.accent(c) and 0x00ffffff) or 0xe6000000.toInt()
                 canvas.drawCircle(x,cy,thumbR,fill)
                 outline.color=0x99ffffff.toInt()
@@ -153,8 +153,8 @@ object ThemeOptions {
             parent.addView(heading)
             val glassSlider=LinearLayout(c).apply {
                 gravity=android.view.Gravity.CENTER_VERTICAL
-                setPadding(dp(8),0,dp(8),0)
-                background=Appearance.glass(c,24f,22,true)
+                setPadding(0,0,0,0)
+                background=null
             }
             glassSlider.addView(GlassThemeSlider(c).apply {
                 this.max=(max-min).coerceAtLeast(1)
@@ -174,10 +174,10 @@ object ThemeOptions {
                     override fun onStartTrackingTouch(seekBar: SeekBar?)=Unit
                     override fun onStopTrackingTouch(seekBar: SeekBar?)=Unit
                 })
-            },LinearLayout.LayoutParams(-1,dp(38)))
-            parent.addView(glassSlider,LinearLayout.LayoutParams(-1,dp(46)).apply {
-                topMargin=dp(2)
-                bottomMargin=dp(10)
+            },LinearLayout.LayoutParams(-1,dp(44)))
+            parent.addView(glassSlider,LinearLayout.LayoutParams(-1,dp(44)).apply {
+                topMargin=0
+                bottomMargin=dp(8)
             })
         }
         slider("Card opacity","cards",20,100,Appearance.cardOpacity(c),"%")
