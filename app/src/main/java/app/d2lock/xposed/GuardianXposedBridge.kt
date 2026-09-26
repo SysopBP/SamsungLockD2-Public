@@ -21,7 +21,7 @@ class GuardianXposedBridge : XposedModule() {
         log(
             Log.INFO,
             TAG,
-            "GUARDIAN_XPOSED_LOADED process=${param.processName} api=$apiVersion framework=$frameworkName"
+            "GUARDIAN_XPOSED_LOADED api=$apiVersion framework=$frameworkName"
         )
     }
 
@@ -30,7 +30,7 @@ class GuardianXposedBridge : XposedModule() {
         log(
             Log.INFO,
             TAG,
-            "GUARDIAN_XPOSED_SYSTEMUI_READY package=${param.packageName} process=${param.processName}"
+            "GUARDIAN_XPOSED_SYSTEMUI_READY package=${param.packageName}"
         )
     }
 }
