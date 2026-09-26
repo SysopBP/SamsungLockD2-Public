@@ -118,7 +118,7 @@ object ThemeOptions {
                 progressDrawable=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 thumb=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 splitTrack=false
-                minimumHeight=dp(44)
+                minimumHeight=dp(40)
                 setPadding(dp(12),0,dp(12),0)
             }
             override fun onDraw(canvas: Canvas) {
@@ -174,16 +174,16 @@ object ThemeOptions {
                     override fun onStartTrackingTouch(seekBar: SeekBar?)=Unit
                     override fun onStopTrackingTouch(seekBar: SeekBar?)=Unit
                 })
-            },LinearLayout.LayoutParams(-1,dp(44)))
-            parent.addView(glassSlider,LinearLayout.LayoutParams(-1,dp(44)).apply {
+            },LinearLayout.LayoutParams(-1,dp(40)))
+            parent.addView(glassSlider,LinearLayout.LayoutParams(-1,dp(40)).apply {
                 topMargin=0
-                bottomMargin=dp(8)
+                bottomMargin=dp(10)
             })
         }
         slider("Card opacity","cards",20,100,Appearance.cardOpacity(c),"%")
         slider("Banner opacity","banners",40,100,Appearance.bannerOpacity(c),"%")
         slider("Corner radius","radius",8,36,Appearance.radius(c)," dp")
-        parent.addView(preview,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(14); bottomMargin=dp(14) })
+        parent.addView(preview,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(18); bottomMargin=dp(18) })
         parent.addView(label("Lower opacity shows more of the background. Wallpaper colors use Android's system palette. A custom lock wallpaper keeps light text for readability."))
         parent.addView(label("FLOATING LOCK-SCREEN BAR"))
         slider("Bar width","bar_width",65,100,Appearance.barWidth(c),"%")
