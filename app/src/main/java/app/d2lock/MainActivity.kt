@@ -421,11 +421,20 @@ class MainActivity : Activity() {
                 background=Appearance.glass(this@MainActivity,30f,58,true)
                 isClickable=true
                 isFocusable=true
-                addView(TextView(this@MainActivity).apply {
-                    text="DEVICE IDENTITY"
-                    textSize=12f
-                    letterSpacing=.10f
-                    setTextColor(Appearance.secondary(this@MainActivity))
+                addView(LinearLayout(this@MainActivity).apply {
+                    orientation=LinearLayout.HORIZONTAL
+                    gravity=Gravity.CENTER_VERTICAL
+                    addView(ImageView(this@MainActivity).apply {
+                        setImageResource(R.drawable.ic_guardian_device)
+                        imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                        contentDescription=null
+                    },LinearLayout.LayoutParams(dp(20),dp(20)).apply { rightMargin=dp(8) })
+                    addView(TextView(this@MainActivity).apply {
+                        text="DEVICE IDENTITY"
+                        textSize=12f
+                        letterSpacing=.10f
+                        setTextColor(Appearance.secondary(this@MainActivity))
+                    })
                 })
                 addView(TextView(this@MainActivity).apply {
                     text="${android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${android.os.Build.MODEL}"
@@ -1057,10 +1066,19 @@ class MainActivity : Activity() {
             orientation=LinearLayout.VERTICAL
             setPadding(dp(18),dp(14),dp(18),dp(14))
             background=Appearance.glass(this@MainActivity,30f,38,true)
-            addView(TextView(this@MainActivity).apply {
-                text="Fingerprint Center"
-                textSize=18f
-                setTextColor(Appearance.text(this@MainActivity))
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.HORIZONTAL
+                gravity=Gravity.CENTER_VERTICAL
+                addView(ImageView(this@MainActivity).apply {
+                    setImageResource(R.drawable.ic_guardian_fingerprint)
+                    imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                    contentDescription=null
+                },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
+                addView(TextView(this@MainActivity).apply {
+                    text="Fingerprint Center"
+                    textSize=18f
+                    setTextColor(Appearance.text(this@MainActivity))
+                })
             })
             val fingerprintHardware=RootManager.fingerprintHardwareInfo()
             addView(TextView(this@MainActivity).apply {
@@ -1098,6 +1116,9 @@ class MainActivity : Activity() {
                 orientation=LinearLayout.HORIZONTAL
                 val test=TextView(this@MainActivity).apply {
                     text="Test Fingerprint"
+                    setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_guardian_fingerprint,0,0,0)
+                    compoundDrawableTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                    compoundDrawablePadding=dp(6)
                     textSize=14f
                     gravity=Gravity.CENTER
                     setTextColor(Appearance.text(this@MainActivity))
@@ -1109,6 +1130,9 @@ class MainActivity : Activity() {
                 }
                 val enroll=TextView(this@MainActivity).apply {
                     text="Enrollment"
+                    setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_guardian_enroll,0,0,0)
+                    compoundDrawableTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                    compoundDrawablePadding=dp(6)
                     textSize=14f
                     gravity=Gravity.CENTER
                     setTextColor(Appearance.text(this@MainActivity))
@@ -1134,10 +1158,19 @@ class MainActivity : Activity() {
             orientation=LinearLayout.VERTICAL
             setPadding(dp(18),dp(14),dp(18),dp(14))
             background=Appearance.glass(this@MainActivity,30f,38,true)
-            addView(TextView(this@MainActivity).apply {
-                text="Recovery Center"
-                textSize=18f
-                setTextColor(Appearance.text(this@MainActivity))
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.HORIZONTAL
+                gravity=Gravity.CENTER_VERTICAL
+                addView(ImageView(this@MainActivity).apply {
+                    setImageResource(R.drawable.ic_guardian_recovery)
+                    imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                    contentDescription=null
+                },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
+                addView(TextView(this@MainActivity).apply {
+                    text="Recovery Center"
+                    textSize=18f
+                    setTextColor(Appearance.text(this@MainActivity))
+                })
             })
             addView(TextView(this@MainActivity).apply {
                 text=if(RootManager.isAvailable()) "Root available  •  Recovery ready" else "Root unavailable  •  Recovery actions disabled"
@@ -1826,10 +1859,19 @@ class MainActivity : Activity() {
             orientation=LinearLayout.VERTICAL
             setPadding(dp(18),dp(14),dp(18),dp(14))
             background=Appearance.glass(this@MainActivity,30f,38,true)
-            addView(TextView(this@MainActivity).apply {
-                text="Access Center"
-                textSize=18f
-                setTextColor(Appearance.text(this@MainActivity))
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.HORIZONTAL
+                gravity=Gravity.CENTER_VERTICAL
+                addView(ImageView(this@MainActivity).apply {
+                    setImageResource(R.drawable.ic_guardian_access)
+                    imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                    contentDescription=null
+                },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
+                addView(TextView(this@MainActivity).apply {
+                    text="Access Center"
+                    textSize=18f
+                    setTextColor(Appearance.text(this@MainActivity))
+                })
             })
             addView(TextView(this@MainActivity).apply {
                 text="Notifications  •  Media  •  Optional features"
