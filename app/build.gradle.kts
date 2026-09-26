@@ -52,7 +52,7 @@ dependencies {
     // Isolated Material 3 comparison preview only; no production Guardian surface uses this yet.
     implementation("com.google.android.material:material:1.13.0")
 
-    implementation("dev.rikka.shizuku:api:13.1.5")
+    // Modern LSPosed/libxposed API is supplied by the framework at runtime.\n    compileOnly("io.github.libxposed:api:101.0.1")\n\n    implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
     implementation("androidx.credentials:credentials:1.7.0-alpha03")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
