@@ -38,6 +38,7 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import app.d2lock.Prefs
@@ -77,6 +78,9 @@ class LockScreenActivity : Activity() {
     private lateinit var mediaTitle: TextView
     private lateinit var mediaArtist: TextView
     private lateinit var playPause: TextView
+    private lateinit var mediaArtwork: ImageView
+    private lateinit var mediaProgress: ProgressBar
+    private lateinit var mediaTime: TextView
     private lateinit var media: MediaControllerBridge
     private var torchOn = false
     private var preview = false
@@ -102,6 +106,25 @@ class LockScreenActivity : Activity() {
             mediaTitle.text = media.title().ifBlank { "Media" }
             mediaArtist.text = media.artist().ifBlank { "Play music to show it here" }
             playPause.text = if (media.isPlaying()) "Ⅱ" else "▶"
+            val artwork = media.artwork()
+            if (artwork != null) {
+                mediaArtwork.setImageBitmap(artwork)
+                mediaArtwork.imageTintList = null
+                mediaArtwork.setPadding(0, 0, 0, 0)
+            } else {
+                mediaArtwork.setImageResource(app.d2lock.R.drawable.ic_media_music)
+                mediaArtwork.imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+                mediaArtwork.setPadding(dp(13), dp(13), dp(13), dp(13))
+            }
+            val duration = media.durationMs()
+            val position = media.positionMs().coerceAtMost(if (duration > 0L) duration else Long.MAX_VALUE)
+            mediaProgress.max = 1000
+            mediaProgress.progress = if (duration > 0L) ((position * 1000L) / duration).toInt().coerceIn(0, 1000) else 0
+            fun mediaClock(ms: Long): String {
+                val total = (ms / 1000L).coerceAtLeast(0L)
+                return "%d:%02d".format(total / 60L, total % 60L)
+            }
+            mediaTime.text = if (duration > 0L) "${mediaClock(position)}  •  ${mediaClock(duration)}" else media.album().ifBlank { "Media session" }
             val mediaName = media.title()
             if (mediaName.isNotBlank()) {
                 LiveHubStore.publish(LiveHubCard("media", LiveHubKind.MEDIA, mediaName, media.artist()))
@@ -472,48 +495,82 @@ class LockScreenActivity : Activity() {
         val mediaCompact = mediaLayout == "compact"
         val mediaLarge = mediaLayout == "large"
         val mediaPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(if (mediaCompact) 12 else 16), dp(if (mediaCompact) 10 else 14), dp(if (mediaCompact) 12 else 16), dp(if (mediaCompact) 10 else 14))
+            background = Appearance.glass(this@LockScreenActivity, 32f, adaptiveGlass(Prefs.componentGlass(this@LockScreenActivity, "media")), true)
+            elevation = dp(10).toFloat()
+        }
+        val mediaHeader = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(if (mediaCompact) 10 else 14), dp(if (mediaCompact) 8 else if (mediaLarge) 15 else 12), dp(10), dp(if (mediaCompact) 8 else if (mediaLarge) 15 else 12))
-            background = Appearance.glass(this@LockScreenActivity, 34f, adaptiveGlass(Prefs.componentGlass(this@LockScreenActivity, "media")), true)
-            elevation = dp(8).toFloat()
         }
-        mediaPanel.addView(ImageView(this).apply {
+        mediaArtwork = ImageView(this).apply {
             setImageResource(app.d2lock.R.drawable.ic_media_music)
             imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            scaleType = ImageView.ScaleType.CENTER_CROP
             setPadding(dp(13), dp(13), dp(13), dp(13))
             background = GradientDrawable().apply {
-                cornerRadius = dp(17).toFloat()
+                cornerRadius = dp(if (mediaCompact) 14 else 18).toFloat()
                 setColor(0xff41475d.toInt())
             }
-            contentDescription = "Media"
-        }, LinearLayout.LayoutParams(dp(if (mediaCompact) 48 else if (mediaLarge) 70 else 62), dp(if (mediaCompact) 48 else if (mediaLarge) 70 else 62)))
+            clipToOutline = true
+            outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
+            contentDescription = "Album artwork"
+        }
+        val artSize = dp(if (mediaCompact) 48 else if (mediaLarge) 76 else 64)
+        mediaHeader.addView(mediaArtwork, LinearLayout.LayoutParams(artSize, artSize))
         val mediaDetails = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(if (mediaCompact) 9 else 12), 0, 0, 0)
-            mediaTitle = label("Media", if (mediaCompact) 14f else if (mediaLarge) 18f else 16f, Color.WHITE).apply {
+            setPadding(dp(12), 0, 0, 0)
+            mediaTitle = label("Media", if (mediaCompact) 14f else if (mediaLarge) 19f else 17f, Color.WHITE).apply {
+                maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+                typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+            }
+            mediaArtist = label("Play music to show it here", if (mediaCompact) 11f else 13f, 0xffd1d4df.toInt()).apply {
                 maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
             }
-            mediaArtist = label("Play music to show it here", if (mediaCompact) 11f else if (mediaLarge) 13f else 12f, 0xffd1d4df.toInt()).apply {
+            mediaTime = label("Media session", 11f, 0xffb9bdc9.toInt()).apply {
                 maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+                setPadding(0, dp(3), 0, 0)
             }
             addView(mediaTitle)
             addView(mediaArtist)
+            addView(mediaTime)
         }
-        mediaPanel.addView(mediaDetails, LinearLayout.LayoutParams(0, -2, 1f))
+        mediaHeader.addView(mediaDetails, LinearLayout.LayoutParams(0, -2, 1f))
+        mediaPanel.addView(mediaHeader)
+        mediaProgress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 1000
+            progress = 0
+            progressTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x44ffffff)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        mediaPanel.addView(mediaProgress, LinearLayout.LayoutParams(-1, dp(3)).apply {
+            topMargin = dp(if (mediaCompact) 8 else 11)
+            bottomMargin = dp(if (mediaCompact) 7 else 9)
+        })
         val controls = LinearLayout(this).apply {
-            gravity = Gravity.CENTER_VERTICAL
-            addView(mediaIconButton(app.d2lock.R.drawable.ic_media_previous, "Previous") { media.previous() })
-            playPause = mediaButton("▶", true) { media.toggle() }
-            addView(playPause)
-            addView(mediaIconButton(app.d2lock.R.drawable.ic_media_next, "Next") { media.next() })
+            gravity = Gravity.CENTER
+            addView(mediaIconButton(app.d2lock.R.drawable.ic_media_previous, "Previous") {
+                performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK); media.previous()
+            })
+            playPause = mediaButton("▶", true) {
+                performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM); media.toggle()
+            }
+            addView(playPause, LinearLayout.LayoutParams(dp(if (mediaCompact) 50 else 58), dp(if (mediaCompact) 46 else 54)).apply {
+                marginStart=dp(10); marginEnd=dp(10)
+            })
+            addView(mediaIconButton(app.d2lock.R.drawable.ic_media_next, "Next") {
+                performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK); media.next()
+            })
             val buttonScale = Prefs.mediaButtonsScale(this@LockScreenActivity) / 100f
             scaleX = buttonScale
             scaleY = buttonScale
         }
-        mediaPanel.addView(controls)
+        mediaPanel.addView(controls, LinearLayout.LayoutParams(-1, -2))
         if (Prefs.showMedia(this)) content.addView(mediaPanel,
-            LinearLayout.LayoutParams(-1, dp(if (mediaCompact) 74 else if (mediaLarge) 108 else 94)).apply { bottomMargin = dp(12) })
+            LinearLayout.LayoutParams(-1, dp(if (mediaCompact) 126 else if (mediaLarge) 174 else 154)).apply { bottomMargin = dp(12) })
         frame.addView(content, FrameLayout.LayoutParams(-1, -1))
         val floatingBar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
