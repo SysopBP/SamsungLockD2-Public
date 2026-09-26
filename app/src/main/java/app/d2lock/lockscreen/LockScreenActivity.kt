@@ -672,8 +672,20 @@ class LockScreenActivity : Activity() {
                 ((::media.isInitialized && media.isPlaying()) || visibleItems.size >= 2)))
         visibleItems.forEach { item ->
             val density = Prefs.notificationDensity(this)
-            val horizontalPad = when (density) { "compact" -> 13; "large" -> 18; else -> 16 }
-            val verticalPad = when (density) { "compact" -> 7; "large" -> 14; else -> 11 }
+            val adaptiveStack = Prefs.experimentalAdaptiveNotifications(this) && visibleItems.size >= 3
+            val horizontalPad = when {
+                adaptiveStack -> 13
+                density == "compact" -> 13
+                density == "large" -> 18
+                else -> 16
+            }
+            val verticalPad = when {
+                adaptiveStack && visibleItems.size >= 5 -> 6
+                adaptiveStack -> 8
+                density == "compact" -> 7
+                density == "large" -> 14
+                else -> 11
+            }
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(horizontalPad), dp(verticalPad), dp(horizontalPad), dp(verticalPad))
