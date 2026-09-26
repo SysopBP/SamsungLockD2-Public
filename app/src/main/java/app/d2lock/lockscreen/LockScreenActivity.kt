@@ -335,6 +335,11 @@ class LockScreenActivity : Activity() {
         // focus (for example call UI). Dismissing it here races Guardian against
         // the user and recreates the fast-unlock bug.
         if (!unlocking && !GuardianWatchdog.isTrustedAuthenticationActive()) {
+            // If Samsung Keyguard takes the foreground, ask the companion service to
+            // restore the existing Guardian surface instead of recreating this Activity.
+            if (!preview && Prefs.kiosk(this)) {
+                LockScreenService.surfaceLost(this, "activity_stopped")
+            }
             pinDialog?.dismiss()
             pinDialog = null
         }
