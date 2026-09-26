@@ -541,78 +541,96 @@ class MainActivity : Activity() {
 
         section(root, "GUARDIAN & KIOSK")
         root.getChildAt(root.childCount - 1).tag = "guardian_kiosk"
-        root.addView(guardianSwitch().apply {
-            text = "Guard Quick Settings while D2 is locked"
-            textSize = 17f
-            setTextColor(Appearance.text(this@MainActivity))
-            isChecked = Prefs.quickSettingsGuard(this@MainActivity)
-            setOnCheckedChangeListener { _, checked -> Prefs.setQuickSettingsGuard(this@MainActivity, checked) }
-        }, rowParams())
-        root.addView(TextView(this).apply {
-            text = "Experimental Samsung/Android guard. D2 keeps the notification shade collapsed while its lock screen has focus. This does not modify SystemUI or disable emergency/recovery controls, and firmware behavior may vary."
-            textSize = 13f
-            setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(dp(6), 0, dp(6), dp(14))
-        })
-
-        root.addView(guardianSwitch().apply {
-            text = "Require D2 authentication to leave (root kiosk)"
-            textSize = 17f
-            setTextColor(Appearance.text(this@MainActivity))
-            isChecked = Prefs.kiosk(this@MainActivity)
-            setOnCheckedChangeListener { _, checked ->
-                Prefs.setKiosk(this@MainActivity, checked)
-            }
-        }, rowParams())
-        root.addView(TextView(this).apply {
-            text = "Experimental: grant D2 root access in KernelSU. When kiosk is active, Home and Recents are blocked until your selected D2 unlock method is accepted. Check for ‘Kiosk active’ on the lock screen. Preview stays unlocked.\n\nAndroid kiosk mode interacts with the system keyguard, but D2 never sets a Samsung PIN. A crash or unresponsive app releases kiosk after about 20 seconds; reboot is the fallback recovery. Power/reboot and root remain bypasses. Primary, unmanaged user only."
-            textSize = 14f
-            setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(0, dp(4), 0, dp(16))
-        })
-
-        root.addView(TextView(this).apply {
-            text = "Phone calls during kiosk: the selected Phone app and system call screen are allowed. Grant notification access below for Answer/Decline controls on D2. Phone-app screens may be accessible without completing D2 authentication; other apps and Home/Recents remain restricted. Call controls do not display caller names or numbers on D2, even when message previews are hidden."
-            textSize = 14f
-            setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(0, 0, 0, dp(16))
-        })
+        root.addView(LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL
+            setPadding(dp(18),dp(14),dp(18),dp(14))
+            background=Appearance.glass(this@MainActivity,30f,38,true)
+            addView(TextView(this@MainActivity).apply {
+                text="Guardian Protection"
+                textSize=18f
+                setTextColor(Appearance.text(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text=listOf(
+                    if(Prefs.quickSettingsGuard(this@MainActivity)) "Quick Settings guarded" else "Quick Settings guard off",
+                    if(Prefs.kiosk(this@MainActivity)) "Kiosk authentication on" else "Kiosk authentication off"
+                ).joinToString("  ·  ")
+                textSize=12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0,dp(5),0,dp(10))
+            })
+            addView(guardianSwitch().apply {
+                text="Guard Quick Settings while D2 is locked"
+                textSize=16f
+                setTextColor(Appearance.text(this@MainActivity))
+                isChecked=Prefs.quickSettingsGuard(this@MainActivity)
+                setOnCheckedChangeListener { _,checked -> Prefs.setQuickSettingsGuard(this@MainActivity,checked) }
+            },rowParams())
+            addView(TextView(this@MainActivity).apply {
+                text="Keeps the notification shade collapsed while the D2 lock screen has focus. Emergency and recovery controls remain available."
+                textSize=12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(dp(4),0,dp(4),dp(10))
+            })
+            addView(guardianSwitch().apply {
+                text="Require D2 authentication to leave"
+                textSize=16f
+                setTextColor(Appearance.text(this@MainActivity))
+                isChecked=Prefs.kiosk(this@MainActivity)
+                setOnCheckedChangeListener { _,checked -> Prefs.setKiosk(this@MainActivity,checked) }
+            },rowParams())
+            addView(TextView(this@MainActivity).apply {
+                text="Root kiosk blocks Home and Recents until the selected D2 unlock method is accepted. Phone-call screens remain allowed; reboot and root are recovery bypasses."
+                textSize=12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(dp(4),0,dp(4),0)
+            })
+        },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
 
         section(root, "ADB / USB RECOVERY")
-        root.addView(TextView(this).apply {
-            val state = RootManager.usbAdbState()
-            text = when {
-                state == null -> "Root access is required to inspect Samsung USB/ADB state."
-                Prefs.adbRecovery(this@MainActivity) && state.adbEnabled != "1" ->
-                    "Recovery is configured · USB debugging is currently off · ${state.summary}"
-                else -> state.summary
-            }
-            textSize = 13f
-            setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(dp(6), 0, dp(6), dp(10))
-        })
-        root.addView(guardianSwitch().apply {
-            text = "ADB / USB recovery mode"
-            textSize = 17f
-            setTextColor(Appearance.text(this@MainActivity))
-            isChecked = Prefs.adbRecovery(this@MainActivity)
-            setOnCheckedChangeListener { _, checked ->
-                if (!RootManager.isAvailable()) {
-                    isChecked = false
-                    Toast.makeText(this@MainActivity, "KernelSU/root access is required", Toast.LENGTH_LONG).show()
-                    return@setOnCheckedChangeListener
+        root.addView(LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL
+            setPadding(dp(18),dp(14),dp(18),dp(14))
+            background=Appearance.glass(this@MainActivity,30f,38,true)
+            addView(TextView(this@MainActivity).apply {
+                text="USB Recovery"
+                textSize=18f
+                setTextColor(Appearance.text(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                val state=RootManager.usbAdbState()
+                text=when {
+                    state==null -> "Root access is required to inspect Samsung USB/ADB state."
+                    Prefs.adbRecovery(this@MainActivity) && state.adbEnabled!="1" -> "Recovery configured · USB debugging currently off · "+state.summary
+                    else -> state.summary
                 }
-                val result = if (checked) RootManager.enableUsbAdbRecovery() else RootManager.disableUsbAdbRecovery()
-                if (result.first) Prefs.setAdbRecovery(this@MainActivity, checked) else isChecked = !checked
-                Toast.makeText(this@MainActivity, result.second, Toast.LENGTH_LONG).show()
-            }
-        }, rowParams())
-        root.addView(TextView(this).apply {
-            text = "Root-only recovery option. When enabled, D2 requests block_usb_lock=0 and enables the ADB USB function. Samsung firmware can still override USB policy, and an untrusted computer still requires ADB authorization. Disable this option when recovery access is not needed."
-            textSize = 13f
-            setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(dp(6), 0, dp(6), dp(14))
-        })
+                textSize=12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0,dp(5),0,dp(10))
+            })
+            addView(guardianSwitch().apply {
+                text="ADB / USB recovery mode"
+                textSize=16f
+                setTextColor(Appearance.text(this@MainActivity))
+                isChecked=Prefs.adbRecovery(this@MainActivity)
+                setOnCheckedChangeListener { _,checked ->
+                    if(!RootManager.isAvailable()) {
+                        isChecked=false
+                        Toast.makeText(this@MainActivity,"KernelSU/root access is required",Toast.LENGTH_LONG).show()
+                        return@setOnCheckedChangeListener
+                    }
+                    val result=if(checked) RootManager.enableUsbAdbRecovery() else RootManager.disableUsbAdbRecovery()
+                    if(result.first) Prefs.setAdbRecovery(this@MainActivity,checked) else isChecked=!checked
+                    Toast.makeText(this@MainActivity,result.second,Toast.LENGTH_LONG).show()
+                }
+            },rowParams())
+            addView(TextView(this@MainActivity).apply {
+                text="Root-only recovery option. D2 requests block_usb_lock=0 and the ADB USB function. Samsung firmware can still override USB policy, and computers still require ADB authorization."
+                textSize=12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(dp(4),0,dp(4),0)
+            })
+        },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
 
         section(root, "THEME & COLORS")
         root.addView(LinearLayout(this).apply {
