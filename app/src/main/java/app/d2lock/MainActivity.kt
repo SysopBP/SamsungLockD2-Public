@@ -2212,6 +2212,31 @@ class MainActivity : Activity() {
             Triple(R.drawable.ic_nav_bar, "Bar", "floating_bar"),
             Triple(R.drawable.ic_nav_settings, "All", "settings")
         )
+        // Beta.2 Guardian Dock: the center core is a live health surface, not a fake
+        // security indicator. Green requires the configured protection stack; amber
+        // means Guardian is usable but one or more optional integrations are absent.
+        val guardianHealthy = Prefs.enabled(this) && PinStore(this).configured() &&
+            (!Prefs.kiosk(this) || Prefs.rootMode(this)) &&
+            (!Prefs.xposedMaster(this) || Prefs.xposedFallback(this))
+        val core = TextView(this).apply {
+            text = "◆"
+            textSize = 17f
+            gravity = Gravity.CENTER
+            contentDescription = if (guardianHealthy) "Guardian Core protected" else "Guardian Core needs attention"
+            setTextColor(if (guardianHealthy) Color.rgb(102, 220, 132) else Appearance.accent(this@MainActivity))
+            background = Appearance.glass(this@MainActivity, 30f, 64, true)
+            elevation = dp(30).toFloat()
+            setOnClickListener {
+                performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+                root.findViewWithTag<android.view.View>("root_shizuku")?.let { view ->
+                    val rect = android.graphics.Rect()
+                    view.getDrawingRect(rect)
+                    root.offsetDescendantRectToMyCoords(view, rect)
+                    scroll.smoothScrollTo(0, (rect.top - dp(18)).coerceAtLeast(0))
+                    view.postDelayed({ flashSettingsTarget(view) }, 280)
+                }
+            }
+        }
         val items = mutableListOf<LinearLayout>()
         fun select(item: LinearLayout) {
             items.forEach { candidate ->
@@ -2219,10 +2244,20 @@ class MainActivity : Activity() {
                 candidate.background = null
                 candidate.scaleX = 1f
                 candidate.scaleY = 1f
+                candidate.setPadding(dp(2), dp(2), dp(2), dp(2))
                 (candidate.getChildAt(0) as? ImageView)?.imageTintList = android.content.res.ColorStateList.valueOf(Appearance.secondary(this@MainActivity))
+                (candidate.getChildAt(1) as? TextView)?.apply {
+                    textSize = 9f
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                }
             }
             item.background = Appearance.glass(this@MainActivity, 28f, 48, true)
+            item.setPadding(dp(7), dp(2), dp(7), dp(2))
             (item.getChildAt(0) as? ImageView)?.imageTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            (item.getChildAt(1) as? TextView)?.apply {
+                textSize = 11f
+                setTextColor(Appearance.text(this@MainActivity))
+            }
             item.scaleX = .88f
             item.scaleY = .88f
             item.animate().scaleX(1f).scaleY(1f).setDuration(180).start()
@@ -2269,15 +2304,22 @@ class MainActivity : Activity() {
                 if (index > 0) marginStart = dp(2)
             })
         }
-        items.firstOrNull()?.background = Appearance.glass(this, 28f, 48, true)
+        items.firstOrNull()?.let { select(it) }
         host.addView(nav, android.widget.FrameLayout.LayoutParams(-1, dp(72), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
             setMargins(dp(18), 0, dp(18), dp(18))
+        })
+        host.addView(core, android.widget.FrameLayout.LayoutParams(dp(46), dp(46), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
+            setMargins(0, 0, 0, dp(66))
         })
         host.setOnApplyWindowInsetsListener { _, insets ->
             val bars = insets.getInsets(android.view.WindowInsets.Type.systemBars())
             (nav.layoutParams as? android.widget.FrameLayout.LayoutParams)?.let { params ->
                 params.bottomMargin = dp(18) + bars.bottom
                 nav.layoutParams = params
+            }
+            (core.layoutParams as? android.widget.FrameLayout.LayoutParams)?.let { params ->
+                params.bottomMargin = dp(66) + bars.bottom
+                core.layoutParams = params
             }
             insets
         }
