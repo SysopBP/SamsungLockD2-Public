@@ -1336,12 +1336,15 @@ class LockScreenActivity : Activity() {
         val biometric=getSystemService(BiometricManager::class.java)?.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)==BiometricManager.BIOMETRIC_SUCCESS
         AlertDialog.Builder(this)
             .setTitle("Guardian Diagnostics")
-            .setMessage("D2 surface  •  ACTIVE\nKiosk  •  "+if(Prefs.kiosk(this)) "ON" else "OFF"+
-                "\nRoot  •  "+if(root) "READY" else "OFF"+
-                "\nShizuku  •  "+if(shizuku) "READY" else "OFF"+
-                "\nLSPosed  •  "+if(Prefs.xposedMaster(this)) "ENABLED" else "OFF"+
-                "\nFingerprint  •  "+if(biometric) "BIOMETRIC_STRONG ready" else "Unavailable"+
-                "\nUnlock  •  "+Prefs.unlockMethod(this).uppercase())
+            .setMessage(buildString {
+                append("D2 surface  •  ACTIVE")
+                append("\nKiosk  •  "); append(if(Prefs.kiosk(this@LockScreenActivity)) "ON" else "OFF")
+                append("\nRoot  •  "); append(if(root) "READY" else "OFF")
+                append("\nShizuku  •  "); append(if(shizuku) "READY" else "OFF")
+                append("\nLSPosed  •  "); append(if(Prefs.xposedMaster(this@LockScreenActivity)) "ENABLED" else "OFF")
+                append("\nFingerprint  •  "); append(if(biometric) "BIOMETRIC_STRONG ready" else "Unavailable")
+                append("\nUnlock  •  "); append(Prefs.unlockMethod(this@LockScreenActivity).uppercase())
+            })
             .setPositiveButton("Close",null)
             .show()
     }
