@@ -1333,68 +1333,57 @@ class MainActivity : Activity() {
 
     private fun guardianSwitch(): Switch = GuardianSwitch(this)
 
-    private inner class GuardianSlider(context: android.content.Context) : androidx.appcompat.widget.SeslSeekBar(context) {
-        private var legacyListener: androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener? = null
+    private inner class GuardianSlider(context: android.content.Context) : SeekBar(context) {
+        private val fill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        private val outline = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = dp(1).toFloat()
+        }
 
         init {
+            // D2 owns the visuals: hide stock/Theme Park assets, retain native SeekBar behavior.
+            progressDrawable = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+            thumb = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+            splitTrack = false
             minimumHeight = dp(40)
-            super.setOnSeekBarChangeListener(object : androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: androidx.appcompat.widget.SeslSeekBar, progress: Int, fromUser: Boolean) {
-                    legacyListener?.onProgressChanged(seekBar, progress, fromUser)
-                }
-                override fun onStartTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) {
-                    legacyListener?.onStartTrackingTouch(seekBar)
-                }
-                override fun onStopTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) {
-                    legacyListener?.onStopTrackingTouch(seekBar)
-                }
-            })
+            setPadding(dp(12), 0, dp(12), 0)
         }
 
-        fun setLegacyOnSeekBarChangeListener(value: androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener?) {
-            legacyListener = value
+        override fun onDraw(canvas: android.graphics.Canvas) {
+            val left = paddingLeft.toFloat()
+            val right = (width - paddingRight).toFloat()
+            val cy = height / 2f
+            // Slim SESL/One UI-like geometry with Guardian glass materials.
+            val railH = dp(5).toFloat()
+            val radius = railH / 2f
+            val fraction = if (max > 0) progress.toFloat() / max.toFloat() else 0f
+            val x = left + (right - left) * fraction
+            val accent = Appearance.accent(this@MainActivity)
+
+            fill.style = android.graphics.Paint.Style.FILL
+            fill.color = if (Appearance.dark(this@MainActivity)) 0x2effffff else 0x22000000
+            canvas.drawRoundRect(left, cy - railH / 2f, right, cy + railH / 2f, radius, radius, fill)
+
+            outline.color = if (Appearance.dark(this@MainActivity)) 0x50ffffff else 0x38000000
+            canvas.drawRoundRect(left, cy - railH / 2f, right, cy + railH / 2f, radius, radius, outline)
+
+            if (x > left) {
+                fill.color = (accent and 0x00ffffff) or 0xb8000000.toInt()
+                canvas.drawRoundRect(left, cy - railH / 2f, x, cy + railH / 2f, radius, radius, fill)
+            }
+
+            // Compact SESL-like thumb, rendered as translucent Guardian glass.
+            val thumbR = dp(9).toFloat()
+            fill.color = (accent and 0x00ffffff) or 0xe6000000.toInt()
+            canvas.drawCircle(x, cy, thumbR, fill)
+            outline.color = 0x99ffffff.toInt()
+            canvas.drawCircle(x, cy, thumbR, outline)
+            fill.color = 0x42ffffff
+            canvas.drawCircle(x - dp(3), cy - dp(3), dp(2).toFloat(), fill)
         }
     }
 
-    private fun guardianSlider(): GuardianSlider = GuardianSlider(this).apply {
-        setPadding(dp(10), 0, dp(10), 0)
-        minimumHeight = dp(40)
-
-        // One UI 9 glass treatment without SESL's restricted tint APIs.
-        val accent = Appearance.accent(this@MainActivity)
-        val inactive = Appearance.blend(
-            Appearance.secondary(this@MainActivity),
-            Appearance.background(this@MainActivity),
-            .45f
-        )
-        progressDrawable = android.graphics.drawable.LayerDrawable(arrayOf(
-            android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                cornerRadius = dp(12).toFloat()
-                setColor((0x38 shl 24) or (inactive and 0x00ffffff))
-                setStroke(dp(1), (0x55 shl 24) or (Appearance.text(this@MainActivity) and 0x00ffffff))
-            },
-            android.graphics.drawable.ClipDrawable(
-                android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                    cornerRadius = dp(12).toFloat()
-                    setColor((0x88 shl 24) or (accent and 0x00ffffff))
-                    setStroke(dp(1), (0x99 shl 24) or (accent and 0x00ffffff))
-                },
-                android.view.Gravity.START,
-                android.graphics.drawable.ClipDrawable.HORIZONTAL
-            )
-        )).apply {
-            setId(0, android.R.id.background)
-            setId(1, android.R.id.progress)
-        }
-        thumb = android.graphics.drawable.GradientDrawable().apply {
-            shape = android.graphics.drawable.GradientDrawable.OVAL
-            setSize(dp(22), dp(22))
-            setColor((0xdd shl 24) or (accent and 0x00ffffff))
-            setStroke(dp(2), (0xaa shl 24) or (Appearance.text(this@MainActivity) and 0x00ffffff))
-        }
-    }
+    private fun guardianSlider(): GuardianSlider = GuardianSlider(this)
 
     private fun showQuickSettingsSheet(root: LinearLayout, scroll: ScrollView) {
         val panel = LinearLayout(this).apply {
