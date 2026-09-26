@@ -2217,7 +2217,7 @@ class MainActivity : Activity() {
         // means Guardian is usable but one or more optional integrations are absent.
         val guardianHealthy = Prefs.enabled(this) && PinStore(this).configured() &&
             (!Prefs.kiosk(this) || Prefs.rootMode(this)) &&
-            (!Prefs.xposedMaster(this) || Prefs.xposedFallback(this))
+            (!Prefs.xposedMaster(this) || Prefs.xposedAutomaticFallback(this))
         val core = TextView(this).apply {
             text = "◆"
             textSize = 17f
