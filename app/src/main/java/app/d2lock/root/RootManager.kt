@@ -38,16 +38,37 @@ object RootManager {
         if (!isAvailable()) return null
         val (ok, dump) = root("dumpsys fingerprint", 5)
         if (!ok || dump.isBlank()) return null
-        fun match(pattern: String) = Regex(pattern, RegexOption.IGNORE_CASE).find(dump)?.groupValues?.getOrNull(1)?.trim() ?: "Unknown"
+
+        fun first(vararg patterns: String): String {
+            patterns.forEach { pattern ->
+                Regex(pattern, setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE))
+                    .find(dump)?.groupValues?.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() }?.let { return it }
+            }
+            return "Not reported"
+        }
+
+        val frameworkSensorId = first(
+            """Dumping for sensorId:\s*([^,\n]+)""",
+            """sensorId\s*[=:]\s*([0-9]+)"""
+        )
+        val provider = first(
+            """Dumping for sensorId:[^\n]*provider:\s*([^\n]+)""",
+            """service\s*[=:]\s*["']?([^"',\n]*FingerprintProvider[^"',\n]*)"""
+        )
+        val maxTemplates = first(
+            """Max\s*Template(?:s)?\s*[:=]\s*([^,\n]+)""",
+            """maxEnrollmentsPerUser\s*[=:]\s*([0-9]+)"""
+        )
+
         return FingerprintHardwareInfo(
-            productId = match("""Product ID:\\s*([^,\\n]+)"""),
-            hardwareSensorId = match("""Sensor ID:\\s*([^,\\n]+)"""),
-            chipSn = match("""Chip SN:\\s*([^,\\n]+)"""),
-            firmwareVersion = match("""Firmware Version:\\s*([^,\\n]+)"""),
-            maxTemplates = match("""Max Template\\s*:\\s*([^\\n]+)"""),
-            frameworkSensorId = match("""Dumping for sensorId:\\s*([^,\\n]+)"""),
-            provider = match("""provider:\\s*([^\\n]+)"""),
-            halDeaths = match("""HAL deaths since last reboot:\\s*([^\\n]+)""")
+            productId = first("""Product\s*ID\s*[:=]\s*([^,\n]+)""", """productId\s*[=:]\s*([^,\n]+)"""),
+            hardwareSensorId = first("""Hardware\s*Sensor\s*ID\s*[:=]\s*([^,\n]+)""", """Sensor\s*ID\s*[:=]\s*([^,\n]+)""", """sensorId\s*[=:]\s*([0-9]+)"""),
+            chipSn = first("""Chip\s*S/?N\s*[:=]\s*([^,\n]+)""", """serial(?:Number)?\s*[=:]\s*([^,\n]+)"""),
+            firmwareVersion = first("""Firmware(?:\s*Version)?\s*[:=]\s*([^,\n]+)"""),
+            maxTemplates = maxTemplates,
+            frameworkSensorId = frameworkSensorId,
+            provider = provider,
+            halDeaths = first("""HAL\s*deaths(?:\s*since\s*last\s*reboot)?\s*[:=]\s*([^\n]+)""")
         )
     }
 
