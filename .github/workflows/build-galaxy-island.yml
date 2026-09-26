@@ -48,6 +48,11 @@ jobs:
                   text = text.replace(old, new, 1)
               path.write_text(text)
 
+          # D2 Guardian visual language: compact One UI 9 / Material 3 surfaces.
+          # Keep upstream behavior intact while making the Galaxy Island settings feel native to D2.
+          settings = "app/src/main/java/com/ekoehler/expressivecutout/ui/screen/SettingScreens/AppearanceScreen.kt"
+          strings = "app/src/main/res/values/strings.xml"
+
           prefs = "app/src/main/java/com/ekoehler/expressivecutout/data/AppearancePreferences.kt"
           edit(prefs, [
               ("data class AppearanceSettings(\n    val shadowEnabled:", "data class AppearanceSettings(\n    val glassEnabled: Boolean = DEFAULT_GLASS_ENABLED,\n    val shadowEnabled:"),
