@@ -1109,7 +1109,7 @@ class MainActivity : Activity() {
                     root.findViewWithTag<TextView>("d2_app_wallpaper_dim_label")?.text = "D2 background dim: $value%"
                 }
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
-                override fun onStopTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar?) { refreshAppearance() }
+                override fun onStopTrackingTouch(seekBar: SeekBar?) { refreshAppearance() }
             })
         }, LinearLayout.LayoutParams(-1, dp(40)))
         addButton(root, "Reset D2 app wallpaper") {
@@ -1339,14 +1339,14 @@ class MainActivity : Activity() {
         init {
             minimumHeight = dp(40)
             super.setOnSeekBarChangeListener(object : androidx.appcompat.widget.SeslSeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: androidx.appcompat.widget.SeslSeekBar?, progress: Int, fromUser: Boolean) {
-                    legacyListener?.onProgressChanged(seekBar, progress, fromUser)
+                override fun onProgressChanged(seekBar: androidx.appcompat.widget.SeslSeekBar, progress: Int, fromUser: Boolean) {
+                    legacyListener?.onProgressChanged(this@GuardianSlider, progress, fromUser)
                 }
-                override fun onStartTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar?) {
-                    legacyListener?.onStartTrackingTouch(seekBar)
+                override fun onStartTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) {
+                    legacyListener?.onStartTrackingTouch(this@GuardianSlider)
                 }
-                override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                    legacyListener?.onStopTrackingTouch(seekBar)
+                override fun onStopTrackingTouch(seekBar: androidx.appcompat.widget.SeslSeekBar) {
+                    legacyListener?.onStopTrackingTouch(this@GuardianSlider)
                 }
             })
         }
