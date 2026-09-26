@@ -22,7 +22,15 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         val state = intent.getStringExtra("state") ?: return
         val source = intent.getStringExtra("source") ?: "unknown"
         Log.i("SamsungLockD2", "GUARDIAN_XPOSED_KEYGUARD_RECEIVED state=$state source=$source")
-        LockScreenService.keyguardSignal(context, state, source)
+        context.getSharedPreferences("guardian_xposed_health", Context.MODE_PRIVATE)
+            .edit()
+            .putLong("last_systemui_event_ms", System.currentTimeMillis())
+            .putString("last_systemui_state", state)
+            .putString("last_systemui_source", source)
+            .apply()
+        if (state != "HEARTBEAT") {
+            LockScreenService.keyguardSignal(context, state, source)
+        }
     }
 
     companion object {
