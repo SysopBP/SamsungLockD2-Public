@@ -244,9 +244,9 @@ class LockScreenActivity : Activity() {
         // actually available. After a normal reboot that loses temporary root,
         // fall back to the configured Guardian PIN/pattern instead of opening a
         // biometric session that depends on the enhanced integration.
-        if (!preview && !unlocking && !biometricRunning && app.d2lock.root.RootManager.available()) {
+        if (!preview && !unlocking && !biometricRunning && app.d2lock.root.RootManager.isAvailable()) {
             startGuardianFingerprint()
-        } else if (!preview && !unlocking && !app.d2lock.root.RootManager.available()) {
+        } else if (!preview && !unlocking && !app.d2lock.root.RootManager.isAvailable()) {
             fingerprintGlass?.visibility = View.GONE
         }
         if (!preview && !healthyReported) {
@@ -610,7 +610,7 @@ class LockScreenActivity : Activity() {
 
         // Guardian fingerprint glass: this is D2's visual layer. The secure
         // authentication itself remains Android/Samsung BIOMETRIC_STRONG.
-        if (!preview && app.d2lock.root.RootManager.available()) {
+        if (!preview && app.d2lock.root.RootManager.isAvailable()) {
             fingerprintGlass = buildFingerprintGlass().also { glass ->
                 frame.addView(glass, FrameLayout.LayoutParams(dp(238), dp(126), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
                     bottomMargin = dp(104)
