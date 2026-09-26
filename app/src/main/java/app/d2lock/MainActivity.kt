@@ -116,7 +116,7 @@ class MainActivity : Activity() {
             setPadding(dp(16), dp(14), dp(16), dp(18)); background = Appearance.glass(this@MainActivity, 26f, 28, true)
         }
         fun whatsNew() {
-            content.text = "WHAT'S NEW  •  D2 ${versionName ?: "current"}\n\n• Guardian/Xposed integration center with individually gated features\n• Galaxy Island Xposed controls and safe fallback path\n• D2 Legal, Privacy & Licenses center\n• Compact Profile Manager and Backup & Restore controls\n• Continued One UI 9 / Guardian glass interface cleanup"
+            content.text = "WHAT'S NEW SINCE BETA.1  •  D2 ${versionName ?: "current"}\n\n• LSPosed/Xposed SystemUI integration and diagnostics\n• Experimental fingerprint authentication groundwork and SystemUI callback diagnostics\n• New System Integration Center for Root, Shizuku, Xposed and Galaxy Island\n• Automatic integration fallback protection\n• Guardian/Kiosk call, focus, relock and boot-protection improvements\n• Recovery & Safety Center with system-health and USB/ADB recovery status\n• Compact glass settings, dialogs, fixed navigation and section highlighting\n• Lock & Wake and Widget Manager cleanup\n• Galaxy Island pairing, Xposed controls and Guardian glass integration\n• Continued PIN/pattern, notification, icon and One UI 9 interface refinements"
         }
         fun whatsNext() {
             val lock = if (PinStore(this@MainActivity).configured()) "✓" else "○"
@@ -125,7 +125,7 @@ class MainActivity : Activity() {
             val shizuku = if (Prefs.shizukuEnabled(this@MainActivity)) "✓" else "○"
             val root = if (Prefs.rootMode(this@MainActivity)) "✓" else "○"
             val xp = if (Prefs.xposedMaster(this@MainActivity)) "✓" else "○"
-            content.text = "WHAT'S NEXT\n\n$lock Set up D2 authentication\n$wake Enable lock on wake\n$kiosk Configure kiosk protection\n$shizuku Connect Shizuku\n$root Verify optional KernelSU/root integration\n$xp Test LSPosed/Xposed integration\n○ Configure Galaxy Island integration\n○ Customize your lock screen\n○ Test your recovery path"
+            content.text = "WHAT'S NEXT\n\n$lock Set up D2 authentication\n$wake Enable lock on wake\n$kiosk Configure kiosk protection\n$shizuku Connect Shizuku\n$root Verify optional KernelSU/root integration\n$xp LSPosed/SystemUI integration enabled\n○ Complete secure fingerprint unlock integration\n○ Verify paired Galaxy Island glass and pop-out behavior\n○ Customize your lock screen\n○ Test your recovery path"
         }
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun tab(label: String, action: () -> Unit) = TextView(this).apply {
