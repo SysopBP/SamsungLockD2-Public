@@ -26,8 +26,11 @@ jobs:
           java-version: "17"
 
       - name: Download Galaxy Island base source
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          curl -fL --retry 3 "https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/Galaxy-Island-themed-source.zip" -o /tmp/galaxy-island-source.zip
+          gh api repos/SysopBP/SamsungLockD2-Public/releases/assets/575986619 \
+            -H "Accept: application/octet-stream" > /tmp/galaxy-island-source.zip
           mkdir -p /tmp/galaxy-island
           unzip -q /tmp/galaxy-island-source.zip -d /tmp/galaxy-island
 
