@@ -2503,17 +2503,28 @@ class MainActivity : Activity() {
     }
 
     private fun flashSettingsTarget(view: android.view.View) {
-        view.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
-        val pulseTarget = (view.parent as? android.view.ViewGroup)?.takeUnless { it is ScrollView } ?: view
+        // Highlight only the exact tagged destination. The previous implementation
+        // promoted the target to its parent container, so jumping to one setting
+        // could make an entire Center (or several sibling cards) appear to flash.
+        view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+        val pulseTarget = view
         val originalAlpha = pulseTarget.alpha
+        val originalScaleX = pulseTarget.scaleX
+        val originalScaleY = pulseTarget.scaleY
         pulseTarget.animate().cancel()
-        pulseTarget.animate().alpha(0.42f).setDuration(110).withEndAction {
-            pulseTarget.animate().alpha(1f).setDuration(180).withEndAction {
-                pulseTarget.animate().alpha(0.58f).setDuration(110).withEndAction {
-                    pulseTarget.animate().alpha(originalAlpha).setDuration(220).start()
-                }.start()
+        pulseTarget.animate()
+            .alpha(0.72f)
+            .scaleX(originalScaleX * 0.985f)
+            .scaleY(originalScaleY * 0.985f)
+            .setDuration(90)
+            .withEndAction {
+                pulseTarget.animate()
+                    .alpha(originalAlpha)
+                    .scaleX(originalScaleX)
+                    .scaleY(originalScaleY)
+                    .setDuration(190)
+                    .start()
             }.start()
-        }.start()
     }
 
     private fun showGuardianCoreHealth() {
