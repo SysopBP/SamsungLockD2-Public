@@ -1386,8 +1386,16 @@ class MainActivity : Activity() {
     }
 
     private fun guardianSlider(): GuardianSlider = GuardianSlider(this).apply {
-        background = Appearance.glass(this@MainActivity, 24f, 26, true)
-        setPadding(dp(14), 0, dp(14), 0)
+        // Compact neutral-glass SESL slider: keep the Samsung renderer, but
+        // remove the default blue accent so controls match Guardian glass.
+        background = Appearance.glass(this@MainActivity, 30f, 24, true)
+        setPadding(dp(12), 0, dp(12), 0)
+        minimumHeight = dp(40)
+        val glassActive = Color.argb(210, 226, 232, 238)
+        val glassInactive = Color.argb(72, 226, 232, 238)
+        progressTintList = android.content.res.ColorStateList.valueOf(glassActive)
+        thumbTintList = android.content.res.ColorStateList.valueOf(glassActive)
+        progressBackgroundTintList = android.content.res.ColorStateList.valueOf(glassInactive)
     }
 
     private fun showQuickSettingsSheet(root: LinearLayout, scroll: ScrollView) {
