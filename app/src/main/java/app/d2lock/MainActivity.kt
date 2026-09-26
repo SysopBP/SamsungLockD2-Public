@@ -1575,6 +1575,23 @@ class MainActivity : Activity() {
             xposedToggle("Automatic Guardian fallback", { Prefs.xposedAutomaticFallback(this@MainActivity) }) { Prefs.setXposedAutomaticFallback(this@MainActivity, it) }
 
             addView(TextView(this@MainActivity).apply {
+                text = "Galaxy Island • Xposed"
+                textSize = 16f
+                setTextColor(Appearance.text(this@MainActivity))
+                background = Appearance.glass(this@MainActivity, 22f, 26, true)
+                setPadding(dp(14), dp(10), dp(14), dp(10))
+            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10); bottomMargin = dp(6) })
+            xposedToggle("Galaxy Island SystemUI integration", { Prefs.xposedGalaxyIsland(this@MainActivity) }) { Prefs.setXposedGalaxyIsland(this@MainActivity, it) }
+            xposedToggle("Island native notifications", { Prefs.xposedIslandNotifications(this@MainActivity) }) { Prefs.setXposedIslandNotifications(this@MainActivity, it) }
+            xposedToggle("Island native media", { Prefs.xposedIslandMedia(this@MainActivity) }) { Prefs.setXposedIslandMedia(this@MainActivity, it) }
+            xposedToggle("Island charging / battery events", { Prefs.xposedIslandCharging(this@MainActivity) }) { Prefs.setXposedIslandCharging(this@MainActivity, it) }
+            xposedToggle("Island call events", { Prefs.xposedIslandCalls(this@MainActivity) }) { Prefs.setXposedIslandCalls(this@MainActivity, it) }
+            xposedToggle("Island screen-state awareness", { Prefs.xposedIslandScreenState(this@MainActivity) }) { Prefs.setXposedIslandScreenState(this@MainActivity, it) }
+            xposedToggle("Island SystemUI positioning", { Prefs.xposedIslandPositioning(this@MainActivity) }) { Prefs.setXposedIslandPositioning(this@MainActivity, it) }
+            xposedToggle("Island Guardian synchronization", { Prefs.xposedIslandGuardianSync(this@MainActivity) }) { Prefs.setXposedIslandGuardianSync(this@MainActivity, it) }
+            xposedToggle("Island fallback bridge", { Prefs.xposedIslandFallback(this@MainActivity) }) { Prefs.setXposedIslandFallback(this@MainActivity, it) }
+
+            addView(TextView(this@MainActivity).apply {
                 text = "Stage 2 test order: leave Safe diagnostics only ON. Test Screen / wake awareness first. The remaining switches are configuration gates and will be wired to their hooks incrementally after each previous stage passes."
                 textSize = 12f
                 setTextColor(Appearance.secondary(this@MainActivity))
