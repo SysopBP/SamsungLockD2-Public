@@ -34,7 +34,9 @@ object Appearance {
     fun reset(c: Context) { prefs(c).edit().clear().apply() }
     fun dark(c: Context, lock: Boolean = false): Boolean =
         (lock && Prefs.wallpaper(c) != null) || when(mode(c)) {
-            0 -> c.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+            // Follow system and System (Dynamic) both honor the current One UI
+            // light/dark state. Fixed visual presets keep their explicit behavior.
+            0, 9 -> c.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
             1 -> false
             else -> true
         }
@@ -42,14 +44,18 @@ object Appearance {
         // CORE owns the live accent. "System wallpaper" always follows the
         // current wallpaper/One UI palette; the experimental switch can also
         // opt fixed presets into wallpaper-derived accenting.
-        if (accentChoice(c) == 0 || Prefs.experimentalDynamicAccent(c)) {
+        val choice = accentChoice(c)
+        // A manually selected custom accent is authoritative. Experimental
+        // dynamic accent may decorate fixed presets, but must never mask the
+        // color the user explicitly chose.
+        if (choice == 0 || (Prefs.experimentalDynamicAccent(c) && choice != 11)) {
             runCatching {
                 val colors = android.app.WallpaperManager.getInstance(c)
                     .getWallpaperColors(android.app.WallpaperManager.FLAG_SYSTEM)
                 colors?.primaryColor?.toArgb()
             }.getOrNull()?.let { return it }
         }
-        return when(accentChoice(c)) {
+        return when(choice) {
         0 -> c.getColor(android.R.color.system_accent1_400)
         1 -> 0xff608ec7.toInt()
         2 -> 0xff529f9c.toInt()
