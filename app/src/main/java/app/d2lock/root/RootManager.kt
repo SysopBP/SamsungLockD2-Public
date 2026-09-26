@@ -23,6 +23,34 @@ object RootManager {
         }
     }.getOrElse { false to (it.message ?: "error") }
 
+    data class FingerprintHardwareInfo(
+        val productId: String = "Unknown",
+        val hardwareSensorId: String = "Unknown",
+        val chipSn: String = "Unknown",
+        val firmwareVersion: String = "Unknown",
+        val maxTemplates: String = "Unknown",
+        val frameworkSensorId: String = "Unknown",
+        val provider: String = "Unknown",
+        val halDeaths: String = "Unknown"
+    )
+
+    fun fingerprintHardwareInfo(): FingerprintHardwareInfo? {
+        if (!isAvailable()) return null
+        val (ok, dump) = root("dumpsys fingerprint", 5)
+        if (!ok || dump.isBlank()) return null
+        fun match(pattern: String) = Regex(pattern, RegexOption.IGNORE_CASE).find(dump)?.groupValues?.getOrNull(1)?.trim() ?: "Unknown"
+        return FingerprintHardwareInfo(
+            productId = match("""Product ID:\\s*([^,\\n]+)"""),
+            hardwareSensorId = match("""Sensor ID:\\s*([^,\\n]+)"""),
+            chipSn = match("""Chip SN:\\s*([^,\\n]+)"""),
+            firmwareVersion = match("""Firmware Version:\\s*([^,\\n]+)"""),
+            maxTemplates = match("""Max Template\\s*:\\s*([^\\n]+)"""),
+            frameworkSensorId = match("""Dumping for sensorId:\\s*([^,\\n]+)"""),
+            provider = match("""provider:\\s*([^\\n]+)"""),
+            halDeaths = match("""HAL deaths since last reboot:\\s*([^\\n]+)""")
+        )
+    }
+
     fun isAvailable(): Boolean {
         val (ok, output) = root("id", 2)
         return ok && output.contains("uid=0")
