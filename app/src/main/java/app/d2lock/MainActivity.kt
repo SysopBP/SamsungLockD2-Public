@@ -480,11 +480,20 @@ class MainActivity : Activity() {
             orientation=LinearLayout.VERTICAL
             setPadding(dp(18),dp(14),dp(18),dp(14))
             background=Appearance.glass(this@MainActivity,30f,38,true)
-            addView(TextView(this@MainActivity).apply {
-                text="🛡  Safety Center"
-                textSize=18f
-                setTextColor(Appearance.text(this@MainActivity))
-            })
+            addView(LinearLayout(this@MainActivity).apply {
+                    orientation=LinearLayout.HORIZONTAL
+                    gravity=Gravity.CENTER_VERTICAL
+                    addView(ImageView(this@MainActivity).apply {
+                        setImageResource(R.drawable.ic_guardian_shield)
+                        imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                        contentDescription=null
+                    },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
+                    addView(TextView(this@MainActivity).apply {
+                        text="Safety Center"
+                        textSize=18f
+                        setTextColor(Appearance.text(this@MainActivity))
+                    })
+                })
             addView(TextView(this@MainActivity).apply {
                 val rootReady=RootManager.isAvailable()
                 val adb=Prefs.adbRecovery(this@MainActivity)
@@ -501,7 +510,10 @@ class MainActivity : Activity() {
                 orientation=LinearLayout.HORIZONTAL
                 gravity=Gravity.CENTER_VERTICAL
                 val health=TextView(this@MainActivity).apply {
-                    text="✓  System health"
+                    text="  System health"
+                    setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_system_health,0,0,0)
+                    compoundDrawableTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                    compoundDrawablePadding=dp(6)
                     textSize=14f
                     setTextColor(Appearance.text(this@MainActivity))
                     gravity=Gravity.CENTER
@@ -527,7 +539,10 @@ class MainActivity : Activity() {
                 }
                 addView(health,LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(6) })
                 val refresh=TextView(this@MainActivity).apply {
-                    text="↻  Refresh"
+                    text="  Refresh"
+                    setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_refresh,0,0,0)
+                    compoundDrawableTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                    compoundDrawablePadding=dp(6)
                     textSize=14f
                     setTextColor(Appearance.accent(this@MainActivity))
                     gravity=Gravity.CENTER
@@ -545,11 +560,20 @@ class MainActivity : Activity() {
             orientation=LinearLayout.VERTICAL
             setPadding(dp(18),dp(14),dp(18),dp(14))
             background=Appearance.glass(this@MainActivity,30f,38,true)
-            addView(TextView(this@MainActivity).apply {
-                text="Guardian Protection"
-                textSize=18f
-                setTextColor(Appearance.text(this@MainActivity))
-            })
+            addView(LinearLayout(this@MainActivity).apply {
+                    orientation=LinearLayout.HORIZONTAL
+                    gravity=Gravity.CENTER_VERTICAL
+                    addView(ImageView(this@MainActivity).apply {
+                        setImageResource(R.drawable.ic_guardian_shield)
+                        imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                        contentDescription=null
+                    },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
+                    addView(TextView(this@MainActivity).apply {
+                        text="Guardian Protection"
+                        textSize=18f
+                        setTextColor(Appearance.text(this@MainActivity))
+                    })
+                })
             addView(TextView(this@MainActivity).apply {
                 text=listOf(
                     if(Prefs.quickSettingsGuard(this@MainActivity)) "Quick Settings guarded" else "Quick Settings guard off",
@@ -592,11 +616,20 @@ class MainActivity : Activity() {
             orientation=LinearLayout.VERTICAL
             setPadding(dp(18),dp(14),dp(18),dp(14))
             background=Appearance.glass(this@MainActivity,30f,38,true)
-            addView(TextView(this@MainActivity).apply {
-                text="USB Recovery"
-                textSize=18f
-                setTextColor(Appearance.text(this@MainActivity))
-            })
+            addView(LinearLayout(this@MainActivity).apply {
+                    orientation=LinearLayout.HORIZONTAL
+                    gravity=Gravity.CENTER_VERTICAL
+                    addView(ImageView(this@MainActivity).apply {
+                        setImageResource(R.drawable.ic_usb_recovery)
+                        imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                        contentDescription=null
+                    },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
+                    addView(TextView(this@MainActivity).apply {
+                        text="USB Recovery"
+                        textSize=18f
+                        setTextColor(Appearance.text(this@MainActivity))
+                    })
+                })
             addView(TextView(this@MainActivity).apply {
                 val state=RootManager.usbAdbState()
                 text=when {
