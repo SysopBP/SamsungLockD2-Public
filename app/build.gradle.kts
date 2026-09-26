@@ -46,6 +46,8 @@ configurations.configureEach {
 }
 
 dependencies {
+    // LSPosed/libxposed is supplied by the framework at runtime; diagnostics only.
+    compileOnly("io.github.libxposed:api:102.0.0")
     // SESL9 preview only. Keep production Guardian/auth surfaces untouched.
     // SESL_GITHUB_TOKEN is supplied by CI/local environment; repository credentials are configured in settings.gradle.kts.
     implementation("sesl.androidx.appcompat:appcompat:1.8.0+1.0.38-sesl9+rev1")
