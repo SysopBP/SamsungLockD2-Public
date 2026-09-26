@@ -59,9 +59,43 @@ object ThemeOptions {
                     val dialog = AlertDialog.Builder(c)
                         .setTitle(title)
                         .setSingleChoiceItems(values.toTypedArray(), selected) { d, which ->
-                            if (which != selected) Appearance.set(c, key, which)
-                            d.dismiss()
-                            if (which != selected) refresh()
+                            if (key == "accent" && which == 11) {
+                                Appearance.set(c, "accent", 11)
+                                d.dismiss()
+                                val field = EditText(c).apply {
+                                    setSingleLine()
+                                    hint = "#RRGGBB"
+                                    setText("%06X".format(Appearance.custom(c) and 0xffffff))
+                                    filters = arrayOf(InputFilter.LengthFilter(7))
+                                }
+                                val customDialog = AlertDialog.Builder(c)
+                                    .setTitle("Custom accent")
+                                    .setView(field)
+                                    .setNegativeButton("Cancel") { _, _ -> refresh() }
+                                    .setPositiveButton("Apply", null)
+                                    .create()
+                                customDialog.setOnShowListener {
+                                    customDialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                                    customDialog.window?.setBackgroundDrawable(Appearance.glass(c, 30f, 76, true))
+                                    customDialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(c))
+                                    customDialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Appearance.accent(c))
+                                    customDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                                        val hex = field.text.toString().trim().removePrefix("#")
+                                        if (!hex.matches(Regex("[0-9a-fA-F]{6}"))) {
+                                            field.error = "Enter six hexadecimal digits"
+                                        } else {
+                                            Appearance.set(c, "custom", Color.parseColor("#$hex"))
+                                            customDialog.dismiss()
+                                            refresh()
+                                        }
+                                    }
+                                }
+                                customDialog.show()
+                            } else {
+                                if (which != selected) Appearance.set(c, key, which)
+                                d.dismiss()
+                                if (which != selected) refresh()
+                            }
                         }
                         .setNegativeButton("Cancel", null)
                         .create()
