@@ -287,7 +287,9 @@ class LockScreenActivity : Activity() {
         handler.removeCallbacks(ticker)
         handler.removeCallbacks(quickSettingsGuard)
         runCatching { unregisterReceiver(batteryReceiver) }
-        cancelGuardianFingerprint("activity_paused")
+        // BiometricPrompt may temporarily move this Activity out of RESUMED state.
+        // Keep the active authentication session alive here; explicit teardown happens
+        // on destroy/new lock lifecycle instead of racing the system biometric UI.
         super.onPause()
     }
 
