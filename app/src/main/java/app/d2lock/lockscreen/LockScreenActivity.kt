@@ -1086,6 +1086,11 @@ class LockScreenActivity : Activity() {
                 unlocking = true
                 GuardianWatchdog.beginTrustedAuthentication()
                 handler.removeCallbacks(quickSettingsGuard)
+                val keyguard = getSystemService(android.app.KeyguardManager::class.java)
+                Log.i(
+                    "SamsungLockD2",
+                    "GUARDIAN_743_HANDOFF_BEGIN type=${result.authenticationType} keyguardLocked=${keyguard?.isKeyguardLocked} deviceLocked=${keyguard?.isDeviceLocked} focus=${hasWindowFocus()}"
+                )
                 Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_SUCCESS type=${result.authenticationType}")
                 setFingerprintGlassState("success")
                 GuardianWatchdog.endTrustedAuthentication("auth_success")
