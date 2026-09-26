@@ -244,10 +244,11 @@ class MainActivity : Activity() {
         // Category navigation now lives in the fixed All dock dialog. Keep the
         // actual tagged sections in the scroll view so Search and jump targets work.
 
-        addButton(root, "Licenses and credits") {
+        addButton(root, "Legal, privacy & licenses") {
             val notice = assets.open("THIRD_PARTY_NOTICES.txt").bufferedReader().use { it.readText() }
+            val agreement = assets.open("D2_USER_AGREEMENT.txt").bufferedReader().use { it.readText() }
             val text = TextView(this).apply {
-                this.text = "D2 Project — All rights reserved.\n\nWeather data and geocoding: Open-Meteo.\n\n$notice"
+                this.text = "$agreement\n\nTHIRD-PARTY LICENSES & CREDITS\n\nWeather data and geocoding: Open-Meteo.\n\n$notice"
                 textSize = 14f
                 setTextColor(Appearance.text(this@MainActivity))
                 setLineSpacing(0f, 1.12f)
@@ -265,7 +266,7 @@ class MainActivity : Activity() {
                 addView(scroll, LinearLayout.LayoutParams(-1, dp(560)))
             }
             val dialog = AlertDialog.Builder(this)
-                .setTitle("Licenses and credits")
+                .setTitle("Legal, privacy & licenses")
                 .setView(content)
                 .setPositiveButton("Close", null)
                 .create()
