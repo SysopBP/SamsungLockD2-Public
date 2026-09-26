@@ -299,14 +299,14 @@ class GalaxyIslandXposedBridge : XposedModule() {
                 runCatching {
                     method.isAccessible = true
                     hook(method).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
-                        log(Log.INFO, TAG, "GALAXY_ISLAND_XPOSED_$event target=${owner.name}#${method.name}")
+                        log(Log.INFO, TAG, "GALAXY_ISLAND_XPOSED_$event target={chr(36)}{owner.name}#{chr(36)}{method.name}")
                         chain.proceed()
                     }
                     installed++
-                }.onFailure { log(Log.WARN, TAG, "GALAXY_ISLAND_XPOSED_${event}_HOOK_FAILED target=${owner.name}#${method.name}", it) }
+                }.onFailure { log(Log.WARN, TAG, "GALAXY_ISLAND_XPOSED_{chr(36)}{event}_HOOK_FAILED target={chr(36)}{owner.name}#{chr(36)}{method.name}", it) }
             }
         }
-        log(if (installed > 0) Log.INFO else Log.WARN, TAG, "GALAXY_ISLAND_XPOSED_${event}_READY hooks=$installed")
+        log(if (installed > 0) Log.INFO else Log.WARN, TAG, "GALAXY_ISLAND_XPOSED_{chr(36)}{event}_READY hooks=$installed")
     }
 }
 """)
