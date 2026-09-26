@@ -247,31 +247,67 @@ class MainActivity : Activity() {
         addButton(root, "Legal, privacy & licenses") {
             val notice = assets.open("THIRD_PARTY_NOTICES.txt").bufferedReader().use { it.readText() }
             val agreement = assets.open("D2_USER_AGREEMENT.txt").bufferedReader().use { it.readText() }
-            val text = TextView(this).apply {
-                this.text = "$agreement\n\nTHIRD-PARTY LICENSES & CREDITS\n\nWeather data and geocoding: Open-Meteo.\n\n$notice"
-                textSize = 14f
-                setTextColor(Appearance.text(this@MainActivity))
-                setLineSpacing(0f, 1.12f)
-                setPadding(dp(18), dp(14), dp(18), dp(18))
-                setTextIsSelectable(true)
-            }
-            val scroll = ScrollView(this).apply {
-                isVerticalScrollBarEnabled = true
-                addView(text)
-                background = Appearance.glass(this@MainActivity, 24f, 30, true)
-            }
-            val content = LinearLayout(this).apply {
+            val dialogBody = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(12), dp(4), dp(12), dp(8))
-                addView(scroll, LinearLayout.LayoutParams(-1, dp(560)))
+                setPadding(dp(14), dp(10), dp(14), dp(14))
+                background = Appearance.glass(this@MainActivity, 30f, 40, true)
+
+                addView(TextView(this@MainActivity).apply {
+                    text = "KIOSK D2 GUARDIAN"
+                    textSize = 12f
+                    letterSpacing = .08f
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                    setPadding(dp(4), dp(2), dp(4), dp(4))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = "Legal & Privacy"
+                    textSize = 22f
+                    setTextColor(Appearance.text(this@MainActivity))
+                    setPadding(dp(4), 0, dp(4), dp(10))
+                })
+
+                val tabs = LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER
+                }
+                val legalText = TextView(this@MainActivity).apply {
+                    textSize = 14f
+                    setTextColor(Appearance.text(this@MainActivity))
+                    setLineSpacing(0f, 1.14f)
+                    setPadding(dp(16), dp(14), dp(16), dp(18))
+                    setTextIsSelectable(true)
+                }
+                fun showLegal() { legalText.text = agreement }
+                fun showLicenses() {
+                    legalText.text = "THIRD-PARTY LICENSES & CREDITS\n\nWeather data and geocoding: Open-Meteo.\n\n$notice"
+                }
+                fun tab(title: String, action: () -> Unit) = TextView(this@MainActivity).apply {
+                    text = title
+                    textSize = 14f
+                    gravity = Gravity.CENTER
+                    setTextColor(Appearance.text(this@MainActivity))
+                    background = Appearance.glass(this@MainActivity, 20f, 28, true)
+                    setPadding(dp(12), dp(10), dp(12), dp(10))
+                    setOnClickListener { action() }
+                }
+                tabs.addView(tab("Agreement & Privacy") { showLegal() }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(6) })
+                tabs.addView(tab("Licenses & Credits") { showLicenses() }, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(6) })
+                addView(tabs, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+
+                val scroll = ScrollView(this@MainActivity).apply {
+                    isVerticalScrollBarEnabled = true
+                    background = Appearance.glass(this@MainActivity, 26f, 28, true)
+                    addView(legalText)
+                }
+                addView(scroll, LinearLayout.LayoutParams(-1, dp(500)))
+                showLegal()
             }
             val dialog = AlertDialog.Builder(this)
-                .setTitle("Legal, privacy & licenses")
-                .setView(content)
-                .setPositiveButton("Close", null)
+                .setView(dialogBody)
+                .setPositiveButton("Done", null)
                 .create()
             dialog.setOnShowListener {
-                dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 78, true))
+                dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 34f, 78, true))
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.apply {
                     setTextColor(Appearance.accent(this@MainActivity))
                     textSize = 15f
