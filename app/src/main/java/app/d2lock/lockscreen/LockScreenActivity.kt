@@ -81,6 +81,9 @@ class LockScreenActivity : Activity() {
     private lateinit var mediaArtwork: ImageView
     private lateinit var mediaProgress: ProgressBar
     private lateinit var mediaTime: TextView
+    private lateinit var mediaPanel: LinearLayout
+    private lateinit var mediaHeader: LinearLayout
+    private lateinit var mediaControls: LinearLayout
     private lateinit var media: MediaControllerBridge
     private var torchOn = false
     private var preview = false
@@ -103,8 +106,19 @@ class LockScreenActivity : Activity() {
             clock.text = if (stacked) time.replace(':', '\n') else time
             applyAdaptiveClockPosition(stacked)
             date.text = SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
-            mediaTitle.text = media.title().ifBlank { "Media" }
-            mediaArtist.text = media.artist().ifBlank { "Play music to show it here" }
+            val mediaName = media.title()
+            val hasMedia = mediaName.isNotBlank() || media.artist().isNotBlank() || media.durationMs() > 0L || media.isPlaying()
+            mediaTitle.text = mediaName.ifBlank { "No media playing" }
+            mediaArtist.text = media.artist().ifBlank { if (hasMedia) "Media session" else "Tap play in an app to show controls" }
+            if (::mediaPanel.isInitialized) {
+                mediaPanel.layoutParams?.let { lp ->
+                    val target = dp(if (hasMedia) 154 else 70)
+                    if (lp.height != target) { lp.height = target; mediaPanel.layoutParams = lp }
+                }
+                mediaProgress.visibility = if (hasMedia) View.VISIBLE else View.GONE
+                mediaControls.visibility = if (hasMedia) View.VISIBLE else View.GONE
+                mediaTime.visibility = if (hasMedia) View.VISIBLE else View.GONE
+            }
             playPause.text = if (media.isPlaying()) "Ⅱ" else "▶"
             val artwork = media.artwork()
             if (artwork != null) {
@@ -125,7 +139,6 @@ class LockScreenActivity : Activity() {
                 return "%d:%02d".format(total / 60L, total % 60L)
             }
             mediaTime.text = if (duration > 0L) "${mediaClock(position)}  •  ${mediaClock(duration)}" else media.album().ifBlank { "Media session" }
-            val mediaName = media.title()
             if (mediaName.isNotBlank()) {
                 LiveHubStore.publish(LiveHubCard("media", LiveHubKind.MEDIA, mediaName, media.artist()))
             } else LiveHubStore.remove("media")
@@ -494,13 +507,13 @@ class LockScreenActivity : Activity() {
         val mediaLayout = Prefs.mediaLayout(this)
         val mediaCompact = mediaLayout == "compact"
         val mediaLarge = mediaLayout == "large"
-        val mediaPanel = LinearLayout(this).apply {
+        mediaPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(if (mediaCompact) 12 else 16), dp(if (mediaCompact) 10 else 14), dp(if (mediaCompact) 12 else 16), dp(if (mediaCompact) 10 else 14))
             background = Appearance.glass(this@LockScreenActivity, 32f, adaptiveGlass(Prefs.componentGlass(this@LockScreenActivity, "media")), true)
             elevation = dp(10).toFloat()
         }
-        val mediaHeader = LinearLayout(this).apply {
+        mediaHeader = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
@@ -550,7 +563,7 @@ class LockScreenActivity : Activity() {
             topMargin = dp(if (mediaCompact) 8 else 11)
             bottomMargin = dp(if (mediaCompact) 7 else 9)
         })
-        val controls = LinearLayout(this).apply {
+        mediaControls = LinearLayout(this).apply {
             gravity = Gravity.CENTER
             addView(mediaIconButton(app.d2lock.R.drawable.ic_media_previous, "Previous") {
                 performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK); media.previous()
@@ -568,7 +581,7 @@ class LockScreenActivity : Activity() {
             scaleX = buttonScale
             scaleY = buttonScale
         }
-        mediaPanel.addView(controls, LinearLayout.LayoutParams(-1, -2))
+        mediaPanel.addView(mediaControls, LinearLayout.LayoutParams(-1, -2))
         if (Prefs.showMedia(this)) content.addView(mediaPanel,
             LinearLayout.LayoutParams(-1, dp(if (mediaCompact) 126 else if (mediaLarge) 174 else 154)).apply { bottomMargin = dp(12) })
         frame.addView(content, FrameLayout.LayoutParams(-1, -1))
@@ -579,14 +592,16 @@ class LockScreenActivity : Activity() {
             elevation = dp(16).toFloat()
             addView(shortcutButton("left"), LinearLayout.LayoutParams(dp(58), dp(58)))
             addView(TextView(this@LockScreenActivity).apply {
-                text = if (Prefs.unlockMethod(this@LockScreenActivity) == "pattern") "PATTERN" else "PIN"
+                text = "◆  " + if (Prefs.unlockMethod(this@LockScreenActivity) == "pattern") "PATTERN" else "PIN"
                 textSize = 14f
                 gravity = Gravity.CENTER
                 setTextColor(Color.WHITE)
                 contentDescription = "Unlock D2"
-                setOnClickListener { authenticate() }
+                background = Appearance.glass(this@LockScreenActivity, 26f, 34, true)
+                setPadding(dp(18), 0, dp(18), 0)
+                setOnClickListener { performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM); authenticate() }
                 setOnTouchListener(unlockSwipeListener())
-            }, LinearLayout.LayoutParams(0, dp(58), 1f))
+            }, LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginStart=dp(12); marginEnd=dp(12) })
             addView(shortcutButton("right"), LinearLayout.LayoutParams(dp(58), dp(58)))
         }
         val barParams = FrameLayout.LayoutParams(-1, dp(72), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
