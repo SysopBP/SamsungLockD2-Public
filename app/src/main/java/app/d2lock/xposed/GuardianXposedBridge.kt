@@ -46,6 +46,7 @@ class GuardianXposedBridge : XposedModule() {
         installGuardianSystemUiHooks(param.classLoader)
         installKeyguardHandoffHooks(param.classLoader)
         installFingerprintStateDiagnostics(param.classLoader)
+        installFingerprintAuthEventBridge(param.classLoader)
     }
 
     /**
@@ -174,6 +175,56 @@ class GuardianXposedBridge : XposedModule() {
     }
 
     /** Read-only Samsung fingerprint eligibility diagnostics. */
+    /**
+     * Stage 4: report genuine SystemUI fingerprint authentication events to Guardian.
+     * Observational only: never changes arguments/results and never synthesizes success.
+     */
+    private fun installFingerprintAuthEventBridge(classLoader: ClassLoader) {
+        val targets = listOf(
+            "com.android.keyguard.KeyguardUpdateMonitor" to listOf(
+                "onBiometricAuthenticated", "handleFingerprintAuthenticated", "onFingerprintAuthenticated",
+                "onBiometricAuthFailed", "handleFingerprintAuthFailed", "onFingerprintAuthFailed"
+            ),
+            "com.android.systemui.biometrics.AuthController" to listOf(
+                "onBiometricAuthenticated", "onFingerprintAuthenticated"
+            )
+        )
+        var installed = 0
+        targets.forEach { (className, names) ->
+            val owner = runCatching { Class.forName(className, false, classLoader) }.getOrNull() ?: return@forEach
+            owner.declaredMethods.filter { it.name in names }.distinctBy { it.toGenericString() }.forEach { method ->
+                try {
+                    method.isAccessible = true
+                    hook(method).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
+                        val result = chain.proceed()
+                        val event = if (method.name.contains("Fail", true)) "FAILED" else "AUTHENTICATED"
+                        log(Log.INFO, TAG, "GUARDIAN_XPOSED_FP_AUTH_EVENT event=$event target=${owner.name}#${method.name}")
+                        signalGuardianFingerprint(event, owner.name + "#" + method.name)
+                        result
+                    }
+                    installed++
+                    log(Log.INFO, TAG, "GUARDIAN_XPOSED_FP_AUTH_HOOK_INSTALLED target=${owner.name}#${method.name}")
+                } catch (t: Throwable) {
+                    log(Log.WARN, TAG, "GUARDIAN_XPOSED_FP_AUTH_HOOK_FAILED target=${owner.name}#${method.name}", t)
+                }
+            }
+        }
+        log(Log.INFO, TAG, "GUARDIAN_XPOSED_FP_AUTH_READY hooks=$installed")
+    }
+
+    private fun signalGuardianFingerprint(event: String, source: String) {
+        runCatching {
+            val activityThread = Class.forName("android.app.ActivityThread")
+            val app = activityThread.getDeclaredMethod("currentApplication").invoke(null) as? Context
+                ?: error("SystemUI application unavailable")
+            val intent = Intent("app.d2lock.action.XPOSED_FINGERPRINT_EVENT")
+                .setComponent(ComponentName("app.d2lock", "app.d2lock.lockscreen.KeyguardSignalReceiver"))
+                .putExtra("fingerprint_event", event)
+                .putExtra("source", source)
+            app.sendBroadcast(intent)
+        }.onFailure { log(Log.WARN, TAG, "GUARDIAN_XPOSED_FP_AUTH_SIGNAL_FAILED event=$event", it) }
+    }
+
     private fun installFingerprintStateDiagnostics(classLoader: ClassLoader) {
         val candidates = listOf(
             "com.android.keyguard.KeyguardUpdateMonitor",
