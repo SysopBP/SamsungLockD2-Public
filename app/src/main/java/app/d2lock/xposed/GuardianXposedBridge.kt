@@ -37,10 +37,25 @@ class GuardianXposedBridge : XposedModule() {
         log(Log.INFO, TAG, "GUARDIAN_XPOSED_743_LOADED api=$apiVersion framework=$frameworkName")
     }
 
-    /** Build 819+: observe framework-side keyguard/biometric flow inside system_server. */
+    /**
+     * Framework boot-safety quarantine.
+     *
+     * Run 863 device A/B testing showed repeated Samsung-logo hangs only while
+     * D2 was scoped into Android Framework/system_server. Keep the module loaded
+     * so LSPosed/API compatibility can still be verified, but do not intercept
+     * system_server methods during boot. SystemUI hooks remain available through
+     * onPackageReady(), which isolates the risky framework path without removing
+     * D2's Xposed integration.
+     */
     override fun onSystemServerStarting(param: SystemServerStartingParam) {
-        log(Log.INFO, TAG, "GUARDIAN_SYS_READY uid=${android.os.Process.myUid()} process=system_server")
-        installSystemServerDiagnostics(param.classLoader)
+        log(
+            Log.WARN,
+            TAG,
+            "GUARDIAN_SYS_QUARANTINED process=system_server reason=boot_safety_run863"
+        )
+        // Intentionally do NOT call installSystemServerDiagnostics() here.
+        // Re-enable individual framework probes only after device testing proves
+        // each target safe across consecutive soft reboots.
     }
 
     override fun onPackageReady(param: PackageReadyParam) {
