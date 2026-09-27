@@ -45,6 +45,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                 .putString(KEY_SYSTEM_TIMELINE, (listOf(line) + timeline).joinToString("\n"))
             if (counterKey != null) edit.putLong(counterKey, prefs.getLong(counterKey, 0L) + 1L)
             edit.apply()
+            recordPipeline(context, event, method)
             Log.i(TAG, "GUARDIAN_SYS_EVENT_RECEIVED event=$event method=$method source=$source")
             val unlocked = context.getSystemService(UserManager::class.java)?.isUserUnlocked == true
             if (unlocked && (event == "WAKE" || event == "KEYGUARD" || event == "TASK_KEYGUARD")) {
@@ -60,11 +61,13 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                 .putString(KEY_LAST_FP_EVENT, event)
                 .putString(KEY_LAST_FP_SOURCE, source)
                 .apply()
+            recordPipeline(context, "FINGERPRINT", event)
             Log.i(TAG, "GUARDIAN_XPOSED_FINGERPRINT_RECEIVED event=$event source=$source observational=true")
             return
         }
         val state = intent.getStringExtra("state") ?: return
         val unlocked = context.getSystemService(UserManager::class.java)?.isUserUnlocked == true
+        recordPipeline(context, "KEYGUARD_UI", state)
         Log.i(TAG, "GUARDIAN_XPOSED_KEYGUARD_RECEIVED state=$state source=$source unlocked=$unlocked")
 
         val prefs = directBootPrefs(context)
@@ -129,6 +132,8 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         private const val KEY_SYSTEM_BIOMETRIC_COUNT = "system_biometric_count"
         private const val KEY_SYSTEM_LOCKSETTINGS_COUNT = "system_locksettings_count"
         private const val KEY_SYSTEM_TIMELINE = "system_timeline"
+        private const val KEY_PIPELINE_TIMELINE = "pipeline_timeline"
+        private const val KEY_LAST_BIOMETRIC_MS = "pipeline_last_biometric_ms"
 
         private fun directBootPrefs(context: Context) =
             context.createDeviceProtectedStorageContext()
@@ -141,6 +146,26 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
             val total: Long, val wakeSleep: Long, val keyguard: Long, val biometric: Long,
             val lockSettings: Long, val timeline: List<String>
         )
+
+        data class PipelineMetrics(val timeline: List<String>, val lastBiometricMs: Long?)
+        private fun recordPipeline(context: Context, stage: String, detail: String) {
+            val prefs = directBootPrefs(context)
+            val now = System.currentTimeMillis()
+            val old = prefs.getString(KEY_PIPELINE_TIMELINE, "").orEmpty()
+                .lineSequence().filter { it.isNotBlank() }.take(19).toList()
+            val edit = prefs.edit().putString(KEY_PIPELINE_TIMELINE, (listOf("$now|$stage|$detail") + old).joinToString("\n"))
+            if (stage == "BIOMETRIC" || stage == "FINGERPRINT") edit.putLong(KEY_LAST_BIOMETRIC_MS, now)
+            edit.apply()
+        }
+        fun recordGuardianStage(context: Context, stage: String, detail: String) = recordPipeline(context, stage, detail)
+        fun pipelineMetrics(context: Context): PipelineMetrics {
+            val prefs = directBootPrefs(context)
+            val bio = prefs.getLong(KEY_LAST_BIOMETRIC_MS, 0L)
+            return PipelineMetrics(
+                prefs.getString(KEY_PIPELINE_TIMELINE, "").orEmpty().lineSequence().filter { it.isNotBlank() }.take(20).toList(),
+                bio.takeIf { it > 0L }
+            )
+        }
 
         fun bridgeHealth(context: Context, staleAfterMs: Long = 90_000L): BridgeHealth {
             val prefs = directBootPrefs(context)
