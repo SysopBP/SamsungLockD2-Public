@@ -687,8 +687,11 @@ class LockScreenActivity : Activity() {
             scaleY = buttonScale
         }
         mediaPanel.addView(mediaControls, LinearLayout.LayoutParams(-1, -2))
-        if (Prefs.showMedia(this)) content.addView(mediaPanel,
-            LinearLayout.LayoutParams(-1, dp(if (mediaCompact) 126 else if (mediaLarge) 174 else 154)).apply { bottomMargin = dp(12) })
+        if (Prefs.showMedia(this)) {
+            // Measure the real player content instead of clipping it to a fixed height.
+            content.addView(mediaPanel,
+                LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+        }
         frame.addView(content, FrameLayout.LayoutParams(-1, -1))
 
         chargingOverlay = LinearLayout(this).apply {
