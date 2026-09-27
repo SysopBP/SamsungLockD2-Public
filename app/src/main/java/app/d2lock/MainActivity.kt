@@ -3072,6 +3072,7 @@ class MainActivity : Activity() {
         val fp = KeyguardSignalReceiver.fingerprintHealth(this)
         val metrics = KeyguardSignalReceiver.systemMetrics(this)
         val pipeline = KeyguardSignalReceiver.pipelineMetrics(this)
+        val decisions = KeyguardSignalReceiver.decisionMetrics(this)
         fun age(ms: Long?): String = when {
             ms == null -> "Waiting"
             ms < 1_000 -> "Now"
@@ -3151,6 +3152,43 @@ class MainActivity : Activity() {
                 text="Pipeline tracks event timing only. Android remains the authority for fingerprint verification."
                 textSize=10f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,0,0,dp(10))
             })
+            addView(TextView(this@MainActivity).apply {
+                text="HOOK COVERAGE + COMPATIBILITY"; textSize=11f; letterSpacing=.08f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,0,0,dp(6))
+            })
+            addView(TextView(this@MainActivity).apply {
+                val active=metrics.timeline.mapNotNull { it.split("|",limit=3).getOrNull(2) }.toSet()
+                fun seen(name:String)=if(active.any { it.contains(name) }) "ACTIVE" else "WAITING"
+                text="LockSettingsService  •  ${seen("LockSettings")}\nBiometricService  •  ${seen("BiometricService")}\nKeyguardController  •  ${seen("KeyguardController")}\nActivityTaskManager  •  ${seen("ActivityTaskManager")}\nPowerManagerService  •  ${seen("PowerManagerService")}\n\nFirmware  •  ${android.os.Build.MODEL} / Android ${android.os.Build.VERSION.RELEASE}\nBuild  •  ${android.os.Build.DISPLAY}"
+                textSize=11f; typeface=android.graphics.Typeface.MONOSPACE; setTextColor(Appearance.text(this@MainActivity))
+                setPadding(dp(12),dp(10),dp(12),dp(10)); background=Appearance.glass(this@MainActivity,20f,24,true)
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
+            addView(TextView(this@MainActivity).apply {
+                text="GUARDIAN DECISIONS  •  ${decisions.suppressed} suppressed/deferred"; textSize=11f; letterSpacing=.06f
+                setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,0,0,dp(6))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text=if(decisions.timeline.isEmpty()) "No Guardian decisions captured yet." else decisions.timeline.take(8).joinToString("\n") { line ->
+                    val p=line.split("|",limit=3); if(p.size<3) line else "${p[1]}  •  ${p[2]}"
+                }
+                textSize=10f; typeface=android.graphics.Typeface.MONOSPACE; setTextColor(Appearance.text(this@MainActivity))
+                setPadding(dp(12),dp(10),dp(12),dp(10)); background=Appearance.glass(this@MainActivity,20f,22,true)
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
+            addView(TextView(this@MainActivity).apply {
+                val events=pipeline.timeline.mapNotNull { l -> val p=l.split("|",limit=3); p.getOrNull(0)?.toLongOrNull()?.let { Triple(it,p.getOrElse(1){""},p.getOrElse(2){""}) } }.sortedBy { it.first }
+                val bio=events.lastOrNull { it.second=="BIOMETRIC" || it.second=="FINGERPRINT" }
+                val launch=events.lastOrNull { it.second=="D2_LAUNCH" }
+                val healthy=events.lastOrNull { it.second=="D2_HEALTHY" }
+                val bioLaunch=if(bio!=null&&launch!=null&&launch.first>=bio.first) "${launch.first-bio.first} ms" else "Waiting"
+                val launchHealthy=if(launch!=null&&healthy!=null&&healthy.first>=launch.first) "${healthy.first-launch.first} ms" else "Waiting"
+                text="LATENCY MONITOR\nBiometric → D2 launch  •  $bioLaunch\nD2 launch → healthy  •  $launchHealthy"
+                textSize=11f; typeface=android.graphics.Typeface.MONOSPACE; setTextColor(Appearance.text(this@MainActivity))
+                setPadding(dp(12),dp(10),dp(12),dp(10)); background=Appearance.glass(this@MainActivity,20f,24,true)
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
+            addView(TextView(this@MainActivity).apply {
+                text="SAFETY MODE  •  OBSERVE / COORDINATE ONLY\nCredential verification, Gatekeeper data and biometric results are never modified."
+                textSize=10f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(12),dp(9),dp(12),dp(9))
+                background=Appearance.glass(this@MainActivity,20f,22,true)
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
             addView(TextView(this@MainActivity).apply {
                 text="RECENT FRAMEWORK EVENTS"; textSize=11f; letterSpacing=.08f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,0,0,dp(6))
             })
