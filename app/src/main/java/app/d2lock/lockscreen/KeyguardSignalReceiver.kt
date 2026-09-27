@@ -48,7 +48,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
             recordPipeline(context, event, method)
             Log.i(TAG, "GUARDIAN_SYS_EVENT_RECEIVED event=$event method=$method source=$source")
             val unlocked = context.getSystemService(UserManager::class.java)?.isUserUnlocked == true
-            if (unlocked && (event == "WAKE" || event == "KEYGUARD" || event == "TASK_KEYGUARD")) {
+            if (unlocked && (event == "BOOT_READY" || event == "WAKE" || event == "KEYGUARD" || event == "TASK_KEYGUARD")) {
                 LockScreenService.frameworkSignal(context, event, source)
             }
             return
