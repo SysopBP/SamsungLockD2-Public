@@ -104,59 +104,46 @@ class GuardianXposedBridge : XposedModule() {
     }
 
     private fun installSystemServerDiagnostics(classLoader: ClassLoader) {
-        val targets = listOf(
-            // Earliest conservative launch handoff: wait for AMS systemReady rather than
-            // trying to start Guardian while system_server is still constructing services.
-            "com.android.server.am.ActivityManagerService" to listOf("systemReady"),
-            "com.android.server.locksettings.LockSettingsService" to listOf(
-                "systemReady", "verifyCredential", "setLockCredential", "getCredentialType", "getStrongAuthForUser"
-            ),
-            "com.android.server.biometrics.BiometricService" to listOf(
-                "onStart", "authenticate", "cancelAuthentication", "registerAuthenticator", "getCurrentStrength"
-            ),
-            "com.android.server.wm.KeyguardController" to listOf(
-                "setKeyguardShown", "keyguardGoingAway", "dismissKeyguard", "isKeyguardLocked"
-            ),
-            "com.android.server.wm.ActivityTaskManagerService" to listOf(
-                "keyguardGoingAway", "setLockScreenShown"
-            ),
-            "com.android.server.power.PowerManagerService" to listOf(
-                "wakeUpInternal", "goToSleepInternal"
-            )
-        )
+        // Android 17 / LSPosed safe-boot mode. Avoid broad framework hooks
+        // while system_server is still constructing services.
+        val className = "com.android.server.am.ActivityManagerService"
+        val owner = runCatching { Class.forName(className, false, classLoader) }.getOrNull()
+        if (owner == null) {
+            log(Log.WARN, TAG, "GUARDIAN_SYS_SAFEBOOT_UNAVAILABLE target=$className")
+            return
+        }
+
+        val methods = owner.declaredMethods
+            .filter { it.name == "systemReady" }
+            .distinctBy { it.toGenericString() }
+
+        if (methods.isEmpty()) {
+            log(Log.WARN, TAG, "GUARDIAN_SYS_SAFEBOOT_UNAVAILABLE reason=no_systemReady")
+            return
+        }
+
         var installed = 0
-        targets.forEach { (className, methodNames) ->
-            val owner = runCatching { Class.forName(className, false, classLoader) }.getOrNull()
-            if (owner == null) {
-                log(Log.INFO, TAG, "GUARDIAN_SYS_CLASS_MISSING target=$className")
-                return@forEach
-            }
-            owner.declaredMethods
-                .filter { it.name in methodNames }
-                .distinctBy { it.toGenericString() }
-                .forEach { method ->
-                    try {
-                        method.isAccessible = true
-                        hook(method)
-                            .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
-                            .intercept { chain ->
-                                // Never dump arguments: credential/biometric calls can carry sensitive objects.
-                                log(Log.INFO, TAG, "GUARDIAN_SYS_CALL target=${owner.name}#${method.name}")
-                                signalGuardianFrameworkEvent(owner.name, method.name)
-                                chain.proceed()
-                            }
-                        installed++
-                        log(Log.INFO, TAG, "GUARDIAN_SYS_HOOK_INSTALLED target=${owner.name}#${method.name}")
-                    } catch (t: Throwable) {
-                        log(Log.WARN, TAG, "GUARDIAN_SYS_HOOK_FAILED target=${owner.name}#${method.name}", t)
+        methods.forEach { method ->
+            try {
+                method.isAccessible = true
+                hook(method)
+                    .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                    .intercept { chain ->
+                        // Never perform Guardian work before Android completes
+                        // the original system_server boot callback.
+                        val result = chain.proceed()
+                        log(Log.INFO, TAG, "GUARDIAN_SYS_SAFEBOOT_READY target=${owner.name}#${method.name}")
+                        signalGuardianFrameworkEvent(owner.name, method.name)
+                        result
                     }
-                }
+                installed++
+                log(Log.INFO, TAG, "GUARDIAN_SYS_SAFEBOOT_HOOK_INSTALLED target=${owner.name}#${method.name}")
+            } catch (t: Throwable) {
+                log(Log.WARN, TAG, "GUARDIAN_SYS_SAFEBOOT_HOOK_FAILED target=${owner.name}#${method.name}", t)
+            }
         }
-        if (installed == 0) {
-            log(Log.WARN, TAG, "GUARDIAN_SYS_UNAVAILABLE reason=no_compatible_framework_targets")
-        } else {
-            log(Log.INFO, TAG, "GUARDIAN_SYS_ACTIVE hooks=$installed mode=observe_only")
-        }
+
+        log(Log.INFO, TAG, "GUARDIAN_SYS_SAFEBOOT_ACTIVE hooks=$installed mode=ams_systemReady_only")
     }
 
     /**
