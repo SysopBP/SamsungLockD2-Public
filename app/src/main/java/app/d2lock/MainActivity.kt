@@ -2685,6 +2685,21 @@ class MainActivity : Activity() {
             status("Kiosk protection",if(Prefs.kiosk(this@MainActivity)) "Kiosk enabled" else "Kiosk currently off",!Prefs.kiosk(this@MainActivity)||rootAvailable)
             status("Recovery path",if(rootAvailable||Prefs.adbRecovery(this@MainActivity)) "Root or ADB recovery available" else "Verify recovery before kiosk use",rootAvailable||Prefs.adbRecovery(this@MainActivity))
             status("Fingerprint","Verified · Guardian unlock succeeds with an enrolled Samsung fingerprint · PIN/pattern fallback retained",true)
+            val logCount=KeyguardSignalReceiver.guardianLog(this@MainActivity).size
+            addView(TextView(this@MainActivity).apply {
+                text="Diagnostics  •  $logCount retained events"
+                textSize=11f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(4),dp(7),dp(4),dp(7))
+            })
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.HORIZONTAL
+                fun quick(label:String, action:()->Unit)=TextView(this@MainActivity).apply {
+                    text=label; textSize=13f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
+                    background=Appearance.glass(this@MainActivity,22f,36,true); setPadding(dp(10),dp(11),dp(10),dp(11))
+                    setOnClickListener { action() }
+                }
+                addView(quick("Logs") { showGuardianLogCenter() },LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(4) })
+                addView(quick("System Server") { showSystemServerDashboard() },LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(4) })
+            },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(2) })
         }
         AlertDialog.Builder(this).setView(body).setNegativeButton("Close",null).create().also { d -> d.setOnShowListener { d.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 34f, 84, true)); d.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Appearance.accent(this@MainActivity)) }; d.show() }
     }
@@ -2720,8 +2735,7 @@ class MainActivity : Activity() {
             Triple(R.drawable.ic_guardian_notifications, "Alerts", "notifications"),
             Triple(R.drawable.ic_palette, "Theme", "app_theme"),
             Triple(R.drawable.ic_nav_bar, "Bar", "floating_bar"),
-            Triple(R.drawable.ic_nav_settings, "All", "settings"),
-            Triple(R.drawable.ic_guardian_device, "Logs", "guardian_logs")
+            Triple(R.drawable.ic_nav_settings, "All", "settings")
         )
         // Beta.2 Guardian Dock: the center core is a live health surface, not a fake
         // security indicator. Green requires the configured protection stack; amber
@@ -2755,6 +2769,11 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER
                 setTextColor(Appearance.text(this@MainActivity))
             }, LinearLayout.LayoutParams(-1, dp(15)))
+            setOnLongClickListener {
+                performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                showGuardianLogCenter()
+                true
+            }
             setOnClickListener {
                 performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
                 animate().cancel()
@@ -2813,8 +2832,6 @@ class MainActivity : Activity() {
                     performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
                     if (target == "settings") {
                         showQuickSettingsSheet(root, scroll)
-                    } else if (target == "guardian_logs") {
-                        showGuardianLogCenter()
                     } else {
                         root.findViewWithTag<android.view.View>(target)?.let { view ->
                             val rect = android.graphics.Rect()
