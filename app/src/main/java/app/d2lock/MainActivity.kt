@@ -392,7 +392,7 @@ class MainActivity : Activity() {
         }
         root.addView(settingsSearch, LinearLayout.LayoutParams(-1, dp(54)).apply { bottomMargin = dp(16) })
 
-        section(root, "SETTINGS")
+        section(root, "GUARDIAN")
         root.getChildAt(root.childCount - 1).tag = "settings"
         val categories = if (configured) listOf(
             Triple("Lock Screen", "Unlock, wake behavior, haptics, clock & weather", "lock_screen_settings"),
@@ -569,77 +569,6 @@ class MainActivity : Activity() {
             root.addView(statusCard,LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
         }
 
-        addButton(root, "Legal & privacy") {
-            val notice = assets.open("THIRD_PARTY_NOTICES.txt").bufferedReader().use { it.readText() }
-            val agreement = assets.open("D2_USER_AGREEMENT.txt").bufferedReader().use { it.readText() }
-            val dialogBody = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(14), dp(10), dp(14), dp(14))
-                background = Appearance.glass(this@MainActivity, 30f, 58, true)
-
-                addView(TextView(this@MainActivity).apply {
-                    text = "KIOSK D2 GUARDIAN"
-                    textSize = 12f
-                    letterSpacing = .08f
-                    setTextColor(Appearance.secondary(this@MainActivity))
-                    setPadding(dp(4), dp(2), dp(4), dp(4))
-                })
-                addView(TextView(this@MainActivity).apply {
-                    text = "Legal & Privacy"
-                    textSize = 22f
-                    setTextColor(Appearance.text(this@MainActivity))
-                    setPadding(dp(4), 0, dp(4), dp(10))
-                })
-
-                val tabs = LinearLayout(this@MainActivity).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER
-                }
-                val legalText = TextView(this@MainActivity).apply {
-                    textSize = 14f
-                    setTextColor(Appearance.text(this@MainActivity))
-                    setLineSpacing(0f, 1.14f)
-                    setPadding(dp(16), dp(14), dp(16), dp(18))
-                    setTextIsSelectable(true)
-                }
-                fun showLegal() { legalText.text = agreement }
-                fun showLicenses() {
-                    legalText.text = "THIRD-PARTY LICENSES & CREDITS\n\nWeather data and geocoding: Open-Meteo.\n\n$notice"
-                }
-                fun tab(title: String, action: () -> Unit) = TextView(this@MainActivity).apply {
-                    text = title
-                    textSize = 14f
-                    gravity = Gravity.CENTER
-                    setTextColor(Appearance.text(this@MainActivity))
-                    background = Appearance.glass(this@MainActivity, 20f, 28, true)
-                    setPadding(dp(12), dp(10), dp(12), dp(10))
-                    setOnClickListener { action() }
-                }
-                tabs.addView(tab("Agreement & Privacy") { showLegal() }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(6) })
-                tabs.addView(tab("Licenses & Credits") { showLicenses() }, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(6) })
-                addView(tabs, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
-
-                val scroll = ScrollView(this@MainActivity).apply {
-                    isVerticalScrollBarEnabled = true
-                    background = Appearance.glass(this@MainActivity, 26f, 28, true)
-                    addView(legalText)
-                }
-                addView(scroll, LinearLayout.LayoutParams(-1, dp(500)))
-                showLegal()
-            }
-            val dialog = AlertDialog.Builder(this)
-                .setView(dialogBody)
-                .setPositiveButton("Done", null)
-                .create()
-            dialog.setOnShowListener {
-                dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 34f, 78, true))
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.apply {
-                    setTextColor(Appearance.accent(this@MainActivity))
-                    textSize = 15f
-                }
-            }
-            dialog.show()
-        }
         if (!configured) addButton(root, "Create D2 PIN") {
             pinDialog = PinUi.show(this, setup = true, change = false, success = {
                 authorized = true
@@ -2349,6 +2278,78 @@ class MainActivity : Activity() {
             restoreDialog.show()
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(6) })
         root.addView(backupRow, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+
+        addButton(root, "Legal & privacy") {
+            val notice = assets.open("THIRD_PARTY_NOTICES.txt").bufferedReader().use { it.readText() }
+            val agreement = assets.open("D2_USER_AGREEMENT.txt").bufferedReader().use { it.readText() }
+            val dialogBody = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(14), dp(10), dp(14), dp(14))
+                background = Appearance.glass(this@MainActivity, 30f, 58, true)
+
+                addView(TextView(this@MainActivity).apply {
+                    text = "KIOSK D2 GUARDIAN"
+                    textSize = 12f
+                    letterSpacing = .08f
+                    setTextColor(Appearance.secondary(this@MainActivity))
+                    setPadding(dp(4), dp(2), dp(4), dp(4))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = "Legal & Privacy"
+                    textSize = 22f
+                    setTextColor(Appearance.text(this@MainActivity))
+                    setPadding(dp(4), 0, dp(4), dp(10))
+                })
+
+                val tabs = LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER
+                }
+                val legalText = TextView(this@MainActivity).apply {
+                    textSize = 14f
+                    setTextColor(Appearance.text(this@MainActivity))
+                    setLineSpacing(0f, 1.14f)
+                    setPadding(dp(16), dp(14), dp(16), dp(18))
+                    setTextIsSelectable(true)
+                }
+                fun showLegal() { legalText.text = agreement }
+                fun showLicenses() {
+                    legalText.text = "THIRD-PARTY LICENSES & CREDITS\n\nWeather data and geocoding: Open-Meteo.\n\n$notice"
+                }
+                fun tab(title: String, action: () -> Unit) = TextView(this@MainActivity).apply {
+                    text = title
+                    textSize = 14f
+                    gravity = Gravity.CENTER
+                    setTextColor(Appearance.text(this@MainActivity))
+                    background = Appearance.glass(this@MainActivity, 20f, 28, true)
+                    setPadding(dp(12), dp(10), dp(12), dp(10))
+                    setOnClickListener { action() }
+                }
+                tabs.addView(tab("Agreement & Privacy") { showLegal() }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(6) })
+                tabs.addView(tab("Licenses & Credits") { showLicenses() }, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(6) })
+                addView(tabs, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+
+                val scroll = ScrollView(this@MainActivity).apply {
+                    isVerticalScrollBarEnabled = true
+                    background = Appearance.glass(this@MainActivity, 26f, 28, true)
+                    addView(legalText)
+                }
+                addView(scroll, LinearLayout.LayoutParams(-1, dp(500)))
+                showLegal()
+            }
+            val dialog = AlertDialog.Builder(this)
+                .setView(dialogBody)
+                .setPositiveButton("Done", null)
+                .create()
+            dialog.setOnShowListener {
+                dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 34f, 78, true))
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.apply {
+                    setTextColor(Appearance.accent(this@MainActivity))
+                    textSize = 15f
+                }
+            }
+            dialog.show()
+        }
 
         addButton(root, "About D2 protection") {
             val info = TextView(this).apply {
