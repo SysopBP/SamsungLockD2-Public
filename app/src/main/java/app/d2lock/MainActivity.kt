@@ -36,6 +36,7 @@ import android.widget.TextView
 import android.widget.Toast
 import app.d2lock.lockscreen.LockScreenActivity
 import app.d2lock.lockscreen.LockScreenService
+import app.d2lock.lockscreen.KeyguardSignalReceiver
 import app.d2lock.root.RootManager
 import app.d2lock.security.PinStore
 import app.d2lock.security.PinUi
@@ -414,6 +415,9 @@ class MainActivity : Activity() {
             val rootReady=RootManager.isAvailable()
             val shizukuReady=Prefs.shizukuEnabled(this) && runCatching { Shizuku.pingBinder() }.getOrDefault(false)
             val xposedReady=Prefs.xposedMaster(this)
+            val systemUiHealth=KeyguardSignalReceiver.bridgeHealth(this)
+            val systemHealth=KeyguardSignalReceiver.systemHealth(this)
+            val fingerprintHealth=KeyguardSignalReceiver.fingerprintHealth(this)
             val kioskReady=Prefs.kiosk(this)
             val statusCard = LinearLayout(this).apply {
                 orientation=LinearLayout.VERTICAL
@@ -469,6 +473,24 @@ class MainActivity : Activity() {
                     addView(statusChip("Root",rootReady),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3); rightMargin=dp(3) })
                     addView(statusChip("Shizuku",shizukuReady),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3); rightMargin=dp(3) })
                     addView(statusChip("LSPosed",xposedReady),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
+                },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
+                addView(LinearLayout(this@MainActivity).apply {
+                    orientation=LinearLayout.VERTICAL
+                    setPadding(dp(12),dp(10),dp(12),dp(10))
+                    background=Appearance.glass(this@MainActivity,22f,28,true)
+                    addView(TextView(this@MainActivity).apply {
+                        text="GUARDIAN SYSTEM BRIDGE"; textSize=11f; letterSpacing=.08f
+                        setTextColor(Appearance.secondary(this@MainActivity))
+                    })
+                    addView(TextView(this@MainActivity).apply {
+                        text="System Server  •  ${systemHealth.status}\nSystem UI  •  ${systemUiHealth.status}\nFingerprint event  •  ${fingerprintHealth.event ?: "Waiting"}"
+                        textSize=13f; setLineSpacing(0f,1.12f); setTextColor(Appearance.text(this@MainActivity)); setPadding(0,dp(6),0,0)
+                    })
+                    addView(TextView(this@MainActivity).apply {
+                        val detail = systemHealth.event?.let { event -> "Last framework event: $event · ${systemHealth.method ?: "unknown"}" }
+                            ?: "Waiting for first system_server event after reboot"
+                        text=detail; textSize=11f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,dp(5),0,0)
+                    })
                 },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
                 addView(guardianSwitch().apply {
                     text=if(app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)) "Galaxy Island  •  Connected" else "Galaxy Island  •  Disconnected"
