@@ -3215,13 +3215,22 @@ class MainActivity : Activity() {
                 textSize=11f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,dp(10),0,0)
             })
         }
-        AlertDialog.Builder(this).setView(panel).setNegativeButton("Close",null)
+        val dashboardScroll = ScrollView(this).apply {
+            isFillViewport = false
+            clipToPadding = false
+            setPadding(0, 0, 0, dp(10))
+            addView(panel, ScrollView.LayoutParams(-1, -2))
+        }
+        AlertDialog.Builder(this).setView(dashboardScroll).setNegativeButton("Close",null)
             .setPositiveButton("Refresh") { _,_ -> showSystemServerDashboard() }
             .create().also { dialog ->
                 dialog.setOnShowListener {
                     dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,32f,98,true))
                     dialog.window?.setDimAmount(0.82f)
                     dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                    val maxHeight = (resources.displayMetrics.heightPixels * 0.82f).toInt()
+                    dashboardScroll.layoutParams = dashboardScroll.layoutParams?.apply { height = maxHeight }
+                        ?: android.view.ViewGroup.LayoutParams(-1, maxHeight)
                 }
                 dialog.show()
             }
