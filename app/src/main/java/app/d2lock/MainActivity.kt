@@ -2165,46 +2165,72 @@ class MainActivity : Activity() {
                 setPadding(0, dp(5), 0, dp(8))
             })
 
-            fun xposedToggle(title: String, checked: () -> Boolean, changed: (Boolean) -> Unit) {
+            fun masterXposedToggle(title: String, checked: () -> Boolean, changed: (Boolean) -> Unit) {
                 addView(guardianSwitch().apply {
-                    text = title
-                    textSize = 15f
-                    setTextColor(Appearance.text(this@MainActivity))
-                    isChecked = checked()
-                    setOnCheckedChangeListener { _, value -> changed(value) }
-                }, rowParams())
+                    text = title; textSize = 15f; setTextColor(Appearance.text(this@MainActivity))
+                    isChecked = checked(); setOnCheckedChangeListener { _, value -> changed(value) }
+                }, LinearLayout.LayoutParams(-1, dp(58)).apply { bottomMargin = dp(4) })
+            }
+            fun compactXposedToggle(title: String, checked: () -> Boolean, changed: (Boolean) -> Unit): LinearLayout =
+                LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(10), dp(5), dp(7), dp(5)); background = Appearance.glass(this@MainActivity, 20f, 22, true)
+                    addView(TextView(this@MainActivity).apply {
+                        text = title; textSize = 11f; maxLines = 2; setTextColor(Appearance.text(this@MainActivity))
+                    }, LinearLayout.LayoutParams(0, -2, 1f))
+                    addView(androidx.appcompat.widget.SwitchCompat(this@MainActivity).apply {
+                        isChecked = checked(); scaleX = .82f; scaleY = .82f
+                        setOnCheckedChangeListener { _, value -> changed(value) }
+                    }, LinearLayout.LayoutParams(dp(54), -2))
+                }
+            fun compactGrid(items: List<Triple<String, () -> Boolean, (Boolean) -> Unit>>) {
+                items.chunked(2).forEach { pair ->
+                    addView(LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        pair.forEachIndexed { index, item ->
+                            addView(compactXposedToggle(item.first, item.second, item.third),
+                                LinearLayout.LayoutParams(0, -2, 1f).apply {
+                                    if(index == 0) rightMargin = dp(3) else leftMargin = dp(3)
+                                })
+                        }
+                        if(pair.size == 1) addView(android.view.View(this@MainActivity), LinearLayout.LayoutParams(0, 1, 1f))
+                    }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(6) })
+                }
             }
 
-            xposedToggle("Master Xposed integration", { Prefs.xposedMaster(this@MainActivity) }) { Prefs.setXposedMaster(this@MainActivity, it) }
-            xposedToggle("Safe diagnostics only", { Prefs.xposedSafeDiagnostics(this@MainActivity) }) { Prefs.setXposedSafeDiagnostics(this@MainActivity, it) }
-            xposedToggle("Screen / wake awareness", { Prefs.xposedScreenAwareness(this@MainActivity) }) { Prefs.setXposedScreenAwareness(this@MainActivity, it) }
-            xposedToggle("Immediate relock", { Prefs.xposedImmediateRelock(this@MainActivity) }) { Prefs.setXposedImmediateRelock(this@MainActivity, it) }
-            xposedToggle("Home / Recents protection", { Prefs.xposedHomeRecents(this@MainActivity) }) { Prefs.setXposedHomeRecents(this@MainActivity, it) }
-            xposedToggle("Gesture coordination", { Prefs.xposedGestureCoordination(this@MainActivity) }) { Prefs.setXposedGestureCoordination(this@MainActivity, it) }
-            xposedToggle("Notification integration", { Prefs.xposedNotifications(this@MainActivity) }) { Prefs.setXposedNotifications(this@MainActivity, it) }
-            xposedToggle("Media integration", { Prefs.xposedMedia(this@MainActivity) }) { Prefs.setXposedMedia(this@MainActivity, it) }
-            xposedToggle("Call-state coordination", { Prefs.xposedCalls(this@MainActivity) }) { Prefs.setXposedCalls(this@MainActivity, it) }
-            xposedToggle("SystemUI restart recovery", { Prefs.xposedSystemUiRecovery(this@MainActivity) }) { Prefs.setXposedSystemUiRecovery(this@MainActivity, it) }
-            xposedToggle("Quick Settings / status-bar guard", { Prefs.xposedBarsGuard(this@MainActivity) }) { Prefs.setXposedBarsGuard(this@MainActivity, it) }
-            xposedToggle("Native lifecycle integration", { Prefs.xposedNativeLifecycle(this@MainActivity) }) { Prefs.setXposedNativeLifecycle(this@MainActivity, it) }
-            xposedToggle("Automatic Guardian fallback", { Prefs.xposedAutomaticFallback(this@MainActivity) }) { Prefs.setXposedAutomaticFallback(this@MainActivity, it) }
+            masterXposedToggle("Master Xposed integration", { Prefs.xposedMaster(this@MainActivity) }) { Prefs.setXposedMaster(this@MainActivity, it) }
+            addView(compactXposedToggle("Safe diagnostics only", { Prefs.xposedSafeDiagnostics(this@MainActivity) }) { Prefs.setXposedSafeDiagnostics(this@MainActivity, it) },
+                LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
+
+            compactGrid(listOf(
+                Triple("Screen / wake", { Prefs.xposedScreenAwareness(this@MainActivity) }, { v:Boolean -> Prefs.setXposedScreenAwareness(this@MainActivity,v) }),
+                Triple("Immediate relock", { Prefs.xposedImmediateRelock(this@MainActivity) }, { v:Boolean -> Prefs.setXposedImmediateRelock(this@MainActivity,v) }),
+                Triple("Home / Recents", { Prefs.xposedHomeRecents(this@MainActivity) }, { v:Boolean -> Prefs.setXposedHomeRecents(this@MainActivity,v) }),
+                Triple("Gesture coordination", { Prefs.xposedGestureCoordination(this@MainActivity) }, { v:Boolean -> Prefs.setXposedGestureCoordination(this@MainActivity,v) }),
+                Triple("Notifications", { Prefs.xposedNotifications(this@MainActivity) }, { v:Boolean -> Prefs.setXposedNotifications(this@MainActivity,v) }),
+                Triple("Media", { Prefs.xposedMedia(this@MainActivity) }, { v:Boolean -> Prefs.setXposedMedia(this@MainActivity,v) }),
+                Triple("Call state", { Prefs.xposedCalls(this@MainActivity) }, { v:Boolean -> Prefs.setXposedCalls(this@MainActivity,v) }),
+                Triple("SystemUI recovery", { Prefs.xposedSystemUiRecovery(this@MainActivity) }, { v:Boolean -> Prefs.setXposedSystemUiRecovery(this@MainActivity,v) }),
+                Triple("QS / status guard", { Prefs.xposedBarsGuard(this@MainActivity) }, { v:Boolean -> Prefs.setXposedBarsGuard(this@MainActivity,v) }),
+                Triple("Native lifecycle", { Prefs.xposedNativeLifecycle(this@MainActivity) }, { v:Boolean -> Prefs.setXposedNativeLifecycle(this@MainActivity,v) }),
+                Triple("Guardian fallback", { Prefs.xposedAutomaticFallback(this@MainActivity) }, { v:Boolean -> Prefs.setXposedAutomaticFallback(this@MainActivity,v) })
+            ))
 
             addView(TextView(this@MainActivity).apply {
-                text = "Galaxy Island • Xposed"
-                textSize = 16f
-                setTextColor(Appearance.text(this@MainActivity))
-                background = Appearance.glass(this@MainActivity, 22f, 26, true)
-                setPadding(dp(14), dp(10), dp(14), dp(10))
-            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10); bottomMargin = dp(6) })
-            xposedToggle("Galaxy Island SystemUI integration", { Prefs.xposedGalaxyIsland(this@MainActivity) }) { Prefs.setXposedGalaxyIsland(this@MainActivity, it) }
-            xposedToggle("Island native notifications", { Prefs.xposedIslandNotifications(this@MainActivity) }) { Prefs.setXposedIslandNotifications(this@MainActivity, it) }
-            xposedToggle("Island native media", { Prefs.xposedIslandMedia(this@MainActivity) }) { Prefs.setXposedIslandMedia(this@MainActivity, it) }
-            xposedToggle("Island charging / battery events", { Prefs.xposedIslandCharging(this@MainActivity) }) { Prefs.setXposedIslandCharging(this@MainActivity, it) }
-            xposedToggle("Island call events", { Prefs.xposedIslandCalls(this@MainActivity) }) { Prefs.setXposedIslandCalls(this@MainActivity, it) }
-            xposedToggle("Island screen-state awareness", { Prefs.xposedIslandScreenState(this@MainActivity) }) { Prefs.setXposedIslandScreenState(this@MainActivity, it) }
-            xposedToggle("Island SystemUI positioning", { Prefs.xposedIslandPositioning(this@MainActivity) }) { Prefs.setXposedIslandPositioning(this@MainActivity, it) }
-            xposedToggle("Island Guardian synchronization", { Prefs.xposedIslandGuardianSync(this@MainActivity) }) { Prefs.setXposedIslandGuardianSync(this@MainActivity, it) }
-            xposedToggle("Island fallback bridge", { Prefs.xposedIslandFallback(this@MainActivity) }) { Prefs.setXposedIslandFallback(this@MainActivity, it) }
+                text = "Galaxy Island • Xposed"; textSize = 14f; setTextColor(Appearance.text(this@MainActivity))
+                background = Appearance.glass(this@MainActivity, 22f, 26, true); setPadding(dp(12), dp(8), dp(12), dp(8))
+            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4); bottomMargin = dp(6) })
+            compactGrid(listOf(
+                Triple("SystemUI integration", { Prefs.xposedGalaxyIsland(this@MainActivity) }, { v:Boolean -> Prefs.setXposedGalaxyIsland(this@MainActivity,v) }),
+                Triple("Native notifications", { Prefs.xposedIslandNotifications(this@MainActivity) }, { v:Boolean -> Prefs.setXposedIslandNotifications(this@MainActivity,v) }),
+                Triple("Native media", { Prefs.xposedIslandMedia(this@MainActivity) }, { v:Boolean -> Prefs.setXposedIslandMedia(this@MainActivity,v) }),
+                Triple("Charging / battery", { Prefs.xposedIslandCharging(this@MainActivity) }, { v:Boolean -> Prefs.setXposedIslandCharging(this@MainActivity,v) }),
+                Triple("Call events", { Prefs.xposedIslandCalls(this@MainActivity) }, { v:Boolean -> Prefs.setXposedIslandCalls(this@MainActivity,v) }),
+                Triple("Screen state", { Prefs.xposedIslandScreenState(this@MainActivity) }, { v:Boolean -> Prefs.setXposedIslandScreenState(this@MainActivity,v) }),
+                Triple("SystemUI positioning", { Prefs.xposedIslandPositioning(this@MainActivity) }, { v:Boolean -> Prefs.setXposedIslandPositioning(this@MainActivity,v) }),
+                Triple("Guardian sync", { Prefs.xposedIslandGuardianSync(this@MainActivity) }, { v:Boolean -> Prefs.setXposedIslandGuardianSync(this@MainActivity,v) }),
+                Triple("Fallback bridge", { Prefs.xposedIslandFallback(this@MainActivity) }, { v:Boolean -> Prefs.setXposedIslandFallback(this@MainActivity,v) })
+            ))
 
             addView(TextView(this@MainActivity).apply {
                 text = "Stage 2 test order: leave Safe diagnostics only ON. Test Screen / wake awareness first. The remaining switches are configuration gates and will be wired to their hooks incrementally after each previous stage passes."
