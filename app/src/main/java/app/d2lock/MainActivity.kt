@@ -914,7 +914,12 @@ class MainActivity : Activity() {
                 setTextColor(Appearance.text(this@MainActivity)); background=Appearance.glass(this@MainActivity,22f,34,true)
                 setPadding(dp(14),dp(11),dp(14),dp(11))
                 setOnClickListener { showSystemServerDashboard() }
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })            addView(TextView(this@MainActivity).apply {
+                text="Open Guardian Log Center"; textSize=15f; gravity=Gravity.CENTER
+                setTextColor(Appearance.text(this@MainActivity)); background=Appearance.glass(this@MainActivity,22f,34,true)
+                setPadding(dp(14),dp(11),dp(14),dp(11)); setOnClickListener { showGuardianLogCenter() }
             },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
+
             addView(TextView(this@MainActivity).apply {
                 text="Open integrations"; textSize=15f; gravity=Gravity.CENTER
                 setTextColor(Appearance.text(this@MainActivity)); background=Appearance.glass(this@MainActivity,22f,28,true)
@@ -2983,6 +2988,62 @@ class MainActivity : Activity() {
                 }
             }, LinearLayout.LayoutParams(-1, dp(50)))
         }
+    }
+
+    private fun showGuardianLogCenter(filter: String = "ALL") {
+        val all = KeyguardSignalReceiver.guardianLog(this)
+        val categories = listOf("ALL","SYSTEM_SERVER","BIOMETRIC","KEYGUARD","BOOT","GUARDIAN")
+        val panel = LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL; setPadding(dp(16),dp(8),dp(16),dp(16))
+            addView(TextView(this@MainActivity).apply {
+                text="GUARDIAN LOG CENTER"; textSize=11f; letterSpacing=.10f; setTextColor(Appearance.secondary(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text="${all.size} retained events  •  ${if(filter=="ALL") "All categories" else filter.replace("_"," ")}"
+                textSize=20f; setTextColor(Appearance.text(this@MainActivity)); setPadding(0,dp(4),0,dp(10))
+            })
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.HORIZONTAL
+                categories.forEach { cat ->
+                    addView(TextView(this@MainActivity).apply {
+                        text=cat.replace("_"," "); textSize=9f; gravity=Gravity.CENTER
+                        setTextColor(if(cat==filter) Appearance.accent(this@MainActivity) else Appearance.secondary(this@MainActivity))
+                        background=Appearance.glass(this@MainActivity,18f,if(cat==filter) 52 else 24,true)
+                        setPadding(dp(5),dp(7),dp(5),dp(7)); setOnClickListener { showGuardianLogCenter(cat) }
+                    },LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(2) })
+                }
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
+            val shown=all.mapNotNull { line ->
+                val p=line.split("|",limit=4); if(p.size<4) null else p
+            }.filter { filter=="ALL" || it[2]==filter }
+            addView(ScrollView(this@MainActivity).apply {
+                addView(TextView(this@MainActivity).apply {
+                    text=if(shown.isEmpty()) "No events in this category yet."
+                    else shown.joinToString("\n") { p ->
+                        val t=runCatching { java.text.SimpleDateFormat("HH:mm:ss.SSS",java.util.Locale.US).format(java.util.Date(p[0].toLong())) }.getOrDefault("--:--:--.---")
+                        "$t  ${p[1]}  [${p[2]}]  ${p[3]}"
+                    }
+                    textSize=10f; typeface=android.graphics.Typeface.MONOSPACE; setTextColor(Appearance.text(this@MainActivity))
+                    setPadding(dp(10),dp(10),dp(10),dp(10))
+                })
+                background=Appearance.glass(this@MainActivity,20f,24,true)
+            },LinearLayout.LayoutParams(-1,dp(390)))
+            addView(TextView(this@MainActivity).apply {
+                text="Sensitive credential and fingerprint payloads are intentionally excluded."
+                textSize=10f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,dp(8),0,0)
+            })
+        }
+        AlertDialog.Builder(this).setView(panel)
+            .setNegativeButton("Close",null)
+            .setNeutralButton("Clear") { _,_ -> KeyguardSignalReceiver.clearGuardianLog(this) }
+            .setPositiveButton("Copy") { _,_ ->
+                val text=all.joinToString("\n")
+                (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+                    .setPrimaryClip(android.content.ClipData.newPlainText("Guardian Log Center",text))
+                Toast.makeText(this,"Guardian log copied",Toast.LENGTH_SHORT).show()
+            }.create().also { d ->
+                d.setOnShowListener { d.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,32f,82,true)) }; d.show()
+            }
     }
 
     private fun showSystemServerDashboard() {
