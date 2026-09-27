@@ -634,7 +634,7 @@ class MainActivity : Activity() {
                     setTextColor(Appearance.text(this@MainActivity))
                     gravity=Gravity.CENTER
                     background=Appearance.glass(this@MainActivity,22f,26,true)
-                    setPadding(dp(14),dp(10),dp(14),dp(10))
+                    setPadding(dp(11),dp(7),dp(11),dp(7))
                     setOnClickListener {
                         val methods=arrayOf("PIN","Pattern")
                         val current=if(Prefs.unlockMethod(this@MainActivity)=="pattern") 1 else 0
@@ -1330,20 +1330,20 @@ class MainActivity : Activity() {
         root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.HORIZONTAL
             gravity=Gravity.CENTER_VERTICAL
-            setPadding(dp(12),dp(8),dp(10),dp(8))
-            background=Appearance.glass(this@MainActivity,28f,34,true)
+            setPadding(dp(10),dp(5),dp(8),dp(5))
+            background=Appearance.glass(this@MainActivity,24f,30,true)
             isClickable=true
             isFocusable=true
             addView(LinearLayout(this@MainActivity).apply {
                 orientation=LinearLayout.VERTICAL
                 addView(TextView(this@MainActivity).apply {
                     text="Appearance & Theme"
-                    textSize=17f
+                    textSize=16f
                     setTextColor(Appearance.text(this@MainActivity))
                 })
                 addView(TextView(this@MainActivity).apply {
                     text="Theme, accent, glass, colors and floating bar"
-                    textSize=12f
+                    textSize=11f
                     setTextColor(Appearance.secondary(this@MainActivity))
                     setPadding(0,dp(3),0,0)
                 })
@@ -1381,15 +1381,15 @@ class MainActivity : Activity() {
                 }
                 dialog.show()
             }
-        },LinearLayout.LayoutParams(-1,dp(62)).apply { bottomMargin=dp(8) })
+        },LinearLayout.LayoutParams(-1,dp(54)).apply { bottomMargin=dp(6) })
         section(root, "ICON CENTER")
         val iconOptions = IconManager.options
         val currentIcon = IconManager.selected(this)
         val iconPreview = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(14), dp(10), dp(14), dp(10))
-            background = Appearance.glass(this@MainActivity, 28f, 30, true)
+            setPadding(dp(10), dp(7), dp(10), dp(7))
+            background = Appearance.glass(this@MainActivity, 24f, 28, true)
         }
         val iconPreviewImage = ImageView(this).apply {
             setImageResource(IconManager.iconResource(currentIcon))
@@ -1513,8 +1513,8 @@ class MainActivity : Activity() {
 
         section(root, "APP THEME")
         root.getChildAt(root.childCount - 1).tag = "app_theme"
-        val appearanceCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(10), dp(7), dp(10), dp(7)); background = Appearance.glass(this@MainActivity, 24f, 28, true) }
-        root.addView(appearanceCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
+        val appearanceCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(8), dp(5), dp(8), dp(5)); background = Appearance.glass(this@MainActivity, 22f, 26, true) }
+        root.addView(appearanceCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         section(appearanceCard, "LOCK SCREEN EXTRAS")
         appearanceCard.addView(guardianSwitch().apply {
             text = "Wallpaper parallax"
@@ -1540,7 +1540,7 @@ class MainActivity : Activity() {
         }
         appearanceCard.addView(TextView(this).apply {
             text = "Optional effects are off by default and work with any wallpaper."
-            textSize = 13f
+            textSize = 12f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(6), 0, dp(6), dp(12))
         })
