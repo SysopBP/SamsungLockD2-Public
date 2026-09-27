@@ -1513,7 +1513,7 @@ class MainActivity : Activity() {
 
         section(root, "APP THEME")
         root.getChildAt(root.childCount - 1).tag = "app_theme"
-        val appearanceCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(8), dp(5), dp(8), dp(5)); background = Appearance.glass(this@MainActivity, 22f, 26, true) }
+        val appearanceCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(8), dp(3), dp(8), dp(4)); background = Appearance.glass(this@MainActivity, 22f, 26, true) }
         root.addView(appearanceCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         section(appearanceCard, "LOCK SCREEN EXTRAS")
         appearanceCard.addView(guardianSwitch().apply {
@@ -1521,19 +1521,19 @@ class MainActivity : Activity() {
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.wallpaperParallax(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setWallpaperParallax(this@MainActivity, checked) }
-        }, rowParams())
+        }, LinearLayout.LayoutParams(-1, dp(48)))
         appearanceCard.addView(guardianSwitch().apply {
             text = "Glass shimmer"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.glassShimmer(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setGlassShimmer(this@MainActivity, checked) }
-        }, rowParams())
+        }, LinearLayout.LayoutParams(-1, dp(48)))
         appearanceCard.addView(guardianSwitch().apply {
             text = "Double-tap empty lock screen to sleep"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.doubleTapSleep(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setDoubleTapSleep(this@MainActivity, checked) }
-        }, rowParams())
+        }, LinearLayout.LayoutParams(-1, dp(48)))
         addChoice(appearanceCard, "Unlock haptics", listOf("Off", "Soft", "Medium", "Strong"),
             listOf("off", "soft", "medium", "strong").indexOf(Prefs.unlockHaptics(this)).coerceAtLeast(0)) {
             Prefs.setUnlockHaptics(this, listOf("off", "soft", "medium", "strong")[it])
@@ -1542,14 +1542,14 @@ class MainActivity : Activity() {
             text = "Optional effects are off by default and work with any wallpaper."
             textSize = 12f
             setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(dp(6), 0, dp(6), dp(12))
+            setPadding(dp(6), 0, dp(6), dp(6))
         })
 
         appearanceCard.addView(TextView(this).apply {
             text = "Dim wallpaper: ${Prefs.wallpaperDim(this@MainActivity)}%"
             textSize = 15f
             setTextColor(Appearance.text(this@MainActivity))
-            setPadding(dp(6), dp(4), 0, 0)
+            setPadding(dp(6), dp(2), 0, 0)
             tag = "wallpaper_dim_label"
         })
         appearanceCard.addView(guardianSlider().apply {
@@ -1564,12 +1564,12 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(30)).apply { bottomMargin = dp(8) })
+        }, LinearLayout.LayoutParams(-1, dp(24)).apply { bottomMargin = dp(8) })
         appearanceCard.addView(TextView(this).apply {
             text = "Lock-screen glass: ${Prefs.lockGlass(this@MainActivity)}%"
             textSize = 15f
             setTextColor(Appearance.text(this@MainActivity))
-            setPadding(dp(6), dp(4), 0, 0)
+            setPadding(dp(6), dp(2), 0, 0)
             tag = "lock_glass_label"
         })
         appearanceCard.addView(guardianSlider().apply {
@@ -1587,12 +1587,12 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(30)))
+        }, LinearLayout.LayoutParams(-1, dp(24)))
         appearanceCard.addView(TextView(this).apply {
             text = "Lock-screen UI scale: ${Prefs.lockScale(this@MainActivity)}%"
             textSize = 15f
             setTextColor(Appearance.text(this@MainActivity))
-            setPadding(dp(6), dp(4), 0, 0)
+            setPadding(dp(6), dp(2), 0, 0)
             tag = "lock_scale_label"
         })
         appearanceCard.addView(guardianSlider().apply {
@@ -1608,7 +1608,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(30)).apply { bottomMargin = dp(8) })
+        }, LinearLayout.LayoutParams(-1, dp(24)).apply { bottomMargin = dp(8) })
         section(appearanceCard, "CLOCK & WEATHER")
         appearanceCard.getChildAt(appearanceCard.childCount - 1).tag = "clock_weather"
         addChoice(appearanceCard, "Clock style", listOf("Adaptive Clean", "Classic", "Rounded", "Condensed", "Bold", "Minimal"),
@@ -1624,12 +1624,12 @@ class MainActivity : Activity() {
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.clockAdaptive(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setClockAdaptive(this@MainActivity, checked) }
-        }, rowParams())
+        }, LinearLayout.LayoutParams(-1, dp(48)))
         appearanceCard.addView(TextView(this).apply {
             text = "Clock size: ${Prefs.clockScale(this@MainActivity)}%"
             textSize = 15f
             setTextColor(Appearance.text(this@MainActivity))
-            setPadding(dp(6), dp(4), 0, 0)
+            setPadding(dp(6), dp(2), 0, 0)
             tag = "clock_scale_label"
         })
         appearanceCard.addView(guardianSlider().apply {
@@ -1645,18 +1645,18 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(30)))
+        }, LinearLayout.LayoutParams(-1, dp(24)))
         appearanceCard.addView(guardianSwitch().apply {
             text = "Show date under clock"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.showDate(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setShowDate(this@MainActivity, checked) }
-        }, rowParams())
+        }, LinearLayout.LayoutParams(-1, dp(48)))
         appearanceCard.addView(TextView(this).apply {
             text = "Weather & battery glass: ${Prefs.componentGlass(this@MainActivity, "top_info")}%"
             textSize = 15f
             setTextColor(Appearance.text(this@MainActivity))
-            setPadding(dp(6), dp(4), 0, 0)
+            setPadding(dp(6), dp(2), 0, 0)
             tag = "top_info_glass_label"
         })
         appearanceCard.addView(guardianSlider().apply {
@@ -1672,12 +1672,12 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(30)))
+        }, LinearLayout.LayoutParams(-1, dp(24)))
         appearanceCard.addView(TextView(this).apply {
             text = "Media player glass: ${Prefs.componentGlass(this@MainActivity, "media")}%"
             textSize = 15f
             setTextColor(Appearance.text(this@MainActivity))
-            setPadding(dp(6), dp(4), 0, 0)
+            setPadding(dp(6), dp(2), 0, 0)
             tag = "media_glass_label"
         })
         appearanceCard.addView(guardianSlider().apply {
@@ -1693,12 +1693,12 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(30)))
+        }, LinearLayout.LayoutParams(-1, dp(24)))
         appearanceCard.addView(TextView(this).apply {
             text = "Weather & battery content size: ${Prefs.topInfoSize(this@MainActivity)}%"
             textSize = 15f
             setTextColor(Appearance.text(this@MainActivity))
-            setPadding(dp(6), dp(4), 0, 0)
+            setPadding(dp(6), dp(2), 0, 0)
             tag = "top_info_size_label"
         })
         appearanceCard.addView(guardianSlider().apply {
@@ -1714,30 +1714,30 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(30)))
+        }, LinearLayout.LayoutParams(-1, dp(24)))
         appearanceCard.addView(guardianSwitch().apply {
             text = "Show weather in pill"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.showWeather(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setShowWeather(this@MainActivity, checked) }
-        }, rowParams())
+        }, LinearLayout.LayoutParams(-1, dp(48)))
         appearanceCard.addView(guardianSwitch().apply {
             text = "Show battery percentage"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.showBatteryPercent(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setShowBatteryPercent(this@MainActivity, checked) }
-        }, rowParams())
+        }, LinearLayout.LayoutParams(-1, dp(48)))
         appearanceCard.addView(guardianSwitch().apply {
             text = "Weather in Celsius (off: Fahrenheit)"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.celsius(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setCelsius(this@MainActivity, checked) }
-        }, rowParams())
+        }, LinearLayout.LayoutParams(-1, dp(48)))
         appearanceCard.addView(TextView(this).apply {
             text = "Primary weather location"
             textSize = 15f
             setTextColor(Appearance.text(this@MainActivity))
-            setPadding(dp(6), dp(8), 0, dp(4))
+            setPadding(dp(6), dp(5), 0, dp(2))
         })
         val weatherLocation = android.widget.EditText(this).apply {
             hint = "Automatic · or city / postcode / region"
@@ -1748,7 +1748,7 @@ class MainActivity : Activity() {
             setPadding(dp(14), dp(10), dp(14), dp(10))
             setSingleLine(true)
         }
-        appearanceCard.addView(weatherLocation, LinearLayout.LayoutParams(-1, dp(56)).apply { bottomMargin = dp(8) })
+        appearanceCard.addView(weatherLocation, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(5) })
         addButton(appearanceCard, "Save primary weather location") {
             Prefs.setWeatherLocation(this, weatherLocation.text.toString())
             showD2Message(if (weatherLocation.text.isNullOrBlank()) "Weather set to automatic location" else "Primary weather location saved")
@@ -1757,7 +1757,7 @@ class MainActivity : Activity() {
             text = "Leave Primary Location blank to use the device location. Enter a city, postcode, or city + country/region for global weather."
             textSize = 13f
             setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(dp(6), 0, dp(6), dp(10))
+            setPadding(dp(6), 0, dp(6), dp(6))
         })
         section(appearanceCard, "MEDIA")
         addChoice(appearanceCard, "Media player layout", listOf("Compact", "Comfortable", "Large"),
@@ -1768,7 +1768,7 @@ class MainActivity : Activity() {
             text = "Media button size: ${Prefs.mediaButtonsScale(this@MainActivity)}%"
             textSize = 15f
             setTextColor(Appearance.text(this@MainActivity))
-            setPadding(dp(6), dp(4), 0, 0)
+            setPadding(dp(6), dp(2), 0, 0)
             tag = "media_button_scale_label"
         })
         appearanceCard.addView(guardianSlider().apply {
@@ -1784,13 +1784,13 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(30)))
+        }, LinearLayout.LayoutParams(-1, dp(24)))
         appearanceCard.addView(guardianSwitch().apply {
             text = "Show media player while D2 is locked"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.showMedia(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setShowMedia(this@MainActivity, checked) }
-        }, rowParams())
+        }, LinearLayout.LayoutParams(-1, dp(48)))
         addButton(appearanceCard, "Reset appearance to defaults") {
             android.app.AlertDialog.Builder(this)
                 .setTitle("Reset appearance?")
