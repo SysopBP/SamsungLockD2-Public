@@ -25,12 +25,26 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
             val event = intent.getStringExtra("event") ?: return
             val method = intent.getStringExtra("method") ?: "unknown"
             val prefs = directBootPrefs(context)
-            prefs.edit()
-                .putLong(KEY_LAST_SYSTEM_EVENT_MS, System.currentTimeMillis())
+            val now = System.currentTimeMillis()
+            val counterKey = when (event) {
+                "WAKE", "SLEEP" -> KEY_SYSTEM_WAKE_COUNT
+                "KEYGUARD", "TASK_KEYGUARD" -> KEY_SYSTEM_KEYGUARD_COUNT
+                "BIOMETRIC" -> KEY_SYSTEM_BIOMETRIC_COUNT
+                "LOCK_SETTINGS" -> KEY_SYSTEM_LOCKSETTINGS_COUNT
+                else -> null
+            }
+            val timeline = prefs.getString(KEY_SYSTEM_TIMELINE, "").orEmpty()
+                .lineSequence().filter { it.isNotBlank() }.take(11).toList()
+            val line = "$now|$event|$method"
+            val edit = prefs.edit()
+                .putLong(KEY_LAST_SYSTEM_EVENT_MS, now)
                 .putString(KEY_LAST_SYSTEM_EVENT, event)
                 .putString(KEY_LAST_SYSTEM_METHOD, method)
                 .putString(KEY_LAST_SYSTEM_SOURCE, source)
-                .apply()
+                .putLong(KEY_SYSTEM_EVENT_COUNT, prefs.getLong(KEY_SYSTEM_EVENT_COUNT, 0L) + 1L)
+                .putString(KEY_SYSTEM_TIMELINE, (listOf(line) + timeline).joinToString("\n"))
+            if (counterKey != null) edit.putLong(counterKey, prefs.getLong(counterKey, 0L) + 1L)
+            edit.apply()
             Log.i(TAG, "GUARDIAN_SYS_EVENT_RECEIVED event=$event method=$method source=$source")
             val unlocked = context.getSystemService(UserManager::class.java)?.isUserUnlocked == true
             if (unlocked && (event == "WAKE" || event == "KEYGUARD" || event == "TASK_KEYGUARD")) {
@@ -109,6 +123,12 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         private const val KEY_LAST_SYSTEM_EVENT = "last_system_event"
         private const val KEY_LAST_SYSTEM_METHOD = "last_system_method"
         private const val KEY_LAST_SYSTEM_SOURCE = "last_system_source"
+        private const val KEY_SYSTEM_EVENT_COUNT = "system_event_count"
+        private const val KEY_SYSTEM_WAKE_COUNT = "system_wake_count"
+        private const val KEY_SYSTEM_KEYGUARD_COUNT = "system_keyguard_count"
+        private const val KEY_SYSTEM_BIOMETRIC_COUNT = "system_biometric_count"
+        private const val KEY_SYSTEM_LOCKSETTINGS_COUNT = "system_locksettings_count"
+        private const val KEY_SYSTEM_TIMELINE = "system_timeline"
 
         private fun directBootPrefs(context: Context) =
             context.createDeviceProtectedStorageContext()
@@ -117,6 +137,10 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         data class BridgeHealth(val status: String, val ageMs: Long?, val source: String?)
         data class SystemHealth(val status: String, val ageMs: Long?, val event: String?, val method: String?, val source: String?)
         data class FingerprintHealth(val ageMs: Long?, val event: String?, val source: String?)
+        data class SystemMetrics(
+            val total: Long, val wakeSleep: Long, val keyguard: Long, val biometric: Long,
+            val lockSettings: Long, val timeline: List<String>
+        )
 
         fun bridgeHealth(context: Context, staleAfterMs: Long = 90_000L): BridgeHealth {
             val prefs = directBootPrefs(context)
@@ -138,6 +162,18 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
             if (timestamp <= 0L) return SystemHealth("WAITING", null, event, method, source)
             val age = (System.currentTimeMillis() - timestamp).coerceAtLeast(0L)
             return SystemHealth(if (age <= staleAfterMs) "READY" else "STALE", age, event, method, source)
+        }
+
+        fun systemMetrics(context: Context): SystemMetrics {
+            val prefs = directBootPrefs(context)
+            return SystemMetrics(
+                prefs.getLong(KEY_SYSTEM_EVENT_COUNT, 0L),
+                prefs.getLong(KEY_SYSTEM_WAKE_COUNT, 0L),
+                prefs.getLong(KEY_SYSTEM_KEYGUARD_COUNT, 0L),
+                prefs.getLong(KEY_SYSTEM_BIOMETRIC_COUNT, 0L),
+                prefs.getLong(KEY_SYSTEM_LOCKSETTINGS_COUNT, 0L),
+                prefs.getString(KEY_SYSTEM_TIMELINE, "").orEmpty().lineSequence().filter { it.isNotBlank() }.take(12).toList()
+            )
         }
 
         fun fingerprintHealth(context: Context): FingerprintHealth {
