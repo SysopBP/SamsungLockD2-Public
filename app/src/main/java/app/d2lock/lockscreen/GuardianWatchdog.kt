@@ -12,7 +12,7 @@ object GuardianWatchdog {
     enum class State { PROTECTED, TRUSTED_UI, TEMPORARILY_RELEASED, REASSERTING }
 
     private const val TAG = "SamsungLockD2"
-    private const val REASSERT_COOLDOWN_MS = 750L
+    private const val REASSERT_COOLDOWN_MS = 2_500L
     private const val TRUSTED_AUTH_TIMEOUT_MS = 15_000L
 
     @Volatile private var state = State.PROTECTED
@@ -40,17 +40,42 @@ object GuardianWatchdog {
         }
         lastReassertAt = now
         transition(State.REASSERTING, reason)
+        KeyguardSignalReceiver.recordGuardianStage(context, "D2_LAUNCH_REQUEST", reason)
         Log.i(TAG, "GUARDIAN_RELOCATE_REQUESTED reason=$reason callActive=$callActive")
-        if (Prefs.rootMode(context) && RootManager.launchCompanion()) {
-            Log.i(TAG, "GUARDIAN_REASSERT_REQUESTED path=root reason=$reason callActive=$callActive")
-            return true
+
+        // Android 17 blocks ordinary background Activity launches from D2's
+        // foreground service (BAL_BLOCK). On rooted Guardian installations use
+        // the privileged shell launch as the authoritative path and do not fall
+        // through to a launch Android has already told us it will reject.
+        if (Prefs.rootMode(context)) {
+            val launched = RootManager.launchCompanion()
+            KeyguardSignalReceiver.recordGuardianStage(
+                context,
+                if (launched) "D2_LAUNCH_ACCEPTED" else "D2_LAUNCH_REJECTED",
+                "root:$reason"
+            )
+            KeyguardSignalReceiver.recordDecision(
+                context,
+                if (launched) "LAUNCH" else "DEFERRED",
+                "root_launch:$reason"
+            )
+            Log.i(TAG, "GUARDIAN_REASSERT_REQUESTED path=root accepted=$launched reason=$reason callActive=$callActive")
+            if (!launched) transition(State.TEMPORARILY_RELEASED, "root_launch_failed")
+            return launched
         }
+
+        // Non-root remains a best-effort compatibility path. A successful
+        // startActivity() call is only a request; ActivityTaskManager may still
+        // reject it under BAL policy, so visibility/first-draw telemetry is the
+        // source of truth for health.
         return runCatching {
             context.startActivity(Intent(context, LockScreenActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
+            KeyguardSignalReceiver.recordGuardianStage(context, "D2_LAUNCH_REQUESTED", "activity:$reason")
             Log.i(TAG, "GUARDIAN_REASSERT_REQUESTED path=activity reason=$reason callActive=$callActive")
             true
         }.getOrElse {
+            KeyguardSignalReceiver.recordGuardianStage(context, "D2_LAUNCH_REJECTED", "activity_exception:$reason")
             Log.w(TAG, "GUARDIAN_REASSERT_FAILED reason=$reason callActive=$callActive", it)
             transition(State.TEMPORARILY_RELEASED, "reassert_failed")
             false
