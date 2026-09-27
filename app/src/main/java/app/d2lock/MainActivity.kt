@@ -2043,94 +2043,67 @@ class MainActivity : Activity() {
         section(root, "EXPERIMENTAL LAB")
         root.getChildAt(root.childCount - 1).tag = "advanced_settings"
         root.addView(LinearLayout(this).apply {
-            orientation=LinearLayout.VERTICAL
-            setPadding(dp(18),dp(14),dp(18),dp(14))
+            orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(14))
             background=Appearance.glass(this@MainActivity,30f,38,true)
             addView(LinearLayout(this@MainActivity).apply {
-                orientation=LinearLayout.HORIZONTAL
-                gravity=Gravity.CENTER_VERTICAL
+                orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL
                 addView(ImageView(this@MainActivity).apply {
                     setImageResource(R.drawable.ic_guardian_advanced)
-                    imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
-                    contentDescription=null
+                    imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity)); contentDescription=null
                 },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
-                addView(TextView(this@MainActivity).apply {
-                    text="Experimental Lab"
-                    textSize=18f
-                    setTextColor(Appearance.text(this@MainActivity))
-                })
+                addView(TextView(this@MainActivity).apply { text="Experimental Lab"; textSize=18f; setTextColor(Appearance.text(this@MainActivity)) })
             })
+            val labBridge=app.d2lock.lockscreen.KeyguardSignalReceiver.systemHealth(this@MainActivity)
+            val labPipeline=app.d2lock.lockscreen.KeyguardSignalReceiver.pipelineMetrics(this@MainActivity)
             addView(TextView(this@MainActivity).apply {
-                text="Opt-in Guardian UI experiments. Disable any feature that behaves unexpectedly."
-                textSize=12f
-                setTextColor(Appearance.secondary(this@MainActivity))
+                text="Framework-assisted experiments  •  ${labBridge.status}\nPipeline: ${labPipeline.timeline.size} recent stages"
+                textSize=11f; setTextColor(if(labBridge.status=="READY") Color.rgb(102,220,132) else Appearance.secondary(this@MainActivity))
                 setPadding(0,dp(5),0,dp(8))
             })
-            addView(guardianSwitch().apply {
-                text="Adaptive Glass"
-                textSize=16f
-                setTextColor(Appearance.text(this@MainActivity))
-                isChecked=Prefs.experimentalAdaptiveGlass(this@MainActivity)
-                setOnCheckedChangeListener { _,v -> Prefs.setExperimentalAdaptiveGlass(this@MainActivity,v) }
-            },rowParams())
-            addView(TextView(this@MainActivity).apply {
-                text="Allows Guardian surfaces to increase contrast when a wallpaper is visually busy."
-                textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(4),0,dp(4),dp(6))
-            })
-            addView(guardianSwitch().apply {
-                text="Dynamic Accent"
-                textSize=16f
-                setTextColor(Appearance.text(this@MainActivity))
-                isChecked=Prefs.experimentalDynamicAccent(this@MainActivity)
-                setOnCheckedChangeListener { _,v -> Prefs.setExperimentalDynamicAccent(this@MainActivity,v); refreshAppearance() }
-            },rowParams())
-            addView(TextView(this@MainActivity).apply {
-                text="Allows supported Guardian surfaces to derive an accent from the selected wallpaper."
-                textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(4),0,dp(4),dp(6))
-            })
-            addView(guardianSwitch().apply {
-                text="Enhanced Haptics"
-                textSize=16f
-                setTextColor(Appearance.text(this@MainActivity))
-                isChecked=Prefs.experimentalEnhancedHaptics(this@MainActivity)
-                setOnCheckedChangeListener { _,v -> Prefs.setExperimentalEnhancedHaptics(this@MainActivity,v) }
-            },rowParams())
-            addView(TextView(this@MainActivity).apply {
-                text="Enables additional restrained tactile feedback for Guardian UI interactions."
-                textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(4),0,dp(4),dp(6))
-            })
-            addView(guardianSwitch().apply {
-                text="Lock-screen Motion"
-                textSize=16f
-                setTextColor(Appearance.text(this@MainActivity))
-                isChecked=Prefs.experimentalLockMotion(this@MainActivity)
-                setOnCheckedChangeListener { _,v -> Prefs.setExperimentalLockMotion(this@MainActivity,v) }
-            },rowParams())
-            addView(TextView(this@MainActivity).apply {
-                text="Enables subtle entrance and depth motion on supported lock-screen surfaces."
-                textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(4),0,dp(4),dp(10))
-            })
-            addView(guardianSwitch().apply {
-                text="Adaptive Notification Stack"
-                textSize=16f
-                setTextColor(Appearance.text(this@MainActivity))
-                isChecked=Prefs.experimentalAdaptiveNotifications(this@MainActivity)
-                setOnCheckedChangeListener { _,v -> Prefs.setExperimentalAdaptiveNotifications(this@MainActivity,v) }
-            },rowParams())
-            addView(TextView(this@MainActivity).apply {
-                text="Lets the lock screen tighten notification spacing as the visible stack grows."
-                textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(4),0,dp(4),dp(10))
-            })
-            addView(TextView(this@MainActivity).apply {
-                text="Guardian Recovery"
-                textSize=15f
-                gravity=Gravity.CENTER
-                setTextColor(Appearance.text(this@MainActivity))
-                background=Appearance.glass(this@MainActivity,22f,26,true)
-                setPadding(dp(14),dp(10),dp(14),dp(10))
-                setOnClickListener {
-                    startActivity(Intent(this@MainActivity,app.d2lock.ui.SeslPreviewActivity::class.java))
+            fun labTile(title:String, status:String, checked:()->Boolean, changed:(Boolean)->Unit)=
+                LinearLayout(this@MainActivity).apply {
+                    orientation=LinearLayout.VERTICAL; setPadding(dp(10),dp(7),dp(7),dp(7))
+                    background=Appearance.glass(this@MainActivity,20f,22,true)
+                    addView(TextView(this@MainActivity).apply {
+                        text=title; textSize=11f; maxLines=2; setTextColor(Appearance.text(this@MainActivity))
+                    })
+                    addView(LinearLayout(this@MainActivity).apply {
+                        orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL
+                        addView(TextView(this@MainActivity).apply {
+                            text=status; textSize=8f; setTextColor(Appearance.secondary(this@MainActivity))
+                        },LinearLayout.LayoutParams(0,-2,1f))
+                        addView(androidx.appcompat.widget.SwitchCompat(this@MainActivity).apply {
+                            isChecked=checked(); scaleX=.78f; scaleY=.78f
+                            setOnCheckedChangeListener { _,v -> changed(v) }
+                        },LinearLayout.LayoutParams(dp(52),-2))
+                    })
                 }
+            fun labGrid(items:List<LinearLayout>) {
+                items.chunked(2).forEach { pair ->
+                    addView(LinearLayout(this@MainActivity).apply {
+                        orientation=LinearLayout.HORIZONTAL
+                        pair.forEachIndexed { i,v -> addView(v,LinearLayout.LayoutParams(0,-2,1f).apply { if(i==0) rightMargin=dp(3) else leftMargin=dp(3) }) }
+                        if(pair.size==1) addView(android.view.View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
+                    },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(6) })
+                }
+            }
+            labGrid(listOf(
+                labTile("Context-Aware Glass","FRAMEWORK ASSISTED",{ Prefs.experimentalAdaptiveGlass(this@MainActivity) }) { Prefs.setExperimentalAdaptiveGlass(this@MainActivity,it) },
+                labTile("Guardian State Accent","FRAMEWORK ASSISTED",{ Prefs.experimentalDynamicAccent(this@MainActivity) }) { Prefs.setExperimentalDynamicAccent(this@MainActivity,it); refreshAppearance() },
+                labTile("Event Haptics","PIPELINE EVENTS",{ Prefs.experimentalEnhancedHaptics(this@MainActivity) }) { Prefs.setExperimentalEnhancedHaptics(this@MainActivity,it) },
+                labTile("Synchronized Motion","KEYGUARD / BIOMETRIC",{ Prefs.experimentalLockMotion(this@MainActivity) }) { Prefs.setExperimentalLockMotion(this@MainActivity,it) },
+                labTile("State-Aware Stack","AUTH / LOCK STATE",{ Prefs.experimentalAdaptiveNotifications(this@MainActivity) }) { Prefs.setExperimentalAdaptiveNotifications(this@MainActivity,it) },
+                labTile("Adaptive Lock Transition","WAKE → D2 HEALTHY",{ Prefs.experimentalAdaptiveTransition(this@MainActivity) }) { Prefs.setExperimentalAdaptiveTransition(this@MainActivity,it) },
+                labTile("Framework Timing","LEARNING TIMING",{ Prefs.experimentalFrameworkTiming(this@MainActivity) }) { Prefs.setExperimentalFrameworkTiming(this@MainActivity,it) }
+            ))
+            addView(TextView(this@MainActivity).apply {
+                text="Experiments consume Guardian/System Server timing and state only. Android remains authoritative for credential and biometric verification."
+                textSize=10f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(3),dp(4),dp(3),dp(7))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text="Guardian Recovery"; textSize=14f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
+                background=Appearance.glass(this@MainActivity,22f,26,true); setPadding(dp(14),dp(9),dp(14),dp(9))
+                setOnClickListener { startActivity(Intent(this@MainActivity,app.d2lock.ui.SeslPreviewActivity::class.java)) }
             })
         },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
         section(root, "XPOSED INTEGRATION")
