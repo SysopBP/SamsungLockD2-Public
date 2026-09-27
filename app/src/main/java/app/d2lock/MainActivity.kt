@@ -195,7 +195,7 @@ class MainActivity : Activity() {
             setPadding(dp(16), dp(14), dp(16), dp(18)); background = Appearance.glass(this@MainActivity, 26f, 28, true)
         }
         fun whatsNew() {
-            content.text = "WHAT'S NEW SINCE BETA.1  •  D2 ${versionName ?: "current"}\n\n• LSPosed/Xposed SystemUI integration and diagnostics\n• Verified Guardian fingerprint unlock using an enrolled Samsung fingerprint, with clean PIN/pattern fallback\n• New System Integration Center for Root, Shizuku, Xposed and Galaxy Island\n• Automatic integration fallback protection\n• Guardian/Kiosk call, focus, relock and boot-protection improvements\n• Recovery & Safety Center with system-health and USB/ADB recovery status\n• Compact glass settings, dialogs, fixed navigation and section highlighting\n• Lock & Wake and Widget Manager cleanup\n• Galaxy Island pairing, Xposed controls and Guardian glass integration\n• Continued PIN/pattern, notification, icon and One UI 9 interface refinements"
+            content.text = "WHAT'S NEW SINCE BETA.1  •  D2 ${versionName ?: "current"}\n\n• LSPosed/Xposed SystemUI integration and diagnostics\n• Fingerprint framework integration is in active testing; hardware detection and Samsung biometric authentication are working, but D2-only fingerprint unlock is not fully integrated yet\n• New System Integration Center for Root, Shizuku, Xposed and Galaxy Island\n• Automatic integration fallback protection\n• Guardian/Kiosk call, focus, relock and boot-protection improvements\n• Recovery & Safety Center with system-health and USB/ADB recovery status\n• Compact glass settings, dialogs, fixed navigation and section highlighting\n• Lock & Wake and Widget Manager cleanup\n• Galaxy Island pairing, Xposed controls and Guardian glass integration\n• Continued PIN/pattern, notification, icon and One UI 9 interface refinements"
         }
         fun whatsNext() {
             val lock = if (PinStore(this@MainActivity).configured()) "✓" else "○"
@@ -204,7 +204,7 @@ class MainActivity : Activity() {
             val shizuku = if (Prefs.shizukuEnabled(this@MainActivity)) "✓" else "○"
             val root = if (Prefs.rootMode(this@MainActivity)) "✓" else "○"
             val xp = if (Prefs.xposedMaster(this@MainActivity)) "✓" else "○"
-            content.text = "WHAT'S NEXT\n\n$lock Set up D2 authentication\n$wake Enable lock on wake\n$kiosk Configure kiosk protection\n$shizuku Connect Shizuku\n$root Verify optional KernelSU/root integration\n$xp LSPosed/SystemUI integration enabled\n✓ Guardian fingerprint unlock verified on-device\n○ Reduce remaining Samsung biometric presentation dependency\n○ Verify paired Galaxy Island glass and pop-out behavior\n○ Customize your lock screen\n○ Test your recovery path"
+            content.text = "WHAT'S NEXT\n\n$lock Set up D2 authentication\n$wake Enable lock on wake\n$kiosk Configure kiosk protection\n$shizuku Connect Shizuku\n$root Verify optional KernelSU/root integration\n$xp LSPosed/SystemUI integration enabled\n○ Complete D2-only fingerprint integration (not fully integrated yet)\n○ Remove the remaining Samsung biometric/keyguard presentation dependency\n○ Verify paired Galaxy Island glass and pop-out behavior\n○ Customize your lock screen\n○ Test your recovery path"
         }
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun tab(label: String, action: () -> Unit) = TextView(this).apply {
@@ -826,8 +826,8 @@ class MainActivity : Activity() {
         root.getChildAt(root.childCount - 1).tag = "root_shizuku"
         root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
-            setPadding(dp(18),dp(14),dp(18),dp(14))
-            background=Appearance.glass(this@MainActivity,30f,38,true)
+            setPadding(dp(12),dp(9),dp(12),dp(9))
+            background=Appearance.glass(this@MainActivity,24f,30,true)
             addView(LinearLayout(this@MainActivity).apply {
                 orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL
                 addView(ImageView(this@MainActivity).apply {
@@ -975,8 +975,8 @@ class MainActivity : Activity() {
         root.getChildAt(root.childCount - 1).tag = "recovery_safety"
         root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
-            setPadding(dp(18),dp(14),dp(18),dp(14))
-            background=Appearance.glass(this@MainActivity,30f,38,true)
+            setPadding(dp(12),dp(9),dp(12),dp(9))
+            background=Appearance.glass(this@MainActivity,24f,30,true)
             addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.HORIZONTAL
                     gravity=Gravity.CENTER_VERTICAL
@@ -1060,8 +1060,8 @@ class MainActivity : Activity() {
         root.getChildAt(root.childCount - 1).tag = "guardian_kiosk"
         root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
-            setPadding(dp(18),dp(14),dp(18),dp(14))
-            background=Appearance.glass(this@MainActivity,30f,38,true)
+            setPadding(dp(12),dp(9),dp(12),dp(9))
+            background=Appearance.glass(this@MainActivity,24f,30,true)
             addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.HORIZONTAL
                     gravity=Gravity.CENTER_VERTICAL
@@ -1116,8 +1116,8 @@ class MainActivity : Activity() {
         section(root, "FINGERPRINT CENTER")
         root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
-            setPadding(dp(18),dp(14),dp(18),dp(14))
-            background=Appearance.glass(this@MainActivity,30f,38,true)
+            setPadding(dp(12),dp(9),dp(12),dp(9))
+            background=Appearance.glass(this@MainActivity,24f,30,true)
             addView(LinearLayout(this@MainActivity).apply {
                 orientation=LinearLayout.HORIZONTAL
                 gravity=Gravity.CENTER_VERTICAL
@@ -1208,8 +1208,8 @@ class MainActivity : Activity() {
         section(root, "RECOVERY CENTER")
         root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
-            setPadding(dp(18),dp(14),dp(18),dp(14))
-            background=Appearance.glass(this@MainActivity,30f,38,true)
+            setPadding(dp(12),dp(9),dp(12),dp(9))
+            background=Appearance.glass(this@MainActivity,24f,30,true)
             addView(LinearLayout(this@MainActivity).apply {
                 orientation=LinearLayout.HORIZONTAL
                 gravity=Gravity.CENTER_VERTICAL
@@ -1275,8 +1275,8 @@ class MainActivity : Activity() {
         section(root, "ADB / USB RECOVERY")
         root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
-            setPadding(dp(18),dp(14),dp(18),dp(14))
-            background=Appearance.glass(this@MainActivity,30f,38,true)
+            setPadding(dp(12),dp(9),dp(12),dp(9))
+            background=Appearance.glass(this@MainActivity,24f,30,true)
             addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.HORIZONTAL
                     gravity=Gravity.CENTER_VERTICAL
@@ -1330,7 +1330,7 @@ class MainActivity : Activity() {
         root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.HORIZONTAL
             gravity=Gravity.CENTER_VERTICAL
-            setPadding(dp(18),dp(12),dp(16),dp(12))
+            setPadding(dp(12),dp(8),dp(10),dp(8))
             background=Appearance.glass(this@MainActivity,28f,34,true)
             isClickable=true
             isFocusable=true
@@ -1381,7 +1381,7 @@ class MainActivity : Activity() {
                 }
                 dialog.show()
             }
-        },LinearLayout.LayoutParams(-1,dp(78)).apply { bottomMargin=dp(12) })
+        },LinearLayout.LayoutParams(-1,dp(62)).apply { bottomMargin=dp(8) })
         section(root, "ICON CENTER")
         val iconOptions = IconManager.options
         val currentIcon = IconManager.selected(this)
@@ -1397,7 +1397,7 @@ class MainActivity : Activity() {
         }
         val iconPreviewText = TextView(this).apply {
             text = (iconOptions.firstOrNull { it.key == currentIcon }?.label ?: "Titanium Graphite") + "  •  Active"
-            textSize = 16f
+            textSize = 14f
             setTextColor(Appearance.text(this@MainActivity))
             setPadding(dp(14), 0, 0, 0)
         }
@@ -1513,7 +1513,7 @@ class MainActivity : Activity() {
 
         section(root, "APP THEME")
         root.getChildAt(root.childCount - 1).tag = "app_theme"
-        val appearanceCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
+        val appearanceCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(10), dp(7), dp(10), dp(7)); background = Appearance.glass(this@MainActivity, 24f, 28, true) }
         root.addView(appearanceCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         section(appearanceCard, "LOCK SCREEN EXTRAS")
         appearanceCard.addView(guardianSwitch().apply {
@@ -1564,7 +1564,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(40)).apply { bottomMargin = dp(8) })
+        }, LinearLayout.LayoutParams(-1, dp(30)).apply { bottomMargin = dp(8) })
         appearanceCard.addView(TextView(this).apply {
             text = "Lock-screen glass: ${Prefs.lockGlass(this@MainActivity)}%"
             textSize = 15f
@@ -1587,7 +1587,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(40)))
+        }, LinearLayout.LayoutParams(-1, dp(30)))
         appearanceCard.addView(TextView(this).apply {
             text = "Lock-screen UI scale: ${Prefs.lockScale(this@MainActivity)}%"
             textSize = 15f
@@ -1608,7 +1608,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(40)).apply { bottomMargin = dp(8) })
+        }, LinearLayout.LayoutParams(-1, dp(30)).apply { bottomMargin = dp(8) })
         section(appearanceCard, "CLOCK & WEATHER")
         appearanceCard.getChildAt(appearanceCard.childCount - 1).tag = "clock_weather"
         addChoice(appearanceCard, "Clock style", listOf("Adaptive Clean", "Classic", "Rounded", "Condensed", "Bold", "Minimal"),
@@ -1645,7 +1645,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(40)))
+        }, LinearLayout.LayoutParams(-1, dp(30)))
         appearanceCard.addView(guardianSwitch().apply {
             text = "Show date under clock"
             setTextColor(Appearance.text(this@MainActivity))
@@ -1672,7 +1672,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(40)))
+        }, LinearLayout.LayoutParams(-1, dp(30)))
         appearanceCard.addView(TextView(this).apply {
             text = "Media player glass: ${Prefs.componentGlass(this@MainActivity, "media")}%"
             textSize = 15f
@@ -1693,7 +1693,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(40)))
+        }, LinearLayout.LayoutParams(-1, dp(30)))
         appearanceCard.addView(TextView(this).apply {
             text = "Weather & battery content size: ${Prefs.topInfoSize(this@MainActivity)}%"
             textSize = 15f
@@ -1714,7 +1714,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(40)))
+        }, LinearLayout.LayoutParams(-1, dp(30)))
         appearanceCard.addView(guardianSwitch().apply {
             text = "Show weather in pill"
             setTextColor(Appearance.text(this@MainActivity))
@@ -1784,7 +1784,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(40)))
+        }, LinearLayout.LayoutParams(-1, dp(30)))
         appearanceCard.addView(guardianSwitch().apply {
             text = "Show media player while D2 is locked"
             setTextColor(Appearance.text(this@MainActivity))
@@ -1804,7 +1804,7 @@ class MainActivity : Activity() {
         }
         section(root, "NOTIFICATIONS")
         root.getChildAt(root.childCount - 1).tag = "notifications"
-        val privacyCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
+        val privacyCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(10), dp(7), dp(10), dp(7)); background = Appearance.glass(this@MainActivity, 24f, 28, true) }
         root.addView(privacyCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         privacyCard.addView(guardianSwitch().apply {
             text = "Live notification banners while D2 is locked"
@@ -1843,7 +1843,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(40)))
+        }, LinearLayout.LayoutParams(-1, dp(30)))
         privacyCard.addView(TextView(this).apply {
             text = "Notification glass: ${Prefs.notificationGlass(this@MainActivity)}%"
             textSize = 15f
@@ -1864,7 +1864,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(40)))
+        }, LinearLayout.LayoutParams(-1, dp(30)))
         privacyCard.addView(TextView(this).apply {
             text = "Public only shows text from apps that mark it public. All previews can show private messages before you authenticate with D2. Apps marked secret stay hidden."
             textSize = 13f
@@ -1873,7 +1873,7 @@ class MainActivity : Activity() {
         })
         section(root, "FLOATING BAR")
         root.getChildAt(root.childCount - 1).tag = "floating_bar"
-        val floatingCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = Appearance.glass(this@MainActivity, 28f, 30, true) }
+        val floatingCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(10), dp(7), dp(10), dp(7)); background = Appearance.glass(this@MainActivity, 24f, 28, true) }
         root.addView(floatingCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         addChoice(floatingCard, "Unlock gesture", listOf("Tap or slide", "Slide only", "Tap only"),
             listOf("tap_or_slide", "slide_only", "tap_only").indexOf(Prefs.floatingUnlockGesture(this)).coerceAtLeast(0)) {
@@ -1911,8 +1911,8 @@ class MainActivity : Activity() {
         root.getChildAt(root.childCount - 1).tag = "main_settings"
         root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
-            setPadding(dp(18),dp(14),dp(18),dp(14))
-            background=Appearance.glass(this@MainActivity,30f,38,true)
+            setPadding(dp(12),dp(9),dp(12),dp(9))
+            background=Appearance.glass(this@MainActivity,24f,30,true)
             addView(LinearLayout(this@MainActivity).apply {
                 orientation=LinearLayout.HORIZONTAL
                 gravity=Gravity.CENTER_VERTICAL
@@ -1964,8 +1964,8 @@ class MainActivity : Activity() {
         root.getChildAt(root.childCount - 1).tag = "app_theme"
         root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
-            setPadding(dp(18),dp(14),dp(18),dp(14))
-            background=Appearance.glass(this@MainActivity,30f,38,true)
+            setPadding(dp(12),dp(9),dp(12),dp(9))
+            background=Appearance.glass(this@MainActivity,24f,30,true)
             addView(LinearLayout(this@MainActivity).apply {
                 orientation=LinearLayout.HORIZONTAL
                 gravity=Gravity.CENTER_VERTICAL
@@ -2025,7 +2025,7 @@ class MainActivity : Activity() {
                     override fun onStartTrackingTouch(seekBar:SeekBar?)=Unit
                     override fun onStopTrackingTouch(seekBar:SeekBar?) { refreshAppearance() }
                 })
-            },LinearLayout.LayoutParams(-1,dp(44)))
+            },LinearLayout.LayoutParams(-1,dp(32)))
             val actions=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL }
             actions.addView(wallpaperAction("Reset D2 app") {
                 Prefs.clearAppWallpaper(this@MainActivity)
@@ -2044,8 +2044,8 @@ class MainActivity : Activity() {
         section(root, "EXPERIMENTAL LAB")
         root.getChildAt(root.childCount - 1).tag = "advanced_settings"
         root.addView(LinearLayout(this).apply {
-            orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(14))
-            background=Appearance.glass(this@MainActivity,30f,38,true)
+            orientation=LinearLayout.VERTICAL; setPadding(dp(12),dp(9),dp(12),dp(9))
+            background=Appearance.glass(this@MainActivity,24f,30,true)
             addView(LinearLayout(this@MainActivity).apply {
                 orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL
                 addView(ImageView(this@MainActivity).apply {
@@ -2397,7 +2397,7 @@ class MainActivity : Activity() {
 
         addButton(root, "About Kiosk D2 Guardian") {
             val info = TextView(this).apply {
-                text = "Double-tap the D2 button or home-screen widget to open D2 authentication. D2 uses its own PIN or pattern. Optional kiosk mode uses Android task restrictions and coordinates with keyguard.\n\nWithout active kiosk, Home/Recents can bypass D2. Root, recovery and reboot remain privileged bypass paths. D2 cannot repair firmware or guarantee prevention of download-mode errors."
+                text = "Kiosk D2 Guardian is a root-aware Samsung lock-screen and kiosk protection project built around D2 PIN/pattern authentication, Guardian relock protection, KernelSU/root recovery, Shizuku, optional LSPosed/Xposed SystemUI integration, and Galaxy Island coordination.\n\nFingerprint framework work is still experimental. Hardware detection and Samsung biometric authentication have been demonstrated, but D2-only fingerprint unlock is not fully integrated and PIN/pattern remain the supported Guardian credentials.\n\nRoot, recovery and reboot remain privileged bypass paths. D2 cannot repair firmware or guarantee prevention of download-mode errors."
                 textSize = 14f
                 setTextColor(Appearance.text(this@MainActivity))
                 setLineSpacing(0f, 1.14f)
@@ -2953,7 +2953,7 @@ class MainActivity : Activity() {
         parent.addView(TextView(this).apply {
             text = title; textSize = 12f; letterSpacing = .12f
             setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(dp(10), dp(22), 0, dp(10))
+            setPadding(dp(8), dp(14), 0, dp(7))
         })
     }
     private fun pillBackground() = Appearance.glass(this, 22f, if (Appearance.dark(this)) 38 else 62, true)
@@ -3279,8 +3279,8 @@ class MainActivity : Activity() {
     private fun addChoice(parent: LinearLayout, title: String, choices: List<String>, selected: Int, save: (Int) -> Unit) {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(12), dp(18), dp(12))
-            background = Appearance.glass(this@MainActivity, 28f, 34, true)
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+            background = Appearance.glass(this@MainActivity, 22f, 28, true)
         }
         val titleView = TextView(this).apply {
             text = title
@@ -3289,9 +3289,9 @@ class MainActivity : Activity() {
         }
         val valueView = TextView(this).apply {
             text = choices[selected.coerceIn(0, choices.lastIndex)] + "   ›"
-            textSize = 14f
+            textSize = 12f
             setTextColor(Appearance.accent(this@MainActivity))
-            setPadding(0, dp(4), 0, 0)
+            setPadding(0, dp(2), 0, 0)
         }
         card.addView(titleView)
         card.addView(valueView)
@@ -3350,9 +3350,9 @@ class MainActivity : Activity() {
             }
             dialog.show()
         }
-        parent.addView(card, LinearLayout.LayoutParams(-1, dp(72)).apply { bottomMargin = dp(8) })
+        parent.addView(card, LinearLayout.LayoutParams(-1, dp(54)).apply { bottomMargin = dp(5) })
     }
-    private fun rowParams() = LinearLayout.LayoutParams(-1, dp(64)).apply { bottomMargin = dp(8) }
+    private fun rowParams() = LinearLayout.LayoutParams(-1, dp(50)).apply { bottomMargin = dp(5) }
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
     private fun requestRuntimePermissions() {
