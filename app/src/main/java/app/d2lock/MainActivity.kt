@@ -3177,12 +3177,16 @@ class MainActivity : Activity() {
             },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
             addView(TextView(this@MainActivity).apply {
                 val events=pipeline.timeline.mapNotNull { l -> val p=l.split("|",limit=3); p.getOrNull(0)?.toLongOrNull()?.let { Triple(it,p.getOrElse(1){""},p.getOrElse(2){""}) } }.sortedBy { it.first }
-                val bio=events.lastOrNull { it.second=="BIOMETRIC" || it.second=="FINGERPRINT" }
-                val launch=events.lastOrNull { it.second=="D2_LAUNCH" }
+                val wake=events.lastOrNull { it.second=="WAKE" }
+                val request=events.lastOrNull { it.second=="D2_LAUNCH_REQUEST" || it.second=="D2_LAUNCH_REQUESTED" }
+                val accepted=events.lastOrNull { it.second=="D2_LAUNCH_ACCEPTED" }
+                val visible=events.lastOrNull { it.second=="D2_VISIBLE" }
+                val firstDraw=events.lastOrNull { it.second=="D2_FIRST_DRAW" }
                 val healthy=events.lastOrNull { it.second=="D2_HEALTHY" }
-                val bioLaunch=if(bio!=null&&launch!=null&&launch.first>=bio.first) "${launch.first-bio.first} ms" else "Waiting"
-                val launchHealthy=if(launch!=null&&healthy!=null&&healthy.first>=launch.first) "${healthy.first-launch.first} ms" else "Waiting"
-                text="LATENCY MONITOR\nBiometric → D2 launch  •  $bioLaunch\nD2 launch → healthy  •  $launchHealthy"
+                fun delta(a: Triple<Long,String,String>?, b: Triple<Long,String,String>?) =
+                    if(a!=null&&b!=null&&b.first>=a.first) "${b.first-a.first} ms" else "Waiting"
+                val path=accepted?.third ?: request?.third ?: "Waiting"
+                text="WAKE / VISIBILITY MONITOR\nWake → request  •  ${delta(wake,request)}\nRequest → visible  •  ${delta(request,visible)}\nVisible → first draw  •  ${delta(visible,firstDraw)}\nFirst draw → healthy  •  ${delta(firstDraw,healthy)}\nLaunch path  •  $path"
                 textSize=11f; typeface=android.graphics.Typeface.MONOSPACE; setTextColor(Appearance.text(this@MainActivity))
                 setPadding(dp(12),dp(10),dp(12),dp(10)); background=Appearance.glass(this@MainActivity,20f,24,true)
             },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
