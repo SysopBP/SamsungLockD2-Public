@@ -2720,7 +2720,8 @@ class MainActivity : Activity() {
             Triple(R.drawable.ic_guardian_notifications, "Alerts", "notifications"),
             Triple(R.drawable.ic_palette, "Theme", "app_theme"),
             Triple(R.drawable.ic_nav_bar, "Bar", "floating_bar"),
-            Triple(R.drawable.ic_nav_settings, "All", "settings")
+            Triple(R.drawable.ic_nav_settings, "All", "settings"),
+            Triple(R.drawable.ic_guardian_device, "Logs", "guardian_logs")
         )
         // Beta.2 Guardian Dock: the center core is a live health surface, not a fake
         // security indicator. Green requires the configured protection stack; amber
@@ -2812,6 +2813,8 @@ class MainActivity : Activity() {
                     performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
                     if (target == "settings") {
                         showQuickSettingsSheet(root, scroll)
+                    } else if (target == "guardian_logs") {
+                        showGuardianLogCenter()
                     } else {
                         root.findViewWithTag<android.view.View>(target)?.let { view ->
                             val rect = android.graphics.Rect()
