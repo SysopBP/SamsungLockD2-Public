@@ -11,7 +11,7 @@ android {
         minSdk = 31
         targetSdk = 37
         versionCode = 19
-        versionName = "0.6.0-guardian-ui9-v19-743diag"
+        versionName = "0.6.0-guardian-ui9-v19-744heartbeat"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
