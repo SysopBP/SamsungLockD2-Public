@@ -134,6 +134,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         private const val KEY_SYSTEM_TIMELINE = "system_timeline"
         private const val KEY_PIPELINE_TIMELINE = "pipeline_timeline"
         private const val KEY_LAST_BIOMETRIC_MS = "pipeline_last_biometric_ms"
+        private const val KEY_GUARDIAN_LOG = "guardian_log_center"
 
         private fun directBootPrefs(context: Context) =
             context.createDeviceProtectedStorageContext()
@@ -148,7 +149,27 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         )
 
         data class PipelineMetrics(val timeline: List<String>, val lastBiometricMs: Long?)
+        private fun recordLog(context: Context, category: String, message: String, level: String = "I") {
+            val prefs = directBootPrefs(context)
+            val now = System.currentTimeMillis()
+            val old = prefs.getString(KEY_GUARDIAN_LOG, "").orEmpty()
+                .lineSequence().filter { it.isNotBlank() }.take(199).toList()
+            prefs.edit().putString(KEY_GUARDIAN_LOG, (listOf("$now|$level|$category|$message") + old).joinToString("\n")).apply()
+        }
+        fun guardianLog(context: Context): List<String> =
+            directBootPrefs(context).getString(KEY_GUARDIAN_LOG, "").orEmpty()
+                .lineSequence().filter { it.isNotBlank() }.take(200).toList()
+        fun clearGuardianLog(context: Context) =
+            directBootPrefs(context).edit().remove(KEY_GUARDIAN_LOG).apply()
+
         private fun recordPipeline(context: Context, stage: String, detail: String) {
+            recordLog(context, when {
+                stage.contains("BIOMETRIC") || stage.contains("FINGERPRINT") -> "BIOMETRIC"
+                stage.contains("KEYGUARD") -> "KEYGUARD"
+                stage.contains("BOOT") -> "BOOT"
+                stage.startsWith("D2_") -> "GUARDIAN"
+                else -> "SYSTEM_SERVER"
+            }, "$stage • $detail")
             val prefs = directBootPrefs(context)
             val now = System.currentTimeMillis()
             val old = prefs.getString(KEY_PIPELINE_TIMELINE, "").orEmpty()
