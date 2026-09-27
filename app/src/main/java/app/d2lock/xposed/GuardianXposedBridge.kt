@@ -7,6 +7,7 @@ import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
+import io.github.libxposed.api.XposedModuleInterface.SystemServerStartingParam
 import java.lang.reflect.Method
 
 /**
@@ -25,6 +26,18 @@ class GuardianXposedBridge : XposedModule() {
         log(Log.INFO, TAG, "GUARDIAN_XPOSED_LOADED api=$apiVersion framework=$frameworkName")
     }
 
+    /**
+     * Stage 2c: system_server observation bridge.
+     *
+     * Deliberately read-only. D2 remains a normal application UID; libxposed injects
+     * this entry into system_server (UID 1000) when the static "system" scope is enabled.
+     * No return values or arguments are modified in this stage.
+     */
+    override fun onSystemServerStarting(param: SystemServerStartingParam) {
+        log(Log.INFO, TAG, "GUARDIAN_SYS_READY uid=${android.os.Process.myUid()} process=system_server")
+        installSystemServerDiagnostics(param.classLoader)
+    }
+
     override fun onPackageReady(param: PackageReadyParam) {
         if (param.packageName != SYSTEM_UI) return
 
@@ -34,6 +47,82 @@ class GuardianXposedBridge : XposedModule() {
         installGuardianSystemUiHooks(param.classLoader)
         installFingerprintStateDiagnostics(param.classLoader)
         installFingerprintEnrollmentDiagnostics(param.classLoader)
+    }
+
+
+    /**
+     * Small, compatibility-oriented probes for the services involved in the D2/keyguard
+     * race. We intentionally log only target + method here: credential/biometric arguments
+     * can contain security-sensitive framework objects and must never be dumped.
+     */
+    private fun installSystemServerDiagnostics(classLoader: ClassLoader) {
+        val targets = listOf(
+            "com.android.server.locksettings.LockSettingsService" to listOf(
+                "systemReady", "verifyCredential", "setLockCredential",
+                "getCredentialType", "getStrongAuthForUser"
+            ),
+            "com.android.server.biometrics.BiometricService" to listOf(
+                "onStart", "authenticate", "cancelAuthentication",
+                "registerAuthenticator", "getCurrentStrength"
+            ),
+            "com.android.server.wm.KeyguardController" to listOf(
+                "setKeyguardShown", "keyguardGoingAway",
+                "dismissKeyguard", "isKeyguardLocked"
+            ),
+            "com.android.server.wm.ActivityTaskManagerService" to listOf(
+                "keyguardGoingAway", "setLockScreenShown"
+            ),
+            "com.android.server.power.PowerManagerService" to listOf(
+                "wakeUpInternal", "goToSleepInternal"
+            )
+        )
+
+        var installed = 0
+        targets.forEach { (className, methodNames) ->
+            val owner = runCatching { Class.forName(className, false, classLoader) }.getOrNull()
+            if (owner == null) {
+                log(Log.INFO, TAG, "GUARDIAN_SYS_CLASS_MISSING target=$className")
+                return@forEach
+            }
+
+            owner.declaredMethods
+                .filter { it.name in methodNames }
+                .distinctBy { it.toGenericString() }
+                .forEach { method ->
+                    try {
+                        method.isAccessible = true
+                        hook(method)
+                            .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                            .intercept { chain ->
+                                log(
+                                    Log.INFO,
+                                    TAG,
+                                    "GUARDIAN_SYS_CALL target=${owner.name}#${method.name}"
+                                )
+                                chain.proceed()
+                            }
+                        installed++
+                        log(
+                            Log.INFO,
+                            TAG,
+                            "GUARDIAN_SYS_HOOK_INSTALLED target=${owner.name}#${method.name}"
+                        )
+                    } catch (t: Throwable) {
+                        log(
+                            Log.WARN,
+                            TAG,
+                            "GUARDIAN_SYS_HOOK_FAILED target=${owner.name}#${method.name}",
+                            t
+                        )
+                    }
+                }
+        }
+
+        if (installed == 0) {
+            log(Log.WARN, TAG, "GUARDIAN_SYS_UNAVAILABLE reason=no_compatible_framework_targets")
+        } else {
+            log(Log.INFO, TAG, "GUARDIAN_SYS_ACTIVE hooks=$installed mode=observe_only")
+        }
     }
 
     /**
