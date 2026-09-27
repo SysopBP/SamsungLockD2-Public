@@ -914,7 +914,8 @@ class MainActivity : Activity() {
                 setTextColor(Appearance.text(this@MainActivity)); background=Appearance.glass(this@MainActivity,22f,34,true)
                 setPadding(dp(14),dp(11),dp(14),dp(11))
                 setOnClickListener { showSystemServerDashboard() }
-            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })            addView(TextView(this@MainActivity).apply {
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
+            addView(TextView(this@MainActivity).apply {
                 text="Open Guardian Log Center"; textSize=15f; gravity=Gravity.CENTER
                 setTextColor(Appearance.text(this@MainActivity)); background=Appearance.glass(this@MainActivity,22f,34,true)
                 setPadding(dp(14),dp(11),dp(14),dp(11)); setOnClickListener { showGuardianLogCenter() }
