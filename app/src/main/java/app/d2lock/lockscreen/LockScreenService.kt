@@ -65,6 +65,7 @@ class LockScreenService : Service() {
         if (action == ACTION_XPOSED_FRAMEWORK_EVENT) {
             val event = intent?.getStringExtra(EXTRA_FRAMEWORK_EVENT) ?: "UNKNOWN"
             val source = intent?.getStringExtra(EXTRA_KEYGUARD_SOURCE) ?: "system_server"
+            KeyguardSignalReceiver.recordGuardianStage(this, "D2_HANDOFF", event)
             Log.i(TAG, "GUARDIAN_FRAMEWORK_HANDOFF event=$event source=$source")
             if (event == "WAKE" || event == "KEYGUARD" || event == "TASK_KEYGUARD") {
                 val callActive = app.d2lock.notifications.CallNotificationStore.items.isNotEmpty()
@@ -92,6 +93,7 @@ class LockScreenService : Service() {
                     handler.postAtTime({
                         if (Prefs.enabled(this) && PinStore(this).configured() &&
                             app.d2lock.notifications.CallNotificationStore.items.isEmpty()) {
+                            KeyguardSignalReceiver.recordGuardianStage(this, "D2_LAUNCH", "keyguard_clear")
                             Log.i(TAG, "GUARDIAN_KEYGUARD_CLEAR launch=single")
                             val launched = Prefs.rootMode(this) && RootManager.launchCompanion()
                             Log.i(TAG, "GUARDIAN_D2_HANDOFF_LAUNCH path=${if (launched) "root" else "activity"}")
@@ -150,6 +152,7 @@ class LockScreenService : Service() {
         getSharedPreferences(RECOVERY_PREFS, MODE_PRIVATE).edit()
             .putInt(KEY_ATTEMPTS, 0).putLong(KEY_WINDOW_START, 0L)
             .putLong(KEY_LAST_HEALTHY, System.currentTimeMillis()).apply()
+        KeyguardSignalReceiver.recordGuardianStage(this, "D2_HEALTHY", "surface")
         Log.i(TAG, "GUARDIAN_HEALTHY")
     }
 
@@ -160,11 +163,13 @@ class LockScreenService : Service() {
         var attempts = prefs.getInt(KEY_ATTEMPTS, 0)
         if (start == 0L || now - start > BOOT_WINDOW_MS) { start = now; attempts = 0 }
         if (attempts >= MAX_BOOT_ATTEMPTS) {
+            KeyguardSignalReceiver.recordGuardianStage(this, "BOOT_SUPPRESSED", attempts.toString())
             Log.w(TAG, "GUARDIAN_BOOT_SUPPRESSED attempts=$attempts")
             return false
         }
         attempts++
         prefs.edit().putLong(KEY_WINDOW_START, start).putInt(KEY_ATTEMPTS, attempts).apply()
+        KeyguardSignalReceiver.recordGuardianStage(this, "BOOT_ATTEMPT", attempts.toString())
         Log.i(TAG, "GUARDIAN_BOOT_ATTEMPT n=$attempts")
         return true
     }
