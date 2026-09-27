@@ -15,6 +15,7 @@ import java.lang.reflect.Method
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Guardian Xposed Bridge v0.2 — Stage 2 diagnostics.
@@ -28,6 +29,8 @@ class GuardianXposedBridge : XposedModule() {
         private const val SYSTEM_UI = "com.android.systemui"
         private const val SAMSUNG_BIOMETRICS = "com.samsung.android.biometrics.app.setting"
         private val heartbeatStarted = AtomicBoolean(false)
+        private val lastDiagnosticSignal = ConcurrentHashMap<String, Long>()
+        private const val DIAGNOSTIC_SIGNAL_COOLDOWN_MS = 5_000L
     }
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
@@ -59,6 +62,21 @@ class GuardianXposedBridge : XposedModule() {
 
 
     private fun signalGuardianFrameworkEvent(owner: String, method: String) {
+        // Wake/keyguard transitions stay immediate. Collapse duplicate diagnostic
+        // broadcasts so observation cannot become unnecessary Guardian work.
+        val eventKey = "$owner#$method"
+        val immediate = owner.endsWith("PowerManagerService") ||
+            owner.endsWith("KeyguardController") ||
+            owner.endsWith("ActivityTaskManagerService")
+        if (!immediate) {
+            val now = android.os.SystemClock.elapsedRealtime()
+            val previous = lastDiagnosticSignal[eventKey]
+            if (previous != null && now - previous < DIAGNOSTIC_SIGNAL_COOLDOWN_MS) {
+                log(Log.DEBUG, TAG, "GUARDIAN_SYS_SIGNAL_DEDUPED target=$eventKey")
+                return
+            }
+            lastDiagnosticSignal[eventKey] = now
+        }
         runCatching {
             val activityThread = Class.forName("android.app.ActivityThread")
             val app = activityThread.getDeclaredMethod("currentApplication").invoke(null) as? Context
