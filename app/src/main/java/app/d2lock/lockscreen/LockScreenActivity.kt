@@ -214,6 +214,15 @@ class LockScreenActivity : Activity() {
         media = MediaControllerBridge(this)
         val guardianUi = buildUi()
         setContentView(guardianUi)
+        if (!preview) {
+            KeyguardSignalReceiver.recordGuardianStage(this, "D2_ACTIVITY_CREATED", "lock_surface")
+            guardianUi.post {
+                if (!isDestroyed && !isFinishing) {
+                    KeyguardSignalReceiver.recordGuardianStage(this, "D2_FIRST_DRAW", "decor_posted")
+                    Log.i("SamsungLockD2", "GUARDIAN_FIRST_DRAW")
+                }
+            }
+        }
         if (Prefs.experimentalLockMotion(this)) {
             guardianUi.alpha = 0f
             guardianUi.scaleX = .985f
@@ -242,7 +251,10 @@ class LockScreenActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        if (!preview && Prefs.kiosk(this)) Log.i("SamsungLockD2", "GUARDIAN_ACTIVITY_RESUMED")
+        if (!preview) {
+            KeyguardSignalReceiver.recordGuardianStage(this, "D2_VISIBLE", "onResume")
+            if (Prefs.kiosk(this)) Log.i("SamsungLockD2", "GUARDIAN_ACTIVITY_RESUMED")
+        }
         if (!::clock.isInitialized) return
         wallpaperActive = true
         wallpaperAnimations.forEach { it.resume() }
