@@ -32,6 +32,9 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                 .putString(KEY_LAST_STATE, state)
                 .putString(KEY_LAST_SOURCE, source)
                 .apply()
+            if (state == "HEARTBEAT") {
+                prefs.edit().putLong(KEY_LAST_HEARTBEAT_MS, System.currentTimeMillis()).apply()
+            }
         }.onFailure {
             Log.w(TAG, "GUARDIAN_XPOSED_DIRECT_BOOT_WRITE_FAILED state=$state", it)
         }
@@ -65,6 +68,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         private const val KEY_LAST_EVENT_MS = "last_systemui_event_ms"
         private const val KEY_LAST_STATE = "last_systemui_state"
         private const val KEY_LAST_SOURCE = "last_systemui_source"
+        private const val KEY_LAST_HEARTBEAT_MS = "last_systemui_heartbeat_ms"
         private const val KEY_PENDING_HANDOFF = "pending_handoff"
         private const val KEY_PENDING_STATE = "pending_state"
         private const val KEY_PENDING_SOURCE = "pending_source"
@@ -72,6 +76,19 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         private fun directBootPrefs(context: Context) =
             context.createDeviceProtectedStorageContext()
                 .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+        data class BridgeHealth(val status: String, val ageMs: Long?, val source: String?)
+
+        fun bridgeHealth(context: Context, staleAfterMs: Long = 90_000L): BridgeHealth {
+            val prefs = directBootPrefs(context)
+            val heartbeat = prefs.getLong(KEY_LAST_HEARTBEAT_MS, 0L)
+            val lastEvent = prefs.getLong(KEY_LAST_EVENT_MS, 0L)
+            val timestamp = maxOf(heartbeat, lastEvent)
+            val source = prefs.getString(KEY_LAST_SOURCE, null)
+            if (timestamp <= 0L) return BridgeHealth("WAITING", null, source)
+            val age = (System.currentTimeMillis() - timestamp).coerceAtLeast(0L)
+            return BridgeHealth(if (age <= staleAfterMs) "READY" else "STALE", age, source)
+        }
 
         fun replayDeferred(context: Context): Boolean {
             val unlocked = context.getSystemService(UserManager::class.java)?.isUserUnlocked == true
