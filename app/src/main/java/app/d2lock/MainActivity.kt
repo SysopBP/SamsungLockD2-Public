@@ -2169,6 +2169,20 @@ class MainActivity : Activity() {
                 textSize = 18f
                 setTextColor(Appearance.text(this@MainActivity))
             })
+            val bridgeHealth = app.d2lock.lockscreen.KeyguardSignalReceiver.bridgeHealth(this@MainActivity)
+            addView(TextView(this@MainActivity).apply {
+                val age = bridgeHealth.ageMs?.let { "${it / 1000}s ago" } ?: "no heartbeat yet"
+                text = "SystemUI bridge  •  ${bridgeHealth.status}\nHeartbeat: $age"
+                textSize = 14f
+                setTextColor(
+                    when (bridgeHealth.status) {
+                        "READY" -> Color.rgb(102, 220, 132)
+                        "STALE" -> Color.rgb(245, 184, 72)
+                        else -> Appearance.secondary(this@MainActivity)
+                    }
+                )
+                setPadding(0, dp(7), 0, dp(7))
+            })
             addView(TextView(this@MainActivity).apply {
                 text = "Enable and validate one integration at a time. Behavioral hooks remain off by default; Guardian root/kiosk recovery stays available as fallback."
                 textSize = 12f
