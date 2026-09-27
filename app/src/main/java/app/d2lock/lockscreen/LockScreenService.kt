@@ -70,8 +70,10 @@ class LockScreenService : Service() {
             if (event == "WAKE" || event == "KEYGUARD" || event == "TASK_KEYGUARD") {
                 val callActive = app.d2lock.notifications.CallNotificationStore.items.isNotEmpty()
                 if (!callActive && Prefs.enabled(this) && PinStore(this).configured()) {
+                    KeyguardSignalReceiver.recordDecision(this, "REASSERT", "framework_${event.lowercase()}")
                     GuardianWatchdog.reassert(this, "framework_${event.lowercase()}", callActive)
                 } else {
+                    KeyguardSignalReceiver.recordDecision(this, "SKIPPED", "event=$event callActive=$callActive armed=${Prefs.enabled(this)} configured=${PinStore(this).configured()}")
                     Log.i(TAG, "GUARDIAN_FRAMEWORK_REASSERT_SKIPPED event=$event callActive=$callActive")
                 }
             }
@@ -94,6 +96,7 @@ class LockScreenService : Service() {
                         if (Prefs.enabled(this) && PinStore(this).configured() &&
                             app.d2lock.notifications.CallNotificationStore.items.isEmpty()) {
                             KeyguardSignalReceiver.recordGuardianStage(this, "D2_LAUNCH", "keyguard_clear")
+                            KeyguardSignalReceiver.recordDecision(this, "LAUNCH", "keyguard_clear")
                             Log.i(TAG, "GUARDIAN_KEYGUARD_CLEAR launch=single")
                             val launched = Prefs.rootMode(this) && RootManager.launchCompanion()
                             Log.i(TAG, "GUARDIAN_D2_HANDOFF_LAUNCH path=${if (launched) "root" else "activity"}")
@@ -112,6 +115,7 @@ class LockScreenService : Service() {
             Log.w(TAG, "GUARDIAN_SURFACE_LOST reason=$reason")
             handler.removeCallbacksAndMessages(SURFACE_RECOVERY_TOKEN)
             if (keyguardHandoffActive) {
+                KeyguardSignalReceiver.recordDecision(this, "DEFERRED", "surface_recovery:$reason:keyguard")
                 Log.i(TAG, "GUARDIAN_SURFACE_RECOVERY_DEFERRED reason=$reason keyguardHandoff=true")
                 return START_STICKY
             }
@@ -164,6 +168,7 @@ class LockScreenService : Service() {
         if (start == 0L || now - start > BOOT_WINDOW_MS) { start = now; attempts = 0 }
         if (attempts >= MAX_BOOT_ATTEMPTS) {
             KeyguardSignalReceiver.recordGuardianStage(this, "BOOT_SUPPRESSED", attempts.toString())
+            KeyguardSignalReceiver.recordDecision(this, "SUPPRESSED", "boot_attempt_limit:$attempts")
             Log.w(TAG, "GUARDIAN_BOOT_SUPPRESSED attempts=$attempts")
             return false
         }
