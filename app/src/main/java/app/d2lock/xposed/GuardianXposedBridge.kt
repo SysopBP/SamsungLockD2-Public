@@ -86,6 +86,7 @@ class GuardianXposedBridge : XposedModule() {
                 owner.endsWith("PowerManagerService") && method == "goToSleepInternal" -> "SLEEP"
                 owner.endsWith("KeyguardController") -> "KEYGUARD"
                 owner.endsWith("ActivityTaskManagerService") -> "TASK_KEYGUARD"
+                owner.endsWith("ActivityManagerService") && method == "systemReady" -> "BOOT_READY"
                 owner.endsWith("BiometricService") -> "BIOMETRIC"
                 owner.endsWith("LockSettingsService") -> "LOCK_SETTINGS"
                 else -> "FRAMEWORK"
@@ -104,6 +105,9 @@ class GuardianXposedBridge : XposedModule() {
 
     private fun installSystemServerDiagnostics(classLoader: ClassLoader) {
         val targets = listOf(
+            // Earliest conservative launch handoff: wait for AMS systemReady rather than
+            // trying to start Guardian while system_server is still constructing services.
+            "com.android.server.am.ActivityManagerService" to listOf("systemReady"),
             "com.android.server.locksettings.LockSettingsService" to listOf(
                 "systemReady", "verifyCredential", "setLockCredential", "getCredentialType", "getStrongAuthForUser"
             ),
