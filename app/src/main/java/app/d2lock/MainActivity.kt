@@ -2990,6 +2990,7 @@ class MainActivity : Activity() {
         val ui = KeyguardSignalReceiver.bridgeHealth(this)
         val fp = KeyguardSignalReceiver.fingerprintHealth(this)
         val metrics = KeyguardSignalReceiver.systemMetrics(this)
+        val pipeline = KeyguardSignalReceiver.pipelineMetrics(this)
         fun age(ms: Long?): String = when {
             ms == null -> "Waiting"
             ms < 1_000 -> "Now"
@@ -3047,6 +3048,28 @@ class MainActivity : Activity() {
                     textSize=13f; setLineSpacing(0f,1.15f); setTextColor(Appearance.text(this@MainActivity)); setPadding(0,dp(6),0,0)
                 })
             },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
+            addView(TextView(this@MainActivity).apply {
+                text="BIOMETRIC + BOOT PIPELINE"; textSize=11f; letterSpacing=.08f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,0,0,dp(6))
+            })
+            addView(TextView(this@MainActivity).apply {
+                val ordered = pipeline.timeline.mapNotNull { line ->
+                    val p=line.split("|",limit=3); if(p.size<3) null else Triple(p[0].toLongOrNull() ?: 0L,p[1],p[2])
+                }.sortedBy { it.first }
+                text=if(ordered.isEmpty()) "Waiting for pipeline telemetry. Soft reboot or authenticate once to populate this view."
+                else {
+                    val base=ordered.first().first
+                    ordered.joinToString("\n") { item ->
+                        val delta=(item.first-base).coerceAtLeast(0L)
+                        "+${delta}ms  •  ${item.second}  •  ${item.third}"
+                    }
+                }
+                textSize=11f; typeface=android.graphics.Typeface.MONOSPACE; setTextColor(Appearance.text(this@MainActivity))
+                setPadding(dp(12),dp(10),dp(12),dp(10)); background=Appearance.glass(this@MainActivity,20f,26,true)
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
+            addView(TextView(this@MainActivity).apply {
+                text="Pipeline tracks event timing only. Android remains the authority for fingerprint verification."
+                textSize=10f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,0,0,dp(10))
+            })
             addView(TextView(this@MainActivity).apply {
                 text="RECENT FRAMEWORK EVENTS"; textSize=11f; letterSpacing=.08f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,0,0,dp(6))
             })
