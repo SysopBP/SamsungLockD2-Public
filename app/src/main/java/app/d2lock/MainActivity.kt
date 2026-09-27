@@ -2073,7 +2073,7 @@ class MainActivity : Activity() {
                         addView(TextView(this@MainActivity).apply {
                             text=status; textSize=8f; setTextColor(Appearance.secondary(this@MainActivity))
                         },LinearLayout.LayoutParams(0,-2,1f))
-                        addView(android.widget.Switch(this@MainActivity).apply {
+                        addView(compactAccentSwitch().apply {
                             isChecked=checked(); scaleX=.78f; scaleY=.78f
                             setOnCheckedChangeListener { _,v -> changed(v) }
                         },LinearLayout.LayoutParams(dp(52),-2))
@@ -2152,7 +2152,7 @@ class MainActivity : Activity() {
                     addView(TextView(this@MainActivity).apply {
                         text = title; textSize = 11f; maxLines = 2; setTextColor(Appearance.text(this@MainActivity))
                     }, LinearLayout.LayoutParams(0, -2, 1f))
-                    addView(android.widget.Switch(this@MainActivity).apply {
+                    addView(compactAccentSwitch().apply {
                         isChecked = checked(); scaleX = .82f; scaleY = .82f
                         setOnCheckedChangeListener { _, value -> changed(value) }
                     }, LinearLayout.LayoutParams(dp(54), -2))
@@ -2492,6 +2492,30 @@ class MainActivity : Activity() {
     }
 
     private fun guardianSwitch(): Switch = GuardianSwitch(this)
+
+    /**
+     * Compact native switch used inside two-column cards. Explicit tinting keeps
+     * Samsung/Theme Park from injecting the default Material lavender/purple.
+     */
+    private fun compactAccentSwitch(): Switch = Switch(this).apply {
+        val accent = Appearance.accent(this@MainActivity)
+        val checked = intArrayOf(android.R.attr.state_checked)
+        val unchecked = intArrayOf(-android.R.attr.state_checked)
+        thumbTintList = android.content.res.ColorStateList(
+            arrayOf(checked, unchecked),
+            intArrayOf(
+                (accent and 0x00ffffff) or 0xff000000.toInt(),
+                if (Appearance.dark(this@MainActivity)) 0xffd8dbe2.toInt() else 0xff666a73.toInt()
+            )
+        )
+        trackTintList = android.content.res.ColorStateList(
+            arrayOf(checked, unchecked),
+            intArrayOf(
+                (accent and 0x00ffffff) or 0x76000000,
+                if (Appearance.dark(this@MainActivity)) 0x45ffffff else 0x35000000
+            )
+        )
+    }
 
     private inner class GuardianSlider(context: android.content.Context) : SeekBar(context) {
         private val fill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
