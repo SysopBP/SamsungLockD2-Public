@@ -17,7 +17,7 @@ object ThemeOptions {
     fun add(activity: Activity, parent: LinearLayout, refresh: () -> Unit) {
         val c = activity
         fun dp(v: Int) = (v*c.resources.displayMetrics.density).toInt()
-        fun label(value: String) = TextView(c).apply { text=value; textSize=15f; setTextColor(Appearance.text(c)); setPadding(dp(8),dp(12),dp(8),dp(6)) }
+        fun label(value: String) = TextView(c).apply { text=value; textSize=14f; setTextColor(Appearance.text(c)); setPadding(dp(6),dp(8),dp(6),dp(4)) }
         fun ui9Card() = Appearance.glass(c, 28f, 34, true)
         fun description(value: String) = TextView(c).apply {
             text = value
@@ -95,7 +95,7 @@ object ThemeOptions {
             parent.addView(LinearLayout(c).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = android.view.Gravity.CENTER_VERTICAL
-                setPadding(dp(18), 0, dp(16), 0)
+                setPadding(dp(14), 0, dp(12), 0)
                 background = ui9Card()
                 isClickable = true
                 isFocusable = true
@@ -112,7 +112,7 @@ object ThemeOptions {
                     text = values.getOrElse(selected) { values.firstOrNull().orEmpty() } + "  ›"
                     textSize = 14f
                     gravity = android.view.Gravity.CENTER
-                    setPadding(dp(14), dp(10), dp(14), dp(10))
+                    setPadding(dp(12), dp(7), dp(12), dp(7))
                     setTextColor(Appearance.text(c))
                     background = Appearance.glass(c, 22f, 26, true)
                 }, LinearLayout.LayoutParams(-2, -2))
@@ -138,7 +138,7 @@ object ThemeOptions {
                     }
                     dialog.show()
                 }
-            }, LinearLayout.LayoutParams(-1, dp(78)).apply { bottomMargin = dp(10) })
+            }, LinearLayout.LayoutParams(-1, dp(60)).apply { bottomMargin = dp(6) })
         }
         choice("App theme",listOf("Follow system","Light","Dark","AMOLED Black","One UI Dark","Graphite","Frosted Glass","Smoke","Wine Red","System (Dynamic)"),Appearance.mode(c),"mode")
         choice("Accent color",listOf("System wallpaper","Blue","Teal","Lavender","Rose","Amber","Sage","Wine Red","Deep Blue","Emerald","Purple","Custom color"),Appearance.accentChoice(c),"accent")
@@ -154,7 +154,7 @@ object ThemeOptions {
             setOnClickListener {
                 showCustomAccentDialog()
             }
-        },LinearLayout.LayoutParams(-1,dp(50)).apply { leftMargin=dp(8); rightMargin=dp(8); bottomMargin=dp(10) })
+        },LinearLayout.LayoutParams(-1,dp(50)).apply { leftMargin=dp(8); rightMargin=dp(8); bottomMargin=dp(6) })
         choice("Notification colors",listOf("Different colors per app","Use accent color","Monochrome","System colors","Custom color"),Appearance.notificationStyle(c),"notifications")
         val preview=TextView(c).apply {
             text="Notification preview\nA sample message in your chosen style"
@@ -173,7 +173,7 @@ object ThemeOptions {
                 progressDrawable=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 thumb=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 splitTrack=false
-                minimumHeight=dp(40)
+                minimumHeight=dp(32)
                 setPadding(dp(12),0,dp(12),0)
             }
             override fun onDraw(canvas: Canvas) {
@@ -240,8 +240,8 @@ object ThemeOptions {
                     override fun onStartTrackingTouch(seekBar: SeekBar?)=Unit
                     override fun onStopTrackingTouch(seekBar: SeekBar?)=Unit
                 })
-            },LinearLayout.LayoutParams(-1,dp(40)))
-            parent.addView(glassSlider,LinearLayout.LayoutParams(-1,dp(40)).apply {
+            },LinearLayout.LayoutParams(-1,dp(32)))
+            parent.addView(glassSlider,LinearLayout.LayoutParams(-1,dp(32)).apply {
                 topMargin=0
                 bottomMargin=dp(10)
             })
@@ -249,17 +249,17 @@ object ThemeOptions {
         slider("Card opacity","cards",20,100,Appearance.cardOpacity(c),"%")
         slider("Banner opacity","banners",40,100,Appearance.bannerOpacity(c),"%")
         slider("Corner radius","radius",8,36,Appearance.radius(c)," dp")
-        parent.addView(preview,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(18); bottomMargin=dp(18) })
+        parent.addView(preview,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(10); bottomMargin=dp(10) })
         parent.addView(label("Lower opacity shows more of the background. Wallpaper colors use Android's system palette. A custom lock wallpaper keeps light text for readability."))
         parent.addView(label("FLOATING LOCK-SCREEN BAR"))
         slider("Bar width","bar_width",65,100,Appearance.barWidth(c),"%")
         slider("Bar opacity","bar_opacity",40,100,Appearance.barOpacity(c),"%")
         slider("Distance above navigation area","bar_gap",8,72,Appearance.barGap(c)," dp")
-        parent.addView(barPreview,LinearLayout.LayoutParams(-1,dp(64)))
+        parent.addView(barPreview,LinearLayout.LayoutParams(-1,dp(52)))
         parent.addView(label("The bar uses your accent and keeps your existing shortcuts. Open the lock-screen preview to see its width and position."))
         parent.addView(LinearLayout(c).apply {
             orientation=LinearLayout.VERTICAL
-            setPadding(dp(18),dp(12),dp(18),dp(12))
+            setPadding(dp(14),dp(8),dp(14),dp(8))
             background=ui9Card()
             isClickable=true
             isFocusable=true
@@ -275,6 +275,6 @@ object ThemeOptions {
                 setPadding(0,dp(3),0,0)
             })
             setOnClickListener { Appearance.reset(c); refresh() }
-        },LinearLayout.LayoutParams(-1,dp(72)).apply { topMargin=dp(12); bottomMargin=dp(8) })
+        },LinearLayout.LayoutParams(-1,dp(56)).apply { topMargin=dp(8); bottomMargin=dp(6) })
     }
 }
