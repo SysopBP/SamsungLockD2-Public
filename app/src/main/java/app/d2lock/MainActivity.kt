@@ -479,24 +479,91 @@ class MainActivity : Activity() {
                 })
                 setOnClickListener {
                     performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                    val fp=fingerprintIdentity
-                    val fingerprintText=if(fp!=null) buildString {
-                        append("\n\nFingerprint hardware")
-                        fun line(label:String,value:String) { if(value != "Not reported" && value != "Unknown") append("\n$label: $value") }
-                        line("Product",fp.productId)
-                        line("Hardware Sensor ID",fp.hardwareSensorId)
-                        line("Framework Sensor ID",fp.frameworkSensorId)
-                        line("Chip SN",fp.chipSn)
-                        line("Firmware",fp.firmwareVersion)
-                        line("Templates supported",fp.maxTemplates)
-                        line("Provider",fp.provider)
-                        line("HAL deaths",fp.halDeaths)
-                    } else "\n\nFingerprint hardware\nRoot diagnostic unavailable"
-                    AlertDialog.Builder(this@MainActivity)
-                        .setTitle("Device Identity")
-                        .setMessage("Manufacturer: ${android.os.Build.MANUFACTURER}\nModel: ${android.os.Build.MODEL}\nProduct: ${android.os.Build.PRODUCT}\nDevice: ${android.os.Build.DEVICE}\nAndroid: ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})\nBuild: ${android.os.Build.DISPLAY}"+fingerprintText)
-                        .setPositiveButton("Close",null)
-                        .show()
+                    val fp = fingerprintIdentity
+                    fun identityRow(label: String, value: String, accent: Boolean = false) = LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(dp(12), dp(7), dp(12), dp(7))
+                        addView(TextView(this@MainActivity).apply {
+                            text = label
+                            textSize = 12f
+                            setTextColor(Appearance.secondary(this@MainActivity))
+                        }, LinearLayout.LayoutParams(0, -2, .43f))
+                        addView(TextView(this@MainActivity).apply {
+                            text = value
+                            textSize = 14f
+                            gravity = Gravity.END
+                            setTextColor(if (accent) Appearance.accent(this@MainActivity) else Appearance.text(this@MainActivity))
+                            setTextIsSelectable(true)
+                        }, LinearLayout.LayoutParams(0, -2, .57f))
+                    }
+                    fun identitySection(title: String) = LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(dp(8), dp(8), dp(8), dp(8))
+                        background = Appearance.glass(this@MainActivity, 24f, 30, true)
+                        addView(TextView(this@MainActivity).apply {
+                            text = title
+                            textSize = 11f
+                            letterSpacing = .10f
+                            setTextColor(Appearance.secondary(this@MainActivity))
+                            setPadding(dp(12), dp(5), dp(12), dp(5))
+                        })
+                    }
+                    val identityBody = LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(dp(14), dp(10), dp(14), dp(14))
+                        background = Appearance.glass(this@MainActivity, 30f, 62, true)
+                        addView(TextView(this@MainActivity).apply {
+                            text = "KIOSK D2 GUARDIAN"
+                            textSize = 11f
+                            letterSpacing = .10f
+                            setTextColor(Appearance.secondary(this@MainActivity))
+                            setPadding(dp(4), 0, dp(4), dp(2))
+                        })
+                        addView(TextView(this@MainActivity).apply {
+                            text = "Device Identity"
+                            textSize = 23f
+                            setTextColor(Appearance.text(this@MainActivity))
+                            setPadding(dp(4), 0, dp(4), dp(10))
+                        })
+                        addView(identitySection("DEVICE").apply {
+                            addView(identityRow("Manufacturer", android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() }))
+                            addView(identityRow("Model", android.os.Build.MODEL, true))
+                            addView(identityRow("Product", android.os.Build.PRODUCT))
+                            addView(identityRow("Device", android.os.Build.DEVICE))
+                            addView(identityRow("Android", "${android.os.Build.VERSION.RELEASE}  ·  API ${android.os.Build.VERSION.SDK_INT}"))
+                            addView(identityRow("Build", android.os.Build.DISPLAY))
+                        }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+                        addView(identitySection("FINGERPRINT HARDWARE").apply {
+                            if (fp == null) {
+                                addView(identityRow("Status", "Root diagnostic unavailable"))
+                            } else {
+                                fun addIf(label: String, value: String, accent: Boolean = false) {
+                                    if (value != "Not reported" && value != "Unknown") addView(identityRow(label, value, accent))
+                                }
+                                addIf("Product", fp.productId, true)
+                                addIf("Hardware sensor", fp.hardwareSensorId)
+                                addIf("Framework sensor", fp.frameworkSensorId)
+                                addIf("Chip SN", fp.chipSn)
+                                addIf("Firmware", fp.firmwareVersion)
+                                addIf("Templates", fp.maxTemplates)
+                                addIf("Provider", fp.provider)
+                                addIf("HAL deaths", fp.halDeaths)
+                            }
+                        })
+                    }
+                    val identityDialog = AlertDialog.Builder(this@MainActivity)
+                        .setView(identityBody)
+                        .setPositiveButton("Close", null)
+                        .create()
+                    identityDialog.setOnShowListener {
+                        identityDialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 34f, 82, true))
+                        identityDialog.getButton(AlertDialog.BUTTON_POSITIVE)?.apply {
+                            setTextColor(Appearance.accent(this@MainActivity))
+                            textSize = 15f
+                        }
+                    }
+                    identityDialog.show()
                 }
             }
             root.addView(statusCard,LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
