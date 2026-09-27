@@ -2073,10 +2073,11 @@ class MainActivity : Activity() {
                         addView(TextView(this@MainActivity).apply {
                             text=status; textSize=8f; setTextColor(Appearance.secondary(this@MainActivity))
                         },LinearLayout.LayoutParams(0,-2,1f))
-                        addView(android.widget.Switch(this@MainActivity).apply {
+                        addView(guardianSwitch().apply {
                             isChecked=checked(); scaleX=.78f; scaleY=.78f
+                            setPadding(0, 0, dp(4), 0)
                             setOnCheckedChangeListener { _,v -> changed(v) }
-                        },LinearLayout.LayoutParams(dp(52),-2))
+                        },LinearLayout.LayoutParams(dp(58),dp(48)))
                     })
                 }
             fun labGrid(items:List<LinearLayout>) {
@@ -2152,10 +2153,11 @@ class MainActivity : Activity() {
                     addView(TextView(this@MainActivity).apply {
                         text = title; textSize = 11f; maxLines = 2; setTextColor(Appearance.text(this@MainActivity))
                     }, LinearLayout.LayoutParams(0, -2, 1f))
-                    addView(android.widget.Switch(this@MainActivity).apply {
+                    addView(guardianSwitch().apply {
                         isChecked = checked(); scaleX = .82f; scaleY = .82f
+                        setPadding(0, 0, dp(4), 0)
                         setOnCheckedChangeListener { _, value -> changed(value) }
-                    }, LinearLayout.LayoutParams(dp(54), -2))
+                    }, LinearLayout.LayoutParams(dp(60), dp(48)))
                 }
             fun compactGrid(items: List<Triple<String, () -> Boolean, (Boolean) -> Unit>>) {
                 items.chunked(2).forEach { pair ->
