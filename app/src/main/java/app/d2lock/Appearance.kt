@@ -48,7 +48,7 @@ object Appearance {
         // A manually selected custom accent is authoritative. Experimental
         // dynamic accent may decorate fixed presets, but must never mask the
         // color the user explicitly chose.
-        if (choice == 0 || (Prefs.experimentalDynamicAccent(c) && choice != 11)) {
+        if (choice == 0) {
             runCatching {
                 val colors = android.app.WallpaperManager.getInstance(c)
                     .getWallpaperColors(android.app.WallpaperManager.FLAG_SYSTEM)
