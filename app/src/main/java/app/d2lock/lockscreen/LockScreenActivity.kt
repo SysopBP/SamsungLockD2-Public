@@ -99,6 +99,7 @@ class LockScreenActivity : Activity() {
     private var preview = false
     private var unlocking = false
     private var healthyReported = false
+    private var deferredStartupScheduled = false
     private lateinit var kioskStatus: TextView
     private var chargingOverlay: LinearLayout? = null
     private var chargingOverlayHide: Runnable? = null
@@ -211,7 +212,6 @@ class LockScreenActivity : Activity() {
         if (!preview) app.d2lock.bridge.IslandBridge.setLocked(this, true)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
-        media = MediaControllerBridge(this)
         val guardianUi = buildUi()
         setContentView(guardianUi)
         if (!preview) {
@@ -240,13 +240,9 @@ class LockScreenActivity : Activity() {
             hide(WindowInsets.Type.statusBars())
             systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
-        NotificationStore.onChanged = { runOnUiThread(::renderNotifications) }
-        app.d2lock.notifications.CallNotificationStore.onChanged = { runOnUiThread(::renderNotifications) }
-        NotificationStore.onPosted = { item -> runOnUiThread { showLiveNotification(item) } }
-        renderNotifications()
-        WeatherRepository.load(this) { value -> runOnUiThread {
-            weather.text = value?.let { "${it.temperature}°${if (Prefs.celsius(this)) "C" else "F"}  ${it.label}" } ?: "Weather unavailable"
-        } }
+        // Keep onCreate lean: the lock surface must win the first-frame race.
+        // Notifications, weather, media, root probing and kiosk attachment are
+        // initialized only after the decor has had a chance to draw.
     }
 
     override fun onResume() {
@@ -258,25 +254,7 @@ class LockScreenActivity : Activity() {
         if (!::clock.isInitialized) return
         wallpaperActive = true
         wallpaperAnimations.forEach { it.resume() }
-        renderNotifications()
-        registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))?.let {
-            batteryReceiver.onReceive(this, it)
-        }
-        handler.post(ticker)
-        if (!preview && Prefs.quickSettingsGuard(this)) handler.post(quickSettingsGuard)
-        if (!preview && !unlocking && Prefs.kiosk(this)) {
-            RootKiosk.attach(this) { kioskStatus.text = it }
-            KioskD2Guardian.start(this)
-        }
-        // Fingerprint is an enhanced Guardian path: only offer it while root is
-        // actually available. After a normal reboot that loses temporary root,
-        // fall back to the configured Guardian PIN/pattern instead of opening a
-        // biometric session that depends on the enhanced integration.
-        if (!preview && !unlocking && !biometricRunning && app.d2lock.root.RootManager.isAvailable()) {
-            startGuardianFingerprint()
-        } else if (!preview && !unlocking && !app.d2lock.root.RootManager.isAvailable()) {
-            fingerprintGlass?.visibility = View.GONE
-        }
+        scheduleDeferredStartup()
         if (!preview && !healthyReported) {
             healthyReported = true
             window.decorView.postDelayed({
@@ -284,6 +262,56 @@ class LockScreenActivity : Activity() {
                     LockScreenService.markHealthy(this)
                 } else healthyReported = false
             }, 1500)
+        }
+    }
+
+    private fun scheduleDeferredStartup() {
+        if (deferredStartupScheduled) return
+        deferredStartupScheduled = true
+        window.decorView.post {
+            if (isDestroyed || isFinishing) {
+                deferredStartupScheduled = false
+                return@post
+            }
+
+            // First-frame work: cheap UI state only.
+            if (!::media.isInitialized) media = MediaControllerBridge(this)
+            NotificationStore.onChanged = { runOnUiThread(::renderNotifications) }
+            app.d2lock.notifications.CallNotificationStore.onChanged = { runOnUiThread(::renderNotifications) }
+            NotificationStore.onPosted = { item -> runOnUiThread { showLiveNotification(item) } }
+            renderNotifications()
+            runCatching {
+                registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))?.let {
+                    batteryReceiver.onReceive(this, it)
+                }
+            }
+            handler.post(ticker)
+            if (!preview && Prefs.quickSettingsGuard(this)) handler.post(quickSettingsGuard)
+
+            // Heavier integrations get another loop turn so they cannot delay
+            // the first visible Guardian frame.
+            window.decorView.post {
+                if (isDestroyed || isFinishing) return@post
+                WeatherRepository.load(this) { value -> runOnUiThread {
+                    if (!isDestroyed && !isFinishing) {
+                        weather.text = value?.let { "${it.temperature}°${if (Prefs.celsius(this)) "C" else "F"}  ${it.label}" }
+                            ?: "Weather unavailable"
+                    }
+                } }
+
+                if (!preview && !unlocking && Prefs.kiosk(this)) {
+                    RootKiosk.attach(this) { kioskStatus.text = it }
+                    KioskD2Guardian.start(this)
+                }
+
+                // Probe root once, after first frame. The old path called
+                // RootManager.isAvailable() twice synchronously in onResume.
+                if (!preview && !unlocking && !biometricRunning) {
+                    val rootAvailable = app.d2lock.root.RootManager.isAvailable()
+                    if (rootAvailable) startGuardianFingerprint()
+                    else fingerprintGlass?.visibility = View.GONE
+                }
+            }
         }
     }
 
