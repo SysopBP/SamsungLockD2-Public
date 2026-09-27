@@ -58,6 +58,32 @@ class GuardianXposedBridge : XposedModule() {
     }
 
 
+    private fun signalGuardianFrameworkEvent(owner: String, method: String) {
+        runCatching {
+            val activityThread = Class.forName("android.app.ActivityThread")
+            val app = activityThread.getDeclaredMethod("currentApplication").invoke(null) as? Context
+                ?: error("system_server application unavailable")
+            val event = when {
+                owner.endsWith("PowerManagerService") && method == "wakeUpInternal" -> "WAKE"
+                owner.endsWith("PowerManagerService") && method == "goToSleepInternal" -> "SLEEP"
+                owner.endsWith("KeyguardController") -> "KEYGUARD"
+                owner.endsWith("ActivityTaskManagerService") -> "TASK_KEYGUARD"
+                owner.endsWith("BiometricService") -> "BIOMETRIC"
+                owner.endsWith("LockSettingsService") -> "LOCK_SETTINGS"
+                else -> "FRAMEWORK"
+            }
+            app.sendBroadcast(
+                Intent("app.d2lock.action.XPOSED_SYSTEM_EVENT")
+                    .setComponent(ComponentName("app.d2lock", "app.d2lock.lockscreen.KeyguardSignalReceiver"))
+                    .putExtra("event", event)
+                    .putExtra("method", method)
+                    .putExtra("source", "$owner#$method")
+            )
+        }.onFailure {
+            log(Log.WARN, TAG, "GUARDIAN_SYS_SIGNAL_FAILED target=$owner#$method", it)
+        }
+    }
+
     private fun installSystemServerDiagnostics(classLoader: ClassLoader) {
         val targets = listOf(
             "com.android.server.locksettings.LockSettingsService" to listOf(
@@ -94,6 +120,7 @@ class GuardianXposedBridge : XposedModule() {
                             .intercept { chain ->
                                 // Never dump arguments: credential/biometric calls can carry sensitive objects.
                                 log(Log.INFO, TAG, "GUARDIAN_SYS_CALL target=${owner.name}#${method.name}")
+                                signalGuardianFrameworkEvent(owner.name, method.name)
                                 chain.proceed()
                             }
                         installed++
