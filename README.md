@@ -1,17 +1,28 @@
-# Samsung Lock D2
+# Kiosk D2 Guardian
 
-An independent Android app privacy screen with its own six-digit PIN, designed for rooted Samsung devices where the user intentionally runs without Android's standard screen lock or biometrics. Version 0.3.0 adds optional root-assisted Android kiosk mode. It does not create or modify system credentials, force the screen off, or change firmware, Knox, Gatekeeper, or boot partitions.
+Kiosk D2 Guardian is an experimental, root-aware Samsung lock-screen and kiosk protection project with its own Guardian PIN/Pattern, optional KernelSU/root recovery support, Shizuku integration, LSPosed/Xposed framework integration, and Galaxy Island coordination. It does not create or modify Android system credentials, firmware, Knox, Gatekeeper, or boot partitions.
 
-> **Root / D2 recovery use case:** The project is intended to be used as the phone's app-level lock screen while rooted **after the user has deliberately removed the standard Android/Samsung screen lock and biometrics**. The project author has physically tested recovery from Samsung D2 Download Mode in this configuration and was able to restore firmware with Odin/firmware flashing tools. The purpose is to avoid having an Android credential/biometric configuration become an additional recovery obstacle after a root-related D2 condition. **D2 itself does not repair Download Mode, remove D2 errors, modify firmware integrity checks, or guarantee recovery on every Samsung model/firmware/root configuration.** Keep firmware backups and the correct Odin/firmware files available before experimenting with root.
+> **Recovery model:** D2 is designed for advanced testing where the user may intentionally operate without Samsung's standard device credential while rooted. D2 itself does not repair Download Mode, bypass firmware integrity checks, or guarantee recovery. Keep a tested recovery path and the correct firmware/Odin resources available before experimenting with root, framework hooks, or kiosk enforcement.
 
-**Public experimental preview.** The current source is **D2 0.4.4**, with optional KernelSU Next bridge **0.5.6**. The newest CI-verified D2 build is published as [v0.4.4-preview.2](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.4-preview.2), built and verified in [Actions run #16](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/35520482675). The existing paired Galaxy Island preview remains available from [v0.4.4-preview.1](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.4-preview.1).
+## Current development baseline
 
-- [**Latest CI-verified D2 APK (Preview 2)**](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.2/SamsungLockD2-debug.apk) — includes wake-listener recovery and verified original signing. [Release notes and all files](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.4-preview.2).
-- [Previous D2 0.4.4 paired APK](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/SamsungLockD2-v0.4.4-paired-themes.apk)
-- [Galaxy Island themed APK](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/Galaxy-Island-themed.apk)
-- [Optional KernelSU Next bridge 0.5.6](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.2/SamsungLockD2-KSUNext-v0.5.6-paired.zip)
-- [Theme and update guide](docs/THEMES.md), [build verification](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/Build-verification.txt), [current D2 checksums](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.2/SHA256SUMS.txt), and [runtime dependencies](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.2/runtime-dependencies.txt)
-- [D2 source](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.2/SamsungLockD2-source.zip) and [Galaxy Island source](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/Galaxy-Island-themed-source.zip)
+The current development line is **D2 0.6.0 Guardian / One UI 9**, with the tested framework-enabled baseline promoted to `main` from successful Actions run **867** (commit `8918f45`). The next test build is **v20 earlyboot**, which keeps that known-good framework behavior and adds one targeted timing change: Guardian receives an early boot-ready handoff when `ActivityManagerService.systemReady` is reached.
+
+- **Boot/framework:** LSPosed/Xposed system_server and SystemUI integration is active. The current known-good build successfully boots with the framework path enabled. The v20 change is intended to reduce the delay before D2 appears without launching while system_server is still constructing services.
+- **Authentication:** Guardian PIN and Pattern remain the supported D2 credentials and recovery path.
+- **Fingerprint:** hardware/framework detection and genuine Android/Samsung biometric authentication have been demonstrated in testing, but D2-only fingerprint unlock and single-scan integration are **not complete**.
+- **Recovery:** KernelSU/root, Shizuku, USB/ADB recovery options, and Guardian health diagnostics remain available according to configuration. Root/reboot remain privileged recovery/bypass paths.
+- **Galaxy Island:** pairing and integration controls are present; visual glass/pop-out/status-bar work remains under active development.
+
+**Current test target:** Samsung SM-S948U1 on Android 17 / One UI 9. Behavior on other Samsung models, firmware revisions, Android versions, root implementations, or LSPosed builds may differ.
+
+### Current priorities
+
+1. Validate v20 early boot timing across repeated soft reboots without reintroducing the framework boot hang.
+2. Keep the known-good framework/system-server path stable while improving first D2 presentation time.
+3. Continue D2-only fingerprint integration without weakening PIN/Pattern fallback.
+4. Continue Galaxy Island glass, status-bar, icon and pop-out integration.
+5. Keep About, What's New, recovery notes and diagnostics synchronized with tested behavior.
 
 D2's **THEME & COLORS** settings add system/light/dark/AMOLED modes, wallpaper colors, soft accent presets and custom hex colors. Notifications support per-app, accent or neutral colors, adjustable opacity and corner radius. The stack stays centered between the clock/weather and lower controls; longer lists scroll. The floating PIN/shortcut bar has adjustable width, opacity and bottom spacing.
 
