@@ -46,6 +46,7 @@ class GuardianXposedBridge : XposedModule() {
         installGuardianSystemUiHooks(param.classLoader)
         installKeyguardHandoffHooks(param.classLoader)
         installFingerprintStateDiagnostics(param.classLoader)
+        installFingerprintEnrollmentDiagnostics(param.classLoader)
         installFingerprintAuthEventBridge(param.classLoader)
     }
 
@@ -278,6 +279,66 @@ class GuardianXposedBridge : XposedModule() {
                 }
         }
         log(Log.INFO, TAG, "GUARDIAN_XPOSED_FPSTATE_READY hooks=$installed")
+    }
+
+    /**
+     * Trace the enrollment/authenticator boundary without modifying it.
+     * Keeps the 816 handoff/auth bridge intact while adding the 817 enrollment diagnostics.
+     */
+    private fun installFingerprintEnrollmentDiagnostics(classLoader: ClassLoader) {
+        val candidates = listOf(
+            "android.hardware.fingerprint.FingerprintManager",
+            "com.android.keyguard.KeyguardUpdateMonitor",
+            "com.android.systemui.biometrics.AuthController"
+        )
+        val nameHints = listOf(
+            "enrolled", "enrollment", "authenticator", "fingerprint",
+            "strongauth", "supported", "possible"
+        )
+        var installed = 0
+
+        candidates.forEach { className ->
+            val owner = runCatching { Class.forName(className, false, classLoader) }.getOrNull()
+            if (owner == null) {
+                log(Log.INFO, TAG, "GUARDIAN_XPOSED_FPENROLL_CLASS_MISSING target=$className")
+                return@forEach
+            }
+            owner.declaredMethods
+                .filter { method ->
+                    nameHints.any { hint -> method.name.contains(hint, ignoreCase = true) } &&
+                        method.parameterCount <= 6
+                }
+                .distinctBy { it.toGenericString() }
+                .forEach { method ->
+                    try {
+                        method.isAccessible = true
+                        hook(method)
+                            .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                            .intercept { chain ->
+                                val result = chain.proceed()
+                                val resultText = summarizeDiagnosticValue(result)
+                                val argsText = chain.args.joinToString(",") { summarizeDiagnosticValue(it) }
+                                log(Log.INFO, TAG, "GUARDIAN_XPOSED_FPENROLL_CALL target=${owner.name}#${method.name} args=[$argsText] result=$resultText")
+                                result
+                            }
+                        installed++
+                        log(Log.INFO, TAG, "GUARDIAN_XPOSED_FPENROLL_HOOK_INSTALLED target=${owner.name}#${method.name}")
+                    } catch (t: Throwable) {
+                        log(Log.WARN, TAG, "GUARDIAN_XPOSED_FPENROLL_HOOK_FAILED target=${owner.name}#${method.name}", t)
+                    }
+                }
+        }
+        log(Log.INFO, TAG, "GUARDIAN_XPOSED_FPENROLL_READY hooks=$installed")
+    }
+
+    private fun summarizeDiagnosticValue(value: Any?): String = when (value) {
+        null -> "null"
+        is Boolean, is Number, is String, is Enum<*> -> value.toString()
+        is Collection<*> -> "${value.javaClass.name}(size=${value.size})"
+        is Array<*> -> "${value.javaClass.name}(size=${value.size})"
+        is IntArray -> "IntArray(size=${value.size})"
+        is LongArray -> "LongArray(size=${value.size})"
+        else -> value.javaClass.name
     }
 
     private fun installNamedProbes(
