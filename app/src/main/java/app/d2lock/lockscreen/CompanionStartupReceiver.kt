@@ -12,9 +12,8 @@ import app.d2lock.security.PinStore
  * Restores the user-enabled lock-screen companion after reboot or an app update.
  *
  * LOCKED_BOOT_COMPLETED runs before credential-protected D2 settings are
- * available. Record only a non-secret pending-restore marker in device-protected
- * storage, leave the platform keyguard authoritative, and perform the real
- * restore after Android reports the user unlocked.
+ * available. Record only non-secret pending state in device-protected storage,
+ * then restore Guardian and replay any LSPosed keyguard handoff after unlock.
  */
 class CompanionStartupReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -50,14 +49,18 @@ class CompanionStartupReceiver : BroadcastReceiver() {
             Log.i(TAG, "GUARDIAN_RESTORE_DEFERRED source=$source")
             return
         }
+
         val enabled = runCatching { Prefs.enabled(context) }.getOrDefault(false)
         val configured = runCatching { PinStore(context).configured() }.getOrDefault(false)
         Log.i(TAG, "GUARDIAN_RESTORE_CHECK source=$source enabled=$enabled configured=$configured")
         if (!enabled || !configured) return
+
         try {
             val postBoot = source == "boot"
             LockScreenService.start(context, postBoot = postBoot)
             Log.i(TAG, "GUARDIAN_SERVICE_REQUESTED source=$source postBoot=$postBoot")
+            val replayed = KeyguardSignalReceiver.replayDeferred(context)
+            Log.i(TAG, "GUARDIAN_XPOSED_REPLAY_CHECK source=$source replayed=$replayed")
         } catch (error: RuntimeException) {
             Log.w(TAG, "GUARDIAN_SERVICE_REQUEST_FAILED source=$source", error)
         }
