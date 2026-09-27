@@ -910,6 +910,12 @@ class MainActivity : Activity() {
                 },LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(5) })
             },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
             addView(TextView(this@MainActivity).apply {
+                text="Open System Server Command Center"; textSize=15f; gravity=Gravity.CENTER
+                setTextColor(Appearance.text(this@MainActivity)); background=Appearance.glass(this@MainActivity,22f,34,true)
+                setPadding(dp(14),dp(11),dp(14),dp(11))
+                setOnClickListener { showSystemServerDashboard() }
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
+            addView(TextView(this@MainActivity).apply {
                 text="Open integrations"; textSize=15f; gravity=Gravity.CENTER
                 setTextColor(Appearance.text(this@MainActivity)); background=Appearance.glass(this@MainActivity,22f,28,true)
                 setPadding(dp(14),dp(10),dp(14),dp(10))
@@ -2977,6 +2983,96 @@ class MainActivity : Activity() {
                 }
             }, LinearLayout.LayoutParams(-1, dp(50)))
         }
+    }
+
+    private fun showSystemServerDashboard() {
+        val sys = KeyguardSignalReceiver.systemHealth(this)
+        val ui = KeyguardSignalReceiver.bridgeHealth(this)
+        val fp = KeyguardSignalReceiver.fingerprintHealth(this)
+        val metrics = KeyguardSignalReceiver.systemMetrics(this)
+        fun age(ms: Long?): String = when {
+            ms == null -> "Waiting"
+            ms < 1_000 -> "Now"
+            ms < 60_000 -> "${ms / 1_000}s ago"
+            else -> "${ms / 60_000}m ago"
+        }
+        fun metric(label: String, value: String) = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(8), dp(10), dp(8), dp(10))
+            background = Appearance.glass(this@MainActivity, 22f, 28, true)
+            addView(TextView(this@MainActivity).apply {
+                text=value; textSize=20f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text=label; textSize=10f; gravity=Gravity.CENTER; setTextColor(Appearance.secondary(this@MainActivity))
+            })
+        }
+        val panel = LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL
+            setPadding(dp(16),dp(8),dp(16),dp(18))
+            addView(TextView(this@MainActivity).apply {
+                text="SYSTEM SERVER COMMAND CENTER"; textSize=11f; letterSpacing=.10f
+                setTextColor(Appearance.secondary(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text=if(sys.status=="READY") "Framework bridge online" else "Framework bridge · ${sys.status.lowercase()}"
+                textSize=22f; setTextColor(Appearance.text(this@MainActivity)); setPadding(0,dp(4),0,dp(2))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text="System Server ${sys.status}  •  System UI ${ui.status}  •  LSPosed ${if(Prefs.xposedMaster(this@MainActivity)) "ON" else "OFF"}"
+                textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,0,0,dp(12))
+            })
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.HORIZONTAL
+                addView(metric("EVENTS",metrics.total.toString()),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
+                addView(metric("WAKE",metrics.wakeSleep.toString()),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3); rightMargin=dp(3) })
+                addView(metric("KEYGUARD",metrics.keyguard.toString()),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(6) })
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.HORIZONTAL
+                addView(metric("BIOMETRIC",metrics.biometric.toString()),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
+                addView(metric("LOCK SETTINGS",metrics.lockSettings.toString()),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3); rightMargin=dp(3) })
+                addView(metric("LAST",age(sys.ageMs)),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation=LinearLayout.VERTICAL
+                setPadding(dp(12),dp(10),dp(12),dp(10))
+                background=Appearance.glass(this@MainActivity,22f,24,true)
+                addView(TextView(this@MainActivity).apply {
+                    text="LIVE STATE"; textSize=11f; letterSpacing=.08f; setTextColor(Appearance.secondary(this@MainActivity))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text="Framework  •  ${sys.event ?: "Waiting"}\nMethod  •  ${sys.method ?: "—"}\nSystemUI heartbeat  •  ${age(ui.ageMs)}\nFingerprint  •  ${fp.event ?: "Waiting"}"
+                    textSize=13f; setLineSpacing(0f,1.15f); setTextColor(Appearance.text(this@MainActivity)); setPadding(0,dp(6),0,0)
+                })
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
+            addView(TextView(this@MainActivity).apply {
+                text="RECENT FRAMEWORK EVENTS"; textSize=11f; letterSpacing=.08f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,0,0,dp(6))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text=if(metrics.timeline.isEmpty()) "No system_server events captured yet. Soft reboot after enabling the System Framework scope."
+                else metrics.timeline.joinToString("\n") { line ->
+                    val p=line.split("|",limit=3)
+                    if(p.size<3) line else {
+                        val t=runCatching { java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.US).format(java.util.Date(p[0].toLong())) }.getOrDefault("--:--:--")
+                        "$t  •  ${p[1]}  •  ${p[2]}"
+                    }
+                }
+                textSize=11f; typeface=android.graphics.Typeface.MONOSPACE; setTextColor(Appearance.text(this@MainActivity))
+                setPadding(dp(12),dp(10),dp(12),dp(10)); background=Appearance.glass(this@MainActivity,20f,22,true)
+            })
+            addView(TextView(this@MainActivity).apply {
+                text="Guardian decisions remain fail-safe: framework telemetry coordinates D2, but credential and biometric verification stay with Android."
+                textSize=11f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,dp(10),0,0)
+            })
+        }
+        AlertDialog.Builder(this).setView(panel).setNegativeButton("Close",null)
+            .setPositiveButton("Refresh") { _,_ -> showSystemServerDashboard() }
+            .create().also { dialog ->
+                dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,32f,82,true)) }
+                dialog.show()
+            }
     }
 
     private fun systemHealthCard(): ViewGroup {
