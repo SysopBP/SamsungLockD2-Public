@@ -740,6 +740,17 @@ class MainActivity : Activity() {
             }
             true
         }
+        val versionInfo = runCatching { packageManager.getPackageInfo(packageName, 0) }.getOrNull()
+        root.addView(TextView(this).apply {
+            val versionName = versionInfo?.versionName ?: "current"
+            val versionCode = if (android.os.Build.VERSION.SDK_INT >= 28) versionInfo?.longVersionCode ?: 0L else @Suppress("DEPRECATION") (versionInfo?.versionCode?.toLong() ?: 0L)
+            text = "Kiosk D2 Guardian  •  $versionName  ($versionCode)"
+            textSize = 12f
+            gravity = Gravity.CENTER
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(8), dp(2), dp(8), dp(10))
+        }, LinearLayout.LayoutParams(-1, -2))
+
         return settingsHost(root)
         }
         addButton(root, "What's New & Next") {
@@ -2242,7 +2253,7 @@ class MainActivity : Activity() {
             dialog.show()
         }
 
-        section(root, "BACKUP & RESTORE")
+        section(root, "ABOUT & DATA")
         val backupRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun backupBubble(label: String, action: () -> Unit) = TextView(this).apply {
             text = label; textSize = 14f; gravity = Gravity.CENTER
@@ -2279,7 +2290,7 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(6) })
         root.addView(backupRow, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
 
-        addButton(root, "Legal & privacy") {
+        addButton(root, "Legal, privacy & licenses") {
             val notice = assets.open("THIRD_PARTY_NOTICES.txt").bufferedReader().use { it.readText() }
             val agreement = assets.open("D2_USER_AGREEMENT.txt").bufferedReader().use { it.readText() }
             val dialogBody = LinearLayout(this).apply {
@@ -2351,7 +2362,7 @@ class MainActivity : Activity() {
             dialog.show()
         }
 
-        addButton(root, "About D2 protection") {
+        addButton(root, "About Kiosk D2 Guardian") {
             val info = TextView(this).apply {
                 text = "Double-tap the D2 button or home-screen widget to open D2 authentication. D2 uses its own PIN or pattern. Optional kiosk mode uses Android task restrictions and coordinates with keyguard.\n\nWithout active kiosk, Home/Recents can bypass D2. Root, recovery and reboot remain privileged bypass paths. D2 cannot repair firmware or guarantee prevention of download-mode errors."
                 textSize = 14f
@@ -2360,7 +2371,7 @@ class MainActivity : Activity() {
                 setPadding(dp(18), dp(14), dp(18), dp(18))
             }
             val dialog = AlertDialog.Builder(this)
-                .setTitle("About D2 protection")
+                .setTitle("About Kiosk D2 Guardian")
                 .setView(info)
                 .setPositiveButton("Done", null)
                 .create()
