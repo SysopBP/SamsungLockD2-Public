@@ -1403,22 +1403,105 @@ class LockScreenActivity : Activity() {
     }
 
     private fun showGuardianDiagnostics() {
-        val root=app.d2lock.root.RootManager.isAvailable()
-        val shizuku=Prefs.shizukuEnabled(this) && runCatching { rikka.shizuku.Shizuku.pingBinder() }.getOrDefault(false)
-        val biometric=getSystemService(BiometricManager::class.java)?.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)==BiometricManager.BIOMETRIC_SUCCESS
-        AlertDialog.Builder(this)
-            .setTitle("Guardian Diagnostics")
-            .setMessage(buildString {
-                append("D2 surface  •  ACTIVE")
-                append("\nKiosk  •  "); append(if(Prefs.kiosk(this@LockScreenActivity)) "ON" else "OFF")
-                append("\nRoot  •  "); append(if(root) "READY" else "OFF")
-                append("\nShizuku  •  "); append(if(shizuku) "READY" else "OFF")
-                append("\nLSPosed  •  "); append(if(Prefs.xposedMaster(this@LockScreenActivity)) "ENABLED" else "OFF")
-                append("\nFingerprint  •  "); append(if(biometric) "BIOMETRIC_STRONG ready" else "Unavailable")
-                append("\nUnlock  •  "); append(Prefs.unlockMethod(this@LockScreenActivity).uppercase())
+        val root = app.d2lock.root.RootManager.isAvailable()
+        val shizuku = Prefs.shizukuEnabled(this) &&
+            runCatching { rikka.shizuku.Shizuku.pingBinder() }.getOrDefault(false)
+        val biometric = getSystemService(BiometricManager::class.java)
+            ?.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) ==
+            BiometricManager.BIOMETRIC_SUCCESS
+
+        fun diagnosticRow(label: String, value: String, ready: Boolean? = null) =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(14), dp(10), dp(14), dp(10))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(16).toFloat()
+                    setColor(0x18ffffff)
+                    setStroke(dp(1), 0x28ffffff)
+                }
+
+                addView(TextView(this@LockScreenActivity).apply {
+                    text = label
+                    textSize = 13f
+                    setTextColor(0xbfffffff.toInt())
+                    typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+                }, LinearLayout.LayoutParams(0, -2, 1f))
+
+                addView(TextView(this@LockScreenActivity).apply {
+                    text = when (ready) {
+                        true -> "●  $value"
+                        false -> "○  $value"
+                        null -> value
+                    }
+                    textSize = 13f
+                    setTextColor(
+                        when (ready) {
+                            true -> 0xffd8ffd8.toInt()
+                            false -> 0xffd0d0d0.toInt()
+                            null -> Color.WHITE
+                        }
+                    )
+                    typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+                    gravity = Gravity.END
+                })
+            }
+
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(18), dp(18), dp(12))
+
+            addView(TextView(this@LockScreenActivity).apply {
+                text = "Guardian Diagnostics"
+                textSize = 21f
+                setTextColor(Color.WHITE)
+                typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
             })
-            .setPositiveButton("Close",null)
-            .show()
+            addView(TextView(this@LockScreenActivity).apply {
+                text = "Live D2 system status"
+                textSize = 12f
+                setTextColor(0x99ffffff.toInt())
+                setPadding(0, dp(3), 0, dp(14))
+            })
+
+            val rows = listOf(
+                diagnosticRow("D2 surface", "ACTIVE", true),
+                diagnosticRow("Kiosk", if (Prefs.kiosk(this@LockScreenActivity)) "ON" else "OFF", Prefs.kiosk(this@LockScreenActivity)),
+                diagnosticRow("Root", if (root) "READY" else "OFF", root),
+                diagnosticRow("Shizuku", if (shizuku) "READY" else "OFF", shizuku),
+                diagnosticRow("LSPosed", if (Prefs.xposedMaster(this@LockScreenActivity)) "ENABLED" else "OFF", Prefs.xposedMaster(this@LockScreenActivity)),
+                diagnosticRow("Fingerprint", if (biometric) "READY" else "NOT AVAILABLE", biometric),
+                diagnosticRow("Unlock", Prefs.unlockMethod(this@LockScreenActivity).uppercase())
+            )
+            rows.forEachIndexed { index, row ->
+                addView(row, LinearLayout.LayoutParams(-1, -2).apply {
+                    if (index > 0) topMargin = dp(6)
+                })
+            }
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(panel)
+            .setPositiveButton("Close", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.window?.apply {
+                setDimAmount(0.42f)
+                setBackgroundDrawable(GradientDrawable().apply {
+                    cornerRadius = dp(30).toFloat()
+                    setColor(0xe61a1a1a.toInt())
+                    setStroke(dp(1), 0x45ffffff)
+                })
+            }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.apply {
+                text = "CLOSE"
+                setTextColor(0xffd6b2ff.toInt())
+                textSize = 13f
+                typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+            }
+        }
+        dialog.show()
     }
 
     private fun glassIconButton(icon: Int, description: String, click: () -> Unit) = ImageView(this).apply {
