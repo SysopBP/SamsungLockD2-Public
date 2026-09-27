@@ -5,6 +5,8 @@ import android.app.AlertDialog
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.text.InputFilter
+import android.text.InputType
+import android.graphics.drawable.ColorDrawable
 import android.widget.*
 import android.view.View
 import android.view.ViewGroup
@@ -28,6 +30,65 @@ object ThemeOptions {
             "Accent color" to "Used for highlights, sliders and buttons.",
             "Notification colors" to "Choose how notification colors are applied."
         )
+        fun showCustomAccentDialog(onDismiss: () -> Unit = {}) {
+            val field = EditText(c).apply {
+                setSingleLine(true)
+                hint = "RRGGBB"
+                setText("%06X".format(Appearance.custom(c) and 0xffffff))
+                filters = arrayOf(InputFilter.LengthFilter(7))
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+                setTextColor(Appearance.text(c))
+                setHintTextColor(Appearance.secondary(c))
+                setSelectAllOnFocus(true)
+                setPadding(dp(18), 0, dp(18), 0)
+                background = Appearance.glass(c, 22f, 46, true)
+            }
+            val fieldRow = LinearLayout(c).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(20), dp(8), dp(20), dp(6))
+                addView(TextView(c).apply {
+                    text = "Hex color"
+                    textSize = 12f
+                    setTextColor(Appearance.secondary(c))
+                    setPadding(dp(4), 0, dp(4), dp(6))
+                })
+                addView(field, LinearLayout.LayoutParams(-1, dp(56)))
+            }
+            val dialog = AlertDialog.Builder(c)
+                .setTitle("Custom accent")
+                .setView(fieldRow)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Apply", null)
+                .create()
+            dialog.setOnShowListener {
+                dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                // Modal surfaces stay substantially more opaque than content cards so
+                // labels/sliders underneath never bleed through the editor.
+                dialog.window?.setBackgroundDrawable(Appearance.glass(c, 30f, 96, true))
+                listOf(AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE).forEach { which ->
+                    dialog.getButton(which)?.apply {
+                        setTextColor(Appearance.accent(c))
+                        background = ColorDrawable(Color.TRANSPARENT)
+                        isAllCaps = false
+                    }
+                }
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setOnClickListener {
+                    val hex = field.text.toString().trim().removePrefix("#")
+                    if (!hex.matches(Regex("[0-9a-fA-F]{6}"))) {
+                        field.error = "Enter six hexadecimal digits"
+                    } else {
+                        Appearance.set(c, "custom", Color.parseColor("#$hex"))
+                        dialog.dismiss()
+                        refresh()
+                    }
+                }
+                field.requestFocus()
+                field.setSelection(0, field.text.length)
+            }
+            dialog.setOnDismissListener { onDismiss() }
+            dialog.show()
+        }
+
         fun choice(title: String, values: List<String>, selected: Int, key: String) {
             // Match the compact Haptics preference: one clean row, then a
             // single-choice Guardian glass sheet instead of an expanded list.
@@ -62,35 +123,7 @@ object ThemeOptions {
                             if (key == "accent" && which == 11) {
                                 Appearance.set(c, "accent", 11)
                                 d.dismiss()
-                                val field = EditText(c).apply {
-                                    setSingleLine()
-                                    hint = "#RRGGBB"
-                                    setText("%06X".format(Appearance.custom(c) and 0xffffff))
-                                    filters = arrayOf(InputFilter.LengthFilter(7))
-                                }
-                                val customDialog = AlertDialog.Builder(c)
-                                    .setTitle("Custom accent")
-                                    .setView(field)
-                                    .setNegativeButton("Cancel") { _, _ -> refresh() }
-                                    .setPositiveButton("Apply", null)
-                                    .create()
-                                customDialog.setOnShowListener {
-                                    customDialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-                                    customDialog.window?.setBackgroundDrawable(Appearance.glass(c, 30f, 76, true))
-                                    customDialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(c))
-                                    customDialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Appearance.accent(c))
-                                    customDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                                        val hex = field.text.toString().trim().removePrefix("#")
-                                        if (!hex.matches(Regex("[0-9a-fA-F]{6}"))) {
-                                            field.error = "Enter six hexadecimal digits"
-                                        } else {
-                                            Appearance.set(c, "custom", Color.parseColor("#$hex"))
-                                            customDialog.dismiss()
-                                            refresh()
-                                        }
-                                    }
-                                }
-                                customDialog.show()
+                                showCustomAccentDialog { refresh() }
                             } else {
                                 if (which != selected) Appearance.set(c, key, which)
                                 d.dismiss()
@@ -119,19 +152,7 @@ object ThemeOptions {
             isClickable=true
             isFocusable=true
             setOnClickListener {
-                val field=EditText(c).apply { setSingleLine(); hint="#RRGGBB"; setText("%06X".format(Appearance.custom(c) and 0xffffff)); filters=arrayOf(InputFilter.LengthFilter(7)) }
-                val dialog=AlertDialog.Builder(c).setTitle("Custom accent").setView(field).setNegativeButton("Cancel",null).setPositiveButton("Apply",null).create()
-                dialog.setOnShowListener {
-                    dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-                    dialog.window?.setBackgroundDrawable(Appearance.glass(c,30f,76,true))
-                    dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(c))
-                    dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Appearance.accent(c))
-                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                        val hex=field.text.toString().trim().removePrefix("#")
-                        if(!hex.matches(Regex("[0-9a-fA-F]{6}"))) field.error="Enter six hexadecimal digits"
-                        else { Appearance.set(c,"custom",Color.parseColor("#$hex")); dialog.dismiss(); refresh() }
-                    }
-                }; dialog.show()
+                showCustomAccentDialog()
             }
         },LinearLayout.LayoutParams(-1,dp(50)).apply { leftMargin=dp(8); rightMargin=dp(8); bottomMargin=dp(10) })
         choice("Notification colors",listOf("Different colors per app","Use accent color","Monochrome","System colors","Custom color"),Appearance.notificationStyle(c),"notifications")
