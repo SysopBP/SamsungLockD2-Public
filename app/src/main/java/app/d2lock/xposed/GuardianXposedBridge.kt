@@ -11,6 +11,9 @@ import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import java.lang.reflect.Method
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Guardian Xposed Bridge v0.2 — Stage 2 diagnostics.
@@ -23,6 +26,7 @@ class GuardianXposedBridge : XposedModule() {
         private const val TAG = "D2XposedBridge"
         private const val SYSTEM_UI = "com.android.systemui"
         private const val SAMSUNG_BIOMETRICS = "com.samsung.android.biometrics.app.setting"
+        private val heartbeatStarted = AtomicBoolean(false)
     }
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
@@ -143,6 +147,17 @@ class GuardianXposedBridge : XposedModule() {
         log(Log.INFO, TAG, "GUARDIAN_XPOSED_KEYGUARD_HANDOFF_READY hooks=$installed")
     }
 
+    private fun startHeartbeat(source: String) {
+        if (!heartbeatStarted.compareAndSet(false, true)) return
+        log(Log.INFO, TAG, "GUARDIAN_XPOSED_HEARTBEAT_STARTED interval=30s source=$source")
+        Executors.newSingleThreadScheduledExecutor { runnable ->
+            Thread(runnable, "D2-Xposed-Heartbeat").apply { isDaemon = true }
+        }.scheduleAtFixedRate({
+            runCatching { signalGuardianKeyguard("HEARTBEAT", source) }
+                .onFailure { log(Log.WARN, TAG, "GUARDIAN_XPOSED_HEARTBEAT_FAILED", it) }
+        }, 0, 30, TimeUnit.SECONDS)
+    }
+
     private fun signalGuardianKeyguard(state: String, source: String) {
         runCatching {
             val activityThread = Class.forName("android.app.ActivityThread")
@@ -246,7 +261,7 @@ class GuardianXposedBridge : XposedModule() {
                                 // SystemUI lifecycle has reached onCreate/startServicesIfNeeded.
                                 if (event == "SYSTEMUI_RECOVERY" &&
                                     (method.name == "onCreate" || method.name == "startServicesIfNeeded")) {
-                                    signalGuardianKeyguard("HEARTBEAT", owner.name + "#" + method.name)
+                                    startHeartbeat(owner.name + "#" + method.name)
                                 }
                                 result
                             }
