@@ -29,6 +29,8 @@ class GuardianXposedBridge : XposedModule() {
         private const val SYSTEM_UI = "com.android.systemui"
         private const val SAMSUNG_BIOMETRICS = "com.samsung.android.biometrics.app.setting"
         private val heartbeatStarted = AtomicBoolean(false)
+        private val systemServerHooksStarted = AtomicBoolean(false)
+        private val deferredLockSettingsStarted = AtomicBoolean(false)
         private val lastDiagnosticSignal = ConcurrentHashMap<String, Long>()
         private const val DIAGNOSTIC_SIGNAL_COOLDOWN_MS = 5_000L
     }
@@ -40,7 +42,12 @@ class GuardianXposedBridge : XposedModule() {
     /** Build 819+: observe framework-side keyguard/biometric flow inside system_server. */
     override fun onSystemServerStarting(param: SystemServerStartingParam) {
         log(Log.INFO, TAG, "GUARDIAN_SYS_READY uid=${android.os.Process.myUid()} process=system_server")
+        if (!systemServerHooksStarted.compareAndSet(false, true)) {
+            log(Log.WARN, TAG, "GUARDIAN_SYS_DUPLICATE_START ignored=true")
+            return
+        }
         installSystemServerDiagnostics(param.classLoader)
+        scheduleDeferredLockSettingsDiagnostics(param.classLoader)
     }
 
     override fun onPackageReady(param: PackageReadyParam) {
@@ -103,15 +110,12 @@ class GuardianXposedBridge : XposedModule() {
     }
 
     private fun installSystemServerDiagnostics(classLoader: ClassLoader) {
+        // Boot-stability pass: keep system_server interception deliberately small.
+        // LockSettings and hot isKeyguardLocked observation are deferred/omitted so
+        // Guardian cannot add synchronous broadcast/log work to the critical boot path.
         val targets = listOf(
-            "com.android.server.locksettings.LockSettingsService" to listOf(
-                "systemReady", "verifyCredential", "setLockCredential", "getCredentialType", "getStrongAuthForUser"
-            ),
-            "com.android.server.biometrics.BiometricService" to listOf(
-                "onStart", "authenticate", "cancelAuthentication", "registerAuthenticator", "getCurrentStrength"
-            ),
             "com.android.server.wm.KeyguardController" to listOf(
-                "setKeyguardShown", "keyguardGoingAway", "dismissKeyguard", "isKeyguardLocked"
+                "setKeyguardShown", "keyguardGoingAway", "dismissKeyguard"
             ),
             "com.android.server.wm.ActivityTaskManagerService" to listOf(
                 "keyguardGoingAway", "setLockScreenShown"
@@ -120,11 +124,43 @@ class GuardianXposedBridge : XposedModule() {
                 "wakeUpInternal", "goToSleepInternal"
             )
         )
+        installSystemServerTargets(classLoader, targets, "early")
+    }
+
+    private fun scheduleDeferredLockSettingsDiagnostics(classLoader: ClassLoader) {
+        if (!deferredLockSettingsStarted.compareAndSet(false, true)) return
+        Executors.newSingleThreadScheduledExecutor { runnable ->
+            Thread(runnable, "D2-Xposed-Deferred").apply { isDaemon = true }
+        }.schedule({
+            runCatching {
+                val targets = listOf(
+                    "com.android.server.locksettings.LockSettingsService" to listOf(
+                        "systemReady", "verifyCredential", "setLockCredential",
+                        "getCredentialType", "getStrongAuthForUser"
+                    ),
+                    "com.android.server.biometrics.BiometricService" to listOf(
+                        "onStart", "authenticate", "cancelAuthentication",
+                        "registerAuthenticator", "getCurrentStrength"
+                    )
+                )
+                installSystemServerTargets(classLoader, targets, "deferred")
+            }.onFailure {
+                log(Log.WARN, TAG, "GUARDIAN_SYS_DEFERRED_FAILED", it)
+            }
+        }, 15, TimeUnit.SECONDS)
+        log(Log.INFO, TAG, "GUARDIAN_SYS_DEFERRED_SCHEDULED delay=15s")
+    }
+
+    private fun installSystemServerTargets(
+        classLoader: ClassLoader,
+        targets: List<Pair<String, List<String>>>,
+        phase: String
+    ) {
         var installed = 0
         targets.forEach { (className, methodNames) ->
             val owner = runCatching { Class.forName(className, false, classLoader) }.getOrNull()
             if (owner == null) {
-                log(Log.INFO, TAG, "GUARDIAN_SYS_CLASS_MISSING target=$className")
+                log(Log.INFO, TAG, "GUARDIAN_SYS_CLASS_MISSING phase=$phase target=$className")
                 return@forEach
             }
             owner.declaredMethods
@@ -136,23 +172,20 @@ class GuardianXposedBridge : XposedModule() {
                         hook(method)
                             .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                             .intercept { chain ->
+                                // Fail-open and preserve framework ordering: run Android first.
+                                val result = chain.proceed()
                                 // Never dump arguments: credential/biometric calls can carry sensitive objects.
-                                log(Log.INFO, TAG, "GUARDIAN_SYS_CALL target=${owner.name}#${method.name}")
                                 signalGuardianFrameworkEvent(owner.name, method.name)
-                                chain.proceed()
+                                result
                             }
                         installed++
-                        log(Log.INFO, TAG, "GUARDIAN_SYS_HOOK_INSTALLED target=${owner.name}#${method.name}")
+                        log(Log.INFO, TAG, "GUARDIAN_SYS_HOOK_INSTALLED phase=$phase target=${owner.name}#${method.name}")
                     } catch (t: Throwable) {
-                        log(Log.WARN, TAG, "GUARDIAN_SYS_HOOK_FAILED target=${owner.name}#${method.name}", t)
+                        log(Log.WARN, TAG, "GUARDIAN_SYS_HOOK_FAILED phase=$phase target=${owner.name}#${method.name}", t)
                     }
                 }
         }
-        if (installed == 0) {
-            log(Log.WARN, TAG, "GUARDIAN_SYS_UNAVAILABLE reason=no_compatible_framework_targets")
-        } else {
-            log(Log.INFO, TAG, "GUARDIAN_SYS_ACTIVE hooks=$installed mode=observe_only")
-        }
+        log(Log.INFO, TAG, "GUARDIAN_SYS_ACTIVE phase=$phase hooks=$installed mode=observe_only")
     }
 
     /**
