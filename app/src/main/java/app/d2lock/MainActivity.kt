@@ -1513,7 +1513,7 @@ class MainActivity : Activity() {
 
         section(root, "APP THEME")
         root.getChildAt(root.childCount - 1).tag = "app_theme"
-        val appearanceCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(8), dp(3), dp(8), dp(4)); background = Appearance.glass(this@MainActivity, 22f, 26, true) }
+        val appearanceCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(8), dp(2), dp(8), dp(2)); background = Appearance.glass(this@MainActivity, 22f, 26, true) }
         root.addView(appearanceCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         section(appearanceCard, "LOCK SCREEN EXTRAS")
         appearanceCard.addView(guardianSwitch().apply {
@@ -1521,19 +1521,19 @@ class MainActivity : Activity() {
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.wallpaperParallax(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setWallpaperParallax(this@MainActivity, checked) }
-        }, LinearLayout.LayoutParams(-1, dp(48)))
+        }, LinearLayout.LayoutParams(-1, dp(40)))
         appearanceCard.addView(guardianSwitch().apply {
             text = "Glass shimmer"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.glassShimmer(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setGlassShimmer(this@MainActivity, checked) }
-        }, LinearLayout.LayoutParams(-1, dp(48)))
+        }, LinearLayout.LayoutParams(-1, dp(40)))
         appearanceCard.addView(guardianSwitch().apply {
             text = "Double-tap empty lock screen to sleep"
             setTextColor(Appearance.text(this@MainActivity))
             isChecked = Prefs.doubleTapSleep(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setDoubleTapSleep(this@MainActivity, checked) }
-        }, LinearLayout.LayoutParams(-1, dp(48)))
+        }, LinearLayout.LayoutParams(-1, dp(40)))
         addChoice(appearanceCard, "Unlock haptics", listOf("Off", "Soft", "Medium", "Strong"),
             listOf("off", "soft", "medium", "strong").indexOf(Prefs.unlockHaptics(this)).coerceAtLeast(0)) {
             Prefs.setUnlockHaptics(this, listOf("off", "soft", "medium", "strong")[it])
@@ -1542,14 +1542,14 @@ class MainActivity : Activity() {
             text = "Optional effects are off by default and work with any wallpaper."
             textSize = 12f
             setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(dp(6), 0, dp(6), dp(6))
+            setPadding(dp(6), 0, dp(6), dp(3))
         })
 
         appearanceCard.addView(TextView(this).apply {
             text = "Dim wallpaper: ${Prefs.wallpaperDim(this@MainActivity)}%"
             textSize = 15f
             setTextColor(Appearance.text(this@MainActivity))
-            setPadding(dp(6), dp(2), 0, 0)
+            setPadding(dp(6), 0, 0, 0)
             tag = "wallpaper_dim_label"
         })
         appearanceCard.addView(guardianSlider().apply {
@@ -1564,12 +1564,12 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(24)).apply { bottomMargin = dp(8) })
+        }, LinearLayout.LayoutParams(-1, dp(20)).apply { bottomMargin = dp(4) })
         appearanceCard.addView(TextView(this).apply {
             text = "Lock-screen glass: ${Prefs.lockGlass(this@MainActivity)}%"
             textSize = 15f
             setTextColor(Appearance.text(this@MainActivity))
-            setPadding(dp(6), dp(2), 0, 0)
+            setPadding(dp(6), 0, 0, 0)
             tag = "lock_glass_label"
         })
         appearanceCard.addView(guardianSlider().apply {
@@ -1587,12 +1587,12 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(24)))
+        }, LinearLayout.LayoutParams(-1, dp(20)))
         appearanceCard.addView(TextView(this).apply {
             text = "Lock-screen UI scale: ${Prefs.lockScale(this@MainActivity)}%"
             textSize = 15f
             setTextColor(Appearance.text(this@MainActivity))
-            setPadding(dp(6), dp(2), 0, 0)
+            setPadding(dp(6), 0, 0, 0)
             tag = "lock_scale_label"
         })
         appearanceCard.addView(guardianSlider().apply {
@@ -1608,7 +1608,7 @@ class MainActivity : Activity() {
                 override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                 override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
             })
-        }, LinearLayout.LayoutParams(-1, dp(24)).apply { bottomMargin = dp(8) })
+        }, LinearLayout.LayoutParams(-1, dp(20)).apply { bottomMargin = dp(4) })
         section(appearanceCard, "CLOCK & WEATHER")
         appearanceCard.getChildAt(appearanceCard.childCount - 1).tag = "clock_weather"
         addChoice(appearanceCard, "Clock style", listOf("Adaptive Clean", "Classic", "Rounded", "Condensed", "Bold", "Minimal"),
