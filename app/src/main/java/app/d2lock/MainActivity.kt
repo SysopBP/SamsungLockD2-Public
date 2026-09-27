@@ -1399,7 +1399,9 @@ class MainActivity : Activity() {
                     .setPositiveButton("Done",null)
                     .create()
                 dialog.setOnShowListener {
-                    dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,32f,82,true))
+                    dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,32f,96,true))
+                    dialog.window?.setDimAmount(0.72f)
+                    dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
                     dialog.window?.setLayout((resources.displayMetrics.widthPixels*0.94f).toInt(),(resources.displayMetrics.heightPixels*0.86f).toInt())
                     dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(this@MainActivity))
                 }
