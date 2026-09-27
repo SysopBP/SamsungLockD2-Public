@@ -2719,7 +2719,15 @@ class MainActivity : Activity() {
                 setBackgroundColor(Color.argb((255f * dim / 100f).toInt(), 0, 0, 0))
             }, android.widget.FrameLayout.LayoutParams(-1, -1))
         }
-        val scroll = ScrollView(this).apply { tag = "settings_scroll"; setBackgroundColor(Color.TRANSPARENT); addView(root) }
+        val scroll = ScrollView(this).apply {
+            tag = "settings_scroll"
+            setBackgroundColor(Color.TRANSPARENT)
+            clipToPadding = false
+            // The Guardian dock intentionally floats above the settings surface.
+            // Reserve scrollable clearance so the final control can move fully above it.
+            setPadding(0, 0, 0, dp(118))
+            addView(root)
+        }
         host.addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
 
         val nav = LinearLayout(this).apply {
