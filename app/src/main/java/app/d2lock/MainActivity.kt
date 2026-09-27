@@ -340,7 +340,7 @@ class MainActivity : Activity() {
     private fun buildSettings(): ViewGroup {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(22), dp(56), dp(22), dp(164))
+            setPadding(dp(22), dp(56), dp(22), dp(210))
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
         }
         root.addView(TextView(this).apply {
@@ -3082,10 +3082,10 @@ class MainActivity : Activity() {
         fun metric(label: String, value: String) = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(dp(8), dp(10), dp(8), dp(10))
-            background = Appearance.glass(this@MainActivity, 22f, 28, true)
+            setPadding(dp(7), dp(7), dp(7), dp(7))
+            background = Appearance.glass(this@MainActivity, 20f, 34, true)
             addView(TextView(this@MainActivity).apply {
-                text=value; textSize=20f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
+                text=value; textSize=18f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
             })
             addView(TextView(this@MainActivity).apply {
                 text=label; textSize=10f; gravity=Gravity.CENTER; setTextColor(Appearance.secondary(this@MainActivity))
@@ -3093,17 +3093,17 @@ class MainActivity : Activity() {
         }
         val panel = LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
-            setPadding(dp(16),dp(8),dp(16),dp(18))
+            setPadding(dp(14),dp(8),dp(14),dp(26))
             addView(TextView(this@MainActivity).apply {
                 text="SYSTEM SERVER COMMAND CENTER"; textSize=11f; letterSpacing=.10f
                 setTextColor(Appearance.secondary(this@MainActivity))
             })
             addView(TextView(this@MainActivity).apply {
-                text=if(sys.status=="READY") "Framework bridge online" else "Framework bridge · ${sys.status.lowercase()}"
+                text=if(sys.event != null) "Framework bridge active" else "Framework bridge · waiting"
                 textSize=22f; setTextColor(Appearance.text(this@MainActivity)); setPadding(0,dp(4),0,dp(2))
             })
             addView(TextView(this@MainActivity).apply {
-                text="System Server ${sys.status}  •  System UI ${ui.status}  •  LSPosed ${if(Prefs.xposedMaster(this@MainActivity)) "ON" else "OFF"}"
+                text="System Server ${if(sys.event != null) "OBSERVED" else "WAITING"}  •  Last activity ${age(sys.ageMs)}  •  System UI ${ui.status}  •  LSPosed ${if(Prefs.xposedMaster(this@MainActivity)) "ON" else "OFF"}"
                 textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,0,0,dp(12))
             })
             addView(LinearLayout(this@MainActivity).apply {
@@ -3140,7 +3140,9 @@ class MainActivity : Activity() {
                 text=if(ordered.isEmpty()) "Waiting for pipeline telemetry. Soft reboot or authenticate once to populate this view."
                 else {
                     val base=ordered.first().first
-                    ordered.joinToString("\n") { item ->
+                    val recent=ordered.takeLast(8)
+                    val prefix=if(ordered.size>recent.size) "${ordered.size-recent.size} earlier events hidden\n" else ""
+                    prefix + recent.joinToString("\n") { item ->
                         val delta=(item.first-base).coerceAtLeast(0L)
                         "+${delta}ms  •  ${item.second}  •  ${item.third}"
                     }
@@ -3157,7 +3159,7 @@ class MainActivity : Activity() {
             })
             addView(TextView(this@MainActivity).apply {
                 val active=metrics.timeline.mapNotNull { it.split("|",limit=3).getOrNull(2) }.toSet()
-                fun seen(name:String)=if(active.any { it.contains(name) }) "ACTIVE" else "WAITING"
+                fun seen(name:String)=if(active.any { it.contains(name) }) "OBSERVED" else "NO EVENT YET"
                 text="LockSettingsService  •  ${seen("LockSettings")}\nBiometricService  •  ${seen("BiometricService")}\nKeyguardController  •  ${seen("KeyguardController")}\nActivityTaskManager  •  ${seen("ActivityTaskManager")}\nPowerManagerService  •  ${seen("PowerManagerService")}\n\nFirmware  •  ${android.os.Build.MODEL} / Android ${android.os.Build.VERSION.RELEASE}\nBuild  •  ${android.os.Build.DISPLAY}"
                 textSize=11f; typeface=android.graphics.Typeface.MONOSPACE; setTextColor(Appearance.text(this@MainActivity))
                 setPadding(dp(12),dp(10),dp(12),dp(10)); background=Appearance.glass(this@MainActivity,20f,24,true)
@@ -3212,7 +3214,11 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this).setView(panel).setNegativeButton("Close",null)
             .setPositiveButton("Refresh") { _,_ -> showSystemServerDashboard() }
             .create().also { dialog ->
-                dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,32f,82,true)) }
+                dialog.setOnShowListener {
+                    dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,32f,98,true))
+                    dialog.window?.setDimAmount(0.82f)
+                    dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                }
                 dialog.show()
             }
     }
