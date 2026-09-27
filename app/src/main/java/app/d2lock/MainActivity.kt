@@ -3219,7 +3219,7 @@ class MainActivity : Activity() {
             isFillViewport = false
             clipToPadding = false
             setPadding(0, 0, 0, dp(10))
-            addView(panel, ScrollView.LayoutParams(-1, -2))
+            addView(panel, android.view.ViewGroup.LayoutParams(-1, -2))
         }
         AlertDialog.Builder(this).setView(dashboardScroll).setNegativeButton("Close",null)
             .setPositiveButton("Refresh") { _,_ -> showSystemServerDashboard() }
