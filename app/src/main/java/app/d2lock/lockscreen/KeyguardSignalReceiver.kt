@@ -16,11 +16,28 @@ import android.util.Log
  */
 class KeyguardSignalReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != ACTION && intent.action != FINGERPRINT_ACTION) return
+        if (intent.action != ACTION && intent.action != FINGERPRINT_ACTION && intent.action != SYSTEM_ACTION) return
         val senderUid = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) sentFromUid else -1
         Log.i(TAG, "GUARDIAN_XPOSED_SIGNAL_ACCEPTED uid=$senderUid permission=STATUS_BAR")
 
         val source = intent.getStringExtra("source") ?: "unknown"
+        if (intent.action == SYSTEM_ACTION) {
+            val event = intent.getStringExtra("event") ?: return
+            val method = intent.getStringExtra("method") ?: "unknown"
+            val prefs = directBootPrefs(context)
+            prefs.edit()
+                .putLong(KEY_LAST_SYSTEM_EVENT_MS, System.currentTimeMillis())
+                .putString(KEY_LAST_SYSTEM_EVENT, event)
+                .putString(KEY_LAST_SYSTEM_METHOD, method)
+                .putString(KEY_LAST_SYSTEM_SOURCE, source)
+                .apply()
+            Log.i(TAG, "GUARDIAN_SYS_EVENT_RECEIVED event=$event method=$method source=$source")
+            val unlocked = context.getSystemService(UserManager::class.java)?.isUserUnlocked == true
+            if (unlocked && (event == "WAKE" || event == "KEYGUARD" || event == "TASK_KEYGUARD")) {
+                LockScreenService.frameworkSignal(context, event, source)
+            }
+            return
+        }
         if (intent.action == FINGERPRINT_ACTION) {
             val event = intent.getStringExtra("fingerprint_event") ?: return
             val prefs = directBootPrefs(context)
@@ -75,6 +92,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         private const val TAG = "SamsungLockD2"
         const val ACTION = "app.d2lock.action.XPOSED_KEYGUARD_STATE"
         const val FINGERPRINT_ACTION = "app.d2lock.action.XPOSED_FINGERPRINT_EVENT"
+        const val SYSTEM_ACTION = "app.d2lock.action.XPOSED_SYSTEM_EVENT"
 
         private const val PREFS = "guardian_xposed_health"
         private const val KEY_LAST_EVENT_MS = "last_systemui_event_ms"
@@ -87,12 +105,18 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         private const val KEY_LAST_FP_EVENT_MS = "last_fingerprint_event_ms"
         private const val KEY_LAST_FP_EVENT = "last_fingerprint_event"
         private const val KEY_LAST_FP_SOURCE = "last_fingerprint_source"
+        private const val KEY_LAST_SYSTEM_EVENT_MS = "last_system_event_ms"
+        private const val KEY_LAST_SYSTEM_EVENT = "last_system_event"
+        private const val KEY_LAST_SYSTEM_METHOD = "last_system_method"
+        private const val KEY_LAST_SYSTEM_SOURCE = "last_system_source"
 
         private fun directBootPrefs(context: Context) =
             context.createDeviceProtectedStorageContext()
                 .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
         data class BridgeHealth(val status: String, val ageMs: Long?, val source: String?)
+        data class SystemHealth(val status: String, val ageMs: Long?, val event: String?, val method: String?, val source: String?)
+        data class FingerprintHealth(val ageMs: Long?, val event: String?, val source: String?)
 
         fun bridgeHealth(context: Context, staleAfterMs: Long = 90_000L): BridgeHealth {
             val prefs = directBootPrefs(context)
@@ -103,6 +127,27 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
             if (timestamp <= 0L) return BridgeHealth("WAITING", null, source)
             val age = (System.currentTimeMillis() - timestamp).coerceAtLeast(0L)
             return BridgeHealth(if (age <= staleAfterMs) "READY" else "STALE", age, source)
+        }
+
+        fun systemHealth(context: Context, staleAfterMs: Long = 90_000L): SystemHealth {
+            val prefs = directBootPrefs(context)
+            val timestamp = prefs.getLong(KEY_LAST_SYSTEM_EVENT_MS, 0L)
+            val event = prefs.getString(KEY_LAST_SYSTEM_EVENT, null)
+            val method = prefs.getString(KEY_LAST_SYSTEM_METHOD, null)
+            val source = prefs.getString(KEY_LAST_SYSTEM_SOURCE, null)
+            if (timestamp <= 0L) return SystemHealth("WAITING", null, event, method, source)
+            val age = (System.currentTimeMillis() - timestamp).coerceAtLeast(0L)
+            return SystemHealth(if (age <= staleAfterMs) "READY" else "STALE", age, event, method, source)
+        }
+
+        fun fingerprintHealth(context: Context): FingerprintHealth {
+            val prefs = directBootPrefs(context)
+            val timestamp = prefs.getLong(KEY_LAST_FP_EVENT_MS, 0L)
+            return FingerprintHealth(
+                if (timestamp > 0L) (System.currentTimeMillis() - timestamp).coerceAtLeast(0L) else null,
+                prefs.getString(KEY_LAST_FP_EVENT, null),
+                prefs.getString(KEY_LAST_FP_SOURCE, null)
+            )
         }
 
         fun replayDeferred(context: Context): Boolean {
