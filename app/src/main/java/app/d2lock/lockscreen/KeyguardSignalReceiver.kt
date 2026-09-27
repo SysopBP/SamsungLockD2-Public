@@ -16,12 +16,23 @@ import android.util.Log
  */
 class KeyguardSignalReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != ACTION) return
+        if (intent.action != ACTION && intent.action != FINGERPRINT_ACTION) return
         val senderUid = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) sentFromUid else -1
         Log.i(TAG, "GUARDIAN_XPOSED_SIGNAL_ACCEPTED uid=$senderUid permission=STATUS_BAR")
 
-        val state = intent.getStringExtra("state") ?: return
         val source = intent.getStringExtra("source") ?: "unknown"
+        if (intent.action == FINGERPRINT_ACTION) {
+            val event = intent.getStringExtra("fingerprint_event") ?: return
+            val prefs = directBootPrefs(context)
+            prefs.edit()
+                .putLong(KEY_LAST_FP_EVENT_MS, System.currentTimeMillis())
+                .putString(KEY_LAST_FP_EVENT, event)
+                .putString(KEY_LAST_FP_SOURCE, source)
+                .apply()
+            Log.i(TAG, "GUARDIAN_XPOSED_FINGERPRINT_RECEIVED event=$event source=$source observational=true")
+            return
+        }
+        val state = intent.getStringExtra("state") ?: return
         val unlocked = context.getSystemService(UserManager::class.java)?.isUserUnlocked == true
         Log.i(TAG, "GUARDIAN_XPOSED_KEYGUARD_RECEIVED state=$state source=$source unlocked=$unlocked")
 
@@ -63,6 +74,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "SamsungLockD2"
         const val ACTION = "app.d2lock.action.XPOSED_KEYGUARD_STATE"
+        const val FINGERPRINT_ACTION = "app.d2lock.action.XPOSED_FINGERPRINT_EVENT"
 
         private const val PREFS = "guardian_xposed_health"
         private const val KEY_LAST_EVENT_MS = "last_systemui_event_ms"
@@ -72,6 +84,9 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         private const val KEY_PENDING_HANDOFF = "pending_handoff"
         private const val KEY_PENDING_STATE = "pending_state"
         private const val KEY_PENDING_SOURCE = "pending_source"
+        private const val KEY_LAST_FP_EVENT_MS = "last_fingerprint_event_ms"
+        private const val KEY_LAST_FP_EVENT = "last_fingerprint_event"
+        private const val KEY_LAST_FP_SOURCE = "last_fingerprint_source"
 
         private fun directBootPrefs(context: Context) =
             context.createDeviceProtectedStorageContext()
