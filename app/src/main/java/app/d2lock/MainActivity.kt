@@ -2073,7 +2073,7 @@ class MainActivity : Activity() {
                         addView(TextView(this@MainActivity).apply {
                             text=status; textSize=8f; setTextColor(Appearance.secondary(this@MainActivity))
                         },LinearLayout.LayoutParams(0,-2,1f))
-                        addView(androidx.appcompat.widget.SwitchCompat(this@MainActivity).apply {
+                        addView(android.widget.Switch(this@MainActivity).apply {
                             isChecked=checked(); scaleX=.78f; scaleY=.78f
                             setOnCheckedChangeListener { _,v -> changed(v) }
                         },LinearLayout.LayoutParams(dp(52),-2))
@@ -2152,7 +2152,7 @@ class MainActivity : Activity() {
                     addView(TextView(this@MainActivity).apply {
                         text = title; textSize = 11f; maxLines = 2; setTextColor(Appearance.text(this@MainActivity))
                     }, LinearLayout.LayoutParams(0, -2, 1f))
-                    addView(androidx.appcompat.widget.SwitchCompat(this@MainActivity).apply {
+                    addView(android.widget.Switch(this@MainActivity).apply {
                         isChecked = checked(); scaleX = .82f; scaleY = .82f
                         setOnCheckedChangeListener { _, value -> changed(value) }
                     }, LinearLayout.LayoutParams(dp(54), -2))
