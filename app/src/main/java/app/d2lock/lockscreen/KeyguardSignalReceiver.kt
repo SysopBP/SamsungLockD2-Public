@@ -135,6 +135,8 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         private const val KEY_PIPELINE_TIMELINE = "pipeline_timeline"
         private const val KEY_LAST_BIOMETRIC_MS = "pipeline_last_biometric_ms"
         private const val KEY_GUARDIAN_LOG = "guardian_log_center"
+        private const val KEY_DECISION_TIMELINE = "guardian_decision_timeline"
+        private const val KEY_SUPPRESSED_COUNT = "guardian_suppressed_count"
 
         private fun directBootPrefs(context: Context) =
             context.createDeviceProtectedStorageContext()
@@ -149,12 +151,26 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         )
 
         data class PipelineMetrics(val timeline: List<String>, val lastBiometricMs: Long?)
+        data class DecisionMetrics(val suppressed: Long, val timeline: List<String>)
         private fun recordLog(context: Context, category: String, message: String, level: String = "I") {
             val prefs = directBootPrefs(context)
             val now = System.currentTimeMillis()
             val old = prefs.getString(KEY_GUARDIAN_LOG, "").orEmpty()
                 .lineSequence().filter { it.isNotBlank() }.take(199).toList()
             prefs.edit().putString(KEY_GUARDIAN_LOG, (listOf("$now|$level|$category|$message") + old).joinToString("\n")).apply()
+        }
+        fun recordDecision(context: Context, decision: String, reason: String) {
+            val prefs = directBootPrefs(context); val now = System.currentTimeMillis()
+            val old = prefs.getString(KEY_DECISION_TIMELINE, "").orEmpty().lineSequence().filter { it.isNotBlank() }.take(29).toList()
+            val edit = prefs.edit().putString(KEY_DECISION_TIMELINE, (listOf("$now|$decision|$reason") + old).joinToString("\n"))
+            if (decision.contains("SUPPRESS") || decision.contains("SKIP") || decision.contains("DEFER"))
+                edit.putLong(KEY_SUPPRESSED_COUNT, prefs.getLong(KEY_SUPPRESSED_COUNT, 0L) + 1L)
+            edit.apply(); recordLog(context, "DECISION", "$decision • $reason")
+        }
+        fun decisionMetrics(context: Context): DecisionMetrics {
+            val p=directBootPrefs(context)
+            return DecisionMetrics(p.getLong(KEY_SUPPRESSED_COUNT,0L),
+                p.getString(KEY_DECISION_TIMELINE,"").orEmpty().lineSequence().filter { it.isNotBlank() }.take(30).toList())
         }
         fun guardianLog(context: Context): List<String> =
             directBootPrefs(context).getString(KEY_GUARDIAN_LOG, "").orEmpty()
