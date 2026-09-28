@@ -3241,7 +3241,7 @@ class MainActivity : Activity() {
             addView(TextView(this@MainActivity).apply {
                 val active=metrics.timeline.mapNotNull { it.split("|",limit=3).getOrNull(2) }.toSet()
                 fun seen(name:String)=if(active.any { it.contains(name) }) "OBSERVED" else "NO EVENT YET"
-                text="LockSettingsService  •  ${seen("LockSettings")}\nBiometricService  •  ${seen("BiometricService")}\nKeyguardController  •  ${seen("KeyguardController")}\nActivityTaskManager  •  ${seen("ActivityTaskManager")}\nPowerManagerService  •  ${seen("PowerManagerService")}\n\nFirmware  •  ${android.os.Build.MODEL} / Android ${android.os.Build.VERSION.RELEASE}\nBuild  •  ${android.os.Build.DISPLAY}"
+                text="Boot handoff  •  ${if(metrics.timeline.any { it.contains("BOOT_READY") }) "OBSERVED" else "WAITING"}\nPowerManagerService wake hook  •  ${KeyguardSignalReceiver.wakeHookStatus(this@MainActivity)}\nWake event  •  ${seen("WAKE_OBSERVED")}\nOther service hooks  •  NOT ENABLED IN THIS BUILD\n\nFirmware  •  ${android.os.Build.MODEL} / Android ${android.os.Build.VERSION.RELEASE}\nBuild  •  ${android.os.Build.DISPLAY}"
                 textSize=11f; typeface=android.graphics.Typeface.MONOSPACE; setTextColor(Appearance.text(this@MainActivity))
                 setPadding(dp(12),dp(10),dp(12),dp(10)); background=Appearance.glass(this@MainActivity,20f,24,true)
             },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })

@@ -33,6 +33,7 @@ class GuardianXposedBridge : XposedModule() {
         private const val TAG = "D2XposedBridge"
         private val bootReadySent = AtomicBoolean(false)
         private val lastWakeSignalMs = AtomicLong(0L)
+        @Volatile private var wakeHookStatus = "UNAVAILABLE"
     }
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
@@ -62,6 +63,7 @@ class GuardianXposedBridge : XposedModule() {
             }
         val methods = owner.declaredMethods.filter { it.name == "wakeUpInternal" }
         if (methods.isEmpty()) {
+            wakeHookStatus = "UNAVAILABLE"
             log(Log.WARN, TAG, "GUARDIAN_WAKE_HOOK_UNAVAILABLE target=$className#wakeUpInternal")
             return
         }
@@ -84,7 +86,9 @@ class GuardianXposedBridge : XposedModule() {
                         result
                     }
                 log(Log.INFO, TAG, "GUARDIAN_WAKE_HOOK_INSTALLED target=$className#${method.name}")
+                wakeHookStatus = "INSTALLED"
             }.onFailure {
+                if (wakeHookStatus != "INSTALLED") wakeHookStatus = "FAILED"
                 log(Log.WARN, TAG, "GUARDIAN_WAKE_HOOK_FAILED target=$className#${method.name}", it)
             }
         }
@@ -176,6 +180,7 @@ class GuardianXposedBridge : XposedModule() {
                         )
                     )
                     .putExtra("event", "BOOT_READY")
+                    .putExtra("wake_hook_status", wakeHookStatus)
                     .putExtra("method", "systemReady")
                     .putExtra(
                         "source",

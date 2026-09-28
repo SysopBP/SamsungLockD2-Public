@@ -43,6 +43,9 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                 .putString(KEY_LAST_SYSTEM_SOURCE, source)
                 .putLong(KEY_SYSTEM_EVENT_COUNT, prefs.getLong(KEY_SYSTEM_EVENT_COUNT, 0L) + 1L)
                 .putString(KEY_SYSTEM_TIMELINE, (listOf(line) + timeline).joinToString("\n"))
+            if (event == "BOOT_READY") {
+                intent.getStringExtra("wake_hook_status")?.let { edit.putString(KEY_WAKE_HOOK_STATUS, it) }
+            }
             if (counterKey != null) edit.putLong(counterKey, prefs.getLong(counterKey, 0L) + 1L)
             edit.apply()
             recordPipeline(context, event, method)
@@ -132,6 +135,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         private const val KEY_SYSTEM_BIOMETRIC_COUNT = "system_biometric_count"
         private const val KEY_SYSTEM_LOCKSETTINGS_COUNT = "system_locksettings_count"
         private const val KEY_SYSTEM_TIMELINE = "system_timeline"
+        private const val KEY_WAKE_HOOK_STATUS = "wake_hook_status"
         private const val KEY_PIPELINE_TIMELINE = "pipeline_timeline"
         private const val KEY_LAST_BIOMETRIC_MS = "pipeline_last_biometric_ms"
         private const val KEY_GUARDIAN_LOG = "guardian_log_center"
@@ -237,6 +241,8 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                 prefs.getString(KEY_SYSTEM_TIMELINE, "").orEmpty().lineSequence().filter { it.isNotBlank() }.take(12).toList()
             )
         }
+        fun wakeHookStatus(context: Context): String =
+            directBootPrefs(context).getString(KEY_WAKE_HOOK_STATUS, null) ?: "UNKNOWN (reboot to check)"
 
         fun fingerprintHealth(context: Context): FingerprintHealth {
             val prefs = directBootPrefs(context)
