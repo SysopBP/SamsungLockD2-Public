@@ -9,6 +9,14 @@ import app.d2lock.lockscreen.LockScreenActivity
 import app.d2lock.security.PinStore
 
 class D2TileService : TileService() {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // QS tiles are bound by SystemUI. A started (especially foreground) service
+        // request cannot be fulfilled by this component; cancel it before Android's
+        // foreground-service deadline kills the entire D2 process.
+        stopSelf(startId)
+        return START_NOT_STICKY
+    }
+
     override fun onStartListening() {
         super.onStartListening()
         val configured = PinStore(this).configured()

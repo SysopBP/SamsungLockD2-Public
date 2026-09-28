@@ -3,6 +3,7 @@ package app.d2lock.notifications
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.app.Notification
+import android.content.Intent
 import java.util.concurrent.CopyOnWriteArrayList
 
 data class LockNotification(val key: String, val app: String, val title: String, val text: String, val time: Long, val visibility: Int,
@@ -16,6 +17,14 @@ object NotificationStore {
 }
 
 class LockNotificationListener : NotificationListenerService() {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Notification listeners receive callbacks through a system binding.
+        // Reject accidental startForegroundService calls promptly so their
+        // timeout cannot crash the app process.
+        stopSelf(startId)
+        return START_NOT_STICKY
+    }
+
     override fun onListenerConnected() {
         NotificationStore.listener = this
         NotificationStore.items.clear()
