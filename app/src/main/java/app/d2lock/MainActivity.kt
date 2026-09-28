@@ -101,18 +101,20 @@ class MainActivity : Activity() {
             "Kiosk D2 Guardian can become your primary rooted lock surface. Complete and test D2 authentication and your recovery path before enabling full kiosk protection.",
             if (PinStore(this).configured()) "D2 authentication is configured. You can continue." else "Create a D2 PIN before full Guardian protection can be enabled. Pattern can be selected later in Security Center.",
             buildString {
-                append(if (RootManager.isAvailable()) "✓ Root shell detected" else "○ Root shell not detected")
+                append(if (RootManager.isAvailable()) "✓ KernelSU Superuser granted to D2" else "○ KernelSU Superuser required")
                 append("\n")
                 append(if (Prefs.adbRecovery(this@MainActivity)) "✓ ADB / USB recovery configured" else "○ ADB / USB recovery is optional and currently off")
-                append("\n\nConfirm you know your reboot/root recovery path before using kiosk protection.")
+                append("\n\nD2's tested rooted configuration requires KernelSU Superuser. Grant Kiosk D2 Guardian root access in KernelSU before continuing to full kiosk protection.")
             },
             buildString {
-                append(if (runCatching { Shizuku.pingBinder() }.getOrDefault(false)) "✓ Shizuku connected" else "○ Shizuku not connected")
+                val shizukuRunning = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+                val shizukuGranted = shizukuRunning && runCatching { Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED }.getOrDefault(false)
+                append(if (shizukuGranted) "✓ Shizuku connected and authorized" else if (shizukuRunning) "○ Shizuku permission required" else "○ Shizuku required — start the service")
                 append("\n")
-                append(if (Prefs.xposedMaster(this@MainActivity)) "✓ LSPosed/Xposed integration configured" else "○ Xposed integration disabled")
+                append(if (Prefs.xposedMaster(this@MainActivity)) "✓ LSPosed/Xposed integration configured" else "○ Xposed integration optional")
                 append("\n")
                 append(if (app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)) "✓ Galaxy Island paired" else "○ Galaxy Island pairing optional")
-                append("\n\nFingerprint unlock remains experimental and is not enabled by this wizard.")
+                append("\n\nBeta 2 validated configuration: KernelSU Superuser + Shizuku authorized. Fingerprint unlock remains experimental.")
             },
             "Recommended starting point: enable Show D2 when the screen wakes, keep Automatic fallback on, and verify call/relock behavior before enabling kiosk authentication.",
             "Use Test Guardian to open the lock surface and successfully return with your D2 credential. Full kiosk protection stays unchanged until you explicitly enable it after this test.",
@@ -137,6 +139,29 @@ class MainActivity : Activity() {
                 background=Appearance.glass(this@MainActivity,22f,30,true); setPadding(dp(12),dp(11),dp(12),dp(11))
                 setOnClickListener { PinUi.show(this@MainActivity,setup=true,success={ showSetupWizard(2) }) }
             },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
+            if(step==2 && !RootManager.isAvailable()) addView(TextView(this@MainActivity).apply {
+                text="Recheck KernelSU Superuser"; textSize=15f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
+                background=Appearance.glass(this@MainActivity,22f,30,true); setPadding(dp(12),dp(11),dp(12),dp(11))
+                setOnClickListener { showSetupWizard(2) }
+            },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
+            if(step==3) {
+                val shizukuRunning = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+                val shizukuGranted = shizukuRunning && runCatching { Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED }.getOrDefault(false)
+                if(!shizukuGranted) addView(TextView(this@MainActivity).apply {
+                    text=if(shizukuRunning) "Authorize Shizuku" else "Recheck Shizuku"
+                    textSize=15f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
+                    background=Appearance.glass(this@MainActivity,22f,30,true); setPadding(dp(12),dp(11),dp(12),dp(11))
+                    setOnClickListener {
+                        if(runCatching { Shizuku.pingBinder() }.getOrDefault(false)) {
+                            if(runCatching { Shizuku.checkSelfPermission() }.getOrDefault(PackageManager.PERMISSION_DENIED) != PackageManager.PERMISSION_GRANTED) {
+                                Shizuku.requestPermission(shizukuRequestCode)
+                            } else showSetupWizard(3)
+                        } else {
+                            Toast.makeText(this@MainActivity,"Start Shizuku, then return to D2.",Toast.LENGTH_LONG).show()
+                        }
+                    }
+                },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
+            }
             if(step==4) addView(guardianSwitch().apply {
                 text="Show D2 when the screen wakes"; setTextColor(Appearance.text(this@MainActivity)); isChecked=Prefs.enabled(this@MainActivity)
                 setOnCheckedChangeListener { _,checked ->
@@ -156,6 +181,16 @@ class MainActivity : Activity() {
             if(step==1 && !PinStore(this).configured()) {
                 showD2Message("Create and verify your D2 PIN before continuing")
                 showSetupWizard(1)
+            } else if(step==2 && !RootManager.isAvailable()) {
+                showD2Message("Grant Kiosk D2 Guardian Superuser access in KernelSU, then recheck")
+                showSetupWizard(2)
+            } else if(step==3) {
+                val running=runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+                val granted=running && runCatching { Shizuku.checkSelfPermission()==PackageManager.PERMISSION_GRANTED }.getOrDefault(false)
+                if(!granted) {
+                    showD2Message(if(running) "Authorize Kiosk D2 Guardian in Shizuku before continuing" else "Start Shizuku before continuing")
+                    showSetupWizard(3)
+                } else showSetupWizard(step+1)
             } else showSetupWizard(step+1)
         } else builder.setPositiveButton("Finish") { _,_ ->
             Prefs.setSetupWizardComplete(this,true)
