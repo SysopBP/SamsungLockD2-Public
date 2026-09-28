@@ -100,8 +100,11 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun hasNotificationAccess(): Boolean =
-        NotificationManager.getEnabledListenerPackages(this).contains(packageName)
+    private fun hasNotificationAccess(): Boolean = runCatching {
+        getSystemService(NotificationManager::class.java).isNotificationListenerAccessGranted(
+            ComponentName(this, app.d2lock.notifications.LockNotificationListener::class.java)
+        )
+    }.getOrDefault(false)
 
     private fun openNotificationAccessSettings() {
         setupIntegrationStepPending = true
