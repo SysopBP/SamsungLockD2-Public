@@ -1601,6 +1601,10 @@ class MainActivity : Activity() {
             isChecked = Prefs.doubleTapSleep(this@MainActivity)
             setOnCheckedChangeListener { _, checked -> Prefs.setDoubleTapSleep(this@MainActivity, checked) }
         }, LinearLayout.LayoutParams(-1, dp(40)))
+        addChoice(appearanceCard, "Turn off screen when lock is idle", listOf("Off", "15 seconds", "30 seconds", "1 minute", "2 minutes"),
+            listOf(0, 15, 30, 60, 120).indexOf(Prefs.lockIdleSleepSeconds(this)).coerceAtLeast(0)) {
+            Prefs.setLockIdleSleepSeconds(this, listOf(0, 15, 30, 60, 120)[it])
+        }
         addChoice(appearanceCard, "Unlock haptics", listOf("Off", "Soft", "Medium", "Strong"),
             listOf("off", "soft", "medium", "strong").indexOf(Prefs.unlockHaptics(this)).coerceAtLeast(0)) {
             Prefs.setUnlockHaptics(this, listOf("off", "soft", "medium", "strong")[it])

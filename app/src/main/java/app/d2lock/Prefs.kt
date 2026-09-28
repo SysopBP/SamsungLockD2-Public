@@ -248,6 +248,8 @@ object Prefs {
     fun setExperimentalLockMotion(context: Context, value: Boolean) = prefs(context).edit().putBoolean("experimental_lock_motion", value).apply()
     fun doubleTapSleep(context: Context) = prefs(context).getBoolean("double_tap_sleep", false)
     fun setDoubleTapSleep(context: Context, value: Boolean) = prefs(context).edit().putBoolean("double_tap_sleep", value).apply()
+    fun lockIdleSleepSeconds(context: Context) = prefs(context).getInt("lock_idle_sleep_seconds", 30).takeIf { it in listOf(0, 15, 30, 60, 120) } ?: 30
+    fun setLockIdleSleepSeconds(context: Context, value: Int) = prefs(context).edit().putInt("lock_idle_sleep_seconds", value).apply()
     fun unlockHaptics(context: Context) = prefs(context).getString("unlock_haptics", "off") ?: "off"
     fun setUnlockHaptics(context: Context, value: String) = prefs(context).edit().putString("unlock_haptics", value).apply()
     fun setWallpaperDim(context: Context, value: Int) = prefs(context).edit().putInt("wallpaper_dim", value.coerceIn(0, 80)).apply()
