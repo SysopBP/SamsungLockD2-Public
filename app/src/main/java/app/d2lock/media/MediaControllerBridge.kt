@@ -2,21 +2,42 @@ package app.d2lock.media
 
 import android.content.ComponentName
 import android.content.Context
+import android.app.Notification
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
+import android.media.session.MediaSession
 import app.d2lock.notifications.LockNotificationListener
+import app.d2lock.notifications.NotificationStore
 
 class MediaControllerBridge(context: Context) {
+    private val appContext = context.applicationContext
     private val manager = context.getSystemService(MediaSessionManager::class.java)
     private val listener = ComponentName(context, LockNotificationListener::class.java)
 
-    private fun controller(): MediaController? = runCatching {
-        val sessions = manager.getActiveSessions(listener)
-        sessions.firstOrNull { it.playbackState?.state == android.media.session.PlaybackState.STATE_PLAYING }
+    private fun controller(): MediaController? {
+        val sessions = runCatching { manager.getActiveSessions(listener) }.getOrDefault(emptyList())
+        val active = sessions.firstOrNull { it.playbackState?.state == android.media.session.PlaybackState.STATE_PLAYING }
             ?: sessions.firstOrNull { !it.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE).isNullOrBlank() }
             ?: sessions.firstOrNull()
-    }.getOrNull()
+        if (active != null) return active
+
+        // Android 17/Samsung can briefly expose the media notification before
+        // getActiveSessions() returns its controller. Recover the session token
+        // directly from our connected notification listener as a fallback.
+        return runCatching {
+            val notifications = NotificationStore.listener?.activeNotifications.orEmpty()
+            @Suppress("DEPRECATION")
+            val controllers = notifications.mapNotNull { sbn ->
+                val token = sbn.notification.extras
+                    ?.getParcelable(Notification.EXTRA_MEDIA_SESSION) as? MediaSession.Token
+                token?.let { MediaController(appContext, it) }
+            }
+            controllers.firstOrNull { it.playbackState?.state == android.media.session.PlaybackState.STATE_PLAYING }
+                ?: controllers.firstOrNull { !it.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE).isNullOrBlank() }
+                ?: controllers.firstOrNull()
+        }.getOrNull()
+    }
     fun isPlaying() = controller()?.playbackState?.state == android.media.session.PlaybackState.STATE_PLAYING
     fun title(): String = controller()?.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty()
     fun artist(): String = controller()?.metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST).orEmpty()
