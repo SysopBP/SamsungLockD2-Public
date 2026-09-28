@@ -119,7 +119,7 @@ jobs:
           # overlay. Do not bundle a second payload for late pm installation.
           rm -rf module/payload
           cp LICENSE THIRD_PARTY_NOTICES.txt module/
-          rm module/payload/PLACE_APK_HERE.txt
+          rm -f module/payload/PLACE_APK_HERE.txt
           for script in module/*.sh; do bash -n "$script"; done
           chmod 755 module/*.sh
           (cd module && zip -r ../dist/Kiosk-D2-Guardian-KernelSU-paired.zip .)
