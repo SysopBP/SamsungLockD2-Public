@@ -1,6 +1,6 @@
 id=samsunglock37_ksunext
-name=Samsung Lock D2 - Galaxy Island Paired Bridge
-version=v0.5.6-paired
-versionCode=56
+name=Kiosk D2 Guardian - Optional KernelSU Bridge
+version=v0.5.7-optional
+versionCode=57
 author=D2 Project
-description=KernelSU Next bridge for the One UI 9-inspired Samsung Lock D2 companion app. Handles APK installation, boot startup, diagnostics, and root-assisted launching without replacing Samsung Keyguard.
+description=Optional KernelSU Next diagnostic/startup bridge for Kiosk D2 Guardian. Not required for the verified stable path: install D2 normally, enable KSU Root Mode in System Integrations, and use the minimal LSPosed systemReady bridge. Do not enable this module unless specifically testing the separate bridge path.
