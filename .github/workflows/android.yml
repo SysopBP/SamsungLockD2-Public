@@ -115,11 +115,11 @@ jobs:
           rm -rf module/payload
           mkdir -p module/payload
           cp LICENSE THIRD_PARTY_NOTICES.txt module/
-          printf '%s\n' 'Install Kiosk-D2-Guardian-debug.apk normally before enabling this bridge.' > module/payload/PLACE_APK_HERE.txt
+          printf '%s\n' 'Optional bridge only. Install Kiosk-D2-Guardian-debug.apk normally and enable KernelSU Root Mode in D2 System Integrations. Leave this module disabled unless intentionally testing the separate bridge path.' > module/payload/PLACE_APK_HERE.txt
           for script in module/*.sh; do bash -n "$script"; done
           chmod 755 module/*.sh
-          (cd module && zip -r ../dist/Kiosk-D2-Guardian-KernelSU-paired.zip .)
-          unzip -t dist/Kiosk-D2-Guardian-KernelSU-paired.zip
+          (cd module && zip -r ../dist/Kiosk-D2-Guardian-KernelSU-OPTIONAL.zip .)
+          unzip -t dist/Kiosk-D2-Guardian-KernelSU-OPTIONAL.zip
           zip -r dist/Kiosk-D2-Guardian-source.zip app/src app/build.gradle.kts build.gradle.kts settings.gradle.kts gradle.properties gradle gradlew gradlew.bat module README.md LICENSE THIRD_PARTY_NOTICES.txt docs .github
           cp runtime-dependencies.txt dist/
           sha256sum dist/*.apk dist/*.zip > dist/SHA256SUMS.txt
