@@ -195,7 +195,7 @@ class MainActivity : Activity() {
             setPadding(dp(16), dp(14), dp(16), dp(18)); background = Appearance.glass(this@MainActivity, 26f, 28, true)
         }
         fun whatsNew() {
-            content.text = "WHAT'S NEW  •  D2 ${versionName ?: "current"}\n\n• Framework-enabled boot path validated on the current SM-S948U1 test device\n• Earlier Guardian launch handoff from system_server after ActivityManager reports systemReady\n• LSPosed/Xposed system_server + SystemUI integration, health status and diagnostics\n• Guardian/Kiosk call, focus, relock, boot and recovery protection improvements\n• System Integration Center for Root, Shizuku, Xposed and Galaxy Island\n• Recovery & Safety Center with system-health and USB/ADB recovery status\n• Compact One UI 9 glass settings, dialogs, navigation and section highlighting\n• Galaxy Island pairing and integration controls\n• Fingerprint framework investigation continues: hardware and genuine Samsung/Android biometric authentication are detectable, but D2-only fingerprint unlock is not complete\n• PIN/Pattern remain the supported Guardian credentials and recovery path"
+            content.text = "WHAT'S NEW  •  D2 ${versionName ?: "current"}\n\n• Stable Android 17 boot path validated across five consecutive reboots on the current SM-S948U1 test device\n• D2 remains a normal user-installed app; KernelSU Root Mode is enabled from System Integrations\n• Minimal LSPosed system_server handoff runs only after ActivityManager reports systemReady\n• Separate KernelSU paired bridge is optional and was disabled during the verified reboot test\n• LSPosed scopes include System Framework, SystemUI and Samsung biometrics for integration/diagnostics\n• Guardian/Kiosk call, focus, relock, boot and recovery protection improvements\n• System Integration Center for Root, Shizuku, Xposed and Galaxy Island\n• Recovery & Safety Center with system-health and USB/ADB recovery status\n• Compact One UI 9 glass settings, dialogs, navigation and section highlighting\n• Galaxy Island pairing and integration controls\n• Fingerprint framework investigation continues: hardware and genuine Samsung/Android biometric authentication are detectable, but D2-only fingerprint unlock is not complete\n• PIN/Pattern remain the supported Guardian credentials and recovery path"
         }
         fun whatsNext() {
             val lock = if (PinStore(this@MainActivity).configured()) "✓" else "○"
@@ -204,7 +204,7 @@ class MainActivity : Activity() {
             val shizuku = if (Prefs.shizukuEnabled(this@MainActivity)) "✓" else "○"
             val root = if (Prefs.rootMode(this@MainActivity)) "✓" else "○"
             val xp = if (Prefs.xposedMaster(this@MainActivity)) "✓" else "○"
-            content.text = "WHAT'S NEXT\n\n$lock Set up D2 authentication\n$wake Enable lock on wake\n$kiosk Configure kiosk protection\n$shizuku Connect Shizuku\n$root Verify optional KernelSU/root integration\n$xp LSPosed/SystemUI integration enabled\n○ Validate the new early system_server boot handoff across repeated soft reboots\n○ Complete D2-only fingerprint integration (not fully integrated yet)\n○ Remove the remaining Samsung biometric/keyguard presentation dependency\n○ Verify paired Galaxy Island glass and pop-out behavior\n○ Customize your lock screen\n○ Test your recovery path"
+            content.text = "WHAT'S NEXT\n\n$lock Set up D2 authentication\n$wake Enable lock on wake\n$kiosk Configure kiosk protection\n$shizuku Connect Shizuku\n$root Enable KernelSU Root Mode when using the verified rooted configuration\n$xp LSPosed/System Framework + SystemUI integration enabled\n✓ Five consecutive reboots validated with the minimal systemReady handoff\n○ Complete D2-only fingerprint integration (not fully integrated yet)\n○ Remove the remaining Samsung biometric/keyguard presentation dependency\n○ Verify paired Galaxy Island glass and pop-out behavior\n○ Customize your lock screen\n○ Test your recovery path"
         }
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun tab(label: String, action: () -> Unit) = TextView(this).apply {
@@ -935,7 +935,7 @@ class MainActivity : Activity() {
                             setOnCheckedChangeListener { _,checked -> Prefs.setShizukuEnabled(this@MainActivity,checked) }
                         },rowParams())
                         addView(guardianSwitch().apply {
-                            text="KernelSU root mode"; isChecked=Prefs.rootMode(this@MainActivity)
+                            text="KernelSU Root Mode (verified path)"; isChecked=Prefs.rootMode(this@MainActivity)
                             setTextColor(Appearance.text(this@MainActivity))
                             setOnCheckedChangeListener { _,checked ->
                                 if(checked && !RootManager.isAvailable()) {
@@ -945,7 +945,7 @@ class MainActivity : Activity() {
                             }
                         },rowParams())
                         addView(guardianSwitch().apply {
-                            text="Xposed integration"; isChecked=Prefs.xposedMaster(this@MainActivity)
+                            text="LSPosed integration (minimal systemReady)"; isChecked=Prefs.xposedMaster(this@MainActivity)
                             setTextColor(Appearance.text(this@MainActivity))
                             setOnCheckedChangeListener { _,checked -> Prefs.setXposedMaster(this@MainActivity,checked) }
                         },rowParams())
@@ -2134,7 +2134,7 @@ class MainActivity : Activity() {
                 setPadding(0, dp(7), 0, dp(7))
             })
             addView(TextView(this@MainActivity).apply {
-                text = "Enable and validate one integration at a time. Behavioral hooks remain off by default; Guardian root/kiosk recovery stays available as fallback."
+                text = "Verified baseline: normal D2 install + KernelSU Root Mode + LSPosed. The system_server bridge only observes ActivityManagerService.systemReady, lets Android finish first, then sends BOOT_READY. Keep behavioral hooks off unless testing them separately."
                 textSize = 12f
                 setTextColor(Appearance.secondary(this@MainActivity))
                 setPadding(0, dp(5), 0, dp(8))
@@ -2209,7 +2209,7 @@ class MainActivity : Activity() {
             ))
 
             addView(TextView(this@MainActivity).apply {
-                text = "Stage 2 test order: leave Safe diagnostics only ON. Test Screen / wake awareness first. The remaining switches are configuration gates and will be wired to their hooks incrementally after each previous stage passes."
+                text = "Release baseline: preserve the minimal systemReady hook. Additional behavioral switches remain experimental and should be enabled one at a time. The separate KernelSU bridge ZIP is optional and is not required for the verified boot path."
                 textSize = 12f
                 setTextColor(Appearance.secondary(this@MainActivity))
                 setPadding(dp(4), dp(8), dp(4), 0)
@@ -2399,7 +2399,7 @@ class MainActivity : Activity() {
 
         addButton(root, "About Kiosk D2 Guardian") {
             val info = TextView(this).apply {
-                text = "Kiosk D2 Guardian is a root-aware Samsung lock-screen and kiosk protection project built around D2 PIN/pattern authentication, Guardian relock protection, KernelSU/root recovery, Shizuku, optional LSPosed/Xposed system_server + SystemUI integration, and Galaxy Island coordination. The framework path can hand Guardian an early boot-ready signal after ActivityManager reaches systemReady.\n\nFingerprint framework work is still experimental. Hardware detection and Samsung biometric authentication have been demonstrated, but D2-only fingerprint unlock is not fully integrated and PIN/pattern remain the supported Guardian credentials.\n\nRoot, recovery and reboot remain privileged bypass paths. D2 cannot repair firmware or guarantee prevention of download-mode errors."
+                text = "Kiosk D2 Guardian is a root-aware Samsung lock-screen and kiosk protection project built around D2 PIN/pattern authentication, Guardian relock protection, KernelSU Root Mode, Shizuku, LSPosed integration, and Galaxy Island coordination. The verified Android 17 baseline keeps D2 normally installed under /data/app, enables KernelSU Root Mode in System Integrations, and uses a minimal LSPosed system_server hook that signals Guardian only after ActivityManagerService reaches systemReady. Five consecutive reboots were validated on the SM-S948U1 test device with the separate KernelSU paired bridge disabled.\n\nFingerprint framework work is still experimental. Hardware detection and Samsung biometric authentication have been demonstrated, but D2-only fingerprint unlock is not fully integrated and PIN/pattern remain the supported Guardian credentials.\n\nRoot, recovery and reboot remain privileged bypass paths. D2 cannot repair firmware or guarantee prevention of download-mode errors."
                 textSize = 14f
                 setTextColor(Appearance.text(this@MainActivity))
                 setLineSpacing(0f, 1.14f)
