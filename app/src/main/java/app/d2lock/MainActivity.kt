@@ -53,6 +53,7 @@ class MainActivity : Activity() {
     private var authorized = false
     private var pinDialog: AlertDialog? = null
     private val shizukuRequestCode = 910
+    private var setupIntegrationStepPending = false
     private val shizukuBinderReceived = Shizuku.OnBinderReceivedListener { refreshShizukuUi() }
     private val shizukuBinderDead = Shizuku.OnBinderDeadListener { refreshShizukuUi() }
     private val shizukuPermission = Shizuku.OnRequestPermissionResultListener { requestCode, _ ->
@@ -73,6 +74,11 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        if (setupIntegrationStepPending) {
+            setupIntegrationStepPending = false
+            window.decorView.post { showSetupWizard(3) }
+            return
+        }
         if (!authorized && pinDialog?.isShowing != true) {
             if (PinStore(this).configured()) {
                 pinDialog = PinUi.show(this, success = {
@@ -94,6 +100,19 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun hasNotificationAccess(): Boolean =
+        NotificationManager.getEnabledListenerPackages(this).contains(packageName)
+
+    private fun openNotificationAccessSettings() {
+        setupIntegrationStepPending = true
+        runCatching {
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        }.onFailure {
+            setupIntegrationStepPending = false
+            Toast.makeText(this, "Open Settings > Notifications > Notification access and enable Kiosk D2 Guardian.", Toast.LENGTH_LONG).show()
+        }
+    }
+
     private fun showSetupWizard(step: Int = 0) {
         Prefs.setSetupWizardSeen(this, true)
         val titles = listOf("Welcome", "D2 authentication", "Recovery readiness", "System integrations", "Lock behavior", "Test before kiosk", "Ready")
@@ -111,10 +130,12 @@ class MainActivity : Activity() {
                 val shizukuGranted = shizukuRunning && runCatching { Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED }.getOrDefault(false)
                 append(if (shizukuGranted) "✓ Shizuku connected and authorized" else if (shizukuRunning) "○ Shizuku permission required" else "○ Shizuku required — start the service")
                 append("\n")
+                append(if (hasNotificationAccess()) "✓ Notification Access enabled — media + lock notifications ready" else "○ Notification Access required — media player and lock notifications need it")
+                append("\n")
                 append(if (Prefs.xposedMaster(this@MainActivity)) "✓ LSPosed/Xposed integration configured" else "○ Xposed integration optional")
                 append("\n")
                 append(if (app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)) "✓ Galaxy Island paired" else "○ Galaxy Island pairing optional")
-                append("\n\nBeta 2 validated configuration: KernelSU Superuser + Shizuku authorized. Fingerprint unlock remains experimental.")
+                append("\n\nRequired for full D2 operation: KernelSU Superuser + Shizuku authorized + Notification Access. Fingerprint unlock remains experimental.")
             },
             "Recommended starting point: enable Show D2 when the screen wakes, keep Automatic fallback on, and verify call/relock behavior before enabling kiosk authentication.",
             "Use Test Guardian to open the lock surface and successfully return with your D2 credential. Full kiosk protection stays unchanged until you explicitly enable it after this test.",
@@ -162,6 +183,11 @@ class MainActivity : Activity() {
                     }
                 },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
             }
+            if(step==3 && !hasNotificationAccess()) addView(TextView(this@MainActivity).apply {
+                text="Enable Notification Access"; textSize=15f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
+                background=Appearance.glass(this@MainActivity,22f,30,true); setPadding(dp(12),dp(11),dp(12),dp(11))
+                setOnClickListener { openNotificationAccessSettings() }
+            },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
             if(step==4) addView(guardianSwitch().apply {
                 text="Show D2 when the screen wakes"; setTextColor(Appearance.text(this@MainActivity)); isChecked=Prefs.enabled(this@MainActivity)
                 setOnCheckedChangeListener { _,checked ->
@@ -189,6 +215,9 @@ class MainActivity : Activity() {
                 val granted=running && runCatching { Shizuku.checkSelfPermission()==PackageManager.PERMISSION_GRANTED }.getOrDefault(false)
                 if(!granted) {
                     showD2Message(if(running) "Authorize Kiosk D2 Guardian in Shizuku before continuing" else "Start Shizuku before continuing")
+                    showSetupWizard(3)
+                } else if(!hasNotificationAccess()) {
+                    showD2Message("Enable Notification Access for D2 media controls and lock-screen notifications")
                     showSetupWizard(3)
                 } else showSetupWizard(step+1)
             } else showSetupWizard(step+1)
