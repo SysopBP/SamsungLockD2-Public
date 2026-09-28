@@ -107,19 +107,15 @@ jobs:
         run: |
           mkdir -p dist
           cp app/build/outputs/apk/debug/app-debug.apk dist/Kiosk-D2-Guardian-debug.apk
-          # Present D2 to PackageManager as a boot-time privileged system package.
-          # This avoids relying on a late "pm install" for the UID 1000 build.
-          rm -f module/skip_mount
+          # Stable test packaging: D2 remains a normal user-installed APK.
+          # Do not mount/inject the APK through /system/priv-app and do not
+          # attempt to obtain android.uid.system / UID 1000.
           rm -rf module/system
-          mkdir -p module/system/priv-app/KioskD2Guardian
-          cp dist/Kiosk-D2-Guardian-debug.apk module/system/priv-app/KioskD2Guardian/KioskD2Guardian.apk
-          chmod 755 module/system module/system/priv-app module/system/priv-app/KioskD2Guardian
-          chmod 644 module/system/priv-app/KioskD2Guardian/KioskD2Guardian.apk
-          # Single installation path: the APK exists only in the system priv-app
-          # overlay. Do not bundle a second payload for late pm installation.
+          touch module/skip_mount
           rm -rf module/payload
+          mkdir -p module/payload
           cp LICENSE THIRD_PARTY_NOTICES.txt module/
-          rm -f module/payload/PLACE_APK_HERE.txt
+          printf '%s\n' 'Install Kiosk-D2-Guardian-debug.apk normally before enabling this bridge.' > module/payload/PLACE_APK_HERE.txt
           for script in module/*.sh; do bash -n "$script"; done
           chmod 755 module/*.sh
           (cd module && zip -r ../dist/Kiosk-D2-Guardian-KernelSU-paired.zip .)
