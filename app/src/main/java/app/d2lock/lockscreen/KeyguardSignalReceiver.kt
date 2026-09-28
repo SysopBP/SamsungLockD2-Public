@@ -27,7 +27,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
             val prefs = directBootPrefs(context)
             val now = System.currentTimeMillis()
             val counterKey = when (event) {
-                "WAKE", "SLEEP" -> KEY_SYSTEM_WAKE_COUNT
+                "WAKE", "SLEEP", "WAKE_OBSERVED" -> KEY_SYSTEM_WAKE_COUNT
                 "KEYGUARD", "TASK_KEYGUARD" -> KEY_SYSTEM_KEYGUARD_COUNT
                 "BIOMETRIC" -> KEY_SYSTEM_BIOMETRIC_COUNT
                 "LOCK_SETTINGS" -> KEY_SYSTEM_LOCKSETTINGS_COUNT

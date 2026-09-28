@@ -1012,7 +1012,7 @@ class MainActivity : Activity() {
                             }
                         },rowParams())
                         addView(guardianSwitch().apply {
-                            text="LSPosed integration (minimal systemReady)"; isChecked=Prefs.xposedMaster(this@MainActivity)
+                            text="LSPosed integration (wake observation test)"; isChecked=Prefs.xposedMaster(this@MainActivity)
                             setTextColor(Appearance.text(this@MainActivity))
                             setOnCheckedChangeListener { _,checked -> Prefs.setXposedMaster(this@MainActivity,checked) }
                         },rowParams())
@@ -2205,7 +2205,7 @@ class MainActivity : Activity() {
                 setPadding(0, dp(7), 0, dp(7))
             })
             addView(TextView(this@MainActivity).apply {
-                text = "Verified baseline: normal D2 install + KernelSU Root Mode + LSPosed. The system_server bridge only observes ActivityManagerService.systemReady, lets Android finish first, then sends BOOT_READY. Keep behavioral hooks off unless testing them separately."
+                text = "Experimental wake observation: the proven systemReady handoff stays intact. A separate PowerManagerService hook records WAKE_OBSERVED after Android handles wake; it does not request a lock or change framework results. Keep run #905 as the rollback build."
                 textSize = 12f
                 setTextColor(Appearance.secondary(this@MainActivity))
                 setPadding(0, dp(5), 0, dp(8))
@@ -2280,7 +2280,7 @@ class MainActivity : Activity() {
             ))
 
             addView(TextView(this@MainActivity).apply {
-                text = "Release baseline: preserve the minimal systemReady hook. Additional behavioral switches remain experimental and should be enabled one at a time. The separate KernelSU bridge ZIP is optional and is not required for the verified boot path."
+                text = "This test adds one observational wake hook to the minimal systemReady baseline. The other behavioral switches are not installed as system_server hooks. Test boot and wake before expanding coverage."
                 textSize = 12f
                 setTextColor(Appearance.secondary(this@MainActivity))
                 setPadding(dp(4), dp(8), dp(4), 0)
@@ -3258,7 +3258,7 @@ class MainActivity : Activity() {
             },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
             addView(TextView(this@MainActivity).apply {
                 val events=pipeline.timeline.mapNotNull { l -> val p=l.split("|",limit=3); p.getOrNull(0)?.toLongOrNull()?.let { Triple(it,p.getOrElse(1){""},p.getOrElse(2){""}) } }.sortedBy { it.first }
-                val wake=events.lastOrNull { it.second=="WAKE" }
+                val wake=events.lastOrNull { it.second=="WAKE" || it.second=="WAKE_OBSERVED" }
                 val request=events.lastOrNull { it.second=="D2_LAUNCH_REQUEST" || it.second=="D2_LAUNCH_REQUESTED" }
                 val accepted=events.lastOrNull { it.second=="D2_LAUNCH_ACCEPTED" }
                 val visible=events.lastOrNull { it.second=="D2_VISIBLE" }
