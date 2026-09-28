@@ -10,9 +10,9 @@ wait_for_android || {
 }
 
 if package_installed; then
-  log_line "priv-app overlay package detected"
+  log_line "normal user-installed D2 package detected"
   start_companion
   log_line "foreground companion start requested"
 else
-  log_line "priv-app overlay package not detected; no pm install fallback attempted"
+  log_line "D2 is not installed; bridge remains idle"
 fi
