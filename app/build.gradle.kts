@@ -10,8 +10,8 @@ android {
         applicationId = "app.d2lock"
         minSdk = 31
         targetSdk = 37
-        versionCode = 20
-        versionName = "0.6.0-guardian-ui9-v20-earlyboot"
+        versionCode = 21
+        versionName = "0.6.1-guardian-ui9-v21-stableboot"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
