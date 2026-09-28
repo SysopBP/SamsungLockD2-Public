@@ -115,9 +115,9 @@ jobs:
           cp dist/Kiosk-D2-Guardian-debug.apk module/system/priv-app/KioskD2Guardian/KioskD2Guardian.apk
           chmod 755 module/system module/system/priv-app module/system/priv-app/KioskD2Guardian
           chmod 644 module/system/priv-app/KioskD2Guardian/KioskD2Guardian.apk
-          # Keep a payload copy for recovery/manual diagnostics, but persistence
-          # comes from the KernelSU system overlay above.
-          cp dist/Kiosk-D2-Guardian-debug.apk module/payload/SamsungLockD2.apk
+          # Single installation path: the APK exists only in the system priv-app
+          # overlay. Do not bundle a second payload for late pm installation.
+          rm -rf module/payload
           cp LICENSE THIRD_PARTY_NOTICES.txt module/
           rm module/payload/PLACE_APK_HERE.txt
           for script in module/*.sh; do bash -n "$script"; done
