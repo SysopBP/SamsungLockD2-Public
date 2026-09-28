@@ -107,6 +107,16 @@ jobs:
         run: |
           mkdir -p dist
           cp app/build/outputs/apk/debug/app-debug.apk dist/Kiosk-D2-Guardian-debug.apk
+          # Present D2 to PackageManager as a boot-time privileged system package.
+          # This avoids relying on a late "pm install" for the UID 1000 build.
+          rm -f module/skip_mount
+          rm -rf module/system
+          mkdir -p module/system/priv-app/KioskD2Guardian
+          cp dist/Kiosk-D2-Guardian-debug.apk module/system/priv-app/KioskD2Guardian/KioskD2Guardian.apk
+          chmod 755 module/system module/system/priv-app module/system/priv-app/KioskD2Guardian
+          chmod 644 module/system/priv-app/KioskD2Guardian/KioskD2Guardian.apk
+          # Keep a payload copy for recovery/manual diagnostics, but persistence
+          # comes from the KernelSU system overlay above.
           cp dist/Kiosk-D2-Guardian-debug.apk module/payload/SamsungLockD2.apk
           cp LICENSE THIRD_PARTY_NOTICES.txt module/
           rm module/payload/PLACE_APK_HERE.txt
