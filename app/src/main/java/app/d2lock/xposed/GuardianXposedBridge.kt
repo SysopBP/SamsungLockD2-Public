@@ -33,6 +33,7 @@ class GuardianXposedBridge : XposedModule() {
         private const val TAG = "D2XposedBridge"
         private val bootReadySent = AtomicBoolean(false)
         private val lastWakeSignalMs = AtomicLong(0L)
+        private val bootGateArmedAtMs = AtomicLong(0L)
         @Volatile private var wakeHookStatus = "UNAVAILABLE"
     }
 
@@ -50,6 +51,8 @@ class GuardianXposedBridge : XposedModule() {
             TAG,
             "GUARDIAN_MINIMAL_SYSTEM_SERVER_START uid=${android.os.Process.myUid()}"
         )
+        bootGateArmedAtMs.compareAndSet(0L, SystemClock.elapsedRealtime())
+        log(Log.INFO, TAG, "GUARDIAN_913_TEST_GATE_ARMED mode=observe_then_handoff failOpen=true")
         installBootReadyHook(param.classLoader)
         runCatching { installWakeObservation(param.classLoader) }
             .onFailure { log(Log.WARN, TAG, "GUARDIAN_WAKE_DISCOVERY_FAILED", it) }
@@ -185,6 +188,9 @@ class GuardianXposedBridge : XposedModule() {
     }
 
     private fun signalBootReady() {
+        val armedAt = bootGateArmedAtMs.get()
+        val now = SystemClock.elapsedRealtime()
+        log(Log.INFO, TAG, "GUARDIAN_913_TEST_GATE_HANDOFF armedAtMs=$armedAt handoffAtMs=$now deltaMs=${if (armedAt > 0L) now - armedAt else -1L}")
         if (!bootReadySent.compareAndSet(false, true)) {
             log(Log.DEBUG, TAG, "GUARDIAN_MINIMAL_BOOT_READY_DEDUPED")
             return
