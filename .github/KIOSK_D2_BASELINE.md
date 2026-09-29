@@ -11,12 +11,14 @@ This document records the device configuration that passed five consecutive rebo
 - ReZygisk: enabled
 - LSPosed: enabled
 - D2 LSPosed scopes: System Framework (`system`), SystemUI, Samsung biometrics
-- Xposed bridge mode: `ams_systemReady_only`
+- Xposed bridge mode: `ams_systemReady_plus_wake_observe` (minimal boot handoff plus post-call Android 17 wake observation)
 - Separate `samsunglock37_ksunext` / paired KernelSU bridge: **disabled during verification**
 - Result: five consecutive successful reboots reported by the tester
 
 ## system_server rule
-The release baseline hooks only `ActivityManagerService.systemReady()`. Android executes the real method first. D2 receives a single explicit `BOOT_READY` signal only after the real call returns. The hook uses protective/fail-open behavior and does not alter framework arguments or results.
+The stable boot handoff remains `ActivityManagerService.systemReady()`. Android executes the real method first. D2 receives a single explicit `BOOT_READY` signal only after the real call returns. The hook uses protective/fail-open behavior and does not alter framework arguments or results.
+
+On September 28, Android 17 boot captures showed that the older `PowerManagerService#wakeUpInternal` target is not present on the SM-S948U1 framework, while `PowerManagerService$BinderService.wakeUp(...)` and `wakeUpWithDisplayId(...)` are present. D2 therefore adds a narrow **post-call observational** wake hook for those actual Android 17 entry points. It emits a deduplicated `WAKE` framework signal after Android completes the wake call; it does not replace, suppress, or modify Android power behavior.
 
 D2 itself is not UID 1000. The Xposed code runs with the identity of the process into which LSPosed injects it; in `system_server`, that process is UID 1000.
 
@@ -26,8 +28,9 @@ The APK is delivered separately and installed normally. CI must not place D2 und
 The KernelSU ZIP is an **optional diagnostic/startup bridge**. It is not required for the verified stable path and should remain disabled unless that separate path is being tested intentionally.
 
 ## Release guardrails
-- Preserve the minimal `ams_systemReady_only` implementation for this release.
-- Do not add keyguard, ATMS, power, lock-settings, or additional early system_server hooks to the release baseline.
+- Preserve the proven `ActivityManagerService.systemReady()` boot handoff.
+- Keep the Android 17 wake observer post-call, fail-open, deduplicated, and limited to the verified BinderService wake entry points.
+- Do not add keyguard, ATMS, lock-settings, or additional early system_server enforcement hooks to the release baseline.
 - Keep experimental behavioral Xposed switches opt-in and test them independently.
 - Keep PIN/Pattern as the supported D2 Guardian credentials; D2-only fingerprint unlock remains experimental.
 - Verify APK signer, package/version identity, build outputs, and SHA-256 sums before publishing.
@@ -38,3 +41,16 @@ The KernelSU ZIP is an **optional diagnostic/startup bridge**. It is not require
 - Original branch: integration/guardian-watchdog-current
 
 The current release candidate is intentionally derived through reviewable commits rather than wholesale replacement of the source tree.
+
+
+## September 28, 2026 development update
+- Added KernelSU Root Mode and Shizuku checks to initial setup based on the verified rooted-device configuration.
+- Fixed Android 17 media-session fallback and added Notification Access to setup so media/live notification features are not silently starved.
+- Added the lock-screen idle display-off timer.
+- Stopped accidental foreground starts of bound D2 services.
+- Reworked the optional KernelSU bridge documentation/packaging so the normal APK + KernelSU Root Mode + LSPosed path remains the primary verified configuration.
+- Expanded boot/system-server diagnostics and crash capture while keeping diagnostic hooks separate from release enforcement.
+- New boot captures confirmed `ActivityManagerService#systemReady` continues to install and execute successfully.
+- Two late-evening captures showed `BOOT_READY` preceding D2's normal locked-boot receiver by roughly four seconds, identifying the remaining handoff window to investigate.
+- Android 17 framework enumeration confirmed `PowerManagerService#wakeUpInternal` is unavailable on this build and exposed `PowerManagerService$BinderService.wakeUp(...)` / `wakeUpWithDisplayId(...)` instead.
+- Added the narrow BinderService wake observer in commit `73d717b`; the next device build should validate that the signal fires reliably without changing the already-stable boot path.
