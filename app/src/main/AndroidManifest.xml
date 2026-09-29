@@ -61,6 +61,7 @@
         </receiver>
         <activity android:name=".ui.SeslPreviewActivity" android:exported="false" android:theme="@style/Theme.D2.SeslPreview" />
         <activity android:name=".MainActivity" android:exported="true" />
+        <activity android:name=".terminal.GuardianTerminalActivity" android:exported="false" android:label="Guardian Terminal" />
 
         <!-- Launcher aliases let D2 switch Titanium icon colors without touching the lock-screen activity. -->
         <activity-alias android:name=".launcher.TitaniumPurple" android:enabled="false" android:exported="true" android:icon="@mipmap/ic_d2_purple" android:roundIcon="@mipmap/ic_d2_purple" android:label="Kiosk D2 Boot Guardian" android:targetActivity=".MainActivity">
