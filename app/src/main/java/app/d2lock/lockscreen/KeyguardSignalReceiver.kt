@@ -257,6 +257,15 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
             }
         }
 
+        fun earlyBootLaunchClaimedThisBoot(context: Context): Boolean {
+            val prefs = directBootPrefs(context)
+            val launchWallMs = prefs.getLong(KEY_EARLY_BOOT_LAUNCH_MS, 0L)
+            if (launchWallMs <= 0L) return false
+            val now = System.currentTimeMillis()
+            val bootWallMs = now - SystemClock.elapsedRealtime()
+            return launchWallMs >= (bootWallMs - 5_000L)
+        }
+
         fun earlyBootLaunchConsumedThisBoot(context: Context): Boolean {
             val confirmedWallMs = directBootPrefs(context).getLong(KEY_EARLY_BOOT_CONFIRMED_MS, 0L)
             if (confirmedWallMs <= 0L) return false
