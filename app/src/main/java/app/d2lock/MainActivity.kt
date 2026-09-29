@@ -581,12 +581,18 @@ class MainActivity : Activity() {
                         text=detail; textSize=11f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,dp(5),0,0)
                     })
                 },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
-                addView(guardianSwitch().apply {
-                    text=if(app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)) "Galaxy Island  •  Connected" else "Galaxy Island  •  Disconnected"
-                    textSize=14f
-                    setTextColor(Appearance.text(this@MainActivity))
-                    isChecked=app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)
-                    setOnCheckedChangeListener { _,value -> app.d2lock.bridge.IslandBridge.setEnabled(this@MainActivity,value) }
+                addView(LinearLayout(this@MainActivity).apply {
+                    orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL
+                    addView(ImageView(this@MainActivity).apply {
+                        setImageResource(R.drawable.ic_guardian_advanced)
+                        imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity)); contentDescription=null
+                    },LinearLayout.LayoutParams(dp(20),dp(20)).apply { rightMargin=dp(8) })
+                    addView(guardianSwitch().apply {
+                        text=if(app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)) "Galaxy Island  •  Connected" else "Galaxy Island  •  Disconnected"
+                        textSize=14f; setTextColor(Appearance.text(this@MainActivity))
+                        isChecked=app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)
+                        setOnCheckedChangeListener { _,value -> app.d2lock.bridge.IslandBridge.setEnabled(this@MainActivity,value) }
+                    },LinearLayout.LayoutParams(0,-2,1f))
                 })
                 setOnClickListener {
                     performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
