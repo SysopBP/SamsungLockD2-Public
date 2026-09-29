@@ -9,6 +9,7 @@ import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.SystemServerStartingParam
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Guardian Xposed Bridge — verified minimal Android 17 boot handoff.
@@ -27,13 +28,15 @@ class GuardianXposedBridge : XposedModule() {
     companion object {
         private const val TAG = "D2XposedBridge"
         private val bootReadySent = AtomicBoolean(false)
+        private val lastWakeSignalMs = AtomicLong(0L)
+        private const val WAKE_DEDUPE_MS = 750L
     }
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
         log(
             Log.INFO,
             TAG,
-            "GUARDIAN_MINIMAL_LOADED api=$apiVersion framework=$frameworkName mode=ams_systemReady_only"
+            "GUARDIAN_MINIMAL_LOADED api=$apiVersion framework=$frameworkName mode=ams_systemReady_plus_wake_observe"
         )
     }
 
@@ -44,6 +47,7 @@ class GuardianXposedBridge : XposedModule() {
             "GUARDIAN_MINIMAL_SYSTEM_SERVER_START uid=${android.os.Process.myUid()}"
         )
         installBootReadyHook(param.classLoader)
+        installWakeObserver(param.classLoader)
     }
 
     private fun installBootReadyHook(classLoader: ClassLoader) {
@@ -91,6 +95,68 @@ class GuardianXposedBridge : XposedModule() {
                     t
                 )
             }
+        }
+    }
+
+
+    /**
+     * Android 17 on the SM-S948U1 no longer exposes the older
+     * PowerManagerService#wakeUpInternal signature. Observe the public BinderService
+     * wake entry points that are actually present instead. This hook is deliberately
+     * post-call and never changes arguments/results, so Android remains authoritative.
+     */
+    private fun installWakeObserver(classLoader: ClassLoader) {
+        val className = "com.android.server.power.PowerManagerService\$BinderService"
+        val owner = runCatching { Class.forName(className, false, classLoader) }.getOrElse {
+            log(Log.WARN, TAG, "GUARDIAN_WAKE_CLASS_MISSING target=$className", it)
+            return
+        }
+        val methods = owner.declaredMethods
+            .filter { it.name == "wakeUp" || it.name == "wakeUpWithDisplayId" }
+            .distinctBy { it.toGenericString() }
+
+        if (methods.isEmpty()) {
+            log(Log.WARN, TAG, "GUARDIAN_WAKE_HOOK_UNAVAILABLE target=$className#wakeUp*")
+            return
+        }
+
+        methods.forEach { method ->
+            try {
+                method.isAccessible = true
+                hook(method)
+                    .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                    .intercept { chain ->
+                        val result = chain.proceed()
+                        signalWakeObserved(method.name, owner.name)
+                        result
+                    }
+                log(Log.INFO, TAG, "GUARDIAN_WAKE_HOOK_INSTALLED target=${owner.name}#${method.name}")
+            } catch (t: Throwable) {
+                log(Log.WARN, TAG, "GUARDIAN_WAKE_HOOK_FAILED target=${owner.name}#${method.name}", t)
+            }
+        }
+    }
+
+    private fun signalWakeObserved(method: String, source: String) {
+        val now = android.os.SystemClock.elapsedRealtime()
+        val previous = lastWakeSignalMs.get()
+        if (now - previous < WAKE_DEDUPE_MS || !lastWakeSignalMs.compareAndSet(previous, now)) return
+
+        runCatching {
+            val app = Class.forName("android.app.ActivityThread")
+                .getDeclaredMethod("currentApplication")
+                .invoke(null) as? Context
+                ?: error("system_server application unavailable")
+            app.sendBroadcast(
+                Intent("app.d2lock.action.XPOSED_SYSTEM_EVENT")
+                    .setComponent(ComponentName("app.d2lock", "app.d2lock.lockscreen.KeyguardSignalReceiver"))
+                    .putExtra("event", "WAKE")
+                    .putExtra("method", method)
+                    .putExtra("source", "$source#$method")
+            )
+            log(Log.INFO, TAG, "GUARDIAN_WAKE_SENT method=$method")
+        }.onFailure {
+            log(Log.WARN, TAG, "GUARDIAN_WAKE_SIGNAL_FAILED method=$method", it)
         }
     }
 
