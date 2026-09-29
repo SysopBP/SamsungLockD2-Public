@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.UserManager
 import android.util.Log
+import app.d2lock.root.RootManager
 
 /**
  * Receives keyguard state emitted from D2's LSPosed code running inside SystemUI.
@@ -48,7 +49,24 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
             recordPipeline(context, event, method)
             Log.i(TAG, "GUARDIAN_SYS_EVENT_RECEIVED event=$event method=$method source=$source")
             val unlocked = context.getSystemService(UserManager::class.java)?.isUserUnlocked == true
-            if (unlocked && (event == "BOOT_READY" || event == "WAKE" || event == "KEYGUARD" || event == "TASK_KEYGUARD")) {
+            if (event == "BOOT_READY" && !unlocked) {
+                val lastLaunch = prefs.getLong(KEY_EARLY_BOOT_LAUNCH_MS, 0L)
+                val elapsed = now - lastLaunch
+                if (lastLaunch == 0L || elapsed > EARLY_BOOT_DEDUPE_MS) {
+                    // BOOT_READY is emitted from AMS.systemReady several seconds before
+                    // LOCKED_BOOT_COMPLETED on Android 17. Credential-protected Prefs
+                    // are not readable yet, so use only the already-authorized root
+                    // companion launch here. The Activity remains authoritative once
+                    // credential storage becomes available.
+                    val launched = RootManager.launchCompanion()
+                    if (launched) prefs.edit().putLong(KEY_EARLY_BOOT_LAUNCH_MS, now).apply()
+                    recordPipeline(context, "EARLY_BOOT_READY_LAUNCH", if (launched) "accepted" else "rejected")
+                    Log.i(TAG, "GUARDIAN_EARLY_BOOT_READY_LAUNCH accepted=$launched source=$source")
+                } else {
+                    recordPipeline(context, "BOOT_FALLBACK_SKIPPED_ALREADY_ACTIVE", "elapsed=$elapsed")
+                    Log.i(TAG, "GUARDIAN_EARLY_BOOT_READY_DEDUPED elapsed=$elapsed")
+                }
+            } else if (unlocked && (event == "BOOT_READY" || event == "WAKE" || event == "KEYGUARD" || event == "TASK_KEYGUARD")) {
                 LockScreenService.frameworkSignal(context, event, source)
             }
             return
@@ -131,7 +149,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         private const val KEY_SYSTEM_KEYGUARD_COUNT = "system_keyguard_count"
         private const val KEY_SYSTEM_BIOMETRIC_COUNT = "system_biometric_count"
         private const val KEY_SYSTEM_LOCKSETTINGS_COUNT = "system_locksettings_count"
-        private const val KEY_SYSTEM_TIMELINE = "system_timeline"
+        private const val KEY_SYSTEM_TIMELINE = "system_timeline"\n        private const val KEY_EARLY_BOOT_LAUNCH_MS = "early_boot_launch_ms"\n        private const val EARLY_BOOT_DEDUPE_MS = 20_000L
         private const val KEY_PIPELINE_TIMELINE = "pipeline_timeline"
         private const val KEY_LAST_BIOMETRIC_MS = "pipeline_last_biometric_ms"
         private const val KEY_GUARDIAN_LOG = "guardian_log_center"
