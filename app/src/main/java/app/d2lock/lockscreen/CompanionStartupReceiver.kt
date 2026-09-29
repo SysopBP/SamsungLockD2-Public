@@ -56,7 +56,8 @@ class CompanionStartupReceiver : BroadcastReceiver() {
         if (!enabled || !configured) return
 
         try {
-            val earlyLaunchConsumed = source == "boot" && KeyguardSignalReceiver.earlyBootLaunchConsumedThisBoot(context)
+            val bootRestoreSource = source == "boot" || source == "locked_boot"
+            val earlyLaunchConsumed = bootRestoreSource && KeyguardSignalReceiver.earlyBootLaunchConsumedThisBoot(context)
             val postBoot = source == "boot" && !earlyLaunchConsumed
             if (earlyLaunchConsumed) {
                 Log.i(TAG, "GUARDIAN_BOOT_LATE_LAUNCH_SKIPPED token=consumed source=$source")
