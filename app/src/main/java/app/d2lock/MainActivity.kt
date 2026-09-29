@@ -526,24 +526,30 @@ class MainActivity : Activity() {
                     setTextColor(Appearance.text(this@MainActivity))
                     setPadding(0,0,0,dp(8))
                 })
-                fun statusChip(label:String, ready:Boolean)=TextView(this@MainActivity).apply {
-                    text=label+"  "+if(ready) "✓" else "—"
-                    textSize=11f
-                    gravity=Gravity.CENTER
-                    setTextColor(if(ready) Appearance.text(this@MainActivity) else Appearance.secondary(this@MainActivity))
+                fun statusChip(label:String, ready:Boolean, icon:Int)=LinearLayout(this@MainActivity).apply {
+                    orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER
                     background=Appearance.glass(this@MainActivity,18f,if(ready) 44 else 24,ready)
-                    setPadding(dp(9),dp(7),dp(9),dp(7))
+                    setPadding(dp(7),dp(6),dp(7),dp(6))
+                    addView(ImageView(this@MainActivity).apply {
+                        setImageResource(icon)
+                        imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                        contentDescription=null
+                    },LinearLayout.LayoutParams(dp(16),dp(16)).apply { rightMargin=dp(5) })
+                    addView(TextView(this@MainActivity).apply {
+                        text=label+"  "+if(ready) "✓" else "○"; textSize=10.5f
+                        setTextColor(if(ready) Appearance.text(this@MainActivity) else Appearance.secondary(this@MainActivity))
+                    })
                 }
                 addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.HORIZONTAL
-                    addView(statusChip("Kiosk",kioskReady),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
-                    addView(statusChip("Root",rootReady),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3); rightMargin=dp(3) })
-                    addView(statusChip("Shizuku",shizukuReady),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
+                    addView(statusChip("Kiosk",kioskReady,R.drawable.ic_guardian_shield),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
+                    addView(statusChip("Root",rootReady,R.drawable.ic_guardian_root),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3); rightMargin=dp(3) })
+                    addView(statusChip("Shizuku",shizukuReady,R.drawable.ic_guardian_shizuku),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
                 },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(6) })
                 addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.HORIZONTAL
-                    addView(statusChip("LSPosed",xposedReady),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
-                    addView(statusChip("System Server",systemHealth.status=="CONNECTED"),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
+                    addView(statusChip("LSPosed",xposedReady,R.drawable.ic_guardian_advanced),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
+                    addView(statusChip("System Server",systemHealth.status=="CONNECTED",R.drawable.ic_system_health),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
                 },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
                 addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.VERTICAL
@@ -553,12 +559,22 @@ class MainActivity : Activity() {
                         text="GUARDIAN SYSTEM BRIDGE"; textSize=11f; letterSpacing=.08f
                         setTextColor(Appearance.secondary(this@MainActivity))
                     })
-                    addView(TextView(this@MainActivity).apply {
-                        val serverOk=systemHealth.status=="CONNECTED"
-                        val uiOk=systemUiHealth.status=="CONNECTED"
-                        text="${if(serverOk) "✓" else "○"} System Server  •  ${systemHealth.status}\n${if(uiOk) "✓" else "○"} System UI  •  ${systemUiHealth.status}\n○ Fingerprint event  •  ${fingerprintHealth.event ?: "Waiting"}"
-                        textSize=13f; setLineSpacing(0f,1.12f); setTextColor(if(serverOk) Color.rgb(102,220,132) else Appearance.text(this@MainActivity)); setPadding(0,dp(6),0,0)
-                    })
+                    fun bridgeRow(icon:Int,label:String,status:String,active:Boolean,problem:Boolean=false)=LinearLayout(this@MainActivity).apply {
+                        orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(0,dp(5),0,dp(2))
+                        addView(ImageView(this@MainActivity).apply {
+                            setImageResource(icon); imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity)); contentDescription=null
+                        },LinearLayout.LayoutParams(dp(18),dp(18)).apply { rightMargin=dp(8) })
+                        addView(TextView(this@MainActivity).apply {
+                            val stateIcon=if(active) "✓" else if(problem) "⚠" else "○"
+                            text="$label  $stateIcon  $status"; textSize=13f
+                            setTextColor(when { active -> Color.rgb(102,220,132); problem -> Color.rgb(245,184,72); else -> Appearance.secondary(this@MainActivity) })
+                        })
+                    }
+                    val serverOk=systemHealth.status=="CONNECTED"
+                    val uiOk=systemUiHealth.status=="CONNECTED"
+                    addView(bridgeRow(R.drawable.ic_system_health,"System Server",if(serverOk) "ACTIVE" else "WAITING",serverOk))
+                    addView(bridgeRow(R.drawable.ic_guardian_device,"SystemUI",if(uiOk) "ACTIVE" else "WAITING",uiOk))
+                    addView(bridgeRow(R.drawable.ic_guardian_fingerprint,"Fingerprint event",fingerprintHealth.event ?: "Waiting",fingerprintHealth.event != null))
                     addView(TextView(this@MainActivity).apply {
                         val detail = systemHealth.event?.let { event -> "Last framework event: $event · ${systemHealth.method ?: "unknown"}" }
                             ?: "Waiting for first system_server event after reboot"
