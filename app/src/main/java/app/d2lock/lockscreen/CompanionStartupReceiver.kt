@@ -148,7 +148,21 @@ class CompanionStartupReceiver : BroadcastReceiver() {
             if (unlocked) {
                 CompanionStartupReceiver().restore(context, "framework_boot_ready")
             } else {
-                Log.i(TAG, "GUARDIAN_EARLY_RESTORE_DEFERRED reason=user_locked")
+                // BOOT_READY is already available several seconds before credential
+                // storage unlocks on Android 17. Put a Direct-Boot-safe lock surface
+                // on screen immediately, then let USER_UNLOCKED hydrate the full
+                // Guardian service/settings path.
+                val launched = runCatching {
+                    context.startActivity(
+                        Intent(context, LockScreenActivity::class.java)
+                            .putExtra(LockScreenActivity.EXTRA_DIRECT_BOOT_MINIMAL, true)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    )
+                    true
+                }.onFailure {
+                    Log.w(TAG, "GUARDIAN_EARLY_DIRECT_BOOT_LAUNCH_FAILED", it)
+                }.getOrDefault(false)
+                Log.i(TAG, "GUARDIAN_EARLY_DIRECT_BOOT_LAUNCH accepted=$launched reason=user_locked")
                 CompanionStartupReceiver().deferUntilUnlocked(context)
             }
         }
