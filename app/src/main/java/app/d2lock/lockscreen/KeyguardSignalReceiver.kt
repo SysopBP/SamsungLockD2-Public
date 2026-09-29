@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.UserManager
+import android.os.SystemClock
 import android.util.Log
 import app.d2lock.root.RootManager
 
@@ -222,8 +223,13 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
             val timestamp = maxOf(heartbeat, lastEvent)
             val source = prefs.getString(KEY_LAST_SOURCE, null)
             if (timestamp <= 0L) return BridgeHealth("WAITING", null, source)
-            val age = (System.currentTimeMillis() - timestamp).coerceAtLeast(0L)
-            return BridgeHealth(if (age <= staleAfterMs) "READY" else "STALE", age, source)
+            val now = System.currentTimeMillis()
+            val age = (now - timestamp).coerceAtLeast(0L)
+            // A bridge is a capability/connection state, not a heartbeat timer. Once
+            // observed during this boot it remains CONNECTED; age is diagnostic only.
+            val bootWallMs = now - SystemClock.elapsedRealtime()
+            val currentBoot = timestamp >= (bootWallMs - 5_000L)
+            return BridgeHealth(if (currentBoot) "CONNECTED" else "WAITING", age, source)
         }
 
         fun systemHealth(context: Context, staleAfterMs: Long = 90_000L): SystemHealth {
@@ -233,8 +239,13 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
             val method = prefs.getString(KEY_LAST_SYSTEM_METHOD, null)
             val source = prefs.getString(KEY_LAST_SYSTEM_SOURCE, null)
             if (timestamp <= 0L) return SystemHealth("WAITING", null, event, method, source)
-            val age = (System.currentTimeMillis() - timestamp).coerceAtLeast(0L)
-            return SystemHealth(if (age <= staleAfterMs) "READY" else "STALE", age, event, method, source)
+            val now = System.currentTimeMillis()
+            val age = (now - timestamp).coerceAtLeast(0L)
+            // system_server does not emit periodic heartbeats. A valid event from the
+            // current boot verifies the bridge for the remainder of that boot.
+            val bootWallMs = now - SystemClock.elapsedRealtime()
+            val currentBoot = timestamp >= (bootWallMs - 5_000L)
+            return SystemHealth(if (currentBoot) "CONNECTED" else "WAITING", age, event, method, source)
         }
 
         fun systemMetrics(context: Context): SystemMetrics {
