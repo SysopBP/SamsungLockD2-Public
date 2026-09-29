@@ -8,7 +8,16 @@ import android.graphics.drawable.GradientDrawable
 
 /** D2-owned theme implementation using Android's public wallpaper color resources. */
 object Appearance {
-    private fun prefs(c: Context) = c.getSharedPreferences("d2_appearance", Context.MODE_PRIVATE)
+    /** Keep BOOT_READY rendering safe before credential-encrypted storage unlocks. */
+    private fun prefs(c: Context): android.content.SharedPreferences {
+        val userManager = c.getSystemService(android.os.UserManager::class.java)
+        val storageContext = if (userManager?.isUserUnlocked != false) {
+            c
+        } else {
+            c.createDeviceProtectedStorageContext()
+        }
+        return storageContext.getSharedPreferences("d2_appearance", Context.MODE_PRIVATE)
+    }
     fun mode(c: Context) = prefs(c).getInt("mode", 2).coerceIn(0, 9)
     fun accentChoice(c: Context) = prefs(c).getInt("accent", 3).coerceIn(0, 11)
     fun notificationStyle(c: Context) = prefs(c).getInt("notifications", 0).coerceIn(0, 4)
