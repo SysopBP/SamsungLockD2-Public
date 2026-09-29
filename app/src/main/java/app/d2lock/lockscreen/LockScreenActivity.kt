@@ -26,6 +26,7 @@ import android.os.BatteryManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.UserManager
 import android.os.CancellationSignal
 import android.os.VibrationEffect
 import android.util.Log
@@ -70,10 +71,13 @@ import java.util.concurrent.Executors
 
 class LockScreenActivity : Activity() {
     companion object {
+        const val EXTRA_DIRECT_BOOT_MINIMAL = "d2_direct_boot_minimal"
         private val fingerprintSessionLock = Any()
         @Volatile private var fingerprintSessionActive = false
     }
     private val handler = Handler(Looper.getMainLooper())
+    private var directBootMinimal = false
+    private var directBootUnlockReceiver: BroadcastReceiver? = null
     private val idleSleep = Runnable {
         if (!preview && !unlocking && !isFinishing && !isDestroyed && hasWindowFocus() &&
             getSystemService(PowerManager::class.java).isInteractive && Prefs.rootMode(this)) {
@@ -84,6 +88,66 @@ class LockScreenActivity : Activity() {
         handler.removeCallbacks(idleSleep)
         val seconds = Prefs.lockIdleSleepSeconds(this)
         if (!preview && seconds > 0 && !unlocking) handler.postDelayed(idleSleep, seconds * 1000L)
+    }
+
+    private fun showDirectBootSurface() {
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
+        window.addFlags(
+            android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+        )
+        window.statusBarColor = Color.BLACK
+        window.navigationBarColor = Color.BLACK
+
+        val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
+        val clockView = TextView(this).apply {
+            text = SimpleDateFormat("h:mm", Locale.getDefault()).format(Date())
+            textSize = 72f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+        }
+        val dateView = TextView(this).apply {
+            text = SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
+            textSize = 18f
+            setTextColor(Color.LTGRAY)
+            gravity = Gravity.CENTER
+        }
+        val statusView = TextView(this).apply {
+            text = "Kiosk D2 Boot Guardian"
+            textSize = 14f
+            setTextColor(Color.LTGRAY)
+            gravity = Gravity.CENTER
+        }
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            addView(clockView, LinearLayout.LayoutParams(-1, -2))
+            addView(dateView, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+            addView(statusView, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(28) })
+        }
+        root.addView(column, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
+        setContentView(root)
+        KeyguardSignalReceiver.recordGuardianStage(this, "D2_DIRECT_BOOT_FIRST_DRAW_REQUESTED", "minimal=true")
+        root.post {
+            KeyguardSignalReceiver.recordGuardianStage(this, "D2_DIRECT_BOOT_FIRST_DRAW", "minimal=true")
+            Log.i("SamsungLockD2", "GUARDIAN_DIRECT_BOOT_FIRST_DRAW")
+        }
+
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action != Intent.ACTION_USER_UNLOCKED) return
+                Log.i("SamsungLockD2", "GUARDIAN_DIRECT_BOOT_USER_UNLOCKED recreate=true")
+                directBootUnlockReceiver?.let { runCatching { unregisterReceiver(it) } }
+                directBootUnlockReceiver = null
+                directBootMinimal = false
+                this@LockScreenActivity.intent.removeExtra(EXTRA_DIRECT_BOOT_MINIMAL)
+                recreate()
+            }
+        }
+        directBootUnlockReceiver = receiver
+        registerReceiver(receiver, IntentFilter(Intent.ACTION_USER_UNLOCKED))
+        Log.i("SamsungLockD2", "GUARDIAN_DIRECT_BOOT_SURFACE_SHOWN waiting=user_unlocked")
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
@@ -216,6 +280,15 @@ class LockScreenActivity : Activity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val userUnlocked = getSystemService(UserManager::class.java)?.isUserUnlocked == true
+        directBootMinimal = intent.getBooleanExtra(EXTRA_DIRECT_BOOT_MINIMAL, false) || !userUnlocked
+        if (directBootMinimal) {
+            // Do not touch credential-encrypted Prefs/PinStore/appearance data here.
+            // This surface exists only to cover the boot gap until USER_UNLOCKED.
+            super.onCreate(savedInstanceState)
+            showDirectBootSurface()
+            return
+        }
         setTheme(if (Appearance.dark(this, true)) app.d2lock.R.style.Theme_D2_Dark else app.d2lock.R.style.Theme_SamsungLock)
         super.onCreate(savedInstanceState)
         PinUi.protect(this)
