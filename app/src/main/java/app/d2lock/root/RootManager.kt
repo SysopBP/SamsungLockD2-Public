@@ -72,6 +72,15 @@ object RootManager {
         )
     }
 
+    /** Interactive Guardian Terminal root backend. */
+    fun exec(command: String, timeoutSeconds: Long = 15): String {
+        val (ok, output) = root(command, timeoutSeconds)
+        return buildString {
+            if (output.isNotBlank()) append(output).append("\n")
+            append(if (ok) "[exit 0]" else "[command failed]")
+        }
+    }
+
     fun isAvailable(): Boolean {
         val (ok, output) = root("id", 2)
         return ok && output.contains("uid=0")
