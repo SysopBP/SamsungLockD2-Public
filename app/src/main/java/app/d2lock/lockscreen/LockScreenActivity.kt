@@ -220,7 +220,11 @@ class LockScreenActivity : Activity() {
         super.onCreate(savedInstanceState)
         PinUi.protect(this)
         preview = intent.getBooleanExtra("preview", false)
-        if (!preview && !PinStore(this).configured()) {
+        // BOOT_READY may arrive while credential-encrypted app storage is still
+        // locked. Do not touch PinStore/noBackupFilesDir until Android says the
+        // user is unlocked; the guardian can still draw and cover the launcher.
+        val userUnlocked = getSystemService(android.os.UserManager::class.java)?.isUserUnlocked != false
+        if (!preview && userUnlocked && !PinStore(this).configured()) {
             startActivity(Intent(this, MainActivity::class.java))
             finish()
             return
