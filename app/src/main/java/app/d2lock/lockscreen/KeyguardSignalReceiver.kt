@@ -149,7 +149,9 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         private const val KEY_SYSTEM_KEYGUARD_COUNT = "system_keyguard_count"
         private const val KEY_SYSTEM_BIOMETRIC_COUNT = "system_biometric_count"
         private const val KEY_SYSTEM_LOCKSETTINGS_COUNT = "system_locksettings_count"
-        private const val KEY_SYSTEM_TIMELINE = "system_timeline"\n        private const val KEY_EARLY_BOOT_LAUNCH_MS = "early_boot_launch_ms"\n        private const val EARLY_BOOT_DEDUPE_MS = 20_000L
+        private const val KEY_SYSTEM_TIMELINE = "system_timeline"
+        private const val KEY_EARLY_BOOT_LAUNCH_MS = "early_boot_launch_ms"
+        private const val EARLY_BOOT_DEDUPE_MS = 20_000L
         private const val KEY_PIPELINE_TIMELINE = "pipeline_timeline"
         private const val KEY_LAST_BIOMETRIC_MS = "pipeline_last_biometric_ms"
         private const val KEY_GUARDIAN_LOG = "guardian_log_center"
