@@ -1,4 +1,5 @@
 name: Build APK and KernelSU module
+# rebuild: early BOOT_READY validation 919
 on:
   push:
     paths-ignore:
