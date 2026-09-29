@@ -298,7 +298,24 @@ class LockScreenActivity : Activity() {
             // First-frame work: cheap UI state only.
             if (!::media.isInitialized) media = MediaControllerBridge(this)
             NotificationStore.onChanged = { runOnUiThread(::renderNotifications) }
-            app.d2lock.notifications.CallNotificationStore.onChanged = { runOnUiThread(::renderNotifications) }
+            app.d2lock.notifications.CallNotificationStore.onChanged = {
+                runOnUiThread {
+                    val callActive = app.d2lock.notifications.CallNotificationStore.items.isNotEmpty()
+                    if (callActive) {
+                        GuardianWatchdog.beginCall("notification")
+                        Log.i("SamsungLockD2", "GUARDIAN_CALL_UI_YIELD")
+                    } else if (GuardianWatchdog.isCallActive()) {
+                        GuardianWatchdog.endCall("notification_cleared")
+                        Log.i("SamsungLockD2", "GUARDIAN_CALL_REASSERT")
+                        window.decorView.postDelayed({
+                            if (!isDestroyed && !isFinishing && Prefs.kiosk(this@LockScreenActivity)) {
+                                GuardianWatchdog.reassert(this@LockScreenActivity, "call_ended", false)
+                            }
+                        }, 300)
+                    }
+                    renderNotifications()
+                }
+            }
             NotificationStore.onPosted = { item -> runOnUiThread { showLiveNotification(item) } }
             renderNotifications()
             runCatching {
@@ -369,7 +386,7 @@ class LockScreenActivity : Activity() {
         if (hasFocus) resetIdleSleep() else handler.removeCallbacks(idleSleep)
         if (!preview && Prefs.kiosk(this)) {
             Log.i("SamsungLockD2", if (hasFocus) "GUARDIAN_WINDOW_FOCUS_GAINED" else "GUARDIAN_WINDOW_FOCUS_LOST")
-            if (hasFocus && RootKiosk.isEnforced()) {
+            if (hasFocus && RootKiosk.isEnforced() && !GuardianWatchdog.isCallActive()) {
                 window.decorView.post { if (!isDestroyed && !isFinishing) RootKiosk.reassert(this) }
             }
             if (hasFocus && fingerprintRestartPending && !unlocking && !biometricRunning) {
@@ -415,8 +432,13 @@ class LockScreenActivity : Activity() {
                 // asleep as a lost lock surface. The old behavior fed a 120 ms
                 // surfaceLost -> root am start -> sleep/stop loop at boot.
                 val interactive = getSystemService(android.os.PowerManager::class.java)?.isInteractive == true
-                if (interactive) {
+                if (interactive && !GuardianWatchdog.isCallActive() &&
+                    app.d2lock.notifications.CallNotificationStore.items.isEmpty()) {
                     LockScreenService.surfaceLost(this, "activity_stopped")
+                } else if (interactive) {
+                    GuardianWatchdog.beginCall("activity_stopped")
+                    Log.i("SamsungLockD2", "GUARDIAN_CALL_ACTIVITY_STOP_IGNORED")
+                    Log.i("SamsungLockD2", "GUARDIAN_CALL_UI_YIELD")
                 } else {
                     Log.i("SamsungLockD2", "GUARDIAN_SURFACE_RECOVERY_SKIPPED reason=screen_not_interactive")
                 }
