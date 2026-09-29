@@ -1,6 +1,6 @@
-# Samsung Lock D2 — KernelSU Next Bridge
+# Kiosk D2 Boot Guardian — KernelSU Next Bridge
 
-This flashable module complements the Samsung Lock D2 Android app. It does not replace the secure Samsung lock screen.
+This flashable module complements the Kiosk D2 Boot Guardian Android app. It does not replace the secure Samsung lock screen.
 
 ## What the module does
 
@@ -26,7 +26,7 @@ Without the bundled APK, the module still works as a bridge after the companion 
 
 ## First use
 
-1. Open KernelSU Next and grant root to Samsung Lock D2 when requested.
+1. Open KernelSU Next and grant root to Kiosk D2 Boot Guardian when requested.
 2. Tap the module's Action button.
 3. Create your independent six-digit D2 PIN. Feature permissions and notification-listener access are optional.
 4. Choose a wallpaper. Double-tap the D2 button or add its home-screen widget.

@@ -106,7 +106,7 @@ jobs:
       - name: Package deliverables
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/Kiosk-D2-Guardian-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/Kiosk-D2-Boot-Guardian-debug.apk
           # Stable test packaging: D2 remains a normal user-installed APK.
           # Do not mount/inject the APK through /system/priv-app and do not
           # attempt to obtain android.uid.system / UID 1000.
@@ -115,21 +115,21 @@ jobs:
           rm -rf module/payload
           mkdir -p module/payload
           cp LICENSE THIRD_PARTY_NOTICES.txt module/
-          printf '%s\n' 'Optional bridge only. Install Kiosk-D2-Guardian-debug.apk normally and enable KernelSU Root Mode in D2 System Integrations. Leave this module disabled unless intentionally testing the separate bridge path.' > module/payload/PLACE_APK_HERE.txt
+          printf '%s\n' 'Optional bridge only. Install Kiosk-D2-Boot-Guardian-debug.apk normally and enable KernelSU Root Mode in D2 System Integrations. Leave this module disabled unless intentionally testing the separate bridge path.' > module/payload/PLACE_APK_HERE.txt
           for script in module/*.sh; do bash -n "$script"; done
           chmod 755 module/*.sh
-          (cd module && zip -r ../dist/Kiosk-D2-Guardian-KernelSU-OPTIONAL.zip .)
-          unzip -t dist/Kiosk-D2-Guardian-KernelSU-OPTIONAL.zip
+          (cd module && zip -r ../dist/Kiosk-D2-Boot-Guardian-KernelSU-OPTIONAL.zip .)
+          unzip -t dist/Kiosk-D2-Boot-Guardian-KernelSU-OPTIONAL.zip
           for script in tools/d2-system-debugger/*.sh; do sh -n "$script"; done
           chmod 755 tools/d2-system-debugger/*.sh
           (cd tools/d2-system-debugger && zip -r ../../dist/D2-System-Server-Debugger-v1.1.0.zip .)
           unzip -t dist/D2-System-Server-Debugger-v1.1.0.zip
-          zip -r dist/Kiosk-D2-Guardian-source.zip app/src app/build.gradle.kts build.gradle.kts settings.gradle.kts gradle.properties gradle gradlew gradlew.bat module tools/d2-system-debugger README.md LICENSE THIRD_PARTY_NOTICES.txt docs .github
+          zip -r dist/Kiosk-D2-Boot-Guardian-source.zip app/src app/build.gradle.kts build.gradle.kts settings.gradle.kts gradle.properties gradle gradlew gradlew.bat module tools/d2-system-debugger README.md LICENSE THIRD_PARTY_NOTICES.txt docs .github
           cp runtime-dependencies.txt dist/
           sha256sum dist/*.apk dist/*.zip > dist/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: Kiosk-D2-Guardian-deliverables
+          name: Kiosk-D2-Boot-Guardian-deliverables
           path: dist/
       - uses: actions/upload-artifact@v4
         if: always()

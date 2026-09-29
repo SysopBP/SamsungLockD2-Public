@@ -1,4 +1,4 @@
-# Samsung Lock D2
+# Kiosk D2 Boot Guardian
 
 An independent Android app privacy screen with its own six-digit PIN, designed for rooted Samsung devices where the user intentionally runs without Android's standard screen lock or biometrics. Version 0.3.0 adds optional root-assisted Android kiosk mode. It does not create or modify system credentials, force the screen off, or change firmware, Knox, Gatekeeper, or boot partitions.
 
@@ -63,7 +63,7 @@ Captured from D2 v0.4.0 in an Android 16 emulator with sample media. These are n
 ## Set up
 
 1. Exit active kiosk using your PIN and install the current paired D2 APK linked above. If Android reports a signature mismatch, stop: uninstalling clears your PIN and settings. For the optional combo, install the Galaxy Island themed APK linked above from Preview 1.
-2. Open Samsung Lock D2 and create and confirm your six-digit PIN. This PIN belongs only to D2.
+2. Open Kiosk D2 Boot Guardian and create and confirm your six-digit PIN. This PIN belongs only to D2.
 3. Choose a wallpaper. Preview is available after entering your PIN in settings.
 4. Double-tap **Double-tap to lock D2** in settings or Preview to open the D2 PIN screen.
 5. Tap **Add home-screen double-tap widget**, or add **D2 double-tap lock** from your launcher's widget list. Double-tap that widget within 0.9 seconds. D2 cannot intercept taps on other parts of the launcher. A single widget tap briefly opens a transparent activity to record the tap; it does not lock.

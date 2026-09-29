@@ -1,7 +1,7 @@
 #!/system/bin/sh
 
 ui_print "***************************************"
-ui_print " Kiosk D2 Guardian - OPTIONAL KSU Bridge"
+ui_print " Kiosk D2 Boot Guardian - OPTIONAL KSU Bridge"
 ui_print "***************************************"
 
 [ "$KSU" = "true" ] || abort "KernelSU / KernelSU Next is required."

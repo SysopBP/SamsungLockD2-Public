@@ -8,6 +8,6 @@ if package_enabled; then
   log_line "module action opened D2 settings"
 else
   log_line "module action failed: normal D2 installation missing or disabled"
-  echo "Kiosk D2 Guardian is not installed/enabled."
+  echo "Kiosk D2 Boot Guardian is not installed/enabled."
   echo "Install the APK normally. KernelSU Root Mode is configured inside D2."
 fi

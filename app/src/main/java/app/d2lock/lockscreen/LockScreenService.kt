@@ -40,7 +40,7 @@ class LockScreenService : Service() {
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         val notification = Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_lock)
-            .setContentTitle("Kiosk D2 Guardian is ready")
+            .setContentTitle("Kiosk D2 Boot Guardian is ready")
             .setContentText("Tap to configure or preview")
             .setContentIntent(open)
             .setOngoing(true)

@@ -26,7 +26,7 @@ object ThemeOptions {
             setPadding(0, dp(3), 0, 0)
         }
         val choiceDescriptions = mapOf(
-            "App theme" to "Choose the overall look for Kiosk D2 Guardian.",
+            "App theme" to "Choose the overall look for Kiosk D2 Boot Guardian.",
             "Accent color" to "Used for highlights, sliders and buttons.",
             "Notification colors" to "Choose how notification colors are applied."
         )

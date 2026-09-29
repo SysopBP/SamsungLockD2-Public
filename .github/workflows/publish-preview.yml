@@ -1,4 +1,4 @@
-name: Publish Samsung Lock D2 Beta
+name: Publish Kiosk D2 Boot Guardian Beta
 
 on:
   push:

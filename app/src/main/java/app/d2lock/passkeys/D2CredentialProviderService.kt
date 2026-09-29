@@ -86,7 +86,7 @@ class D2CredentialProviderService : CredentialProviderService() {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
         )
-        val entry = CreateEntry.Builder("Samsung Lock D2", pendingIntent)
+        val entry = CreateEntry.Builder("Kiosk D2 Boot Guardian", pendingIntent)
             .setDescription("Save this passkey with D2")
             .setPublicKeyCredentialCount(runCatching { D2PasskeyStore(this).list().size }.getOrDefault(0))
             .build()

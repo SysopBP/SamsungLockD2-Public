@@ -1259,7 +1259,7 @@ class LockScreenActivity : Activity() {
         fingerprintGlass?.visibility = View.INVISIBLE
 
         val prompt = BiometricPrompt.Builder(this)
-            .setTitle("Kiosk D2 Guardian")
+            .setTitle("Kiosk D2 Boot Guardian")
             .setSubtitle("Fingerprint unlock")
             .setDescription("Use an enrolled fingerprint or cancel to use your Guardian PIN/pattern.")
             .setNegativeButton("Use PIN / pattern", mainExecutor) { _, _ ->

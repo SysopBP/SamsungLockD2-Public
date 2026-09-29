@@ -2,7 +2,7 @@ KIOSK D2 GUARDIAN — USER AGREEMENT, PRIVACY & SAFETY NOTICE
 Effective: September 26, 2026
 
 1. PROJECT AND LICENSE
-Kiosk D2 Guardian ("D2") is independently developed software. Copyright © 2026 D2 Project. All rights reserved. Except for third-party components governed by their own licenses, no open-source license or other permission to copy, modify, publish, sublicense, sell, or redistribute D2 source code, documentation, branding, or original artwork is granted merely because the repository or binaries are publicly accessible.
+Kiosk D2 Boot Guardian ("D2") is independently developed software. Copyright © 2026 D2 Project. All rights reserved. Except for third-party components governed by their own licenses, no open-source license or other permission to copy, modify, publish, sublicense, sell, or redistribute D2 source code, documentation, branding, or original artwork is granted merely because the repository or binaries are publicly accessible.
 
 2. INDEPENDENT PROJECT
 D2 is an independent project and is not affiliated with, endorsed by, sponsored by, or an official product of Samsung Electronics, Google, Android, KernelSU, LSPosed, Shizuku, or other third-party projects or vendors. Names and trademarks belong to their respective owners.
