@@ -9,7 +9,7 @@ import app.d2lock.root.RootManager
 import app.d2lock.security.PinStore
 
 object GuardianWatchdog {
-    enum class State { PROTECTED, TRUSTED_UI, TEMPORARILY_RELEASED, REASSERTING }
+    enum class State { PROTECTED, TRUSTED_UI, CALL_ACTIVE, TEMPORARILY_RELEASED, REASSERTING }
 
     private const val TAG = "SamsungLockD2"
     private const val REASSERT_COOLDOWN_MS = 2_500L
@@ -20,9 +20,15 @@ object GuardianWatchdog {
     @Volatile private var lastReason = "startup"
     @Volatile private var trustedAuthentication = false
     @Volatile private var trustedAuthenticationStartedAt = 0L
+    @Volatile private var callActive = false
 
     @Synchronized
     fun reassert(context: Context, reason: String, callActive: Boolean = false): Boolean {
+        if (callActive || this.callActive) {
+            beginCall("reassert:$reason")
+            Log.i(TAG, "GUARDIAN_CALL_REASSERT_SUPPRESSED reason=$reason")
+            return false
+        }
         if (trustedAuthentication) {
             Log.i(TAG, "GUARDIAN_REASSERT_DEFERRED_AUTH reason=$reason")
             return false
@@ -81,6 +87,20 @@ object GuardianWatchdog {
             false
         }
     }
+
+    @Synchronized fun beginCall(reason: String) {
+        if (!callActive) Log.i(TAG, "GUARDIAN_CALL_ENTER reason=$reason")
+        callActive = true
+        transition(State.CALL_ACTIVE, reason)
+    }
+
+    @Synchronized fun endCall(reason: String) {
+        if (callActive) Log.i(TAG, "GUARDIAN_CALL_EXIT reason=$reason")
+        callActive = false
+        transition(State.PROTECTED, reason)
+    }
+
+    fun isCallActive(): Boolean = callActive
 
     @Synchronized fun beginTrustedAuthentication() {
         trustedAuthentication = true
