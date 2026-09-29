@@ -53,16 +53,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                 val lastLaunch = prefs.getLong(KEY_EARLY_BOOT_LAUNCH_MS, 0L)
                 val elapsed = now - lastLaunch
                 if (lastLaunch == 0L || elapsed > EARLY_BOOT_DEDUPE_MS) {
-                    // BOOT_READY is emitted from AMS.systemReady several seconds before
-                    // LOCKED_BOOT_COMPLETED on Android 17. Credential-protected Prefs
-                    // are not readable yet, so use only the already-authorized root
-                    // companion launch here. The Activity remains authoritative once
-                    // credential storage becomes available.
-                    val launched = RootManager.launchCompanion()
-                    if (launched) prefs.edit().putLong(KEY_EARLY_BOOT_LAUNCH_MS, now).apply()
-                    recordPipeline(context, "EARLY_BOOT_READY_LAUNCH", if (launched) "accepted" else "rejected")
-                    Log.i(TAG, "GUARDIAN_EARLY_BOOT_READY_LAUNCH accepted=$launched source=$source")
-                } else {
+                    // BOOT_READY arrives before KernelSU su may be ready. Launch\n                    // directly from this explicit system_server-triggered receiver first;\n                    // retain the existing root launch only as a fallback.\n                    val directLaunch = runCatching {\n                        context.startActivity(\n                            Intent(context, LockScreenActivity::class.java)\n                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)\n                        )\n                        true\n                    }.onFailure {\n                        Log.w(TAG, "GUARDIAN_EARLY_BOOT_DIRECT_LAUNCH_FAILED", it)\n                    }.getOrDefault(false)\n                    val rootFallback = !directLaunch && RootManager.launchCompanion()\n                    val launched = directLaunch || rootFallback\n                    if (launched) prefs.edit().putLong(KEY_EARLY_BOOT_LAUNCH_MS, now).apply()\n                    val launchPath = when { directLaunch -> "activity"; rootFallback -> "root"; else -> "none" }\n                    recordPipeline(context, "EARLY_BOOT_READY_LAUNCH", if (launched) "accepted:$launchPath" else "rejected")\n                    Log.i(TAG, "GUARDIAN_EARLY_BOOT_READY_LAUNCH accepted=$launched path=$launchPath source=$source")\n                } else {
                     recordPipeline(context, "BOOT_FALLBACK_SKIPPED_ALREADY_ACTIVE", "elapsed=$elapsed")
                     Log.i(TAG, "GUARDIAN_EARLY_BOOT_READY_DEDUPED elapsed=$elapsed")
                 }
