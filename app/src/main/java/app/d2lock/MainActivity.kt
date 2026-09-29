@@ -54,6 +54,7 @@ class MainActivity : Activity() {
     private var pinDialog: AlertDialog? = null
     private val shizukuRequestCode = 910
     private var setupIntegrationStepPending = false
+    private var setupSecurityStepPending = false
     private val shizukuBinderReceived = Shizuku.OnBinderReceivedListener { refreshShizukuUi() }
     private val shizukuBinderDead = Shizuku.OnBinderDeadListener { refreshShizukuUi() }
     private val shizukuPermission = Shizuku.OnRequestPermissionResultListener { requestCode, _ ->
@@ -74,9 +75,14 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        if (setupSecurityStepPending) {
+            setupSecurityStepPending = false
+            window.decorView.post { showSetupWizard(2) }
+            return
+        }
         if (setupIntegrationStepPending) {
             setupIntegrationStepPending = false
-            window.decorView.post { showSetupWizard(3) }
+            window.decorView.post { showSetupWizard(4) }
             return
         }
         if (!authorized && pinDialog?.isShowing != true) {
@@ -118,10 +124,11 @@ class MainActivity : Activity() {
 
     private fun showSetupWizard(step: Int = 0) {
         Prefs.setSetupWizardSeen(this, true)
-        val titles = listOf("Welcome", "D2 authentication", "Recovery readiness", "System integrations", "Lock behavior", "Test before kiosk", "Ready")
+        val titles = listOf("Welcome", "D2 authentication", "Samsung lock-screen compatibility", "Recovery readiness", "System integrations", "Lock behavior", "Test before kiosk", "Ready")
         val messages = listOf(
             "Kiosk D2 Boot Guardian can become your primary rooted lock surface. Complete and test D2 authentication and your recovery path before enabling full kiosk protection.",
             if (PinStore(this).configured()) "D2 authentication is configured. You can continue." else "Create a D2 PIN before full Guardian protection can be enabled. Pattern can be selected later in Security Center.",
+            "For the intended rooted D2 configuration, remove the existing Samsung screen-lock credential and enrolled lock-screen biometrics before enabling Guardian protection. This includes Samsung PIN, pattern or password, fingerprints, face unlock, and other lock-screen biometrics. D2 will never remove them automatically. Open Samsung lock settings, make the changes yourself, then return here and check again.",
             buildString {
                 append(if (RootManager.isAvailable()) "✓ KernelSU Superuser granted to D2" else "○ KernelSU Superuser required")
                 append("\n")
@@ -158,17 +165,34 @@ class MainActivity : Activity() {
             addView(TextView(this@MainActivity).apply {
                 text=messages[step]; textSize=14f; setLineSpacing(0f,1.14f); setTextColor(Appearance.text(this@MainActivity))
             })
+            if(step==2) {
+                addView(TextView(this@MainActivity).apply {
+                    text="Open Samsung lock settings"; textSize=15f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
+                    background=Appearance.glass(this@MainActivity,22f,30,true); setPadding(dp(12),dp(11),dp(12),dp(11))
+                    setOnClickListener {
+                        setupSecurityStepPending=true
+                        runCatching { startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) }.onFailure {
+                            setupSecurityStepPending=false
+                            Toast.makeText(this@MainActivity,"Open Settings > Lock screen and remove Samsung credentials and biometrics.",Toast.LENGTH_LONG).show()
+                        }
+                    }
+                },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
+                addView(TextView(this@MainActivity).apply {
+                    text="Check again"; textSize=14f; gravity=Gravity.CENTER; setTextColor(Appearance.accent(this@MainActivity))
+                    setPadding(dp(12),dp(10),dp(12),dp(10)); setOnClickListener { showSetupWizard(2) }
+                },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(5) })
+            }
             if(step==1 && !PinStore(this@MainActivity).configured()) addView(TextView(this@MainActivity).apply {
                 text="Create D2 PIN"; textSize=15f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
                 background=Appearance.glass(this@MainActivity,22f,30,true); setPadding(dp(12),dp(11),dp(12),dp(11))
                 setOnClickListener { PinUi.show(this@MainActivity,setup=true,success={ showSetupWizard(2) }) }
             },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
-            if(step==2 && !RootManager.isAvailable()) addView(TextView(this@MainActivity).apply {
+            if(step==3 && !RootManager.isAvailable()) addView(TextView(this@MainActivity).apply {
                 text="Recheck KernelSU Superuser"; textSize=15f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
                 background=Appearance.glass(this@MainActivity,22f,30,true); setPadding(dp(12),dp(11),dp(12),dp(11))
-                setOnClickListener { showSetupWizard(2) }
+                setOnClickListener { showSetupWizard(3) }
             },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
-            if(step==3) {
+            if(step==4) {
                 val shizukuRunning = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
                 val shizukuGranted = shizukuRunning && runCatching { Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED }.getOrDefault(false)
                 if(!shizukuGranted) addView(TextView(this@MainActivity).apply {
@@ -179,7 +203,7 @@ class MainActivity : Activity() {
                         if(runCatching { Shizuku.pingBinder() }.getOrDefault(false)) {
                             if(runCatching { Shizuku.checkSelfPermission() }.getOrDefault(PackageManager.PERMISSION_DENIED) != PackageManager.PERMISSION_GRANTED) {
                                 Shizuku.requestPermission(shizukuRequestCode)
-                            } else showSetupWizard(3)
+                            } else showSetupWizard(4)
                         } else {
                             Toast.makeText(this@MainActivity,"Start Shizuku, then return to D2.",Toast.LENGTH_LONG).show()
                         }
@@ -210,18 +234,18 @@ class MainActivity : Activity() {
             if(step==1 && !PinStore(this).configured()) {
                 showD2Message("Create and verify your D2 PIN before continuing")
                 showSetupWizard(1)
-            } else if(step==2 && !RootManager.isAvailable()) {
+            } else if(step==3 && !RootManager.isAvailable()) {
                 showD2Message("Grant Kiosk D2 Boot Guardian Superuser access in KernelSU, then recheck")
-                showSetupWizard(2)
-            } else if(step==3) {
+                showSetupWizard(3)
+            } else if(step==4) {
                 val running=runCatching { Shizuku.pingBinder() }.getOrDefault(false)
                 val granted=running && runCatching { Shizuku.checkSelfPermission()==PackageManager.PERMISSION_GRANTED }.getOrDefault(false)
                 if(!granted) {
                     showD2Message(if(running) "Authorize Kiosk D2 Boot Guardian in Shizuku before continuing" else "Start Shizuku before continuing")
-                    showSetupWizard(3)
+                    showSetupWizard(4)
                 } else if(!hasNotificationAccess()) {
                     showD2Message("Enable Notification Access for D2 media controls and lock-screen notifications")
-                    showSetupWizard(3)
+                    showSetupWizard(4)
                 } else showSetupWizard(step+1)
             } else showSetupWizard(step+1)
         } else builder.setPositiveButton("Finish") { _,_ ->
