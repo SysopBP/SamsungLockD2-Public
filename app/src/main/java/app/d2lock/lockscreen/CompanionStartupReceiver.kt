@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.UserManager
+import android.os.SystemClock
 import android.util.Log
 import app.d2lock.Prefs
 import app.d2lock.security.PinStore
@@ -139,6 +140,8 @@ class CompanionStartupReceiver : BroadcastReceiver() {
         private const val TAG = "SamsungLockD2"
         private const val BOOT_STATE_PREFS = "guardian_boot_state"
         private const val KEY_PENDING_RESTORE = "pending_restore"
+        private const val KEY_BOOT_LAUNCH_TOKEN = "boot_launch_token"
+        private const val BOOT_TOKEN_TOLERANCE_MS = 5_000L
 
         // All entry points run on the app main thread. Boot broadcasts remain
         // the fallback if the process dies before the runtime receiver fires.
@@ -148,21 +151,37 @@ class CompanionStartupReceiver : BroadcastReceiver() {
             if (unlocked) {
                 CompanionStartupReceiver().restore(context, "framework_boot_ready")
             } else {
-                // BOOT_READY is already available several seconds before credential
-                // storage unlocks on Android 17. Put a Direct-Boot-safe lock surface
-                // on screen immediately, then let USER_UNLOCKED hydrate the full
-                // Guardian service/settings path.
-                val launched = runCatching {
-                    context.startActivity(
-                        Intent(context, LockScreenActivity::class.java)
-                            .putExtra(LockScreenActivity.EXTRA_DIRECT_BOOT_MINIMAL, true)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                    )
-                    true
-                }.onFailure {
-                    Log.w(TAG, "GUARDIAN_EARLY_DIRECT_BOOT_LAUNCH_FAILED", it)
-                }.getOrDefault(false)
-                Log.i(TAG, "GUARDIAN_EARLY_DIRECT_BOOT_LAUNCH accepted=$launched reason=user_locked")
+                // BOOT_READY can be emitted more than once during the same boot.
+                // Claim a Direct-Boot-safe token based on this boot's wall-clock
+                // start time so only the first signal launches the minimal surface.
+                val dp = context.createDeviceProtectedStorageContext()
+                val state = dp.getSharedPreferences(BOOT_STATE_PREFS, Context.MODE_PRIVATE)
+                val bootToken = System.currentTimeMillis() - SystemClock.elapsedRealtime()
+                val previousToken = state.getLong(KEY_BOOT_LAUNCH_TOKEN, Long.MIN_VALUE)
+                val alreadyClaimed = previousToken != Long.MIN_VALUE &&
+                    kotlin.math.abs(previousToken - bootToken) <= BOOT_TOKEN_TOLERANCE_MS
+
+                if (alreadyClaimed) {
+                    Log.i(TAG, "GUARDIAN_EARLY_DIRECT_BOOT_DEDUPED token=$previousToken")
+                } else {
+                    // Commit synchronously before startActivity so a second BOOT_READY
+                    // cannot race the first launch in this process.
+                    state.edit().putLong(KEY_BOOT_LAUNCH_TOKEN, bootToken).commit()
+                    val launched = runCatching {
+                        context.startActivity(
+                            Intent(context, LockScreenActivity::class.java)
+                                .putExtra(LockScreenActivity.EXTRA_DIRECT_BOOT_MINIMAL, true)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        )
+                        true
+                    }.onFailure {
+                        // Release the token if launch itself failed so a later
+                        // BOOT_READY signal can retry rather than leaving a boot gap.
+                        state.edit().remove(KEY_BOOT_LAUNCH_TOKEN).commit()
+                        Log.w(TAG, "GUARDIAN_EARLY_DIRECT_BOOT_LAUNCH_FAILED", it)
+                    }.getOrDefault(false)
+                    Log.i(TAG, "GUARDIAN_EARLY_DIRECT_BOOT_LAUNCH accepted=$launched token=$bootToken reason=user_locked")
+                }
                 CompanionStartupReceiver().deferUntilUnlocked(context)
             }
         }
