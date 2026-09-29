@@ -5,7 +5,13 @@ import android.net.Uri
 
 object Prefs {
     private const val FILE = "lock_preferences"
-    private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+    /** Direct-Boot safe preference access for the early guardian launch. */
+    private fun prefs(context: Context): android.content.SharedPreferences {
+        val userManager = context.getSystemService(android.os.UserManager::class.java)
+        val storageContext = if (userManager?.isUserUnlocked != false) context
+        else context.createDeviceProtectedStorageContext()
+        return storageContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+    }
 
     fun exportSettings(context: Context): String {
         val excluded = setOf("enabled", "root_mode", "root_kiosk", "adb_recovery", "shizuku_enabled")
