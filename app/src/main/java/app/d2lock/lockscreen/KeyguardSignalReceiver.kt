@@ -84,8 +84,8 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                     }.getOrDefault(false)
                     val launched = rootLaunch || activityFallback
                     if (launched) {
-                        prefs.edit().putLong(KEY_EARLY_BOOT_LAUNCH_MS, now).apply()
-                        Log.i(TAG, "GUARDIAN_BOOT_TOKEN_CONSUMED event=$event")
+                        prefs.edit().putLong(KEY_EARLY_BOOT_LAUNCH_MS, now).putLong(KEY_EARLY_BOOT_CONFIRMED_MS, 0L).apply()
+                        Log.i(TAG, "GUARDIAN_BOOT_TOKEN_PENDING event=$event")
                     }
                     val launchPath = when { rootLaunch -> "root"; activityFallback -> "activity"; else -> "none" }
                     recordPipeline(context, "EARLY_BOOT_LAUNCH", "$event:$launchPath:$launched")
@@ -179,6 +179,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         private const val KEY_SYSTEM_LOCKSETTINGS_COUNT = "system_locksettings_count"
         private const val KEY_SYSTEM_TIMELINE = "system_timeline"
         private const val KEY_EARLY_BOOT_LAUNCH_MS = "early_boot_launch_ms"
+        private const val KEY_EARLY_BOOT_CONFIRMED_MS = "early_boot_confirmed_ms"
         private const val EARLY_BOOT_DEDUPE_MS = 20_000L
         private const val KEY_PIPELINE_TIMELINE = "pipeline_timeline"
         private const val KEY_LAST_BIOMETRIC_MS = "pipeline_last_biometric_ms"
@@ -242,15 +243,26 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
             if (stage == "BIOMETRIC" || stage == "FINGERPRINT") edit.putLong(KEY_LAST_BIOMETRIC_MS, now)
             edit.apply()
         }
-        fun recordGuardianStage(context: Context, stage: String, detail: String) = recordPipeline(context, stage, detail)
+        fun recordGuardianStage(context: Context, stage: String, detail: String) {
+            recordPipeline(context, stage, detail)
+            if (stage == "D2_ACTIVITY_CREATED" || stage == "D2_VISIBLE") {
+                val prefs = directBootPrefs(context)
+                val launchWallMs = prefs.getLong(KEY_EARLY_BOOT_LAUNCH_MS, 0L)
+                val now = System.currentTimeMillis()
+                val bootWallMs = now - SystemClock.elapsedRealtime()
+                if (launchWallMs >= (bootWallMs - 5_000L)) {
+                    prefs.edit().putLong(KEY_EARLY_BOOT_CONFIRMED_MS, now).apply()
+                    Log.i(TAG, "GUARDIAN_BOOT_TOKEN_CONFIRMED stage=$stage")
+                }
+            }
+        }
 
         fun earlyBootLaunchConsumedThisBoot(context: Context): Boolean {
-            val prefs = directBootPrefs(context)
-            val launchWallMs = prefs.getLong(KEY_EARLY_BOOT_LAUNCH_MS, 0L)
-            if (launchWallMs <= 0L) return false
+            val confirmedWallMs = directBootPrefs(context).getLong(KEY_EARLY_BOOT_CONFIRMED_MS, 0L)
+            if (confirmedWallMs <= 0L) return false
             val now = System.currentTimeMillis()
             val bootWallMs = now - SystemClock.elapsedRealtime()
-            return launchWallMs >= (bootWallMs - 5_000L)
+            return confirmedWallMs >= (bootWallMs - 5_000L)
         }
         fun pipelineMetrics(context: Context): PipelineMetrics {
             val prefs = directBootPrefs(context)
