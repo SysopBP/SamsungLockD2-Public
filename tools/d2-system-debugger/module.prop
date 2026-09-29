@@ -2,5 +2,5 @@ id=d2_system_debug
 name=D2 System Server Debugger
 version=1.1.0
 versionCode=110
-author=Branen D. / D2 diagnostics
+author=D2 diagnostics
 description=Boot capture plus continuous bounded all-app crash, ANR and native-crash diagnostics. Action collects now and exports reports to Downloads. Diagnostic only.
