@@ -56,7 +56,7 @@ class CompanionStartupReceiver : BroadcastReceiver() {
         if (!enabled || !configured) return
 
         try {
-            val postBoot = source == "boot"
+            val postBoot = source == "boot" || source == "framework_boot_ready"
             LockScreenService.start(context, postBoot = postBoot)
             Log.i(TAG, "GUARDIAN_SERVICE_REQUESTED source=$source postBoot=$postBoot")
             val replayed = KeyguardSignalReceiver.replayDeferred(context)
@@ -94,5 +94,13 @@ class CompanionStartupReceiver : BroadcastReceiver() {
         private const val TAG = "SamsungLockD2"
         private const val BOOT_STATE_PREFS = "guardian_boot_state"
         private const val KEY_PENDING_RESTORE = "pending_restore"
+
+        fun restoreFromFramework(context: Context, unlocked: Boolean) {
+            if (unlocked) {
+                CompanionStartupReceiver().restore(context, "framework_boot_ready")
+            } else {
+                Log.i(TAG, "GUARDIAN_EARLY_RESTORE_DEFERRED reason=user_locked")
+            }
+        }
     }
 }

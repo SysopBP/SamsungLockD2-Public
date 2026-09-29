@@ -155,7 +155,8 @@ class LockScreenService : Service() {
     private fun markLockSurfaceHealthy() {
         getSharedPreferences(RECOVERY_PREFS, MODE_PRIVATE).edit()
             .putInt(KEY_ATTEMPTS, 0).putLong(KEY_WINDOW_START, 0L)
-            .putLong(KEY_LAST_HEALTHY, System.currentTimeMillis()).apply()
+            .putLong(KEY_LAST_HEALTHY, System.currentTimeMillis())
+            .putLong(KEY_LAST_HEALTHY_ELAPSED, SystemClock.elapsedRealtime()).apply()
         KeyguardSignalReceiver.recordGuardianStage(this, "D2_HEALTHY", "surface")
         Log.i(TAG, "GUARDIAN_HEALTHY")
     }
@@ -163,6 +164,15 @@ class LockScreenService : Service() {
     private fun postBootLaunchAllowed(): Boolean {
         val now = SystemClock.elapsedRealtime()
         val prefs = getSharedPreferences(RECOVERY_PREFS, MODE_PRIVATE)
+        val healthyElapsed = prefs.getLong(KEY_LAST_HEALTHY_ELAPSED, 0L)
+        val healthyWall = prefs.getLong(KEY_LAST_HEALTHY, 0L)
+        // A later BOOT_COMPLETED broadcast must not reopen a surface that the
+        // early systemReady handoff has already drawn in this boot.
+        if (healthyElapsed > 0L && now >= healthyElapsed && now - healthyElapsed < BOOT_WINDOW_MS &&
+            System.currentTimeMillis() - healthyWall in 0 until BOOT_WINDOW_MS) {
+            Log.i(TAG, "GUARDIAN_BOOT_DEDUPED reason=surface_healthy")
+            return false
+        }
         var start = prefs.getLong(KEY_WINDOW_START, 0L)
         var attempts = prefs.getInt(KEY_ATTEMPTS, 0)
         if (start == 0L || now - start > BOOT_WINDOW_MS) { start = now; attempts = 0 }
@@ -189,6 +199,7 @@ class LockScreenService : Service() {
         private const val KEY_ATTEMPTS = "boot_attempts"
         private const val KEY_WINDOW_START = "boot_window_start"
         private const val KEY_LAST_HEALTHY = "last_healthy"
+        private const val KEY_LAST_HEALTHY_ELAPSED = "last_healthy_elapsed"
         private const val BOOT_WINDOW_MS = 120_000L
         private const val MAX_BOOT_ATTEMPTS = 2
         private const val EXTRA_POST_BOOT = "d2_post_boot"
