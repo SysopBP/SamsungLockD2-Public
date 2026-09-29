@@ -56,9 +56,13 @@ class CompanionStartupReceiver : BroadcastReceiver() {
         if (!enabled || !configured) return
 
         try {
-            val postBoot = source == "boot"
+            val earlyLaunchConsumed = source == "boot" && KeyguardSignalReceiver.earlyBootLaunchConsumedThisBoot(context)
+            val postBoot = source == "boot" && !earlyLaunchConsumed
+            if (earlyLaunchConsumed) {
+                Log.i(TAG, "GUARDIAN_BOOT_LATE_LAUNCH_SKIPPED token=consumed source=$source")
+            }
             LockScreenService.start(context, postBoot = postBoot)
-            Log.i(TAG, "GUARDIAN_SERVICE_REQUESTED source=$source postBoot=$postBoot")
+            Log.i(TAG, "GUARDIAN_SERVICE_REQUESTED source=$source postBoot=$postBoot earlyTokenConsumed=$earlyLaunchConsumed")
             val replayed = KeyguardSignalReceiver.replayDeferred(context)
             Log.i(TAG, "GUARDIAN_XPOSED_REPLAY_CHECK source=$source replayed=$replayed")
         } catch (error: RuntimeException) {
