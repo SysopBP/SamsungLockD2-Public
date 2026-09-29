@@ -57,17 +57,20 @@ class CompanionStartupReceiver : BroadcastReceiver() {
 
         try {
             val bootRestoreSource = source == "boot" || source == "locked_boot"
-            val earlyLaunchConsumed = bootRestoreSource && KeyguardSignalReceiver.earlyBootLaunchConsumedThisBoot(context)
-            val postBoot = source == "boot" && !earlyLaunchConsumed
-            if (earlyLaunchConsumed) {
-                Log.i(TAG, "GUARDIAN_BOOT_LATE_LAUNCH_SKIPPED token=consumed source=$source")
+            val earlyLaunchClaimed = bootRestoreSource && KeyguardSignalReceiver.earlyBootLaunchClaimedThisBoot(context)
+            val earlyLaunchConfirmed = bootRestoreSource && KeyguardSignalReceiver.earlyBootLaunchConsumedThisBoot(context)
+            // The early Direct-Boot root launch owns presentation for this boot as soon as
+            // RootManager accepts it. Activity confirmation can arrive after BOOT_COMPLETED,
+            // so waiting for D2_VISIBLE here caused a second post-boot activity launch.
+            val postBoot = source == "boot" && !earlyLaunchClaimed
+            if (earlyLaunchClaimed) {
+                Log.i(TAG, "GUARDIAN_BOOT_TOKEN_RECOGNIZED source=$source confirmed=$earlyLaunchConfirmed")
+                Log.i(TAG, "GUARDIAN_BOOT_LATE_LAUNCH_SKIPPED token=claimed source=$source")
             }
-            if (earlyLaunchConsumed) {
-                Log.i(TAG, "GUARDIAN_BOOT_LATE_SERVICE_SKIPPED token=consumed source=$source")
-            } else {
-                LockScreenService.start(context, postBoot = postBoot)
-                Log.i(TAG, "GUARDIAN_SERVICE_REQUESTED source=$source postBoot=$postBoot earlyTokenConsumed=false")
-            }
+            // Keep the foreground service alive for watchdog/bridge work, but never ask it
+            // to present the lock surface again when the early launch already owns this boot.
+            LockScreenService.start(context, postBoot = postBoot)
+            Log.i(TAG, "GUARDIAN_SERVICE_REQUESTED source=$source postBoot=$postBoot earlyTokenConsumed=$earlyLaunchClaimed confirmed=$earlyLaunchConfirmed")
             val replayed = KeyguardSignalReceiver.replayDeferred(context)
             Log.i(TAG, "GUARDIAN_XPOSED_REPLAY_CHECK source=$source replayed=$replayed")
         } catch (error: RuntimeException) {
