@@ -572,7 +572,7 @@ class MainActivity : Activity() {
                 },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(6) })
                 addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.HORIZONTAL
-                    addView(statusChip("LSPosed",xposedReady,R.drawable.ic_guardian_advanced),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
+                    addView(statusChip("LSPosed",xposedReady,R.drawable.ic_guardian_xposed),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
                     addView(statusChip("System Server",systemHealth.status=="CONNECTED",R.drawable.ic_system_health),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
                 },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
                 addView(LinearLayout(this@MainActivity).apply {
@@ -608,7 +608,7 @@ class MainActivity : Activity() {
                 addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL
                     addView(ImageView(this@MainActivity).apply {
-                        setImageResource(R.drawable.ic_guardian_advanced)
+                        setImageResource(R.drawable.ic_guardian_island)
                         imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity)); contentDescription=null
                     },LinearLayout.LayoutParams(dp(20),dp(20)).apply { rightMargin=dp(8) })
                     addView(guardianSwitch().apply {
@@ -723,7 +723,7 @@ class MainActivity : Activity() {
             root.addView(LinearLayout(this).apply {
                 orientation=LinearLayout.VERTICAL
                 setPadding(dp(18),dp(14),dp(18),dp(14))
-                background=Appearance.glass(this@MainActivity,30f,38,true)
+                background=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
 
                 addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.HORIZONTAL
@@ -946,11 +946,11 @@ class MainActivity : Activity() {
         root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
             setPadding(dp(12),dp(9),dp(12),dp(9))
-            background=Appearance.glass(this@MainActivity,24f,30,true)
+            background=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
             addView(LinearLayout(this@MainActivity).apply {
                 orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL
                 addView(ImageView(this@MainActivity).apply {
-                    setImageResource(R.drawable.ic_guardian_shizuku)
+                    setImageResource(R.drawable.ic_guardian_integrations)
                     imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
                 },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
                 addView(TextView(this@MainActivity).apply {
@@ -1048,6 +1048,37 @@ class MainActivity : Activity() {
                     val panel=LinearLayout(this@MainActivity).apply {
                         orientation=LinearLayout.VERTICAL
                         setPadding(dp(18),dp(8),dp(18),dp(20))
+                        fun integrationRow(label:String, checked:Boolean, onChange:(Boolean)->Unit)=LinearLayout(this@MainActivity).apply {
+                            orientation=LinearLayout.VERTICAL
+                            addView(guardianSwitch().apply {
+                                text=label; isChecked=checked
+                                setTextColor(Appearance.text(this@MainActivity))
+                                background=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                                setPadding(dp(2),dp(10),dp(2),dp(10))
+                                setOnCheckedChangeListener { _,value -> onChange(value) }
+                            },LinearLayout.LayoutParams(-1,-2))
+                            addView(View(this@MainActivity).apply {
+                                setBackgroundColor(Color.argb(34,255,255,255))
+                            },LinearLayout.LayoutParams(-1,dp(1)))
+                        }
+                        addView(integrationRow("Use Shizuku",Prefs.shizukuEnabled(this@MainActivity)) { checked ->
+                            Prefs.setShizukuEnabled(this@MainActivity,checked)
+                        })
+                        addView(integrationRow("KernelSU Root Mode (verified path)",Prefs.rootMode(this@MainActivity)) { checked ->
+                            if(checked && !RootManager.isAvailable()) {
+                                Toast.makeText(this@MainActivity,"Root shell was not detected",Toast.LENGTH_LONG).show()
+                            } else Prefs.setRootMode(this@MainActivity,checked)
+                        })
+                        addView(integrationRow("LSPosed integration (minimal systemReady)",Prefs.xposedMaster(this@MainActivity)) { checked ->
+                            Prefs.setXposedMaster(this@MainActivity,checked)
+                        })
+                        addView(integrationRow("Galaxy Island • Xposed",Prefs.xposedGalaxyIsland(this@MainActivity)) { checked ->
+                            Prefs.setXposedGalaxyIsland(this@MainActivity,checked)
+                        })
+                        addView(integrationRow("Automatic fallback",Prefs.xposedAutomaticFallback(this@MainActivity)) { checked ->
+                            Prefs.setXposedAutomaticFallback(this@MainActivity,checked)
+                        })
+                        /* legacy rows removed
                         addView(guardianSwitch().apply {
                             text="Use Shizuku"; isChecked=Prefs.shizukuEnabled(this@MainActivity)
                             setTextColor(Appearance.text(this@MainActivity))
@@ -1078,6 +1109,7 @@ class MainActivity : Activity() {
                             setTextColor(Appearance.text(this@MainActivity))
                             setOnCheckedChangeListener { _,checked -> Prefs.setXposedAutomaticFallback(this@MainActivity,checked) }
                         },rowParams())
+                        */
                     }
                     val dialog=AlertDialog.Builder(this@MainActivity)
                         .setTitle("System integrations")
@@ -1095,12 +1127,12 @@ class MainActivity : Activity() {
         root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
             setPadding(dp(12),dp(9),dp(12),dp(9))
-            background=Appearance.glass(this@MainActivity,24f,30,true)
+            background=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
             addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.HORIZONTAL
                     gravity=Gravity.CENTER_VERTICAL
                     addView(ImageView(this@MainActivity).apply {
-                        setImageResource(R.drawable.ic_guardian_shield)
+                        setImageResource(R.drawable.ic_guardian_safety)
                         imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
                         contentDescription=null
                     },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
