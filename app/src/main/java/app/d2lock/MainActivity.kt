@@ -2231,6 +2231,21 @@ class MainActivity : Activity() {
                 setOnClickListener { startActivity(Intent(this@MainActivity,app.d2lock.ui.SeslPreviewActivity::class.java)) }
             })
         },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
+        section(root, "GUARDIAN TERMINAL")
+        root.addView(LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(14))
+            background=Appearance.glass(this@MainActivity,30f,38,true)
+            addView(TextView(this@MainActivity).apply { text="Framework Command Center"; textSize=18f; setTextColor(Appearance.text(this@MainActivity)) })
+            addView(TextView(this@MainActivity).apply {
+                text="ROOT  ·  SHIZUKU  ·  SYSTEM SERVER  ·  ZYGOTE\nIndependent sessions, live bridge health, command history and framework diagnostics."
+                textSize=12f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,dp(5),0,dp(10))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text="Open Guardian Terminal"; textSize=14f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
+                background=Appearance.glass(this@MainActivity,22f,32,true); setPadding(dp(14),dp(11),dp(14),dp(11))
+                setOnClickListener { startActivity(Intent(this@MainActivity,app.d2lock.terminal.GuardianTerminalActivity::class.java)) }
+            })
+        },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
         section(root, "XPOSED INTEGRATION")
         root.addView(LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
