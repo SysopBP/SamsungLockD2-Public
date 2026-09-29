@@ -149,7 +149,21 @@ object RootKiosk {
             if (activity == null && detachedAt != 0L && now - detachedAt > 5000) {
                 fail("D2 window closed; recovery released kiosk"); return
             }
-            if (active && activity != null && mode(activity) != ActivityManager.LOCK_TASK_MODE_LOCKED) {
+            val callActive = activity != null &&
+                app.d2lock.notifications.CallNotificationStore.items.isNotEmpty()
+            if (callActive) {
+                app.d2lock.lockscreen.GuardianWatchdog.beginCall("kiosk_pulse")
+                if (lockLostAt != 0L || lockRepairAttempts != 0) {
+                    Log.i("SamsungLockD2", "GUARDIAN_CALL_KIOSK_REPAIR_SUSPENDED")
+                    lockLostAt = 0L
+                    lockRepairAttempts = 0
+                }
+            } else if (app.d2lock.lockscreen.GuardianWatchdog.isCallActive()) {
+                app.d2lock.lockscreen.GuardianWatchdog.endCall("kiosk_call_cleared")
+                Log.i("SamsungLockD2", "GUARDIAN_CALL_REASSERT")
+                if (activity != null) reassert(activity, bringToFront = !activity.hasWindowFocus())
+            }
+            if (!callActive && active && activity != null && mode(activity) != ActivityManager.LOCK_TASK_MODE_LOCKED) {
                 if (lockLostAt == 0L) {
                     lockLostAt = now
                     lockRepairAttempts = 0
@@ -163,7 +177,7 @@ object RootKiosk {
                     Log.e("SamsungLockD2", "GUARDIAN_LOCK_TASK_RECOVERY_FAILED attempts=$lockRepairAttempts")
                     fail("Kiosk ended and Guardian could not restore secure lock"); return
                 }
-            } else if (active && activity != null && lockLostAt != 0L) {
+            } else if (!callActive && active && activity != null && lockLostAt != 0L) {
                 Log.i("SamsungLockD2", "GUARDIAN_LOCK_TASK_RECOVERED elapsed=${now - lockLostAt} attempts=$lockRepairAttempts")
                 lockLostAt = 0L
                 lockRepairAttempts = 0
