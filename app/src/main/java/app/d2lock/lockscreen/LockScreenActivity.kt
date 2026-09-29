@@ -407,7 +407,15 @@ class LockScreenActivity : Activity() {
             // If Samsung Keyguard takes the foreground, ask the companion service to
             // restore the existing Guardian surface instead of recreating this Activity.
             if (!preview && Prefs.kiosk(this)) {
-                LockScreenService.surfaceLost(this, "activity_stopped")
+                // Do not treat Android stopping the Activity because the display is
+                // asleep as a lost lock surface. The old behavior fed a 120 ms
+                // surfaceLost -> root am start -> sleep/stop loop at boot.
+                val interactive = getSystemService(android.os.PowerManager::class.java)?.isInteractive == true
+                if (interactive) {
+                    LockScreenService.surfaceLost(this, "activity_stopped")
+                } else {
+                    Log.i("SamsungLockD2", "GUARDIAN_SURFACE_RECOVERY_SKIPPED reason=screen_not_interactive")
+                }
             }
             pinDialog?.dismiss()
             pinDialog = null
