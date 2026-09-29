@@ -58,6 +58,9 @@ class LockScreenService : Service() {
         val action = intent?.action
         val postBoot = intent?.getBooleanExtra(EXTRA_POST_BOOT, false) == true
         Log.i(TAG, "GUARDIAN_SERVICE_STARTED action=$action postBoot=$postBoot")
+        if (postBoot) {
+            Log.i(TAG, "GUARDIAN_913_TEST_GATE_APP_HANDOFF elapsedMs=${SystemClock.elapsedRealtime()}")
+        }
         if (action == ACTION_LOCK_SURFACE_HEALTHY) {
             markLockSurfaceHealthy()
             return START_STICKY
