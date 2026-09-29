@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong
  * Guardian Xposed Bridge — verified minimal Android 17 boot handoff.
  *
  * Purpose:
- * - Preserve D2's UID 1000/system-app design.
+ * - Run the bridge inside system_server; the D2 app keeps its own UID.
  * - Preserve the proven ActivityManagerService.systemReady handoff.
  * - Experimentally observe wakeUpInternal after Android handles it.
  * - Do not hook SystemUI, keyguard, biometrics, lock settings or ATMS.
@@ -51,7 +51,8 @@ class GuardianXposedBridge : XposedModule() {
             "GUARDIAN_MINIMAL_SYSTEM_SERVER_START uid=${android.os.Process.myUid()}"
         )
         installBootReadyHook(param.classLoader)
-        installWakeObservation(param.classLoader)
+        runCatching { installWakeObservation(param.classLoader) }
+            .onFailure { log(Log.WARN, TAG, "GUARDIAN_WAKE_DISCOVERY_FAILED", it) }
     }
 
     private fun installWakeObservation(classLoader: ClassLoader) {
@@ -65,6 +66,7 @@ class GuardianXposedBridge : XposedModule() {
         if (methods.isEmpty()) {
             wakeHookStatus = "UNAVAILABLE"
             log(Log.WARN, TAG, "GUARDIAN_WAKE_HOOK_UNAVAILABLE target=$className#wakeUpInternal")
+            reportWakeCandidates(classLoader)
             return
         }
         methods.forEach { method ->
@@ -90,6 +92,30 @@ class GuardianXposedBridge : XposedModule() {
             }.onFailure {
                 if (wakeHookStatus != "INSTALLED") wakeHookStatus = "FAILED"
                 log(Log.WARN, TAG, "GUARDIAN_WAKE_HOOK_FAILED target=$className#${method.name}", it)
+            }
+        }
+    }
+
+    /** Discovery only: do not attach guessed hooks on unverified Samsung builds. */
+    private fun reportWakeCandidates(classLoader: ClassLoader) {
+        val candidates = listOf(
+            "com.android.server.power.PowerManagerService",
+            "com.android.server.power.PowerManagerService\$LocalService",
+            "com.android.server.power.PowerManagerService\$BinderService",
+            "com.android.server.power.PowerGroup"
+        )
+        candidates.forEach { name ->
+            runCatching {
+                val owner = Class.forName(name, false, classLoader)
+                val methods = owner.declaredMethods
+                    .filter { it.name.contains("wake", ignoreCase = true) }
+                    .sortedBy { it.toGenericString() }
+                log(Log.INFO, TAG, "GUARDIAN_WAKE_CANDIDATE_CLASS target=$name count=${methods.size}")
+                methods.take(32).forEach { method ->
+                    log(Log.INFO, TAG, "GUARDIAN_WAKE_CANDIDATE signature=${method.toGenericString()}")
+                }
+            }.onFailure {
+                log(Log.WARN, TAG, "GUARDIAN_WAKE_CANDIDATE_UNAVAILABLE target=$name", it)
             }
         }
     }
@@ -188,7 +214,7 @@ class GuardianXposedBridge : XposedModule() {
                     )
             )
 
-            log(Log.INFO, TAG, "GUARDIAN_MINIMAL_BOOT_READY_SENT")
+            log(Log.INFO, TAG, "GUARDIAN_MINIMAL_BOOT_READY_SENT elapsedMs=${SystemClock.elapsedRealtime()} wakeHook=$wakeHookStatus")
         }.onFailure {
             // No retry loop or heartbeat. If signalling fails, leave Android alone.
             log(Log.WARN, TAG, "GUARDIAN_MINIMAL_BOOT_READY_SIGNAL_FAILED", it)
