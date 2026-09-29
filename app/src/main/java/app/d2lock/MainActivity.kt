@@ -2190,11 +2190,27 @@ class MainActivity : Activity() {
                 textSize = 18f
                 setTextColor(Appearance.text(this@MainActivity))
             })
+            val systemHealth = app.d2lock.lockscreen.KeyguardSignalReceiver.systemHealth(this@MainActivity)
             val bridgeHealth = app.d2lock.lockscreen.KeyguardSignalReceiver.bridgeHealth(this@MainActivity)
+            addView(TextView(this@MainActivity).apply {
+                val age = systemHealth.ageMs?.let { "${it / 1000}s ago" } ?: "waiting for first event"
+                val event = systemHealth.event ?: "none"
+                val method = systemHealth.method ?: "none"
+                text = "System Server bridge  •  ${systemHealth.status}\nLast event: $event • $age\nHook: $method"
+                textSize = 14f
+                setTextColor(
+                    when (systemHealth.status) {
+                        "READY" -> Color.rgb(102, 220, 132)
+                        "STALE" -> Color.rgb(245, 184, 72)
+                        else -> Appearance.secondary(this@MainActivity)
+                    }
+                )
+                setPadding(0, dp(7), 0, dp(4))
+            })
             addView(TextView(this@MainActivity).apply {
                 val age = bridgeHealth.ageMs?.let { "${it / 1000}s ago" } ?: "no heartbeat yet"
                 text = "SystemUI bridge  •  ${bridgeHealth.status}\nHeartbeat: $age"
-                textSize = 14f
+                textSize = 12f
                 setTextColor(
                     when (bridgeHealth.status) {
                         "READY" -> Color.rgb(102, 220, 132)
@@ -2202,13 +2218,19 @@ class MainActivity : Activity() {
                         else -> Appearance.secondary(this@MainActivity)
                     }
                 )
-                setPadding(0, dp(7), 0, dp(7))
+                setPadding(0, dp(2), 0, dp(7))
             })
             addView(TextView(this@MainActivity).apply {
-                text = "Verified baseline: normal D2 install + KernelSU Root Mode + LSPosed. The system_server bridge only observes ActivityManagerService.systemReady, lets Android finish first, then sends BOOT_READY. Keep behavioral hooks off unless testing them separately."
+                text = "Current Android 17 path: ActivityManagerService.systemReady sends BOOT_READY after Android returns from systemReady. D2 now uses that early signal for the earliest safe rooted Guardian launch; LOCKED_BOOT_COMPLETED remains the recovery fallback. SystemUI heartbeat is separate and is not required for the System Server boot handoff."
                 textSize = 12f
                 setTextColor(Appearance.secondary(this@MainActivity))
-                setPadding(0, dp(5), 0, dp(8))
+                setPadding(0, dp(5), 0, dp(4))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = "Behavior controls below are experimental unless individually verified. Safe diagnostics can remain enabled while testing boot timing."
+                textSize = 11f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0, dp(2), 0, dp(8))
             })
 
             fun masterXposedToggle(title: String, checked: () -> Boolean, changed: (Boolean) -> Unit) {
