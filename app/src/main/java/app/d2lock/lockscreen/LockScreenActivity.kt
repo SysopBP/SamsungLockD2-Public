@@ -220,7 +220,8 @@ class LockScreenActivity : Activity() {
         super.onCreate(savedInstanceState)
         PinUi.protect(this)
         preview = intent.getBooleanExtra("preview", false)
-        if (!preview && !PinStore(this).configured()) {
+        val userUnlocked = getSystemService(android.os.UserManager::class.java)?.isUserUnlocked != false
+        if (!preview && userUnlocked && !PinStore(this).configured()) {
             startActivity(Intent(this, MainActivity::class.java))
             finish()
             return
