@@ -44,14 +44,7 @@ class GuardianTerminalActivity:Activity(){
  fun shizukuExec(cmd:String):String{
   if(!runCatching{Shizuku.pingBinder()}.getOrDefault(false))return "Shizuku is not connected."
   if(runCatching{Shizuku.checkSelfPermission()}.getOrDefault(android.content.pm.PackageManager.PERMISSION_DENIED)!=android.content.pm.PackageManager.PERMISSION_GRANTED)return "Shizuku permission is not granted."
-  return try{
-   @Suppress("DEPRECATION")
-   val p=Shizuku.newProcess(arrayOf("sh","-c",cmd),null,null)
-   val stdout=BufferedReader(InputStreamReader(p.inputStream)).readText()
-   val stderr=BufferedReader(InputStreamReader(p.errorStream)).readText()
-   val code=p.waitFor()
-   buildString{if(stdout.isNotBlank())append(stdout.trimEnd());if(stderr.isNotBlank()){if(isNotEmpty())append("\n");append(stderr.trimEnd())};if(isNotEmpty())append("\n");append("[shizuku exit $code]")}
-  }catch(t:Throwable){"Shizuku execution failed: ${t.javaClass.simpleName}: ${t.message?:"unknown error"}"}
+  return "Shizuku shell backend is connected, but direct process execution is unavailable with this Shizuku API. Use the ROOT terminal for commands; Shizuku remains available independently for binder/permission diagnostics."
  }
  fun console(cmd:String,system:Boolean):String{if(!system&&!runCatching{Shizuku.pingBinder()}.getOrDefault(false))return "Shizuku is not connected.";val h=KeyguardSignalReceiver.systemHealth(this);val p=KeyguardSignalReceiver.pipelineMetrics(this);return when(cmd.lowercase()){"help"->if(system)"Commands: status, events, boot, hooks, fingerprint, help" else "Commands: status, binder, permission, framework, help";"status"->if(system)"system_server: ${h.status}\nlast event: ${h.event?:"none"}\nhook: ${h.method?:"none"}" else "binder: ${Shizuku.pingBinder()}\npermission: ${runCatching{Shizuku.checkSelfPermission()}.getOrNull()}";"events","boot"->p.timeline.joinToString("\n").ifBlank{"No framework pipeline events yet."};"hooks"->"system_server hook: ${h.method?:"waiting"}\nbridge: ${h.status}";"fingerprint"->"Fingerprint events are exposed through D2 framework capture.";"binder"->"Shizuku binder: ${Shizuku.pingBinder()}";"permission"->"Shizuku permission: ${runCatching{Shizuku.checkSelfPermission()}.getOrNull()}";"framework"->"System Server bridge: ${h.status} · ${h.event?:"waiting"}";else->"Unknown command. Type help."}}
  fun zygote(cmd:String):String{val h=KeyguardSignalReceiver.systemHealth(this);return when(cmd.lowercase()){"help"->"Commands: status, bridge, abi, process, help";"status","bridge"->"LSPosed framework bridge: ${h.status}\nSystem Server event: ${h.event?:"waiting"}";"abi"->"Supported ABI: ${android.os.Build.SUPPORTED_ABIS.joinToString()}\nProcess ABI: ${if(android.os.Process.is64Bit())"64-bit" else "32-bit"}";"process"->"D2 pid: ${android.os.Process.myPid()}\nuid: ${android.os.Process.myUid()}\nControlled diagnostics mode";else->"Unknown Zygote command. Type help."}}
