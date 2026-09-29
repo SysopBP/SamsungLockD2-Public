@@ -723,7 +723,7 @@ class MainActivity : Activity() {
             root.addView(LinearLayout(this).apply {
                 orientation=LinearLayout.VERTICAL
                 setPadding(dp(18),dp(14),dp(18),dp(14))
-                background=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                background=Appearance.glass(this@MainActivity,30f,42,true)
 
                 addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.HORIZONTAL
@@ -946,7 +946,7 @@ class MainActivity : Activity() {
         root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
             setPadding(dp(12),dp(9),dp(12),dp(9))
-            background=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+            background=Appearance.glass(this@MainActivity,28f,36,true)
             addView(LinearLayout(this@MainActivity).apply {
                 orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL
                 addView(ImageView(this@MainActivity).apply {
@@ -1096,7 +1096,7 @@ class MainActivity : Activity() {
         root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
             setPadding(dp(12),dp(9),dp(12),dp(9))
-            background=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+            background=Appearance.glass(this@MainActivity,28f,36,true)
             addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.HORIZONTAL
                     gravity=Gravity.CENTER_VERTICAL
