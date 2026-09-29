@@ -54,3 +54,34 @@ The current release candidate is intentionally derived through reviewable commit
 - Two late-evening captures showed `BOOT_READY` preceding D2's normal locked-boot receiver by roughly four seconds, identifying the remaining handoff window to investigate.
 - Android 17 framework enumeration confirmed `PowerManagerService#wakeUpInternal` is unavailable on this build and exposed `PowerManagerService$BinderService.wakeUp(...)` / `wakeUpWithDisplayId(...)` instead.
 - Added the narrow BinderService wake observer in commit `73d717b`; the next device build should validate that the signal fires reliably without changing the already-stable boot path.
+
+
+## September 29, 2026 — token-integrated fast-boot reference
+
+A physical-device boot capture from the current build establishes a new known-good reference for the D2 boot path. Preserve this ordering and token behavior unless a change is being tested specifically against this baseline.
+
+### Measured successful boot
+- 11:51:44.788 — system_server emits `BOOT_READY`.
+- 11:51:44.799 — D2 requests the early lock-screen launch through the root path.
+- 11:51:44.903 — boot launch token enters `PENDING`.
+- 11:51:44.904 — early launch is accepted.
+- 11:51:45.043 — `LockScreenActivity` is created and the token becomes `CONFIRMED`.
+- 11:51:45.047 — D2 reports the lock surface `VISIBLE`.
+- 11:51:45.093 — `GUARDIAN_FIRST_DRAW`.
+- Measured `BOOT_READY` → first draw: approximately **305 ms**.
+- Measured early-launch acceptance → first draw: approximately **189 ms**.
+
+### Late receiver deduplication
+The normal Android boot receiver arrived later at 11:51:48.937. Instead of launching a second lock screen, D2 recognized the already-claimed token:
+
+```text
+GUARDIAN_BOOT_TOKEN_RECOGNIZED source=boot confirmed=true
+GUARDIAN_BOOT_LATE_LAUNCH_SKIPPED token=claimed source=boot
+```
+
+This confirms the intended architecture: **system_server BOOT_READY → early root launch → token pending → activity created → token confirmed → visible/first draw → later Android boot receiver recognizes the claimed token and skips its duplicate launch.**
+
+The later activity recreation observed around 11:51:55 was marked `changingConfig=true` and is treated as a configuration recreation, not a duplicate boot launch.
+
+### Baseline rule
+Treat this token-integrated fast-boot path as the current known-good boot baseline. Keep current application features and UI; do not roll the application back to older builds. Future boot changes should be compared against this trace and should preserve the early `BOOT_READY` handoff, token confirmation, and late-launch suppression.
