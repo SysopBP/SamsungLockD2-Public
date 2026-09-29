@@ -60,9 +60,19 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                 if (!launchedThisBoot || elapsed > EARLY_BOOT_DEDUPE_MS) {
                     recordPipeline(context, "WAKE_DETECTED", "$event:$method")
                     Log.i(TAG, "GUARDIAN_WAKE_DETECTED event=$event method=$method source=$source")
-                    val directLaunch = runCatching {
+                    // Prefer the root launch during Direct Boot. Android 17 can accept a
+                    // background startActivity() call without actually presenting it, while
+                    // the root path can place the existing singleTask lock surface immediately.
+                    val rootLaunch = runCatching {
+                        recordPipeline(context, "LAUNCH_REQUEST", "root:$event")
+                        Log.i(TAG, "GUARDIAN_LAUNCH_REQUEST event=$event path=root")
+                        RootManager.launchCompanion()
+                    }.onFailure {
+                        Log.w(TAG, "GUARDIAN_EARLY_BOOT_ROOT_LAUNCH_FAILED event=$event", it)
+                    }.getOrDefault(false)
+                    val activityFallback = !rootLaunch && runCatching {
                         recordPipeline(context, "LAUNCH_REQUEST", "activity:$event")
-                        Log.i(TAG, "GUARDIAN_LAUNCH_REQUEST event=$event path=activity")
+                        Log.i(TAG, "GUARDIAN_LAUNCH_REQUEST event=$event path=activity_fallback")
                         context.startActivity(
                             Intent(context, LockScreenActivity::class.java)
                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -72,10 +82,12 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                     }.onFailure {
                         Log.w(TAG, "GUARDIAN_EARLY_BOOT_DIRECT_LAUNCH_FAILED event=$event", it)
                     }.getOrDefault(false)
-                    val rootFallback = !directLaunch && RootManager.launchCompanion()
-                    val launched = directLaunch || rootFallback
-                    if (launched) prefs.edit().putLong(KEY_EARLY_BOOT_LAUNCH_MS, now).apply()
-                    val launchPath = when { directLaunch -> "activity"; rootFallback -> "root"; else -> "none" }
+                    val launched = rootLaunch || activityFallback
+                    if (launched) {
+                        prefs.edit().putLong(KEY_EARLY_BOOT_LAUNCH_MS, now).apply()
+                        Log.i(TAG, "GUARDIAN_BOOT_TOKEN_CONSUMED event=$event")
+                    }
+                    val launchPath = when { rootLaunch -> "root"; activityFallback -> "activity"; else -> "none" }
                     recordPipeline(context, "EARLY_BOOT_LAUNCH", "$event:$launchPath:$launched")
                     Log.i(TAG, "GUARDIAN_EARLY_BOOT_LAUNCH event=$event accepted=$launched path=$launchPath source=$source")
                 } else {
@@ -231,6 +243,15 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
             edit.apply()
         }
         fun recordGuardianStage(context: Context, stage: String, detail: String) = recordPipeline(context, stage, detail)
+
+        fun earlyBootLaunchConsumedThisBoot(context: Context): Boolean {
+            val prefs = directBootPrefs(context)
+            val launchWallMs = prefs.getLong(KEY_EARLY_BOOT_LAUNCH_MS, 0L)
+            if (launchWallMs <= 0L) return false
+            val now = System.currentTimeMillis()
+            val bootWallMs = now - SystemClock.elapsedRealtime()
+            return launchWallMs >= (bootWallMs - 5_000L)
+        }
         fun pipelineMetrics(context: Context): PipelineMetrics {
             val prefs = directBootPrefs(context)
             val bio = prefs.getLong(KEY_LAST_BIOMETRIC_MS, 0L)
