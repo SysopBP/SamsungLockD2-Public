@@ -41,6 +41,7 @@
         <activity android:name=".bridge.IslandLockActivity" android:exported="false" android:excludeFromRecents="true" />
         <activity
             android:name=".lockscreen.LockScreenActivity"
+            android:directBootAware="true"
             android:excludeFromRecents="true"
             android:exported="false"
             android:launchMode="singleTask"
