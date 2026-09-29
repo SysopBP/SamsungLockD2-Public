@@ -112,7 +112,7 @@ class MainActivity : Activity() {
             startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         }.onFailure {
             setupIntegrationStepPending = false
-            Toast.makeText(this, "Open Settings > Notifications > Notification access and enable Kiosk D2 Guardian.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Open Settings > Notifications > Notification access and enable Kiosk D2 Boot Guardian.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -120,13 +120,13 @@ class MainActivity : Activity() {
         Prefs.setSetupWizardSeen(this, true)
         val titles = listOf("Welcome", "D2 authentication", "Recovery readiness", "System integrations", "Lock behavior", "Test before kiosk", "Ready")
         val messages = listOf(
-            "Kiosk D2 Guardian can become your primary rooted lock surface. Complete and test D2 authentication and your recovery path before enabling full kiosk protection.",
+            "Kiosk D2 Boot Guardian can become your primary rooted lock surface. Complete and test D2 authentication and your recovery path before enabling full kiosk protection.",
             if (PinStore(this).configured()) "D2 authentication is configured. You can continue." else "Create a D2 PIN before full Guardian protection can be enabled. Pattern can be selected later in Security Center.",
             buildString {
                 append(if (RootManager.isAvailable()) "✓ KernelSU Superuser granted to D2" else "○ KernelSU Superuser required")
                 append("\n")
                 append(if (Prefs.adbRecovery(this@MainActivity)) "✓ ADB / USB recovery configured" else "○ ADB / USB recovery is optional and currently off")
-                append("\n\nD2's tested rooted configuration requires KernelSU Superuser. Grant Kiosk D2 Guardian root access in KernelSU before continuing to full kiosk protection.")
+                append("\n\nD2's tested rooted configuration requires KernelSU Superuser. Grant Kiosk D2 Boot Guardian root access in KernelSU before continuing to full kiosk protection.")
             },
             buildString {
                 val shizukuRunning = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
@@ -211,13 +211,13 @@ class MainActivity : Activity() {
                 showD2Message("Create and verify your D2 PIN before continuing")
                 showSetupWizard(1)
             } else if(step==2 && !RootManager.isAvailable()) {
-                showD2Message("Grant Kiosk D2 Guardian Superuser access in KernelSU, then recheck")
+                showD2Message("Grant Kiosk D2 Boot Guardian Superuser access in KernelSU, then recheck")
                 showSetupWizard(2)
             } else if(step==3) {
                 val running=runCatching { Shizuku.pingBinder() }.getOrDefault(false)
                 val granted=running && runCatching { Shizuku.checkSelfPermission()==PackageManager.PERMISSION_GRANTED }.getOrDefault(false)
                 if(!granted) {
-                    showD2Message(if(running) "Authorize Kiosk D2 Guardian in Shizuku before continuing" else "Start Shizuku before continuing")
+                    showD2Message(if(running) "Authorize Kiosk D2 Boot Guardian in Shizuku before continuing" else "Start Shizuku before continuing")
                     showSetupWizard(3)
                 } else if(!hasNotificationAccess()) {
                     showD2Message("Enable Notification Access for D2 media controls and lock-screen notifications")
@@ -250,7 +250,7 @@ class MainActivity : Activity() {
             background = Appearance.glass(this@MainActivity, 30f, 58, true)
         }
         val title = TextView(this).apply {
-            text = "KIOSK D2 GUARDIAN"; textSize = 12f; letterSpacing = .08f
+            text = "KIOSK D2 BOOT GUARDIAN"; textSize = 12f; letterSpacing = .08f
             setTextColor(Appearance.secondary(this@MainActivity)); setPadding(dp(4), 0, dp(4), dp(4))
         }
         val heading = TextView(this).apply {
@@ -411,12 +411,12 @@ class MainActivity : Activity() {
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
         }
         root.addView(TextView(this).apply {
-            text = "Kiosk D2 Guardian"
+            text = "Kiosk D2 Boot Guardian"
             textSize = 32f
             setTextColor(Appearance.text(this@MainActivity))
         })
         root.addView(TextView(this).apply {
-            text = "Kiosk D2 Guardian Security Session · Independent app authentication"
+            text = "Kiosk D2 Boot Guardian Security Session · Independent app authentication"
             textSize = 15f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(0, dp(4), 0, dp(24))
@@ -538,8 +538,12 @@ class MainActivity : Activity() {
                     orientation=LinearLayout.HORIZONTAL
                     addView(statusChip("Kiosk",kioskReady),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
                     addView(statusChip("Root",rootReady),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3); rightMargin=dp(3) })
-                    addView(statusChip("Shizuku",shizukuReady),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3); rightMargin=dp(3) })
-                    addView(statusChip("LSPosed",xposedReady),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
+                    addView(statusChip("Shizuku",shizukuReady),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
+                },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(6) })
+                addView(LinearLayout(this@MainActivity).apply {
+                    orientation=LinearLayout.HORIZONTAL
+                    addView(statusChip("LSPosed",xposedReady),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
+                    addView(statusChip("System Server",systemHealth.status=="CONNECTED"),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
                 },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
                 addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.VERTICAL
@@ -550,8 +554,10 @@ class MainActivity : Activity() {
                         setTextColor(Appearance.secondary(this@MainActivity))
                     })
                     addView(TextView(this@MainActivity).apply {
-                        text="System Server  •  ${systemHealth.status}\nSystem UI  •  ${systemUiHealth.status}\nFingerprint event  •  ${fingerprintHealth.event ?: "Waiting"}"
-                        textSize=13f; setLineSpacing(0f,1.12f); setTextColor(Appearance.text(this@MainActivity)); setPadding(0,dp(6),0,0)
+                        val serverOk=systemHealth.status=="CONNECTED"
+                        val uiOk=systemUiHealth.status=="CONNECTED"
+                        text="${if(serverOk) "✓" else "○"} System Server  •  ${systemHealth.status}\n${if(uiOk) "✓" else "○"} System UI  •  ${systemUiHealth.status}\n○ Fingerprint event  •  ${fingerprintHealth.event ?: "Waiting"}"
+                        textSize=13f; setLineSpacing(0f,1.12f); setTextColor(if(serverOk) Color.rgb(102,220,132) else Appearance.text(this@MainActivity)); setPadding(0,dp(6),0,0)
                     })
                     addView(TextView(this@MainActivity).apply {
                         val detail = systemHealth.event?.let { event -> "Last framework event: $event · ${systemHealth.method ?: "unknown"}" }
@@ -603,7 +609,7 @@ class MainActivity : Activity() {
                         setPadding(dp(14), dp(10), dp(14), dp(14))
                         background = Appearance.glass(this@MainActivity, 30f, 62, true)
                         addView(TextView(this@MainActivity).apply {
-                            text = "KIOSK D2 GUARDIAN"
+                            text = "KIOSK D2 BOOT GUARDIAN"
                             textSize = 11f
                             letterSpacing = .10f
                             setTextColor(Appearance.secondary(this@MainActivity))
@@ -833,7 +839,7 @@ class MainActivity : Activity() {
         root.addView(TextView(this).apply {
             val versionName = versionInfo?.versionName ?: "current"
             val versionCode = if (android.os.Build.VERSION.SDK_INT >= 28) versionInfo?.longVersionCode ?: 0L else @Suppress("DEPRECATION") (versionInfo?.versionCode?.toLong() ?: 0L)
-            text = "Kiosk D2 Guardian  •  $versionName  ($versionCode)"
+            text = "Kiosk D2 Boot Guardian  •  $versionName  ($versionCode)"
             textSize = 12f
             gravity = Gravity.CENTER
             setTextColor(Appearance.secondary(this@MainActivity))
@@ -876,14 +882,14 @@ class MainActivity : Activity() {
             setPadding(dp(14), dp(12), dp(14), dp(12))
             setOnClickListener {
                 val info = TextView(this@MainActivity).apply {
-                    text = "Add the customizable Kiosk D2 Guardian widget. Each placed widget can have its own style, tap action and label. Long-press a widget to open launcher reconfiguration when supported."
+                    text = "Add the customizable Kiosk D2 Boot Guardian widget. Each placed widget can have its own style, tap action and label. Long-press a widget to open launcher reconfiguration when supported."
                     textSize = 14f; setTextColor(Appearance.text(this@MainActivity)); setPadding(dp(18), dp(10), dp(18), dp(18))
                 }
                 val dialog = AlertDialog.Builder(this@MainActivity).setTitle("Widget Manager").setView(info)
                     .setNegativeButton("Close", null).setPositiveButton("Add widget") { _, _ ->
                         val manager = getSystemService(AppWidgetManager::class.java)
                         if (manager.isRequestPinAppWidgetSupported) manager.requestPinAppWidget(ComponentName(this@MainActivity, D2Widget::class.java), null, null)
-                        else Toast.makeText(this@MainActivity, "Open your launcher's Widgets menu and add Kiosk D2 Guardian.", Toast.LENGTH_LONG).show()
+                        else Toast.makeText(this@MainActivity, "Open your launcher's Widgets menu and add Kiosk D2 Boot Guardian.", Toast.LENGTH_LONG).show()
                     }.create()
                 dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true)) }
                 dialog.show()
@@ -957,7 +963,7 @@ class MainActivity : Activity() {
                 addView(healthBubble("Copy diagnostics") {
                     val info=runCatching { packageManager.getPackageInfo(packageName,0) }.getOrNull()
                     val report=buildString {
-                        appendLine("Kiosk D2 Guardian diagnostics")
+                        appendLine("Kiosk D2 Boot Guardian diagnostics")
                         appendLine("Version: ${info?.versionName ?: "unknown"}")
                         appendLine("Android: ${android.os.Build.VERSION.RELEASE}")
                         appendLine("Device: ${android.os.Build.MODEL}")
@@ -972,7 +978,7 @@ class MainActivity : Activity() {
                         appendLine("Fingerprint unlock: experimental/not enabled")
                     }
                     val clipboard=getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Kiosk D2 Guardian diagnostics",report))
+                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Kiosk D2 Boot Guardian diagnostics",report))
                     showD2Message("Sanitized Guardian diagnostics copied")
                 },LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(5) })
             },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
@@ -1314,7 +1320,7 @@ class MainActivity : Activity() {
                     if(!RootManager.isAvailable()) Toast.makeText(this@MainActivity,"KernelSU/root access is required",Toast.LENGTH_LONG).show()
                     else android.app.AlertDialog.Builder(this@MainActivity)
                         .setTitle("Restart System UI?")
-                        .setMessage("System UI will briefly disappear and reload. Kiosk D2 Guardian itself will not be reset.")
+                        .setMessage("System UI will briefly disappear and reload. Kiosk D2 Boot Guardian itself will not be reset.")
                         .setNegativeButton("Cancel",null)
                         .setPositiveButton("Restart") { _,_-> val result=RootManager.restartSystemUi(); Toast.makeText(this@MainActivity,result.second,Toast.LENGTH_LONG).show() }
                         .show()
@@ -2129,7 +2135,7 @@ class MainActivity : Activity() {
             val labPipeline=app.d2lock.lockscreen.KeyguardSignalReceiver.pipelineMetrics(this@MainActivity)
             addView(TextView(this@MainActivity).apply {
                 text="Framework-assisted experiments  •  ${labBridge.status}\nPipeline: ${labPipeline.timeline.size} recent stages"
-                textSize=11f; setTextColor(if(labBridge.status=="READY") Color.rgb(102,220,132) else Appearance.secondary(this@MainActivity))
+                textSize=11f; setTextColor(if(labBridge.status=="CONNECTED") Color.rgb(102,220,132) else Appearance.secondary(this@MainActivity))
                 setPadding(0,dp(5),0,dp(8))
             })
             fun labTile(title:String, status:String, checked:()->Boolean, changed:(Boolean)->Unit)=
@@ -2200,7 +2206,7 @@ class MainActivity : Activity() {
                 textSize = 14f
                 setTextColor(
                     when (systemHealth.status) {
-                        "READY" -> Color.rgb(102, 220, 132)
+                        "CONNECTED" -> Color.rgb(102, 220, 132)
                         "STALE" -> Color.rgb(245, 184, 72)
                         else -> Appearance.secondary(this@MainActivity)
                     }
@@ -2213,7 +2219,7 @@ class MainActivity : Activity() {
                 textSize = 12f
                 setTextColor(
                     when (bridgeHealth.status) {
-                        "READY" -> Color.rgb(102, 220, 132)
+                        "CONNECTED" -> Color.rgb(102, 220, 132)
                         "STALE" -> Color.rgb(245, 184, 72)
                         else -> Appearance.secondary(this@MainActivity)
                     }
@@ -2427,7 +2433,7 @@ class MainActivity : Activity() {
                 background = Appearance.glass(this@MainActivity, 30f, 58, true)
 
                 addView(TextView(this@MainActivity).apply {
-                    text = "KIOSK D2 GUARDIAN"
+                    text = "KIOSK D2 BOOT GUARDIAN"
                     textSize = 12f
                     letterSpacing = .08f
                     setTextColor(Appearance.secondary(this@MainActivity))
@@ -2490,16 +2496,16 @@ class MainActivity : Activity() {
             dialog.show()
         }
 
-        addButton(root, "About Kiosk D2 Guardian") {
+        addButton(root, "About Kiosk D2 Boot Guardian") {
             val info = TextView(this).apply {
-                text = "Kiosk D2 Guardian is a root-aware Samsung lock-screen and kiosk protection project built around D2 PIN/pattern authentication, Guardian relock protection, KernelSU Root Mode, Shizuku, LSPosed integration, and Galaxy Island coordination. The verified Android 17 baseline keeps D2 normally installed under /data/app, enables KernelSU Root Mode in System Integrations, and uses a minimal LSPosed system_server hook that signals Guardian only after ActivityManagerService reaches systemReady. Five consecutive reboots were validated on the SM-S948U1 test device with the separate KernelSU paired bridge disabled.\n\nFingerprint framework work is still experimental. Hardware detection and Samsung biometric authentication have been demonstrated, but D2-only fingerprint unlock is not fully integrated and PIN/pattern remain the supported Guardian credentials.\n\nRoot, recovery and reboot remain privileged bypass paths. D2 cannot repair firmware or guarantee prevention of download-mode errors."
+                text = "Kiosk D2 Boot Guardian is a root-aware Samsung lock-screen and kiosk protection project built around D2 PIN/pattern authentication, Guardian relock protection, KernelSU Root Mode, Shizuku, LSPosed integration, and Galaxy Island coordination. The verified Android 17 baseline keeps D2 normally installed under /data/app, enables KernelSU Root Mode in System Integrations, and uses a minimal LSPosed system_server hook that signals Guardian only after ActivityManagerService reaches systemReady. Five consecutive reboots were validated on the SM-S948U1 test device with the separate KernelSU paired bridge disabled.\n\nFingerprint framework work is still experimental. Hardware detection and Samsung biometric authentication have been demonstrated, but D2-only fingerprint unlock is not fully integrated and PIN/pattern remain the supported Guardian credentials.\n\nRoot, recovery and reboot remain privileged bypass paths. D2 cannot repair firmware or guarantee prevention of download-mode errors."
                 textSize = 14f
                 setTextColor(Appearance.text(this@MainActivity))
                 setLineSpacing(0f, 1.14f)
                 setPadding(dp(18), dp(14), dp(18), dp(18))
             }
             val dialog = AlertDialog.Builder(this)
-                .setTitle("About Kiosk D2 Guardian")
+                .setTitle("About Kiosk D2 Boot Guardian")
                 .setView(info)
                 .setPositiveButton("Done", null)
                 .create()
@@ -3084,9 +3090,9 @@ class MainActivity : Activity() {
             })
             addView(TextView(this@MainActivity).apply {
                 text = when {
-                    !enabled -> "The Shizuku service may keep running, but Kiosk D2 Guardian will not use it."
+                    !enabled -> "The Shizuku service may keep running, but Kiosk D2 Boot Guardian will not use it."
                     granted -> "Service running · Authorized"
-                    running -> "Tap below to authorize Kiosk D2 Guardian."
+                    running -> "Tap below to authorize Kiosk D2 Boot Guardian."
                     else -> "Start Shizuku, then return here. D2 reconnects automatically."
                 }
                 textSize = 13f
