@@ -50,13 +50,37 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
             recordPipeline(context, event, method)
             Log.i(TAG, "GUARDIAN_SYS_EVENT_RECEIVED event=$event method=$method source=$source")
             val unlocked = context.getSystemService(UserManager::class.java)?.isUserUnlocked == true
-            if (event == "BOOT_READY" && !unlocked) {
+            if (!unlocked && (event == "WAKE" || event == "BOOT_READY")) {
+                // First pre-unlock signal owns this boot launch. WAKE is preferred;
+                // BOOT_READY stays as the fallback if the early wake launch cannot run.
                 val lastLaunch = prefs.getLong(KEY_EARLY_BOOT_LAUNCH_MS, 0L)
                 val elapsed = now - lastLaunch
-                if (lastLaunch == 0L || elapsed > EARLY_BOOT_DEDUPE_MS) {
-                    // BOOT_READY arrives before KernelSU su may be ready. Launch\n                    // directly from this explicit system_server-triggered receiver first;\n                    // retain the existing root launch only as a fallback.\n                    val directLaunch = runCatching {\n                        context.startActivity(\n                            Intent(context, LockScreenActivity::class.java)\n                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)\n                        )\n                        true\n                    }.onFailure {\n                        Log.w(TAG, "GUARDIAN_EARLY_BOOT_DIRECT_LAUNCH_FAILED", it)\n                    }.getOrDefault(false)\n                    val rootFallback = !directLaunch && RootManager.launchCompanion()\n                    val launched = directLaunch || rootFallback\n                    if (launched) prefs.edit().putLong(KEY_EARLY_BOOT_LAUNCH_MS, now).apply()\n                    val launchPath = when { directLaunch -> "activity"; rootFallback -> "root"; else -> "none" }\n                    recordPipeline(context, "EARLY_BOOT_READY_LAUNCH", if (launched) "accepted:$launchPath" else "rejected")\n                    Log.i(TAG, "GUARDIAN_EARLY_BOOT_READY_LAUNCH accepted=$launched path=$launchPath source=$source")\n                } else {
-                    recordPipeline(context, "BOOT_FALLBACK_SKIPPED_ALREADY_ACTIVE", "elapsed=$elapsed")
-                    Log.i(TAG, "GUARDIAN_EARLY_BOOT_READY_DEDUPED elapsed=$elapsed")
+                val bootStartWall = now - SystemClock.elapsedRealtime()
+                val launchedThisBoot = lastLaunch >= (bootStartWall - 5_000L)
+                if (!launchedThisBoot || elapsed > EARLY_BOOT_DEDUPE_MS) {
+                    recordPipeline(context, "WAKE_DETECTED", "$event:$method")
+                    Log.i(TAG, "GUARDIAN_WAKE_DETECTED event=$event method=$method source=$source")
+                    val directLaunch = runCatching {
+                        recordPipeline(context, "LAUNCH_REQUEST", "activity:$event")
+                        Log.i(TAG, "GUARDIAN_LAUNCH_REQUEST event=$event path=activity")
+                        context.startActivity(
+                            Intent(context, LockScreenActivity::class.java)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                .putExtra("guardian_boot_trigger", event)
+                        )
+                        true
+                    }.onFailure {
+                        Log.w(TAG, "GUARDIAN_EARLY_BOOT_DIRECT_LAUNCH_FAILED event=$event", it)
+                    }.getOrDefault(false)
+                    val rootFallback = !directLaunch && RootManager.launchCompanion()
+                    val launched = directLaunch || rootFallback
+                    if (launched) prefs.edit().putLong(KEY_EARLY_BOOT_LAUNCH_MS, now).apply()
+                    val launchPath = when { directLaunch -> "activity"; rootFallback -> "root"; else -> "none" }
+                    recordPipeline(context, "EARLY_BOOT_LAUNCH", "$event:$launchPath:$launched")
+                    Log.i(TAG, "GUARDIAN_EARLY_BOOT_LAUNCH event=$event accepted=$launched path=$launchPath source=$source")
+                } else {
+                    recordPipeline(context, "BOOT_FALLBACK_SKIPPED_ALREADY_ACTIVE", "$event:elapsed=$elapsed")
+                    Log.i(TAG, "GUARDIAN_EARLY_BOOT_DEDUPED event=$event elapsed=$elapsed")
                 }
             } else if (unlocked && (event == "BOOT_READY" || event == "WAKE" || event == "KEYGUARD" || event == "TASK_KEYGUARD")) {
                 LockScreenService.frameworkSignal(context, event, source)
