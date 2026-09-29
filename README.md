@@ -137,3 +137,6 @@ Most Android notifications are marked private by default. Select **All previews 
 in D2 settings if you want their message text on the locked D2 screen. **Public only**
 shows text only from notifications explicitly marked public by their apps.
 Notification access must be granted for either option. Secret notifications stay hidden.
+
+
+<!-- rebuild: 2026-09-28 fresh 918 early-boot validation -->
