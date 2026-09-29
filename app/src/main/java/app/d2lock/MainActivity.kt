@@ -1078,38 +1078,7 @@ class MainActivity : Activity() {
                         addView(integrationRow("Automatic fallback",Prefs.xposedAutomaticFallback(this@MainActivity)) { checked ->
                             Prefs.setXposedAutomaticFallback(this@MainActivity,checked)
                         })
-                        /* legacy rows removed
-                        addView(guardianSwitch().apply {
-                            text="Use Shizuku"; isChecked=Prefs.shizukuEnabled(this@MainActivity)
-                            setTextColor(Appearance.text(this@MainActivity))
-                            setOnCheckedChangeListener { _,checked -> Prefs.setShizukuEnabled(this@MainActivity,checked) }
-                        },rowParams())
-                        addView(guardianSwitch().apply {
-                            text="KernelSU Root Mode (verified path)"; isChecked=Prefs.rootMode(this@MainActivity)
-                            setTextColor(Appearance.text(this@MainActivity))
-                            setOnCheckedChangeListener { _,checked ->
-                                if(checked && !RootManager.isAvailable()) {
-                                    isChecked=false
-                                    Toast.makeText(this@MainActivity,"Root shell was not detected",Toast.LENGTH_LONG).show()
-                                } else Prefs.setRootMode(this@MainActivity,checked)
-                            }
-                        },rowParams())
-                        addView(guardianSwitch().apply {
-                            text="LSPosed integration (minimal systemReady)"; isChecked=Prefs.xposedMaster(this@MainActivity)
-                            setTextColor(Appearance.text(this@MainActivity))
-                            setOnCheckedChangeListener { _,checked -> Prefs.setXposedMaster(this@MainActivity,checked) }
-                        },rowParams())
-                        addView(guardianSwitch().apply {
-                            text="Galaxy Island • Xposed"; isChecked=Prefs.xposedGalaxyIsland(this@MainActivity)
-                            setTextColor(Appearance.text(this@MainActivity))
-                            setOnCheckedChangeListener { _,checked -> Prefs.setXposedGalaxyIsland(this@MainActivity,checked) }
-                        },rowParams())
-                        addView(guardianSwitch().apply {
-                            text="Automatic fallback"; isChecked=Prefs.xposedAutomaticFallback(this@MainActivity)
-                            setTextColor(Appearance.text(this@MainActivity))
-                            setOnCheckedChangeListener { _,checked -> Prefs.setXposedAutomaticFallback(this@MainActivity,checked) }
-                        },rowParams())
-                        */
+
                     }
                     val dialog=AlertDialog.Builder(this@MainActivity)
                         .setTitle("System integrations")
