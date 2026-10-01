@@ -22,6 +22,7 @@ import android.net.Uri
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.app.AlarmManager
+import android.app.admin.DevicePolicyManager
 import android.os.BatteryManager
 import android.os.Bundle
 import android.os.Handler
@@ -55,6 +56,8 @@ import app.d2lock.security.PinStore
 import app.d2lock.security.PinUi
 import app.d2lock.security.PatternStore
 import app.d2lock.security.PatternUi
+import app.d2lock.security.D2DeviceAdminReceiver
+import rikka.shizuku.Shizuku
 import app.d2lock.widget.DoubleTap
 import app.d2lock.media.MediaControllerBridge
 import app.d2lock.livehub.LiveHubCard
@@ -103,26 +106,94 @@ class LockScreenActivity : Activity() {
             } else {
                 val doubleTap = now - emptyTapAt in 40..350
                 emptyTapAt = now
-                val safeBackground = NotificationStore.items.isEmpty() &&
-                    app.d2lock.notifications.CallNotificationStore.items.isEmpty() &&
-                    RootKiosk.isEnforced()
-                if (doubleTap && safeBackground) {
+                if (doubleTap) {
                     emptyTapAt = 0L
-                    if (Prefs.rootMode(this)) {
-                        Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP")
-                        window.decorView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                        Thread {
-                            runCatching {
-                                Runtime.getRuntime().exec(arrayOf("su", "-c", "input keyevent 26")).waitFor()
-                            }.onFailure { Log.w("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_FAILED", it) }
-                        }.start()
-                    } else {
-                        Toast.makeText(this, "Double-tap sleep requires D2 root mode", Toast.LENGTH_SHORT).show()
-                    }
+                    window.decorView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                    sleepDisplayFromDoubleTap()
                 }
             }
         }
         return super.dispatchTouchEvent(event)
+    }
+
+    private fun sleepDisplayFromDoubleTap() {
+        Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_REQUEST")
+
+        // 1) Root remains the fastest path on the verified Guardian configuration.
+        if (Prefs.rootMode(this)) {
+            Thread {
+                val ok = runCatching {
+                    Runtime.getRuntime().exec(arrayOf("su", "-c", "input keyevent 26")).waitFor() == 0
+                }.getOrDefault(false)
+                if (ok) {
+                    Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_ROOT")
+                } else {
+                    runOnUiThread { sleepViaShizukuOrDeviceAdmin() }
+                }
+            }.start()
+            return
+        }
+
+        // 2) Non-root: try the Shizuku shell identity when it is running/authorized.
+        sleepViaShizukuOrDeviceAdmin()
+    }
+
+    private fun sleepViaShizukuOrDeviceAdmin() {
+        val shizukuReady = runCatching {
+            Shizuku.pingBinder() && Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
+        }.getOrDefault(false)
+        if (shizukuReady) {
+            Thread {
+                val ok = runCatching {
+                    // Keep compatibility with Shizuku API variants without making the
+                    // lock surface depend on a deprecated process API at compile time.
+                    val method = Shizuku::class.java.getMethod(
+                        "newProcess",
+                        Array<String>::class.java,
+                        Array<String>::class.java,
+                        String::class.java
+                    )
+                    val process = method.invoke(null, arrayOf("sh", "-c", "input keyevent 26"), null, null) as Process
+                    process.waitFor() == 0
+                }.getOrDefault(false)
+                if (ok) {
+                    Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_SHIZUKU")
+                } else {
+                    runOnUiThread { sleepViaDeviceAdmin() }
+                }
+            }.start()
+        } else {
+            sleepViaDeviceAdmin()
+        }
+    }
+
+    private fun sleepViaDeviceAdmin() {
+        val policy = getSystemService(DevicePolicyManager::class.java)
+        val admin = ComponentName(this, D2DeviceAdminReceiver::class.java)
+        if (policy.isAdminActive(admin)) {
+            runCatching {
+                policy.lockNow()
+                Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_DEVICE_ADMIN")
+            }.onFailure {
+                Log.w("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_DEVICE_ADMIN_FAILED", it)
+            }
+            return
+        }
+
+        // Device Admin is opt-in. Ask only after the user invokes the gesture so D2
+        // never silently acquires this capability.
+        Toast.makeText(this, "Enable D2 screen-off access once to use double-tap without root", Toast.LENGTH_LONG).show()
+        runCatching {
+            startActivity(Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin)
+                putExtra(
+                    DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                    "Allows Kiosk D2 Boot Guardian to turn the screen off when you double-tap an empty area of its lock screen."
+                )
+            })
+        }.onFailure {
+            Log.w("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_ADMIN_PROMPT_FAILED", it)
+        }
     }
 
     private fun findTouchTarget(view: View, rawX: Float, rawY: Float): View? {
