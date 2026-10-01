@@ -2003,6 +2003,19 @@ class MainActivity : Activity() {
             listOf("tap_or_slide", "slide_only", "tap_only").indexOf(Prefs.floatingUnlockGesture(this)).coerceAtLeast(0)) {
             Prefs.setFloatingUnlockGesture(this, listOf("tap_or_slide", "slide_only", "tap_only")[it])
         }
+        addChoice(floatingCard, "Floating Bar scroll behavior",
+            listOf("Always visible", "Hide on scroll", "Exit after scrolling"),
+            listOf("always_visible", "hide_on_scroll", "exit_after_scroll").indexOf(Prefs.floatingBarScrollBehavior(this)).coerceAtLeast(1)) {
+            Prefs.setFloatingBarScrollBehavior(this, listOf("always_visible", "hide_on_scroll", "exit_after_scroll")[it])
+            showD2Message("Floating Bar behavior updated")
+            refreshAppearance()
+        }
+        floatingCard.addView(TextView(this).apply {
+            text = "Always visible keeps the Guardian Dock pinned. Hide on scroll slides it away while scrolling down and restores it on scroll up. Exit after scrolling hides the dock for the rest of the current settings view once you begin scrolling."
+            textSize = 12f
+            setTextColor(Appearance.secondary(this@MainActivity))
+            setPadding(dp(6), 0, dp(6), dp(10))
+        })
         floatingCard.addView(TextView(this).apply {
             text = "Slide left, right, or up on the center unlock control. The glass control follows your finger and snaps back if the gesture does not reach the unlock threshold."
             textSize = 13f
@@ -3032,8 +3045,9 @@ class MainActivity : Activity() {
         // Downward scrolling hides both the dock and its CORE/CHECK button; upward
         // scrolling restores them. Returning to the top always restores the dock.
         var dockVisible = true
-        var lastScrollY = 0
+        var dockExitedForScroll = false
         val scrollThreshold = dp(6)
+        val dockScrollBehavior = Prefs.floatingBarScrollBehavior(this)
         fun setDockVisible(visible: Boolean) {
             if (dockVisible == visible) return
             dockVisible = visible
@@ -3055,12 +3069,20 @@ class MainActivity : Activity() {
         }
         scroll.setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
             val delta = scrollY - oldScrollY
-            when {
-                scrollY <= dp(4) -> setDockVisible(true)
-                delta > scrollThreshold -> setDockVisible(false)
-                delta < -scrollThreshold -> setDockVisible(true)
+            when (dockScrollBehavior) {
+                "always_visible" -> setDockVisible(true)
+                "exit_after_scroll" -> {
+                    if (!dockExitedForScroll && scrollY > dp(4) && kotlin.math.abs(delta) > scrollThreshold) {
+                        dockExitedForScroll = true
+                        setDockVisible(false)
+                    }
+                }
+                else -> when {
+                    scrollY <= dp(4) -> setDockVisible(true)
+                    delta > scrollThreshold -> setDockVisible(false)
+                    delta < -scrollThreshold -> setDockVisible(true)
+                }
             }
-            lastScrollY = scrollY
         }
 
         host.setOnApplyWindowInsetsListener { _, insets ->
