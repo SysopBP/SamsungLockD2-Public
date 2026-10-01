@@ -60,6 +60,16 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/d2_widget_info" />
         </receiver>
+        <receiver
+            android:name=".security.D2DeviceAdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN"
+            android:label="Kiosk D2 Boot Guardian screen-off">
+            <meta-data android:name="android.app.device_admin" android:resource="@xml/d2_device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
         <activity android:name=".ui.SeslPreviewActivity" android:exported="false" android:theme="@style/Theme.D2.SeslPreview" />
         <activity android:name=".MainActivity" android:exported="true" />
         <activity android:name=".terminal.GuardianTerminalActivity" android:exported="false" android:label="Guardian Terminal" />
