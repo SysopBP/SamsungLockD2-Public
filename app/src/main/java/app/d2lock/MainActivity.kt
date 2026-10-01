@@ -3027,6 +3027,42 @@ class MainActivity : Activity() {
         host.addView(core, android.widget.FrameLayout.LayoutParams(dp(58), dp(58), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
             setMargins(0, 0, 0, dp(62))
         })
+
+        // Keep the Guardian Dock out of the way while reading settings.
+        // Downward scrolling hides both the dock and its CORE/CHECK button; upward
+        // scrolling restores them. Returning to the top always restores the dock.
+        var dockVisible = true
+        var lastScrollY = 0
+        val scrollThreshold = dp(6)
+        fun setDockVisible(visible: Boolean) {
+            if (dockVisible == visible) return
+            dockVisible = visible
+            val navDistance = (nav.height.takeIf { it > 0 } ?: dp(72)) + dp(34)
+            val coreDistance = navDistance + dp(54)
+            nav.animate().cancel()
+            core.animate().cancel()
+            if (visible) {
+                nav.visibility = View.VISIBLE
+                core.visibility = View.VISIBLE
+                nav.animate().translationY(0f).alpha(1f).setDuration(180).start()
+                core.animate().translationY(0f).alpha(1f).setDuration(180).start()
+            } else {
+                nav.animate().translationY(navDistance.toFloat()).alpha(0f).setDuration(160)
+                    .withEndAction { if (!dockVisible) nav.visibility = View.INVISIBLE }.start()
+                core.animate().translationY(coreDistance.toFloat()).alpha(0f).setDuration(160)
+                    .withEndAction { if (!dockVisible) core.visibility = View.INVISIBLE }.start()
+            }
+        }
+        scroll.setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
+            val delta = scrollY - oldScrollY
+            when {
+                scrollY <= dp(4) -> setDockVisible(true)
+                delta > scrollThreshold -> setDockVisible(false)
+                delta < -scrollThreshold -> setDockVisible(true)
+            }
+            lastScrollY = scrollY
+        }
+
         host.setOnApplyWindowInsetsListener { _, insets ->
             val bars = insets.getInsets(android.view.WindowInsets.Type.systemBars())
             (nav.layoutParams as? android.widget.FrameLayout.LayoutParams)?.let { params ->
