@@ -262,6 +262,12 @@ object Prefs {
     fun setExperimentalFrameworkTiming(context: Context, value: Boolean) = prefs(context).edit().putBoolean("experimental_framework_timing", value).apply()
     fun experimentalLockMotion(context: Context) = prefs(context).getBoolean("experimental_lock_motion", false)
     fun setExperimentalLockMotion(context: Context, value: Boolean) = prefs(context).edit().putBoolean("experimental_lock_motion", value).apply()
+    fun updateChannel(context: Context) = prefs(context).getString("update_channel", "preview") ?: "preview"
+    fun setUpdateChannel(context: Context, value: String) = prefs(context).edit().putString("update_channel", value).apply()
+    fun skippedUpdateTag(context: Context) = prefs(context).getString("skipped_update_tag", "") ?: ""
+    fun setSkippedUpdateTag(context: Context, value: String) = prefs(context).edit().putString("skipped_update_tag", value).apply()
+    fun lastUpdateCheck(context: Context) = prefs(context).getLong("last_update_check", 0L)
+    fun setLastUpdateCheck(context: Context, value: Long) = prefs(context).edit().putLong("last_update_check", value).apply()
     fun floatingBarScrollBehavior(context: Context) = prefs(context).getString("floating_bar_scroll_behavior", "hide_on_scroll") ?: "hide_on_scroll"
     fun setFloatingBarScrollBehavior(context: Context, value: String) = prefs(context).edit().putString("floating_bar_scroll_behavior", value).apply()
     fun doubleTapSleep(context: Context) = prefs(context).getBoolean("double_tap_sleep", false)
