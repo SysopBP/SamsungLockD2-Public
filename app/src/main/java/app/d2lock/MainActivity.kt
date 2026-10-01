@@ -2499,6 +2499,10 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(6) })
         root.addView(backupRow, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
 
+        addButton(root, "App Updates") {
+            showAppUpdates()
+        }
+
         addButton(root, "Legal, privacy & licenses") {
             val notice = assets.open("THIRD_PARTY_NOTICES.txt").bufferedReader().use { it.readText() }
             val agreement = assets.open("D2_USER_AGREEMENT.txt").bufferedReader().use { it.readText() }
@@ -2591,6 +2595,63 @@ class MainActivity : Activity() {
             dialog.show()
         }
         return settingsHost(root)
+    }
+
+    private fun showAppUpdates() {
+        val installed = runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: "current"
+        val choices = arrayOf("Check for updates", "Release channel · " + Prefs.updateChannel(this).replaceFirstChar { it.uppercase() })
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("App Updates")
+            .setMessage("Installed: $installed\n\nD2 checks published GitHub Releases from SysopBP/SamsungLockD2-Public. Updates are never silently installed.")
+            .setItems(choices) { _, which ->
+                if (which == 0) checkForAppUpdate()
+                else {
+                    val channels = arrayOf("Stable", "Preview")
+                    val current = if (Prefs.updateChannel(this) == "stable") 0 else 1
+                    AlertDialog.Builder(this).setTitle("Release channel")
+                        .setSingleChoiceItems(channels, current) { channelDialog, selected ->
+                            Prefs.setUpdateChannel(this, if (selected == 0) "stable" else "preview")
+                            channelDialog.dismiss()
+                            showD2Message("Update channel: ${channels[selected]}")
+                        }.setNegativeButton("Cancel", null).show()
+                }
+            }
+            .setNegativeButton("Done", null)
+            .create()
+        dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this, 30f, 76, true)) }
+        dialog.show()
+    }
+
+    private fun checkForAppUpdate() {
+        showD2Message("Checking GitHub Releases…")
+        Thread {
+            val result = app.d2lock.update.GitHubUpdateChecker.check(this)
+            runOnUiThread {
+                result.onFailure { showD2Message("Update check failed: ${it.message ?: "network error"}") }
+                    .onSuccess { release ->
+                        if (release == null) {
+                            AlertDialog.Builder(this).setTitle("D2 is up to date")
+                                .setMessage("No newer ${Prefs.updateChannel(this)} release with an APK was found.")
+                                .setPositiveButton("Done", null).show()
+                        } else {
+                            val notes = release.body.ifBlank { "No release notes were provided." }.take(3500)
+                            val label = if (release.prerelease) "Preview" else "Stable"
+                            val updateDialog = AlertDialog.Builder(this)
+                                .setTitle("Update available · ${release.tag}")
+                                .setMessage("$label release\nPublished: ${release.publishedAt}\n\n$notes")
+                                .setPositiveButton("Download Update") { _, _ ->
+                                    runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(release.apkUrl))) }
+                                        .onFailure { showD2Message("Could not open the release APK") }
+                                }
+                                .setNeutralButton("Skip this version") { _, _ -> Prefs.setSkippedUpdateTag(this, release.tag) }
+                                .setNegativeButton("Later", null)
+                                .create()
+                            updateDialog.setOnShowListener { updateDialog.window?.setBackgroundDrawable(Appearance.glass(this, 30f, 76, true)) }
+                            updateDialog.show()
+                        }
+                    }
+            }
+        }.start()
     }
 
     private fun showAppShortcutPicker(side: String) {
