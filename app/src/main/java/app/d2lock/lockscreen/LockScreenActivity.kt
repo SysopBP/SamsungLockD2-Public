@@ -88,7 +88,64 @@ class LockScreenActivity : Activity() {
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         if (event.actionMasked == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_UP) resetIdleSleep()
+
+        // Observe taps before child views dispatch them. Do not consume the event:
+        // buttons, notifications, media controls and credential UI still receive
+        // their normal touch sequence.
+        if (event.actionMasked == MotionEvent.ACTION_UP &&
+            Prefs.doubleTapSleep(this) && Prefs.kiosk(this) && !preview && !unlocking) {
+            val touched = window.decorView.findViewById<View>(android.R.id.content)
+                ?.let { findTouchTarget(it, event.rawX, event.rawY) }
+            val interactive = touched?.let { isInteractiveTouchTarget(it) } == true
+            val now = android.os.SystemClock.elapsedRealtime()
+            if (interactive) {
+                emptyTapAt = 0L
+            } else {
+                val doubleTap = now - emptyTapAt in 40..350
+                emptyTapAt = now
+                val safeBackground = NotificationStore.items.isEmpty() &&
+                    app.d2lock.notifications.CallNotificationStore.items.isEmpty() &&
+                    RootKiosk.isEnforced()
+                if (doubleTap && safeBackground) {
+                    emptyTapAt = 0L
+                    if (Prefs.rootMode(this)) {
+                        Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP")
+                        window.decorView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                        Thread {
+                            runCatching {
+                                Runtime.getRuntime().exec(arrayOf("su", "-c", "input keyevent 26")).waitFor()
+                            }.onFailure { Log.w("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_FAILED", it) }
+                        }.start()
+                    } else {
+                        Toast.makeText(this, "Double-tap sleep requires D2 root mode", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
         return super.dispatchTouchEvent(event)
+    }
+
+    private fun findTouchTarget(view: View, rawX: Float, rawY: Float): View? {
+        if (view.visibility != View.VISIBLE) return null
+        val location = IntArray(2)
+        view.getLocationOnScreen(location)
+        if (rawX < location[0] || rawX >= location[0] + view.width ||
+            rawY < location[1] || rawY >= location[1] + view.height) return null
+        if (view is ViewGroup) {
+            for (i in view.childCount - 1 downTo 0) {
+                findTouchTarget(view.getChildAt(i), rawX, rawY)?.let { return it }
+            }
+        }
+        return view
+    }
+
+    private fun isInteractiveTouchTarget(view: View): Boolean {
+        var current: View? = view
+        while (current != null) {
+            if (current.isClickable || current.isLongClickable || current.isFocusable) return true
+            current = current.parent as? View
+        }
+        return false
     }
     private lateinit var clock: TextView
     private lateinit var date: TextView
@@ -517,37 +574,6 @@ class LockScreenActivity : Activity() {
                 }
             }, FrameLayout.LayoutParams(-1, -1))
         }
-        if (Prefs.doubleTapSleep(this) && Prefs.kiosk(this) && !preview) {
-            frame.setOnTouchListener { view, event ->
-                if (event.action != MotionEvent.ACTION_UP) false
-                else {
-                    val now = android.os.SystemClock.elapsedRealtime()
-                    val doubleTap = now - emptyTapAt in 40..350
-                    emptyTapAt = now
-                    // This listener only receives taps that were not consumed by a
-                    // child control. Keep notifications/call cards excluded as an
-                    // extra guard against sleeping while the user is interacting.
-                    val safeBackground = NotificationStore.items.isEmpty() &&
-                        app.d2lock.notifications.CallNotificationStore.items.isEmpty() &&
-                        !unlocking && RootKiosk.isEnforced()
-                    if (doubleTap && safeBackground) {
-                        if (Prefs.rootMode(this@LockScreenActivity)) {
-                            Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP")
-                            view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                            Thread {
-                                runCatching {
-                                    Runtime.getRuntime().exec(arrayOf("su", "-c", "input keyevent 26")).waitFor()
-                                }.onFailure { Log.w("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_FAILED", it) }
-                            }.start()
-                        } else {
-                            Toast.makeText(this@LockScreenActivity, "Double-tap sleep requires D2 root mode", Toast.LENGTH_SHORT).show()
-                        }
-                        true
-                    } else false
-                }
-            }
-        }
-
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
