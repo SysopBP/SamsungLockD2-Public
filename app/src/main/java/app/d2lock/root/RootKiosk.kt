@@ -149,7 +149,15 @@ object RootKiosk {
             if (activity == null && detachedAt != 0L && now - detachedAt > 5000) {
                 fail("D2 window closed; recovery released kiosk"); return
             }
-            if (active && activity != null && mode(activity) != ActivityManager.LOCK_TASK_MODE_LOCKED) {
+            val callActive = app.d2lock.notifications.CallNotificationStore.items.isNotEmpty()
+            if (active && activity != null && mode(activity) != ActivityManager.LOCK_TASK_MODE_LOCKED && callActive) {
+                // A real call surface is temporarily allowed to own focus/task state.
+                // Do not repair kiosk here: proximity wakes and voicemail transitions
+                // must not become an accidental D2 relock.
+                lockLostAt = 0L
+                lockRepairAttempts = 0
+                Log.i("SamsungLockD2", "GUARDIAN_LOCK_TASK_REPAIR_DEFERRED_CALL")
+            } else if (active && activity != null && mode(activity) != ActivityManager.LOCK_TASK_MODE_LOCKED) {
                 if (lockLostAt == 0L) {
                     lockLostAt = now
                     lockRepairAttempts = 0
