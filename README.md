@@ -2,6 +2,27 @@
 
 > **September 29, 2026 development status:** Physical-device testing now confirms the token-integrated fast-boot path as the new known-good reference. `ActivityManagerService.systemReady()` delivers `BOOT_READY`, D2 performs the early root launch, confirms the boot token when `LockScreenActivity` is created, and reaches `GUARDIAN_FIRST_DRAW` about **305 ms after BOOT_READY** in the captured successful boot. When the normal Android boot receiver arrives later, it recognizes the claimed token and skips the duplicate launch. Preserve this ordering as the boot baseline. See [the verified baseline and measured boot timeline](.github/KIOSK_D2_BASELINE.md).
 
+## October 1, 2026 — New features & hotfixes
+
+### Hotfixes
+- **Voicemail / call-state relock:** fixes the case where an incoming call transitioning to voicemail could incorrectly cause D2 to lock. Normal Guardian relock behavior after an actual call is retained.
+- **Double-tap screen-off:** double-tapping an empty area of the D2 lock screen can turn the display off while interactive controls remain excluded from the gesture.
+- **Notification/call-card gesture handling:** the presence of a notification or call card no longer disables double-tap sleep for the entire lock screen; D2 checks the actual touch target instead.
+
+### Double-tap sleep fallback chain
+- **Root → Shizuku → Device Admin.** Root remains the privileged path, Shizuku is attempted when available and authorized, and Android Device Admin lockNow() provides an opt-in fallback when root/Shizuku cannot perform the action.
+- Device Admin is never silently enabled; Android's approval screen is shown when activation is required.
+
+### Guardian Dock / Floating Bar
+- The floating Guardian Dock and center **CORE/CHECK** control now hide together when scrolling down and return together when scrolling up.
+- Added smooth slide/fade behavior and retained bottom inset clearance for gesture navigation.
+- Added **Floating Bar scroll behavior** under **Settings → Shortcuts & Bar → Floating Bar**:
+  1. **Always visible** — keep the dock pinned.
+  2. **Hide on scroll** — hide on downward scroll and restore on upward scroll. This is the default.
+  3. **Exit after scrolling** — after scrolling begins, keep the dock hidden for the remainder of the current settings view.
+
+These UI and gesture changes are intentionally isolated from the token-integrated early-boot path described above.
+
 An independent Android app privacy screen with its own six-digit PIN, designed for rooted Samsung devices where the user intentionally runs without Android's standard screen lock or biometrics. Version 0.3.0 adds optional root-assisted Android kiosk mode. It does not create or modify system credentials, force the screen off, or change firmware, Knox, Gatekeeper, or boot partitions.
 
 > **Root / D2 recovery use case:** The project is intended to be used as the phone's app-level lock screen while rooted **after the user has deliberately removed the standard Android/Samsung screen lock and biometrics**. The project author has physically tested recovery from Samsung D2 Download Mode in this configuration and was able to restore firmware with Odin/firmware flashing tools. The purpose is to avoid having an Android credential/biometric configuration become an additional recovery obstacle after a root-related D2 condition. **D2 itself does not repair Download Mode, remove D2 errors, modify firmware integrity checks, or guarantee recovery on every Samsung model/firmware/root configuration.** Keep firmware backups and the correct Odin/firmware files available before experimenting with root.
