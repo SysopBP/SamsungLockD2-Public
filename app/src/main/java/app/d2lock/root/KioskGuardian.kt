@@ -54,6 +54,13 @@ object KioskD2Guardian {
             val manager = activity.getSystemService(ActivityManager::class.java)
             val now = SystemClock.elapsedRealtime()
             if (RootKiosk.isEnforced()) {
+                val callActive = app.d2lock.notifications.CallNotificationStore.items.isNotEmpty()
+                if (callActive) {
+                    if (lostFocusAt != 0L) lostFocusAt = 0L
+                    Log.i(TAG, "GUARDIAN_WATCHDOG_DEFERRED_CALL")
+                    main.postDelayed(this, CHECK_MS)
+                    return
+                }
                 if (GuardianWatchdog.isTrustedAuthenticationActive()) {
                     if (lostFocusAt != 0L) lostFocusAt = 0L
                     Log.i(TAG, "GUARDIAN_WATCHDOG_DEFERRED_AUTH")
