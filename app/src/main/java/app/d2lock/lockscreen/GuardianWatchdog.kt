@@ -23,6 +23,14 @@ object GuardianWatchdog {
 
     @Synchronized
     fun reassert(context: Context, reason: String, callActive: Boolean = false): Boolean {
+        // Phone/InCallUI is a trusted temporary foreground surface. Never turn a
+        // proximity wake, voicemail transition, or call UI focus change into a
+        // fresh D2 lock while Android still reports an active call notification.
+        if (callActive) {
+            transition(State.TRUSTED_UI, "call_active")
+            Log.i(TAG, "GUARDIAN_REASSERT_DEFERRED_CALL reason=$reason")
+            return false
+        }
         if (trustedAuthentication) {
             Log.i(TAG, "GUARDIAN_REASSERT_DEFERRED_AUTH reason=$reason")
             return false
