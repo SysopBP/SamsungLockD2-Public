@@ -262,6 +262,8 @@ object Prefs {
     fun setExperimentalFrameworkTiming(context: Context, value: Boolean) = prefs(context).edit().putBoolean("experimental_framework_timing", value).apply()
     fun experimentalLockMotion(context: Context) = prefs(context).getBoolean("experimental_lock_motion", false)
     fun setExperimentalLockMotion(context: Context, value: Boolean) = prefs(context).edit().putBoolean("experimental_lock_motion", value).apply()
+    fun floatingBarScrollBehavior(context: Context) = prefs(context).getString("floating_bar_scroll_behavior", "hide_on_scroll") ?: "hide_on_scroll"
+    fun setFloatingBarScrollBehavior(context: Context, value: String) = prefs(context).edit().putString("floating_bar_scroll_behavior", value).apply()
     fun doubleTapSleep(context: Context) = prefs(context).getBoolean("double_tap_sleep", false)
     fun setDoubleTapSleep(context: Context, value: Boolean) = prefs(context).edit().putBoolean("double_tap_sleep", value).apply()
     fun lockIdleSleepSeconds(context: Context) = prefs(context).getInt("lock_idle_sleep_seconds", 30).takeIf { it in listOf(0, 15, 30, 60, 120) } ?: 30
