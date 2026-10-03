@@ -27,14 +27,18 @@ An independent Android app privacy screen with its own six-digit PIN, designed f
 
 > **Root / D2 recovery use case:** The project is intended to be used as the phone's app-level lock screen while rooted **after the user has deliberately removed the standard Android/Samsung screen lock and biometrics**. The project author has physically tested recovery from Samsung D2 Download Mode in this configuration and was able to restore firmware with Odin/firmware flashing tools. The purpose is to avoid having an Android credential/biometric configuration become an additional recovery obstacle after a root-related D2 condition. **D2 itself does not repair Download Mode, remove D2 errors, modify firmware integrity checks, or guarantee recovery on every Samsung model/firmware/root configuration.** Keep firmware backups and the correct Odin/firmware files available before experimenting with root.
 
-**Public experimental preview.** The current source is **D2 0.4.4**, with optional KernelSU Next bridge **0.5.6**. The newest CI-verified D2 build is published as [v0.4.4-preview.2](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.4-preview.2), built and verified in [Actions run #16](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/35520482675). The existing paired Galaxy Island preview remains available from [v0.4.4-preview.1](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.4-preview.1).
+## Verified known-good build
 
-- [**Latest CI-verified D2 APK (Preview 2)**](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.2/SamsungLockD2-debug.apk) — includes wake-listener recovery and verified original signing. [Release notes and all files](https://github.com/SysopBP/SamsungLockD2-Public/releases/tag/v0.4.4-preview.2).
-- [Previous D2 0.4.4 paired APK](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/SamsungLockD2-v0.4.4-paired-themes.apk)
-- [Galaxy Island themed APK](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/Galaxy-Island-themed.apk)
-- [Optional KernelSU Next bridge 0.5.6](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.2/SamsungLockD2-KSUNext-v0.5.6-paired.zip)
-- [Theme and update guide](docs/THEMES.md), [build verification](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/Build-verification.txt), [current D2 checksums](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.2/SHA256SUMS.txt), and [runtime dependencies](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.2/runtime-dependencies.txt)
-- [D2 source](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.2/SamsungLockD2-source.zip) and [Galaxy Island source](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.4.4-preview.1/Galaxy-Island-themed-source.zip)
+The current **frozen known-good D2 application baseline** is **GitHub Actions run #985 / run 36825757183**, commit `811888c8ab9a45ec05ff0dfc542cc59475806908` (October 1, 2026). That workflow completed successfully and produced the `Kiosk-D2-Guardian-deliverables`, preview test reports, and lint reports.
+
+- [**Verified Actions run #985**](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/36825757183)
+- Baseline commit: [`811888c8`](https://github.com/SysopBP/SamsungLockD2-Public/commit/811888c8ab9a45ec05ff0dfc542cc59475806908)
+- [Verified boot architecture and measured timeline](.github/KIOSK_D2_BASELINE.md)
+- [TokenX integration boundary](docs/TOKENX-INTEGRATION.md)
+
+**Freeze rule:** preserve the application, lock-screen UI, kiosk behavior, boot handoff, boot-token confirmation, late-launch suppression, and October 1 feature/hotfix set from run #985. Infrastructure, documentation, release metadata, and optional external integrations may evolve independently, but they must not silently replace this application baseline.
+
+Older 0.4.x preview releases remain historical downloads and screenshot references; they are no longer described as the current verified D2 baseline.
 
 D2's **THEME & COLORS** settings add system/light/dark/AMOLED modes, wallpaper colors, soft accent presets and custom hex colors. Notifications support per-app, accent or neutral colors, adjustable opacity and corner radius. The stack stays centered between the clock/weather and lower controls; longer lists scroll. The floating PIN/shortcut bar has adjustable width, opacity and bottom spacing.
 
