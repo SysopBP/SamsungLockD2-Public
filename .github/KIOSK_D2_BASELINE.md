@@ -1,5 +1,7 @@
 # Kiosk D2 Guardian — verified Android 17 release baseline
 
+> **Frozen application reference (October 2, 2026):** GitHub Actions **run #985 / 36825757183**, commit `811888c8ab9a45ec05ff0dfc542cc59475806908`, is the current known-good D2 application build. Do not change D2 application code, lock-screen behavior, UI, or the proven boot/token sequence merely to accommodate an external privilege provider. Any TokenX work belongs outside the frozen app unless a future D2 app change is explicitly opened as a separate test.
+
 This document records the device configuration that passed five consecutive reboot tests. Preserve this architecture while preparing the release; expand privileged/system_server behavior only as isolated, reviewable changes.
 
 ## Verified device path
