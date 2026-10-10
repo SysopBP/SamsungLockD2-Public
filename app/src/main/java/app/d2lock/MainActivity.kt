@@ -1337,6 +1337,49 @@ class MainActivity : Activity() {
             })
         },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
 
+        section(root, "D2 SECURITY CORE")
+        root.addView(LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL
+            setPadding(dp(12),dp(12),dp(12),dp(12))
+            background=Appearance.glass(this@MainActivity,24f,30,true)
+            addView(TextView(this@MainActivity).apply {
+                text="D2 Security Core"
+                textSize=18f
+                setTextColor(Appearance.text(this@MainActivity))
+            })
+            val status=TextView(this@MainActivity).apply {
+                textSize=13f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0,dp(10),0,dp(10))
+            }
+            fun refresh() {
+                val rootReady=RootManager.isAvailable()
+                val enforcing=try {
+                    when(java.io.File("/sys/fs/selinux/enforce").readText().trim()) {
+                        "1" -> "Enforcing"
+                        "0" -> "Permissive"
+                        else -> "Unknown"
+                    }
+                } catch (_: Exception) { "Unavailable" }
+                status.text="Lock: Unavailable   •   Maintenance: Unavailable   •   AT: Unavailable\\n" +
+                    "Root: ${if(rootReady) "Available" else "Unavailable"}   •   SELinux: $enforcing\\n" +
+                    "Samsung service reader not connected. No security flags are modified."
+            }
+            addView(status)
+            addView(TextView(this@MainActivity).apply {
+                text="Refresh diagnostics"
+                textSize=14f
+                gravity=Gravity.CENTER
+                setTextColor(Appearance.text(this@MainActivity))
+                background=Appearance.glass(this@MainActivity,22f,28,true)
+                setPadding(dp(12),dp(13),dp(12),dp(13))
+                isClickable=true
+                isFocusable=true
+                setOnClickListener { refresh() }
+            })
+            refresh()
+        },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
+
         section(root, "RECOVERY CENTER")
         root.addView(LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
