@@ -8,3 +8,6 @@
 7. Test cold boot, normal D2 unlock, call return, screen-off/wake, kiosk release, USB rollback and sleep. Record results for this exact build before relying on the repairs.
 
 D2 does not replace Samsung credentials. Preserve a working recovery route. Report device model, Android/One UI, root/LSPosed versions, exact app version, reproduction steps and diagnostics.
+
+## Galaxy Island
+The optional Galaxy-Island-v0.2.1-beta-run191.apk is the exact companion from the previous v0.6.2-beta.1 release. Install it separately; no Galaxy Island rebuild is included.

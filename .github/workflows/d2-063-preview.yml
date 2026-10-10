@@ -35,6 +35,8 @@ jobs:
             echo "::error::Unexpected injected or bundled module APK"
             exit 1
           fi
+          gh release download v0.6.2-beta.1 --pattern Galaxy-Island-v0.2.1-beta-run191.apk --dir dist
+          echo '0b1c69374bfb6789abd9d27b070d99efe0142fd65d4cf49ee4e4bdd61cc6ab6d  dist/Galaxy-Island-v0.2.1-beta-run191.apk' | sha256sum --check
           cp docs/releases/d2-063-preview.md dist/D2-0.6.3-Release-Notes.md
           cp docs/releases/d2-063-setup.md dist/D2-0.6.3-Setup.md
           cp AUDIT_REPAIRS.md dist/D2-Audit-Repairs.md
@@ -44,7 +46,8 @@ jobs:
         run: |
           set -euo pipefail
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Existing release preserved"
+            gh release upload "$RELEASE_TAG" dist/Galaxy-Island-v0.2.1-beta-run191.apk dist/D2-0.6.3-Release-Notes.md dist/D2-0.6.3-Setup.md dist/SHA256SUMS.txt --clobber
+            gh release edit "$RELEASE_TAG" --notes-file docs/releases/d2-063-preview.md
             exit 0
           fi
           gh release create "$RELEASE_TAG" dist/* --target "$SOURCE_SHA" --title "Kiosk D2 Guardian 0.6.3 — Preview 1 | Audit Repairs" --notes-file docs/releases/d2-063-preview.md --prerelease

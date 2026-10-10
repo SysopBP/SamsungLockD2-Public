@@ -22,6 +22,9 @@ See the bundled audit repair report for detailed behavior and remaining work.
 
 Install the APK explicitly to update D2. The optional module is separate from in-app KernelSU Root Mode and is not required for normal installation. It uses no system overlay and does not provision UID 1000.
 
+## Galaxy Island companion
+Includes **Galaxy-Island-v0.2.1-beta-run191.apk**, carried forward unchanged from D2 v0.6.2-beta.1. Its SHA-256 is verified against the previous release. Install separately if wanted; this is not a new Galaxy Island build or new device validation.
+
 ## Verification
 Build 993 passed build, lint, JVM tests, emulator runtime tests, original signing-certificate verification and deliverable packaging.
 Samsung/KernelSU/LSPosed device validation is still pending for this exact candidate: cold boot before credential unlock, PIN/fingerprint cancellation and recreation, calls/proximity wake, kiosk release, USB rollback, idle/double-tap sleep, and restore behavior.
