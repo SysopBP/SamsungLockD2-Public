@@ -1,4 +1,4 @@
-# D2 0.6.3 Preview 1 setup
+# D2 0.6.3 Beta 2 setup
 1. Install Kiosk-D2-Guardian-debug.apk normally over a compatible existing installation. A signing mismatch should be investigated rather than bypassed by deleting app data.
 2. Open D2 and verify version 0.6.3-audit-repairs-v23.
 3. Configure your independent D2 PIN and review the selected appearance and protection settings.

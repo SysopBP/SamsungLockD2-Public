@@ -1,4 +1,4 @@
-name: Publish D2 0.6.3 Preview 1
+name: Publish D2 0.6.3 Beta 2
 on:
   push:
     branches: [main]
@@ -17,7 +17,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       SOURCE_SHA: f6a64d646646e851190e4d31df8029dffd1311ed
-      RELEASE_TAG: v0.6.3-preview.1
+      RELEASE_TAG: v0.6.3-beta.2
     steps:
       - uses: actions/checkout@v4
       - name: Package successful Build 993
@@ -45,9 +45,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if gh release view v0.6.3-preview.1 >/dev/null 2>&1 && ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit v0.6.3-preview.1 --tag "$RELEASE_TAG" --target "$SOURCE_SHA" --title "Kiosk D2 Guardian 0.6.3 — Beta 2 | Audit Repairs" --notes-file docs/releases/d2-063-preview.md --prerelease
+          fi
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" dist/Galaxy-Island-v0.2.1-beta-run191.apk dist/D2-0.6.3-Release-Notes.md dist/D2-0.6.3-Setup.md dist/SHA256SUMS.txt --clobber
             gh release edit "$RELEASE_TAG" --notes-file docs/releases/d2-063-preview.md
             exit 0
           fi
-          gh release create "$RELEASE_TAG" dist/* --target "$SOURCE_SHA" --title "Kiosk D2 Guardian 0.6.3 — Preview 1 | Audit Repairs" --notes-file docs/releases/d2-063-preview.md --prerelease
+          gh release create "$RELEASE_TAG" dist/* --target "$SOURCE_SHA" --title "Kiosk D2 Guardian 0.6.3 — Beta 2 | Audit Repairs" --notes-file docs/releases/d2-063-preview.md --prerelease

@@ -1,4 +1,4 @@
-# Kiosk D2 Guardian 0.6.3 — Preview 1
+# Kiosk D2 Guardian 0.6.3 — Beta 2
 ## Audit repairs for Android 17 / One UI 9 testing
 This prerelease packages **0.6.3-audit-repairs-v23** from successful [Build 993](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38038382440), commit `f6a64d646646e851190e4d31df8029dffd1311ed`. The APK retains its original verified signing certificate. This is a debug preview, not a stable certification.
 
