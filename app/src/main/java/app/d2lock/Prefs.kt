@@ -148,6 +148,7 @@ object Prefs {
         require(clean.isNotBlank())
         val store = runCatching { org.json.JSONObject(prefs(context).getString("custom_profiles", "{}") ?: "{}") }
             .getOrDefault(org.json.JSONObject())
+        require(store.has(clean) || store.length() < 32) { "At most 32 custom profiles can be saved" }
         val snapshot = org.json.JSONObject(exportSettings(context))
         snapshot.getJSONObject("lock").remove("custom_profiles")
         store.put(clean, snapshot)
