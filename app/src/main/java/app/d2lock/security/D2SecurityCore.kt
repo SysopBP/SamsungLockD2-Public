@@ -15,6 +15,15 @@ object D2SecurityCore {
         RegexOption.IGNORE_CASE
     )
 
+    /**
+     * Only accepts an explicit successful DMC result. Never infer values from
+     * service discovery, error messages, or arbitrary unrelated log lines.
+     */
+    fun parseVerifiedRead(raw: String): D2SecurityCoreStatus? {
+        if (!raw.contains("Available(", ignoreCase = true)) return null
+        return parseStatus(raw)
+    }
+
     fun parseStatus(raw: String): D2SecurityCoreStatus? {
         val match = statusPattern.find(raw) ?: return null
         val lock = match.groupValues[1].toIntOrNull() ?: return null
