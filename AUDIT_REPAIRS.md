@@ -13,16 +13,16 @@ This is an explicitly authorized application repair candidate, not a new device-
 - USB recovery snapshots original global settings and USB functions, uses checked command chains, verifies applied/restored state, and keeps its switch usable after a failure. Older installations without a snapshot must restore original USB settings through Android settings.
 - Removing the optional KernelSU module leaves the independently enabled app service running.
 - Credential throttling uses elapsed time within the same boot, while retaining bounded persisted delays across reboot. Pattern node indices are validated.
-- Sleep commands use explicit SLEEP rather than the POWER toggle, have a timeout, and prevent concurrent sleep requests. The Shizuku fallback respects its enable preference.
+- Sleep commands use explicit SLEEP rather than the POWER toggle, have a timeout, and prevent concurrent sleep requests. Idle and double-tap sleep share the same fallback chain; the Shizuku fallback respects its enable preference.
 - Automatic updates require a strictly newer comparable version. Unknown tags do not produce downgrade prompts.
 - The exported passkey provider is disabled. Saved credentials remain manageable. Re-enable only after caller verification, Digital Asset Links, clientDataHash/origin validation, allow/exclude lists, and supported algorithms are implemented and tested.
-- Unimplemented behavioral hook switches are disabled and labeled accordingly. Terminal framework panes describe recorded events/local diagnostics rather than claiming a live command channel.
+- Unimplemented behavioral hook switches are disabled and labeled accordingly. Dashboard badges and terminal framework panes distinguish enabled signal handling, recorded events, and local diagnostics from a live command channel.
 - JVM tests run in CI. Instrumentation failures propagate their exit status; deliverables are not packaged after a failed gate. Existing recreation test uses the supported Back authentication entry point.
 
 ## Still needs implementation or device validation
 
 - Full passkey provider protocol/security work; command execution through a supported Shizuku user service; individual behavioral framework hooks; additional Live Hub sources and renderer integration. These are not represented as completed features.
-- System/zygote badges elsewhere in the dashboard still show configuration or historical observations. They are not proof of a live RPC connection; there is no live framework command API.
+- There is no live framework command API. Recorded framework observations and configuration checks do not prove that protection is currently enforced.
 - Physical Samsung/KernelSU/LSPosed testing: cold boot before CE unlock, preview-to-lock promotion, cancellation/recreation during fingerprint and PIN entry, incoming/outgoing/ended calls and proximity wake, kiosk release, USB rollback, idle sleep/double-tap, and restore on another installation.
 - Terminal commands cannot retract root-side effects already accepted before the app stops. Cancellation closes the local process; this is not a transaction rollback.
 - Settings storage spans multiple preference files and launcher aliases. Validation is performed before writes, but a storage or package-manager failure can leave a partial restore; review the shown error before arming protection.

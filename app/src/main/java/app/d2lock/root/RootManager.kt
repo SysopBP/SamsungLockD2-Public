@@ -99,11 +99,16 @@ object RootManager {
 
     /** Interactive Guardian Terminal root backend. */
     fun exec(command: String, timeoutSeconds: Long = 15): String {
-        val (ok, output) = root(command, timeoutSeconds)
-        return buildString {
-            if (output.isNotBlank()) append(output).append("\n")
-            append(if (ok) "[exit 0]" else "[command failed]")
-        }
+        return runCatching {
+            check(!onMain()) { "Root commands must run off the UI thread" }
+            val result = ShellRunner.run(listOf("su", "-c", command), timeoutSeconds)
+            buildString {
+                if (result.output.isNotBlank()) append(result.output.trimEnd()).append("\n")
+                if (result.truncated) append("[output truncated at 256 KiB]\n")
+                if (result.timedOut) append("[command timed out]\n")
+                append("[exit ${result.exitCode}]")
+            }
+        }.getOrElse { "[command failed: ${it.message ?: "error"}]" }
     }
 
     fun isAvailable(): Boolean {

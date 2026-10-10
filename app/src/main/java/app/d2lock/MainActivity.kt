@@ -581,8 +581,8 @@ class MainActivity : Activity() {
                 },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(6) })
                 addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.HORIZONTAL
-                    addView(statusChip("LSPosed",xposedReady,R.drawable.ic_guardian_xposed),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
-                    addView(statusChip("System Server",systemHealth.status=="CONNECTED",R.drawable.ic_system_health),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
+                    addView(statusChip("Signals enabled",xposedReady,R.drawable.ic_guardian_xposed),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
+                    addView(statusChip("Framework event",systemHealth.status=="CONNECTED",R.drawable.ic_system_health),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
                 },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
                 addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.VERTICAL
@@ -605,8 +605,8 @@ class MainActivity : Activity() {
                     }
                     val serverOk=systemHealth.status=="CONNECTED"
                     val uiOk=systemUiHealth.status=="CONNECTED"
-                    addView(bridgeRow(R.drawable.ic_system_health,"System Server",if(serverOk) "ACTIVE" else "WAITING",serverOk))
-                    addView(bridgeRow(R.drawable.ic_guardian_device,"SystemUI",if(uiOk) "ACTIVE" else "WAITING",uiOk))
+                    addView(bridgeRow(R.drawable.ic_system_health,"System Server",if(serverOk) "OBSERVED" else "WAITING",serverOk))
+                    addView(bridgeRow(R.drawable.ic_guardian_device,"SystemUI",if(uiOk) "OBSERVED" else "WAITING",uiOk))
                     addView(bridgeRow(R.drawable.ic_guardian_fingerprint,"Fingerprint event",fingerprintHealth.event ?: "Waiting",fingerprintHealth.event != null))
                     addView(TextView(this@MainActivity).apply {
                         val detail = systemHealth.event?.let { event -> "Last framework event: $event · ${systemHealth.method ?: "unknown"}" }
@@ -1061,6 +1061,9 @@ class MainActivity : Activity() {
                             orientation=LinearLayout.VERTICAL
                             addView(guardianSwitch().apply {
                                 text=label; isChecked=checked
+                                if (label == "Automatic fallback") {
+                                    text = "Automatic fallback (not implemented)"; isEnabled = false; isChecked = false
+                                }
                                 setTextColor(Appearance.text(this@MainActivity))
                                 background=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                                 setPadding(dp(2),dp(10),dp(2),dp(10))
@@ -2370,7 +2373,7 @@ class MainActivity : Activity() {
                 }
             }
 
-            masterXposedToggle("Master Xposed integration", { Prefs.xposedMaster(this@MainActivity) }) { Prefs.setXposedMaster(this@MainActivity, it) }
+            masterXposedToggle("Accept framework signals", { Prefs.xposedMaster(this@MainActivity) }) { Prefs.setXposedMaster(this@MainActivity, it) }
             addView(compactXposedToggle("Safe diagnostics only", { Prefs.xposedSafeDiagnostics(this@MainActivity) }) { Prefs.setXposedSafeDiagnostics(this@MainActivity, it) },
                 LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
 
@@ -2939,10 +2942,10 @@ class MainActivity : Activity() {
         val rootAvailable=RootManager.isAvailable(); val shizukuAvailable=runCatching { Shizuku.pingBinder() }.getOrDefault(false)
         val authReady=PinStore(this).configured(); val wakeReady=Prefs.enabled(this)
         val islandPaired=app.d2lock.bridge.IslandBridge.enabled(this); val islandSync=!islandPaired || Prefs.xposedIslandGuardianSync(this)
-        val healthy=authReady && wakeReady && (!Prefs.rootMode(this) || rootAvailable) && (!Prefs.shizukuEnabled(this) || shizukuAvailable) && (!Prefs.xposedMaster(this) || Prefs.xposedAutomaticFallback(this)) && islandSync
+        val healthy=authReady && wakeReady && (!Prefs.rootMode(this) || rootAvailable) && (!Prefs.shizukuEnabled(this) || shizukuAvailable)  && islandSync
         val body=LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(16)); background=Appearance.glass(this@MainActivity,32f,64,true)
-            addView(TextView(this@MainActivity).apply { text=if(healthy) "◆  GUARDIAN PROTECTED" else "◆  GUARDIAN ATTENTION"; textSize=13f; setTextColor(if(healthy) Color.rgb(102,220,132) else Appearance.accent(this@MainActivity)) })
+            addView(TextView(this@MainActivity).apply { text=if(healthy) "◆  GUARDIAN CONFIGURED" else "◆  GUARDIAN ATTENTION"; textSize=13f; setTextColor(if(healthy) Color.rgb(102,220,132) else Appearance.accent(this@MainActivity)) })
             addView(TextView(this@MainActivity).apply { text="Guardian Core"; textSize=24f; setTextColor(Appearance.text(this@MainActivity)); setPadding(0,dp(3),0,dp(12)) })
             fun status(title:String,detail:String,ok:Boolean) { addView(TextView(this@MainActivity).apply { text=(if(ok) "●  " else "○  ")+title+"\n    "+detail; textSize=14f; setTextColor(if(ok) Appearance.text(this@MainActivity) else Appearance.accent(this@MainActivity)); setPadding(dp(13),dp(9),dp(13),dp(9)); background=Appearance.glass(this@MainActivity,24f,28,true) },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(6) }) }
             status("D2 authentication",if(authReady) "Credential configured" else "Create a D2 PIN",authReady)
@@ -3025,7 +3028,6 @@ class MainActivity : Activity() {
             (!Prefs.rootMode(this) || rootAvailable) &&
             (!Prefs.shizukuEnabled(this) || shizukuAvailable) &&
             (!Prefs.kiosk(this) || rootAvailable) &&
-            (!Prefs.xposedMaster(this) || Prefs.xposedAutomaticFallback(this)) &&
             islandSync
         val core = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL

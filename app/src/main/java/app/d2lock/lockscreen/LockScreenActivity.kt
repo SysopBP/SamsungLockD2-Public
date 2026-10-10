@@ -93,11 +93,9 @@ class LockScreenActivity : Activity() {
     }
     private val idleSleep = Runnable {
         if (!preview && !unlocking && !isFinishing && !isDestroyed && hasWindowFocus() &&
-            getSystemService(PowerManager::class.java).isInteractive && Prefs.rootMode(this)) {
-            if (sleepPending.compareAndSet(false, true)) Thread {
-                try { runCatching { app.d2lock.root.ShellRunner.run(listOf("su", "-c", "input keyevent 223"), 3).exitCode } }
-                finally { sleepPending.set(false) }
-            }.start()
+            getSystemService(PowerManager::class.java).isInteractive &&
+            !app.d2lock.notifications.CallNotificationStore.isCallActive(this)) {
+            sleepDisplayFromDoubleTap(allowSetup = false)
         }
     }
     private fun resetIdleSleep() {
@@ -133,7 +131,7 @@ class LockScreenActivity : Activity() {
         return super.dispatchTouchEvent(event)
     }
 
-    private fun sleepDisplayFromDoubleTap() {
+    private fun sleepDisplayFromDoubleTap(allowSetup: Boolean = true) {
         if (isFinishing || isDestroyed || unlocking || !sleepPending.compareAndSet(false, true)) return
         Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_REQUEST")
 
@@ -147,17 +145,17 @@ class LockScreenActivity : Activity() {
                     sleepPending.set(false)
                     Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_ROOT")
                 } else {
-                    runOnUiThread { sleepViaShizukuOrDeviceAdmin() }
+                    runOnUiThread { sleepViaShizukuOrDeviceAdmin(allowSetup) }
                 }
             }.start()
             return
         }
 
         // 2) Non-root: try the Shizuku shell identity when it is running/authorized.
-        sleepViaShizukuOrDeviceAdmin()
+        sleepViaShizukuOrDeviceAdmin(allowSetup)
     }
 
-    private fun sleepViaShizukuOrDeviceAdmin() {
+    private fun sleepViaShizukuOrDeviceAdmin(allowSetup: Boolean) {
         if (isFinishing || isDestroyed || unlocking) { sleepPending.set(false); return }
         val shizukuReady = Prefs.shizukuEnabled(this) && runCatching {
             Shizuku.pingBinder() && Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -180,15 +178,15 @@ class LockScreenActivity : Activity() {
                     sleepPending.set(false)
                     Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_SHIZUKU")
                 } else {
-                    runOnUiThread { sleepViaDeviceAdmin() }
+                    runOnUiThread { sleepViaDeviceAdmin(allowSetup) }
                 }
             }.start()
         } else {
-            sleepViaDeviceAdmin()
+            sleepViaDeviceAdmin(allowSetup)
         }
     }
 
-    private fun sleepViaDeviceAdmin() {
+    private fun sleepViaDeviceAdmin(allowSetup: Boolean) {
         sleepPending.set(false)
         if (isFinishing || isDestroyed || unlocking) return
         val policy = getSystemService(DevicePolicyManager::class.java)
@@ -203,6 +201,7 @@ class LockScreenActivity : Activity() {
             return
         }
 
+        if (!allowSetup) return
         // Device Admin is opt-in. Ask only after the user invokes the gesture so D2
         // never silently acquires this capability.
         Toast.makeText(this, "Enable D2 screen-off access once to use double-tap without root", Toast.LENGTH_LONG).show()
