@@ -71,28 +71,14 @@ jobs:
           disk-size: 2048M
           emulator-boot-timeout: 300
           disable-animations: true
-          script: |
-            adb shell input keyevent KEYCODE_WAKEUP
-            adb shell wm dismiss-keyguard
-            adb shell settings put system screen_off_timeout 1800000
-            adb logcat -c
-            adb logcat -v time > guardian-runtime.log 2>&1 &
-            LOGCAT_PID=$!
-            set +e
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.notClass=app.d2lock.ComboScreenshotTest,app.d2lock.ScreenshotCaptureTest --stacktrace
-            TEST_EXIT=$?
-            set -e
-            kill "$LOGCAT_PID" 2>/dev/null || true
-            wait "$LOGCAT_PID" 2>/dev/null || true
-            echo '--- Guardian/PIN runtime log ---'
-            grep -E 'SamsungLockD2|GUARDIAN_|PinUi|PIN_' guardian-runtime.log || true
-            echo "Runtime test exit: $TEST_EXIT"
-            exit "$TEST_EXIT"
+          script: bash .github/scripts/runtime-tests.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: preview-test-reports
           path: |
+            app/build/reports/tests/
+            app/build/test-results/
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
             guardian-runtime.log
