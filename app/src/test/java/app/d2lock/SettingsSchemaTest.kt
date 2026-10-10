@@ -23,4 +23,15 @@ class SettingsSchemaTest {
             assertTrue(runCatching { SettingsSchema.validate(raw) }.isFailure)
         }
     }
+    @Test fun validatesAppearanceAndIconInsideNestedProfiles() {
+        val snapshot = JSONObject().put("schema", 2).put("lock", JSONObject().put("wallpaper_dim", 20))
+            .put("appearance", JSONObject().put("cards", true)).put("icon", "silver")
+        val document = JSONObject().put("custom_profiles", JSONObject().put("unsafe", snapshot).toString())
+        assertTrue(runCatching { SettingsSchema.validate(document) }.isFailure)
+        snapshot.put("appearance", JSONObject().put("cards", 40)).put("icon", "purple")
+        SettingsSchema.validateDocument(snapshot)
+        snapshot.put("icon", "unknown")
+        assertTrue(runCatching { SettingsSchema.validateDocument(snapshot) }.isFailure)
+    }
+
 }

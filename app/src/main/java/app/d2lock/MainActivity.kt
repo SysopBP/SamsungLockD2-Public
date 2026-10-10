@@ -2457,8 +2457,9 @@ class MainActivity : Activity() {
                                 saveDialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setOnClickListener {
                                     val name = input.text.toString().trim()
                                     if (name.isBlank()) showD2Message("Enter a profile name") else {
-                                        Prefs.saveCustomProfile(this@MainActivity, name)
-                                        saveDialog.dismiss(); showD2Message("$name profile saved"); refreshAppearance()
+                                        runCatching { Prefs.saveCustomProfile(this@MainActivity, name) }
+                                            .onSuccess { saveDialog.dismiss(); showD2Message("$name profile saved"); refreshAppearance() }
+                                            .onFailure { showD2Message("Profile could not be saved: ${it.message}") }
                                     }
                                 }
                             }
@@ -2468,7 +2469,7 @@ class MainActivity : Activity() {
                             .setItems(names.toTypedArray()) { _, i ->
                                 if (Prefs.applyCustomProfile(this, names[i])) {
                                     showD2Message("${names[i]} profile applied"); refreshAppearance()
-                                }
+                                } else showD2Message("Profile is invalid or could not be restored")
                             }.setNegativeButton("Cancel", null).create().also {
                                 it.setOnShowListener { _ -> it.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true)) }; it.show()
                             }
@@ -2491,7 +2492,7 @@ class MainActivity : Activity() {
             setTextColor(Appearance.text(this@MainActivity))
             background = Appearance.glass(this@MainActivity, 26f, 34, true)
             setPadding(dp(12), dp(16), dp(12), dp(16))
-            setOnClickListener { action() }
+            setOnClickListener { runCatching { action() }.onFailure { showD2Message("Backup could not be created: ${it.message}") } }
         }
         backupRow.addView(backupBubble("Copy backup") {
             val backup = Prefs.exportSettings(this)
@@ -2512,9 +2513,18 @@ class MainActivity : Activity() {
                 restoreDialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true))
                 restoreDialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Appearance.accent(this@MainActivity))
                 restoreDialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setOnClickListener {
-                    runCatching { Prefs.importSettings(this@MainActivity, input.text.toString()) }
-                        .onSuccess { count -> restoreDialog.dismiss(); showD2Message("Restored $count D2 settings"); refreshAppearance() }
-                        .onFailure { showD2Message("Backup is not valid D2 settings") }
+                    val raw = input.text.toString()
+                    val button = restoreDialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                    button.isEnabled = false
+                    Thread {
+                        val result = runCatching { Prefs.importSettings(this@MainActivity, raw) }
+                        runOnUiThread {
+                            if (isDestroyed || isFinishing || !authorized) return@runOnUiThread
+                            button.isEnabled = true
+                            result.onSuccess { count -> restoreDialog.dismiss(); showD2Message("Restored $count D2 settings"); refreshAppearance() }
+                                .onFailure { showD2Message("Backup could not be restored: ${it.message}") }
+                        }
+                    }.start()
                 }
             }
             restoreDialog.show()

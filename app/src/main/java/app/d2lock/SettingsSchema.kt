@@ -77,7 +77,7 @@ object SettingsSchema {
             key == "custom_profiles" || key == "active_profile" -> "String"
             key == "intro_seen_version" -> "Int"
             key in protectedKeys -> "Boolean"
-            else -> types[key] ?: return true
+            else -> types[key] ?: return false
         }
         return when (expected) {
             "Boolean" -> value is Boolean
