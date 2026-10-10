@@ -1361,8 +1361,8 @@ class MainActivity : Activity() {
                         else -> "Unknown"
                     }
                 } catch (_: Exception) { "Unavailable" }
-                status.text="Lock: Unavailable   •   Maintenance: Unavailable   •   AT: Unavailable\\n" +
-                    "Root: ${if(rootReady) "Available" else "Unavailable"}   •   SELinux: $enforcing\\n" +
+                status.text="Lock: Unavailable   •   Maintenance: Unavailable   •   AT: Unavailable\n" +
+                    "Root: ${if(rootReady) "Available" else "Unavailable"}   •   SELinux: $enforcing\n" +
                     "Samsung service reader not connected. No security flags are modified."
             }
             addView(status)
