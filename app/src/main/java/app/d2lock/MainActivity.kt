@@ -1366,6 +1366,35 @@ class MainActivity : Activity() {
                     "Samsung service reader not connected. No security flags are modified."
             }
             addView(status)
+            val apiProbe = TextView(this@MainActivity).apply {
+                text = "Root API probe not run"
+                textSize = 12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0, 0, 0, dp(10))
+            }
+            addView(apiProbe)
+            addView(TextView(this@MainActivity).apply {
+                text = "Probe Samsung read API (root)"
+                textSize = 14f
+                gravity = Gravity.CENTER
+                setTextColor(Appearance.text(this@MainActivity))
+                background = Appearance.glass(this@MainActivity, 22f, 28, true)
+                setPadding(dp(12), dp(13), dp(12), dp(13))
+                isClickable = true
+                isFocusable = true
+                setOnClickListener {
+                    apiProbe.text = "Checking API signatures..."
+                    val apk = applicationInfo.sourceDir
+                    Thread {
+                        val result = if (!RootManager.isAvailable()) "Root unavailable" else {
+                            val safeApk = "'" + apk.replace("'", "'\\''") + "'"
+                            RootManager.exec("CLASSPATH=" + safeApk +
+                                " /system/bin/app_process /system/bin app.d2lock.security.VaultKeeperRootProbe", 10)
+                        }
+                        runOnUiThread { apiProbe.text = result.take(1800) }
+                    }.start()
+                }
+            })
             addView(TextView(this@MainActivity).apply {
                 text="Refresh diagnostics"
                 textSize=14f
