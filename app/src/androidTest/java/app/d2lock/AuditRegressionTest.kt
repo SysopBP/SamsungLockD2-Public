@@ -54,12 +54,15 @@ class AuditRegressionTest {
     }
     @Test fun cancelledPatternNotifiesOwnerExactlyOnce() {
         ActivityScenario.launch<LockScreenActivity>(Intent(context, LockScreenActivity::class.java).putExtra("preview", true)).use { scenario ->
-            var cancelled = 0
+            val cancelled = java.util.concurrent.atomic.AtomicInteger(0)
             scenario.onActivity { activity ->
-                val dialog = PatternUi.show(activity, success = { fail("Cancelled dialog must not authenticate") }, cancel = { cancelled++ })
+                val dialog = PatternUi.show(activity, success = { fail("Cancelled dialog must not authenticate") }, cancel = { cancelled.incrementAndGet() })
                 dialog.cancel()
-                assertEquals(1, cancelled)
+                dialog.cancel()
             }
+            // Dialog cancellation dispatches its listener through the main message queue.
+            instrumentation.waitForIdleSync()
+            assertEquals(1, cancelled.get())
         }
     }
     @Test fun terminalRequiresPinAndProtectsWindow() {
