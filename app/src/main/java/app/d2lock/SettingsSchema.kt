@@ -58,6 +58,20 @@ object SettingsSchema {
         "wallpaper_zoom" to "Int",
         "weather_location" to "String"
     )
+    fun validateDocument(document: JSONObject, allowProfiles: Boolean = true): Map<String, Any> {
+        if (!document.has("schema")) return validate(document, allowProfiles)
+        require(document.get("schema") == 2) { "Unsupported backup schema" }
+        require(document.keys().asSequence().all { it in setOf("schema", "lock", "appearance", "icon") }) { "Unknown backup section" }
+        val values = validate(document.getJSONObject("lock"), allowProfiles)
+        val appearance = document.getJSONObject("appearance")
+        val keys = setOf("mode", "accent", "notifications", "cards", "banners", "radius", "bar_width", "bar_opacity", "bar_gap", "custom")
+        for (key in appearance.keys()) {
+            val value = appearance.get(key)
+            require(key in keys && value is Number && value.toDouble().isFinite() && value.toDouble() == value.toInt().toDouble()) { "Invalid appearance setting: $key" }
+        }
+        require(document.get("icon") in setOf("silver", "red", "blue", "purple", "green", "gold", "amoled")) { "Invalid launcher icon" }
+        return values
+    }
     fun validStoredType(key: String, value: Any?): Boolean {
         val expected = when {
             key == "custom_profiles" || key == "active_profile" -> "String"
@@ -87,10 +101,7 @@ object SettingsSchema {
                     require(name.isNotBlank() && name.length <= 32) { "Invalid profile name" }
                     val snapshot = profiles.getJSONObject(name)
                     if (snapshot.has("schema")) {
-                        require(snapshot.get("schema") == 2)
-                        validate(snapshot.getJSONObject("lock"), false)
-                        require(snapshot.keys().asSequence().all { it in setOf("schema", "lock", "appearance", "icon") })
-                        require(snapshot.get("appearance") is JSONObject && snapshot.get("icon") is String)
+                        validateDocument(snapshot, false)
                     } else validate(snapshot, false)
                 }
                 result[key] = value

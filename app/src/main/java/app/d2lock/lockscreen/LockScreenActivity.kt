@@ -77,10 +77,27 @@ class LockScreenActivity : Activity() {
         @Volatile private var fingerprintSessionActive = false
     }
     private val handler = Handler(Looper.getMainLooper())
+    private val sleepPending = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val stoppedAuthCleanup = object : Runnable {
+        override fun run() {
+            if (isDestroyed || isFinishing || hasWindowFocus()) return
+            val interactive = getSystemService(PowerManager::class.java).isInteractive
+            val callActive = app.d2lock.notifications.CallNotificationStore.isCallActive(this@LockScreenActivity)
+            if (!interactive || callActive) { handler.postDelayed(this, 60000); return }
+            pinDialog?.cancel(); pinDialog = null
+            cancelGuardianFingerprint("stopped_auth_session")
+            unlocking = false
+            GuardianWatchdog.endTrustedAuthentication("stopped_auth_session")
+            if (!preview && Prefs.kiosk(this@LockScreenActivity)) LockScreenService.surfaceLost(this@LockScreenActivity, "stopped_auth_session")
+        }
+    }
     private val idleSleep = Runnable {
         if (!preview && !unlocking && !isFinishing && !isDestroyed && hasWindowFocus() &&
             getSystemService(PowerManager::class.java).isInteractive && Prefs.rootMode(this)) {
-            Thread { runCatching { app.d2lock.root.ShellRunner.run(listOf("su", "-c", "input keyevent 223"), 3).exitCode } }.start()
+            if (sleepPending.compareAndSet(false, true)) Thread {
+                try { runCatching { app.d2lock.root.ShellRunner.run(listOf("su", "-c", "input keyevent 223"), 3).exitCode } }
+                finally { sleepPending.set(false) }
+            }.start()
         }
     }
     private fun resetIdleSleep() {
@@ -117,6 +134,7 @@ class LockScreenActivity : Activity() {
     }
 
     private fun sleepDisplayFromDoubleTap() {
+        if (isFinishing || isDestroyed || unlocking || !sleepPending.compareAndSet(false, true)) return
         Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_REQUEST")
 
         // 1) Root remains the fastest path on the verified Guardian configuration.
@@ -126,6 +144,7 @@ class LockScreenActivity : Activity() {
                     app.d2lock.root.ShellRunner.run(listOf("su", "-c", "input keyevent 223"), 3).exitCode == 0
                 }.getOrDefault(false)
                 if (ok) {
+                    sleepPending.set(false)
                     Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_ROOT")
                 } else {
                     runOnUiThread { sleepViaShizukuOrDeviceAdmin() }
@@ -139,6 +158,7 @@ class LockScreenActivity : Activity() {
     }
 
     private fun sleepViaShizukuOrDeviceAdmin() {
+        if (isFinishing || isDestroyed || unlocking) { sleepPending.set(false); return }
         val shizukuReady = Prefs.shizukuEnabled(this) && runCatching {
             Shizuku.pingBinder() && Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
         }.getOrDefault(false)
@@ -157,6 +177,7 @@ class LockScreenActivity : Activity() {
                     process.waitFor(3, java.util.concurrent.TimeUnit.SECONDS).also { if (!it) process.destroyForcibly() } && process.exitValue() == 0
                 }.getOrDefault(false)
                 if (ok) {
+                    sleepPending.set(false)
                     Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_SHIZUKU")
                 } else {
                     runOnUiThread { sleepViaDeviceAdmin() }
@@ -168,6 +189,8 @@ class LockScreenActivity : Activity() {
     }
 
     private fun sleepViaDeviceAdmin() {
+        sleepPending.set(false)
+        if (isFinishing || isDestroyed || unlocking) return
         val policy = getSystemService(DevicePolicyManager::class.java)
         val admin = ComponentName(this, D2DeviceAdminReceiver::class.java)
         if (policy.isAdminActive(admin)) {
@@ -395,6 +418,7 @@ class LockScreenActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        handler.removeCallbacks(stoppedAuthCleanup)
         resetIdleSleep()
         if (!preview) {
             KeyguardSignalReceiver.recordGuardianStage(this, "D2_VISIBLE", "onResume")
@@ -546,6 +570,10 @@ class LockScreenActivity : Activity() {
         if (!preview && Prefs.kiosk(this)) Log.i("SamsungLockD2", "GUARDIAN_ACTIVITY_STOPPED changingConfig=$isChangingConfigurations")
         handler.removeCallbacks(hideBanner)
         hideBanner.run()
+        if (unlocking || GuardianWatchdog.isTrustedAuthenticationActive()) {
+            handler.removeCallbacks(stoppedAuthCleanup)
+            handler.postDelayed(stoppedAuthCleanup, 60000)
+        }
         // Keep an active PIN/pattern sheet alive while Android temporarily changes
         // focus (for example call UI). Dismissing it here races Guardian against
         // the user and recreates the fast-unlock bug.

@@ -3,7 +3,8 @@
 MODDIR=${0%/*}
 . "$MODDIR/common.sh"
 
-/system/bin/am stopservice -n "$SERVICE" >/dev/null 2>&1
+# The app manages its own enabled policy. Removing the optional module must
+# not stop protection that the user independently enabled in D2.
 log_line "module removed; companion app and user data preserved"
 
 # To explicitly remove the APK with the module, create an empty file named

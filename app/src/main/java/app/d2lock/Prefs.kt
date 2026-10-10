@@ -65,19 +65,9 @@ object Prefs {
         require(raw.length <= 524288) { "Backup is too large" }
         val document = org.json.JSONObject(raw)
         val modern = document.has("schema")
-        if (modern) {
-            require(document.get("schema") == 2) { "Unsupported backup schema" }
-            require(document.keys().asSequence().all { it in setOf("schema", "lock", "appearance", "icon") }) { "Unknown backup section" }
-        }
-        val values = SettingsSchema.validate(if (modern) document.getJSONObject("lock") else document)
+        val values = SettingsSchema.validateDocument(document)
         val appearance = if (modern) document.getJSONObject("appearance") else org.json.JSONObject()
-        val appearanceKeys = setOf("mode", "accent", "notifications", "cards", "banners", "radius", "bar_width", "bar_opacity", "bar_gap", "custom")
-        for (key in appearance.keys()) {
-            val value = appearance.get(key)
-            require(key in appearanceKeys && value is Number && value.toDouble() == value.toInt().toDouble()) { "Invalid appearance setting: $key" }
-        }
         val icon = if (modern) document.getString("icon") else null
-        require(icon == null || IconManager.options.any { it.key == icon }) { "Invalid launcher icon" }
         val edit = prefs(context).edit()
         var count = 0
         for ((key, value) in values) {

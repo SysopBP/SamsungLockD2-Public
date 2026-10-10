@@ -69,14 +69,15 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                 // First pre-unlock signal owns this boot launch. WAKE is preferred;
                 // BOOT_READY stays as the fallback if the early wake launch cannot run.
                 val lastLaunch = prefs.getLong(KEY_EARLY_BOOT_LAUNCH_MS, 0L)
-                val elapsed = now - lastLaunch
-                val bootStartWall = now - SystemClock.elapsedRealtime()
-                val launchedThisBoot = lastLaunch >= (bootStartWall - 5_000L)
+                val elapsed = SystemClock.elapsedRealtime() - prefs.getLong(KEY_EARLY_BOOT_LAUNCH_ELAPSED_MS, 0L)
+                val launchedThisBoot = earlyBootLaunchClaimedThisBoot(context)
                 if (!launchedThisBoot || elapsed > EARLY_BOOT_DEDUPE_MS) {
                     recordPipeline(context, "WAKE_DETECTED", "$event:$method")
                     Log.i(TAG, "GUARDIAN_WAKE_DETECTED event=$event method=$method source=$source")
                     prefs.edit().putLong(KEY_EARLY_BOOT_LAUNCH_MS, now)
-                        .putLong(KEY_EARLY_BOOT_CONFIRMED_MS, 0L).commit()
+                        .putLong(KEY_EARLY_BOOT_CONFIRMED_MS, 0L)
+                        .putInt(KEY_EARLY_BOOT_COUNT, bootCount(context))
+                        .putLong(KEY_EARLY_BOOT_LAUNCH_ELAPSED_MS, SystemClock.elapsedRealtime()).commit()
                     // Prefer the root launch during Direct Boot. Android 17 can accept a
                     // background startActivity() call without actually presenting it, while
                     // the root path can place the existing singleTask lock surface immediately.
@@ -198,6 +199,9 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         private const val KEY_SYSTEM_LOCKSETTINGS_COUNT = "system_locksettings_count"
         private const val KEY_SYSTEM_TIMELINE = "system_timeline"
         private const val KEY_EARLY_BOOT_LAUNCH_MS = "early_boot_launch_ms"
+        private const val KEY_EARLY_BOOT_COUNT = "early_boot_count"
+        private const val KEY_EARLY_BOOT_LAUNCH_ELAPSED_MS = "early_boot_launch_elapsed_ms"
+        private fun bootCount(context: Context) = android.provider.Settings.Global.getInt(context.contentResolver, android.provider.Settings.Global.BOOT_COUNT, -1)
         private const val KEY_EARLY_BOOT_CONFIRMED_MS = "early_boot_confirmed_ms"
         private const val EARLY_BOOT_DEDUPE_MS = 20_000L
         private const val KEY_PIPELINE_TIMELINE = "pipeline_timeline"
@@ -269,7 +273,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                 val launchWallMs = prefs.getLong(KEY_EARLY_BOOT_LAUNCH_MS, 0L)
                 val now = System.currentTimeMillis()
                 val bootWallMs = now - SystemClock.elapsedRealtime()
-                if (launchWallMs >= (bootWallMs - 5_000L)) {
+                if (earlyBootLaunchClaimedThisBoot(context)) {
                     prefs.edit().putLong(KEY_EARLY_BOOT_CONFIRMED_MS, now).apply()
                     Log.i(TAG, "GUARDIAN_BOOT_TOKEN_CONFIRMED stage=$stage")
                 }
@@ -280,6 +284,8 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
             val prefs = directBootPrefs(context)
             val launchWallMs = prefs.getLong(KEY_EARLY_BOOT_LAUNCH_MS, 0L)
             if (launchWallMs <= 0L) return false
+            val boot = bootCount(context)
+            if (boot >= 0) return prefs.getInt(KEY_EARLY_BOOT_COUNT, -2) == boot
             val now = System.currentTimeMillis()
             val bootWallMs = now - SystemClock.elapsedRealtime()
             return launchWallMs >= (bootWallMs - 5_000L)
@@ -288,9 +294,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         fun earlyBootLaunchConsumedThisBoot(context: Context): Boolean {
             val confirmedWallMs = directBootPrefs(context).getLong(KEY_EARLY_BOOT_CONFIRMED_MS, 0L)
             if (confirmedWallMs <= 0L) return false
-            val now = System.currentTimeMillis()
-            val bootWallMs = now - SystemClock.elapsedRealtime()
-            return confirmedWallMs >= (bootWallMs - 5_000L)
+            return earlyBootLaunchClaimedThisBoot(context)
         }
         fun pipelineMetrics(context: Context): PipelineMetrics {
             val prefs = directBootPrefs(context)
