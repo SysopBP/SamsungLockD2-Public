@@ -68,7 +68,7 @@ object RootKiosk {
     fun attach(activity: Activity, status: (String) -> Unit) {
         owner = WeakReference(activity); observer = status; status(message)
         detachedAt = 0L
-        if (active || starting) return
+        if (active || starting || releasing) return
         if (mode(activity) != ActivityManager.LOCK_TASK_MODE_NONE) {
             report("Kiosk unavailable: another task is locked"); return
         }
@@ -149,7 +149,7 @@ object RootKiosk {
             if (activity == null && detachedAt != 0L && now - detachedAt > 5000) {
                 fail("D2 window closed; recovery released kiosk"); return
             }
-            val callActive = app.d2lock.notifications.CallNotificationStore.items.isNotEmpty()
+            val callActive = activity?.let { app.d2lock.notifications.CallNotificationStore.isCallActive(it) } ?: false
             if (active && activity != null && mode(activity) != ActivityManager.LOCK_TASK_MODE_LOCKED && callActive) {
                 // A real call surface is temporarily allowed to own focus/task state.
                 // Do not repair kiosk here: proximity wakes and voicemail transitions
@@ -192,9 +192,13 @@ object RootKiosk {
             catch (_: Exception) { /* Removing our temporary allowlist below also stops the task. */ }
         }
         release {
-            releasing = false
-            if (mode(activity) == ActivityManager.LOCK_TASK_MODE_NONE) done()
-            else report("Could not release kiosk. Retry ${credentialName(activity)}, or reboot for recovery.")
+            val deadline = SystemClock.elapsedRealtime() + 5000
+            fun confirmRelease() {
+                if (mode(activity) == ActivityManager.LOCK_TASK_MODE_NONE) { releasing = false; done() }
+                else if (SystemClock.elapsedRealtime() < deadline) main.postDelayed({ confirmRelease() }, 100)
+                else { releasing = false; report("Could not release kiosk. Retry ${credentialName(activity)}, or reboot for recovery.") }
+            }
+            confirmRelease()
         }
     }
     private fun release(done: () -> Unit) {
@@ -205,7 +209,13 @@ object RootKiosk {
         channel = null; events = null
         worker.execute {
             if (lease != null) {
-                runCatching { lease.writer.write("RELEASE\n"); lease.writer.flush(); queue?.poll(5, TimeUnit.SECONDS) }
+                runCatching {
+                    lease.writer.write("RELEASE\n"); lease.writer.flush()
+                    val deadline = SystemClock.elapsedRealtime() + 5000
+                    while (SystemClock.elapsedRealtime() < deadline) {
+                        if (queue?.poll(100, TimeUnit.MILLISECONDS) == "D2_RELEASED") break
+                    }
+                }
                 lease.close()
             }
             main.post { report("Kiosk inactive"); done() }

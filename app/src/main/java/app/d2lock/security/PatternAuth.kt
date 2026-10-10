@@ -27,7 +27,8 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 import kotlin.math.hypot
 
-class PatternStore(context: Context, private val now: () -> Long = System::currentTimeMillis) {
+class PatternStore(context: Context, now: (() -> Long)? = null) {
+    private val throttle = AttemptThrottle(context, now)
     private val file = AtomicFile(File(context.noBackupFilesDir, "d2-pattern.json"))
     companion object { private val guard = Any(); private const val ITERATIONS = 210_000 }
     fun configured() = synchronized(guard) { file.baseFile.exists() || File(file.baseFile.path + ".bak").exists() }
@@ -44,7 +45,7 @@ class PatternStore(context: Context, private val now: () -> Long = System::curre
     }
     fun create(nodes: List<Int>) = synchronized(guard) {
         require(!configured()) { "Pattern already configured" }
-        require(nodes.distinct().size == nodes.size && nodes.size >= 4)
+        require(nodes.size in 4..9 && nodes.all { it in 0..8 } && nodes.distinct().size == nodes.size)
         val chars = nodes.joinToString("-").toCharArray()
         try {
             val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
@@ -58,20 +59,20 @@ class PatternStore(context: Context, private val now: () -> Long = System::curre
         if (remaining(state) > 0) return@synchronized false
         val chars = nodes.joinToString("-").toCharArray()
         val valid = try {
-            nodes.distinct().size == nodes.size && nodes.size >= 4 && MessageDigest.isEqual(
+            nodes.size in 4..9 && nodes.all { it in 0..8 } && nodes.distinct().size == nodes.size && MessageDigest.isEqual(
                 Base64.decode(state.getString("hash"), Base64.NO_WRAP),
                 hash(chars, Base64.decode(state.getString("salt"), Base64.NO_WRAP)))
         } finally { chars.fill('\u0000') }
-        if (valid) state.put("failures", 0).put("until", 0L)
+        if (valid) { state.put("failures", 0); throttle.reset(state) }
         else {
             val failures = (state.optInt("failures") + 1).coerceAtMost(100)
             state.put("failures", failures)
-            if (failures >= 5) state.put("until", now() + (30_000L shl ((failures - 5) / 5).coerceAtMost(5)))
+            if (failures >= 5) throttle.record(state, 30_000L shl ((failures - 5) / 5).coerceAtMost(5))
         }
         write(state)
         valid
     }
-    private fun remaining(state: JSONObject) = (state.optLong("until") - now()).coerceAtLeast(0L)
+    private fun remaining(state: JSONObject) = throttle.remaining(state)
     fun remainingMillis() = synchronized(guard) { remaining(read()) }
 }
 
@@ -182,12 +183,16 @@ object PatternUi {
         val pattern = PatternView(activity)
         val error = TextView(activity).apply { textSize=14f; setTextColor(Color.rgb(220,70,70)) }
         root.addView(prompt); root.addView(pattern, LinearLayout.LayoutParams(-1,dp(350))); root.addView(error)
+        var completed = false
+        fun cancelled() { if (!completed) { completed = true; cancel() } }
         val dialog = AlertDialog.Builder(activity)
             .setTitle(if(setup) "Create D2 pattern" else "Unlock D2")
             .setMessage("This pattern belongs only to D2 and does not change your Samsung screen lock.")
             .setView(root)
-            .setNegativeButton(if(!setup && usePin!=null) "Use PIN instead" else "Cancel") { _,_ -> if(!setup && usePin!=null) usePin() else cancel() }
+            .setNegativeButton(if(!setup && usePin!=null) "Use PIN instead" else "Cancel") { _,_ -> if(!setup && usePin!=null) { completed = true; usePin() } else cancelled() }
+            .setOnCancelListener { cancelled() }
             .create()
+        dialog.setOnDismissListener { first = null }
         pattern.onComplete = complete@{ nodes ->
             if(nodes.size < 4) { error.text="Connect at least 4 dots."; return@complete }
             if(setup && first==null) { first=nodes; prompt.text="Draw the same pattern again"; error.text=""; return@complete }
@@ -204,7 +209,7 @@ object PatternUi {
                 }
                 activity.runOnUiThread {
                     if(!dialog.isShowing || activity.isFinishing || activity.isDestroyed) return@runOnUiThread
-                    if(ok) { dialog.dismiss(); success() } else { error.setTextColor(Color.rgb(220,70,70)); error.text=message; pattern.isEnabled=true }
+                    if(ok) { completed = true; dialog.dismiss(); success() } else { error.setTextColor(Color.rgb(220,70,70)); error.text=message; pattern.isEnabled=true }
                 }
             }
         }

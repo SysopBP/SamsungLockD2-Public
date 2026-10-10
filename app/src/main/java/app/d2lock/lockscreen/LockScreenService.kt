@@ -25,7 +25,7 @@ class LockScreenService : Service() {
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == Intent.ACTION_SCREEN_ON && Prefs.enabled(context) && PinStore(context).configured()) {
-                val callActive = app.d2lock.notifications.CallNotificationStore.items.isNotEmpty()
+                val callActive = app.d2lock.notifications.CallNotificationStore.isCallActive(this)
                 Log.i(TAG, "GUARDIAN_SCREEN_ON callActive=$callActive")
                 GuardianWatchdog.reassert(context, "screen_on", callActive)
             }
@@ -50,6 +50,7 @@ class LockScreenService : Service() {
     }
 
     override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
         runCatching { unregisterReceiver(screenReceiver) }
         super.onDestroy()
     }
@@ -68,7 +69,7 @@ class LockScreenService : Service() {
             KeyguardSignalReceiver.recordGuardianStage(this, "D2_HANDOFF", event)
             Log.i(TAG, "GUARDIAN_FRAMEWORK_HANDOFF event=$event source=$source")
             if (event == "WAKE" || event == "KEYGUARD" || event == "TASK_KEYGUARD") {
-                val callActive = app.d2lock.notifications.CallNotificationStore.items.isNotEmpty()
+                val callActive = app.d2lock.notifications.CallNotificationStore.isCallActive(this)
                 if (!callActive && Prefs.enabled(this) && PinStore(this).configured()) {
                     KeyguardSignalReceiver.recordDecision(this, "REASSERT", "framework_${event.lowercase()}")
                     GuardianWatchdog.reassert(this, "framework_${event.lowercase()}", callActive)
@@ -94,16 +95,11 @@ class LockScreenService : Service() {
                     keyguardHandoffActive = false
                     handler.postAtTime({
                         if (Prefs.enabled(this) && PinStore(this).configured() &&
-                            app.d2lock.notifications.CallNotificationStore.items.isEmpty()) {
+                            !app.d2lock.notifications.CallNotificationStore.isCallActive(this)) {
                             KeyguardSignalReceiver.recordGuardianStage(this, "D2_LAUNCH", "keyguard_clear")
                             KeyguardSignalReceiver.recordDecision(this, "LAUNCH", "keyguard_clear")
                             Log.i(TAG, "GUARDIAN_KEYGUARD_CLEAR launch=single")
-                            val launched = Prefs.rootMode(this) && RootManager.launchCompanion()
-                            Log.i(TAG, "GUARDIAN_D2_HANDOFF_LAUNCH path=${if (launched) "root" else "activity"}")
-                            if (!launched) runCatching {
-                                startActivity(Intent(this, LockScreenActivity::class.java)
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP))
-                            }
+                            GuardianWatchdog.reassert(this, "keyguard_clear")
                         }
                     }, SURFACE_RECOVERY_TOKEN, SystemClock.uptimeMillis() + KEYGUARD_CLEAR_SETTLE_MS)
                 }
@@ -120,13 +116,8 @@ class LockScreenService : Service() {
                 return START_STICKY
             }
             handler.postAtTime({
-                if (Prefs.enabled(this) && PinStore(this).configured() && app.d2lock.notifications.CallNotificationStore.items.isEmpty()) {
-                    val launched = Prefs.rootMode(this) && RootManager.launchCompanion()
-                    Log.i(TAG, "GUARDIAN_SURFACE_RECOVERY reason=$reason path=${if (launched) "root" else "activity"}")
-                    if (!launched) runCatching {
-                        startActivity(Intent(this, LockScreenActivity::class.java)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP))
-                    }
+                if (Prefs.enabled(this) && PinStore(this).configured() && !app.d2lock.notifications.CallNotificationStore.isCallActive(this)) {
+                    GuardianWatchdog.reassert(this, "surface_recovery:$reason")
                 }
             }, SURFACE_RECOVERY_TOKEN, SystemClock.uptimeMillis() + 120L)
             return START_STICKY
@@ -136,18 +127,14 @@ class LockScreenService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        if (postBoot && app.d2lock.notifications.CallNotificationStore.items.isEmpty() && postBootLaunchAllowed()) {
-            val root = Prefs.rootMode(this)
-            val launched = root && RootManager.launchCompanion()
-            if (launched) {
-                Log.i(TAG, "GUARDIAN_LOCKSCREEN_REQUESTED path=root")
-            } else {
-                runCatching {
-                    startActivity(Intent(this, LockScreenActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP))
-                }.onSuccess { Log.i(TAG, "GUARDIAN_LOCKSCREEN_REQUESTED path=activity") }
-                 .onFailure { Log.w(TAG, "GUARDIAN_LOCKSCREEN_REQUEST_FAILED", it) }
-            }
+        if (postBoot && !app.d2lock.notifications.CallNotificationStore.isCallActive(this) && postBootLaunchAllowed()) {
+            // Give a just-accepted early launch time to confirm before one bounded late fallback.
+            handler.postAtTime({
+                if (!KeyguardSignalReceiver.earlyBootLaunchConsumedThisBoot(this)) {
+                    GuardianWatchdog.reassert(this, "post_boot_unconfirmed",
+                        app.d2lock.notifications.CallNotificationStore.isCallActive(this))
+                }
+            }, SURFACE_RECOVERY_TOKEN, SystemClock.uptimeMillis() + 1500L)
         }
         return START_STICKY
     }

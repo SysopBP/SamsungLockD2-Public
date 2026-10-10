@@ -19,7 +19,22 @@ import app.d2lock.root.RootManager
 class KeyguardSignalReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != ACTION && intent.action != FINGERPRINT_ACTION && intent.action != SYSTEM_ACTION) return
-        val senderUid = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) sentFromUid else -1
+        val pending = goAsync()
+        signalWorker.execute {
+            try { receiveSignal(context.applicationContext, intent) }
+            catch (error: Exception) { Log.w(TAG, "GUARDIAN_SIGNAL_FAILED", error) }
+            finally { pending.finish() }
+        }
+    }
+
+    private fun receiveSignal(context: Context, intent: Intent) {
+        val unlockedForPolicy = context.getSystemService(UserManager::class.java)?.isUserUnlocked == true
+        if ((unlockedForPolicy && !app.d2lock.Prefs.xposedMaster(context)) ||
+            (!unlockedForPolicy && !app.d2lock.Prefs.earlyBootArmed(context))) {
+            Log.i(TAG, "GUARDIAN_SIGNAL_SKIPPED policy=disabled_or_unarmed")
+            return
+        }
+        val senderUid = -1
         Log.i(TAG, "GUARDIAN_XPOSED_SIGNAL_ACCEPTED uid=$senderUid permission=STATUS_BAR")
 
         val source = intent.getStringExtra("source") ?: "unknown"
@@ -60,6 +75,8 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                 if (!launchedThisBoot || elapsed > EARLY_BOOT_DEDUPE_MS) {
                     recordPipeline(context, "WAKE_DETECTED", "$event:$method")
                     Log.i(TAG, "GUARDIAN_WAKE_DETECTED event=$event method=$method source=$source")
+                    prefs.edit().putLong(KEY_EARLY_BOOT_LAUNCH_MS, now)
+                        .putLong(KEY_EARLY_BOOT_CONFIRMED_MS, 0L).commit()
                     // Prefer the root launch during Direct Boot. Android 17 can accept a
                     // background startActivity() call without actually presenting it, while
                     // the root path can place the existing singleTask lock surface immediately.
@@ -84,9 +101,10 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                     }.getOrDefault(false)
                     val launched = rootLaunch || activityFallback
                     if (launched) {
-                        prefs.edit().putLong(KEY_EARLY_BOOT_LAUNCH_MS, now).putLong(KEY_EARLY_BOOT_CONFIRMED_MS, 0L).apply()
+                        // Claim already recorded before launch; do not erase a visibility confirmation.
                         Log.i(TAG, "GUARDIAN_BOOT_TOKEN_PENDING event=$event")
                     }
+                    if (!launched) prefs.edit().remove(KEY_EARLY_BOOT_LAUNCH_MS).remove(KEY_EARLY_BOOT_CONFIRMED_MS).commit()
                     val launchPath = when { rootLaunch -> "root"; activityFallback -> "activity"; else -> "none" }
                     recordPipeline(context, "EARLY_BOOT_LAUNCH", "$event:$launchPath:$launched")
                     Log.i(TAG, "GUARDIAN_EARLY_BOOT_LAUNCH event=$event accepted=$launched path=$launchPath source=$source")
@@ -152,6 +170,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
     }
 
     companion object {
+        private val signalWorker = java.util.concurrent.Executors.newSingleThreadExecutor()
         private const val TAG = "SamsungLockD2"
         const val ACTION = "app.d2lock.action.XPOSED_KEYGUARD_STATE"
         const val FINGERPRINT_ACTION = "app.d2lock.action.XPOSED_FINGERPRINT_EVENT"
@@ -245,7 +264,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         }
         fun recordGuardianStage(context: Context, stage: String, detail: String) {
             recordPipeline(context, stage, detail)
-            if (stage == "D2_ACTIVITY_CREATED" || stage == "D2_VISIBLE") {
+            if (stage == "D2_VISIBLE") {
                 val prefs = directBootPrefs(context)
                 val launchWallMs = prefs.getLong(KEY_EARLY_BOOT_LAUNCH_MS, 0L)
                 val now = System.currentTimeMillis()

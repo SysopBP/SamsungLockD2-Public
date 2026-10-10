@@ -52,7 +52,7 @@ jobs:
       - name: Build and lint
         run: |
           ./gradlew :app:dependencies --configuration debugRuntimeClasspath > runtime-dependencies.txt
-          ./gradlew assembleDebug assembleDebugAndroidTest lintDebug --stacktrace
+          ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug --stacktrace
       - name: Enable emulator acceleration
         run: |
           # This Kotlin-only app does not use the runner's preinstalled native SDKs.
@@ -63,7 +63,6 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: PIN, kiosk, and Preview runtime tests
         id: runtime_tests
-        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 36
@@ -87,10 +86,8 @@ jobs:
             wait "$LOGCAT_PID" 2>/dev/null || true
             echo '--- Guardian/PIN runtime log ---'
             grep -E 'SamsungLockD2|GUARDIAN_|PinUi|PIN_' guardian-runtime.log || true
-            # Runtime emulator coverage is diagnostic for this UI branch.
-            # Physical-device Guardian/auth behavior is the release gate.
-            echo "Runtime emulator pass completed; reports uploaded for diagnostics."
-            exit 0
+            echo "Runtime test exit: $TEST_EXIT"
+            exit "$TEST_EXIT"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -26,8 +26,16 @@ object GitHubUpdateChecker {
             setRequestProperty("Accept", "application/vnd.github+json")
             setRequestProperty("User-Agent", "Kiosk-D2-Boot-Guardian")
         }
-        val raw = connection.inputStream.bufferedReader().use { it.readText() }
-        connection.disconnect()
+        val raw = try { connection.inputStream.bufferedReader().use { reader ->
+            val text = StringBuilder()
+            val buffer = CharArray(4096)
+            while (true) {
+                val n = reader.read(buffer); if (n < 0) break
+                require(text.length + n <= 2 * 1024 * 1024) { "Release response is too large" }
+                text.append(buffer, 0, n)
+            }
+            text.toString()
+        } } finally { connection.disconnect() }
         Prefs.setLastUpdateCheck(context, System.currentTimeMillis())
         val releases = JSONArray(raw)
         val channel = Prefs.updateChannel(context)
@@ -52,7 +60,7 @@ object GitHubUpdateChecker {
             if (apk.isBlank()) continue
             val normalizedInstalled = installed.removePrefix("v")
             val normalizedTag = tag.removePrefix("v")
-            if (normalizedTag == normalizedInstalled) return@runCatching null
+            if (!ReleaseVersion.newer(normalizedTag, normalizedInstalled)) continue
             return@runCatching D2Release(
                 tag = tag,
                 name = release.optString("name").ifBlank { tag },

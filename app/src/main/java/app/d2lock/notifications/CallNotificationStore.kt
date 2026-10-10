@@ -17,10 +17,19 @@ object CallNotificationStore {
     val items = CopyOnWriteArrayList<CallNotification>()
     @Volatile var onChanged: (() -> Unit)? = null
 
+    /** Telecom is authoritative when the user grants phone-state access. */
+    fun isCallActive(context: android.content.Context): Boolean {
+        if (context.checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            runCatching { context.getSystemService(android.telecom.TelecomManager::class.java)?.isInCall }
+                .getOrNull()?.let { return it }
+        }
+        return items.isNotEmpty()
+    }
+
     fun update(sbn: StatusBarNotification, allowedPackages: Set<String>) {
         items.removeAll { it.key == sbn.key }
         val notification = sbn.notification
-        if (sbn.packageName !in allowedPackages || notification.category != Notification.CATEGORY_CALL) {
+        if (sbn.packageName !in allowedPackages || (notification.category != Notification.CATEGORY_CALL || !sbn.isOngoing)) {
             onChanged?.invoke()
             return
         }

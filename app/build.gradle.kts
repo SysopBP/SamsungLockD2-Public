@@ -10,8 +10,8 @@ android {
         applicationId = "app.d2lock"
         minSdk = 31
         targetSdk = 37
-        versionCode = 22
-        versionName = "0.6.2-boot-guardian-ui9-v22"
+        versionCode = 23
+        versionName = "0.6.3-audit-repairs-v23"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -46,6 +46,8 @@ configurations.configureEach {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
     // SESL9 preview only. Keep production Guardian/auth surfaces untouched.
     // SESL_GITHUB_TOKEN is supplied by CI/local environment; repository credentials are configured in settings.gradle.kts.
     implementation("sesl.androidx.appcompat:appcompat:1.8.0+1.0.38-sesl9+rev1")

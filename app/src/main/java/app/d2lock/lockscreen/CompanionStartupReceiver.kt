@@ -59,16 +59,16 @@ class CompanionStartupReceiver : BroadcastReceiver() {
             val bootRestoreSource = source == "boot" || source == "locked_boot"
             val earlyLaunchClaimed = bootRestoreSource && KeyguardSignalReceiver.earlyBootLaunchClaimedThisBoot(context)
             val earlyLaunchConfirmed = bootRestoreSource && KeyguardSignalReceiver.earlyBootLaunchConsumedThisBoot(context)
-            // The early Direct-Boot root launch owns presentation for this boot as soon as
-            // RootManager accepts it. Activity confirmation can arrive after BOOT_COMPLETED,
-            // so waiting for D2_VISIBLE here caused a second post-boot activity launch.
-            val postBoot = source == "boot" && !earlyLaunchClaimed
-            if (earlyLaunchClaimed) {
+            // Only confirmed visibility consumes the early launch. The service waits
+            // briefly before its bounded fallback so normal early launches are not duplicated.
+            val postBoot = source == "boot" && !earlyLaunchConfirmed
+            if (earlyLaunchConfirmed) {
                 Log.i(TAG, "GUARDIAN_BOOT_TOKEN_RECOGNIZED source=$source confirmed=$earlyLaunchConfirmed")
-                Log.i(TAG, "GUARDIAN_BOOT_LATE_LAUNCH_SKIPPED token=claimed source=$source")
+                Log.i(TAG, "GUARDIAN_BOOT_LATE_LAUNCH_SKIPPED token=confirmed source=$source")
             }
             // Keep the foreground service alive for watchdog/bridge work, but never ask it
             // to present the lock surface again when the early launch already owns this boot.
+            app.d2lock.Prefs.syncBootPolicy(context)
             LockScreenService.start(context, postBoot = postBoot)
             Log.i(TAG, "GUARDIAN_SERVICE_REQUESTED source=$source postBoot=$postBoot earlyTokenConsumed=$earlyLaunchClaimed confirmed=$earlyLaunchConfirmed")
             val replayed = KeyguardSignalReceiver.replayDeferred(context)

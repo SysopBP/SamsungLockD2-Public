@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.HIDE_OVERLAY_WINDOWS" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -143,7 +144,7 @@
             tools:targetApi="34" />
         <service
             android:name=".passkeys.D2CredentialProviderService"
-            android:enabled="true"
+            android:enabled="false"
             android:exported="true"
             android:label="Kiosk D2 Boot Guardian"
             android:permission="android.permission.BIND_CREDENTIAL_PROVIDER_SERVICE"

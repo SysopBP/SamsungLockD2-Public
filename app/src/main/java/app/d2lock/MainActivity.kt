@@ -66,6 +66,8 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         Appearance.apply(this)
         PinUi.protect(this)
+        Prefs.syncBootPolicy(this)
+        RootManager.refreshAsync()
         window.statusBarColor = Color.TRANSPARENT
         setContentView(buildLockedBackdrop())
         Shizuku.addBinderReceivedListenerSticky(shizukuBinderReceived)
@@ -318,6 +320,13 @@ class MainActivity : Activity() {
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(Appearance.secondary(this@MainActivity))
         }
         dialog.show()
+    }
+
+    private fun runRootAction(action: () -> Pair<Boolean, String>) {
+        Thread {
+            val result = action()
+            runOnUiThread { if (!isDestroyed && !isFinishing) Toast.makeText(this, result.second, Toast.LENGTH_LONG).show() }
+        }.start()
     }
 
     override fun onDestroy() {
@@ -797,7 +806,7 @@ class MainActivity : Activity() {
                 },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
 
                 addView(TextView(this@MainActivity).apply {
-                    text="Manage passkeys"
+                    text="Saved passkeys (provider unavailable)"
                     textSize=15f
                     setTextColor(Appearance.text(this@MainActivity))
                     gravity=Gravity.CENTER
@@ -1369,7 +1378,7 @@ class MainActivity : Activity() {
                         .setTitle("Restart System UI?")
                         .setMessage("System UI will briefly disappear and reload. Kiosk D2 Boot Guardian itself will not be reset.")
                         .setNegativeButton("Cancel",null)
-                        .setPositiveButton("Restart") { _,_-> val result=RootManager.restartSystemUi(); Toast.makeText(this@MainActivity,result.second,Toast.LENGTH_LONG).show() }
+                        .setPositiveButton("Restart") { _,_-> runRootAction { RootManager.restartSystemUi() } }
                         .show()
                 }
                 val reboot=recoveryAction("Soft Reboot") {
@@ -1378,7 +1387,7 @@ class MainActivity : Activity() {
                         .setTitle("Soft reboot Android?")
                         .setMessage("Android's framework will restart. Unsaved work in other apps may be lost. Guardian will restore through its existing startup path.")
                         .setNegativeButton("Cancel",null)
-                        .setPositiveButton("Soft reboot") { _,_-> val result=RootManager.softReboot(); if(!result.first) Toast.makeText(this@MainActivity,result.second,Toast.LENGTH_LONG).show() }
+                        .setPositiveButton("Soft reboot") { _,_-> runRootAction { RootManager.softReboot() } }
                         .show()
                 }
                 addView(systemUi,LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(6) })
@@ -1427,15 +1436,26 @@ class MainActivity : Activity() {
                 textSize=16f
                 setTextColor(Appearance.text(this@MainActivity))
                 isChecked=Prefs.adbRecovery(this@MainActivity)
+                var correcting = false
                 setOnCheckedChangeListener { _,checked ->
+                    if (correcting) return@setOnCheckedChangeListener
                     if(!RootManager.isAvailable()) {
-                        isChecked=false
+                        correcting = true; isChecked = !checked; correcting = false
                         Toast.makeText(this@MainActivity,"KernelSU/root access is required",Toast.LENGTH_LONG).show()
                         return@setOnCheckedChangeListener
                     }
-                    val result=if(checked) RootManager.enableUsbAdbRecovery() else RootManager.disableUsbAdbRecovery()
-                    if(result.first) Prefs.setAdbRecovery(this@MainActivity,checked) else isChecked=!checked
-                    Toast.makeText(this@MainActivity,result.second,Toast.LENGTH_LONG).show()
+                    isEnabled = false
+                    Thread {
+                        val result = if (checked) RootManager.enableUsbAdbRecovery(this@MainActivity) else RootManager.disableUsbAdbRecovery(this@MainActivity)
+                        runOnUiThread {
+                            if (isDestroyed || isFinishing) return@runOnUiThread
+                            // Remove the listener before correcting a failed operation.
+                            if (result.first) Prefs.setAdbRecovery(this@MainActivity, checked)
+                            else { correcting = true; isChecked = !checked; correcting = false }
+                            isEnabled = true
+                            Toast.makeText(this@MainActivity, result.second, Toast.LENGTH_LONG).show()
+                        }
+                    }.start()
                 }
             },rowParams())
             addView(TextView(this@MainActivity).apply {
@@ -2328,7 +2348,9 @@ class MainActivity : Activity() {
                         text = title; textSize = 11f; maxLines = 2; setTextColor(Appearance.text(this@MainActivity))
                     }, LinearLayout.LayoutParams(0, -2, 1f))
                     addView(guardianSwitch().apply {
-                        isChecked = checked(); scaleX = .82f; scaleY = .82f
+                        // These stored switches have no behavioral hook implementation yet.
+                        isChecked = false; isEnabled = false; contentDescription = "$title: not implemented"
+                        scaleX = .82f; scaleY = .82f
                         setPadding(0, 0, dp(4), 0)
                         setOnCheckedChangeListener { _, value -> changed(value) }
                     }, LinearLayout.LayoutParams(dp(60), dp(48)))
@@ -2383,7 +2405,7 @@ class MainActivity : Activity() {
             ))
 
             addView(TextView(this@MainActivity).apply {
-                text = "Release baseline: preserve the minimal systemReady hook. Additional behavioral switches remain experimental and should be enabled one at a time. The separate KernelSU bridge ZIP is optional and is not required for the verified boot path."
+                text = "Release baseline: preserve the minimal systemReady hook. Additional behavioral switches are disabled until their hooks are implemented and tested. The separate KernelSU bridge ZIP is optional and is not required for the verified boot path."
                 textSize = 12f
                 setTextColor(Appearance.secondary(this@MainActivity))
                 setPadding(dp(4), dp(8), dp(4), 0)
@@ -3669,6 +3691,7 @@ class MainActivity : Activity() {
         if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) missing += Manifest.permission.POST_NOTIFICATIONS
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) missing += Manifest.permission.CAMERA
         if (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) missing += Manifest.permission.ACCESS_COARSE_LOCATION
+        if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) missing += Manifest.permission.READ_PHONE_STATE
         if (missing.isNotEmpty()) requestPermissions(missing.toTypedArray(), 81)
     }
 

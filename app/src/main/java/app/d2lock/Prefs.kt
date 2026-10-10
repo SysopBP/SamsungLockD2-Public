@@ -5,6 +5,7 @@ import android.net.Uri
 
 object Prefs {
     private const val FILE = "lock_preferences"
+    private val checkedStores = mutableSetOf<Boolean>()
     /**
      * Direct-Boot safe preference access.
      *
@@ -20,54 +21,86 @@ object Prefs {
         } else {
             context.createDeviceProtectedStorageContext()
         }
-        return storageContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val preferences = storageContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        synchronized(checkedStores) {
+            if (checkedStores.add(storageContext.isDeviceProtectedStorage)) {
+                val bad = preferences.all.filter { (key, value) -> !SettingsSchema.validStoredType(key, value) }.keys
+                if (bad.isNotEmpty()) {
+                    val edit = preferences.edit()
+                    bad.forEach { edit.remove(it) }
+                    edit.putBoolean("enabled", false).commit()
+                    android.util.Log.w("SamsungLockD2", "Invalid settings removed; Guardian disabled until reviewed: $bad")
+                }
+            }
+        }
+        return preferences
+    }
+
+    fun syncBootPolicy(context: Context) {
+        if (context.getSystemService(android.os.UserManager::class.java)?.isUserUnlocked == false) return
+        context.createDeviceProtectedStorageContext().getSharedPreferences("guardian_boot_policy", Context.MODE_PRIVATE)
+            .edit().putInt("version", 1).putBoolean("enabled", enabled(context))
+            .putBoolean("root", rootMode(context)).putBoolean("master", xposedMaster(context))
+            .putBoolean("credential_ready", app.d2lock.security.PinStore(context).configured()).commit()
+    }
+    fun earlyBootArmed(context: Context): Boolean {
+        val p = context.createDeviceProtectedStorageContext().getSharedPreferences("guardian_boot_policy", Context.MODE_PRIVATE)
+        return p.getInt("version", 0) == 1 && p.getBoolean("enabled", false) &&
+            p.getBoolean("root", false) && p.getBoolean("master", false) && p.getBoolean("credential_ready", false)
     }
 
     fun exportSettings(context: Context): String {
-        val excluded = setOf("enabled", "root_mode", "root_kiosk", "adb_recovery", "shizuku_enabled")
         val json = org.json.JSONObject()
         prefs(context).all.forEach { (key, value) ->
-            if (key !in excluded) when (value) {
-                is Boolean, is Int, is Long, is Float, is String -> json.put(key, value)
-            }
+            if (key !in SettingsSchema.protectedKeys && value != null) json.put(key, value)
         }
-        return json.toString(2)
+        // Validate exports too: previously corrupt preferences must not spread to another install.
+        SettingsSchema.validate(json)
+        val appearance = org.json.JSONObject(context.getSharedPreferences("d2_appearance", Context.MODE_PRIVATE).all)
+        return org.json.JSONObject().put("schema", 2).put("lock", json)
+            .put("appearance", appearance).put("icon", IconManager.selected(context)).toString(2)
     }
 
     fun importSettings(context: Context, raw: String): Int {
-        val excluded = setOf("enabled", "root_mode", "root_kiosk", "adb_recovery", "shizuku_enabled")
-        val json = org.json.JSONObject(raw)
+        require(raw.length <= 524288) { "Backup is too large" }
+        val document = org.json.JSONObject(raw)
+        val modern = document.has("schema")
+        if (modern) {
+            require(document.get("schema") == 2) { "Unsupported backup schema" }
+            require(document.keys().asSequence().all { it in setOf("schema", "lock", "appearance", "icon") }) { "Unknown backup section" }
+        }
+        val values = SettingsSchema.validate(if (modern) document.getJSONObject("lock") else document)
+        val appearance = if (modern) document.getJSONObject("appearance") else org.json.JSONObject()
+        val appearanceKeys = setOf("mode", "accent", "notifications", "cards", "banners", "radius", "bar_width", "bar_opacity", "bar_gap", "custom")
+        for (key in appearance.keys()) {
+            val value = appearance.get(key)
+            require(key in appearanceKeys && value is Number && value.toDouble() == value.toInt().toDouble()) { "Invalid appearance setting: $key" }
+        }
+        val icon = if (modern) document.getString("icon") else null
+        require(icon == null || IconManager.options.any { it.key == icon }) { "Invalid launcher icon" }
         val edit = prefs(context).edit()
         var count = 0
-        val uriBackedKeys = setOf("wallpaper", "app_wallpaper")
-
-        fun canReadRestoredUri(value: String): Boolean {
-            if (!value.startsWith("content://")) return true
-            return runCatching {
-                context.contentResolver.openInputStream(Uri.parse(value))?.use { true } ?: false
-            }.getOrDefault(false)
-        }
-        val keys = json.keys()
-        while (keys.hasNext()) {
-            val key = keys.next()
-            if (key in excluded) continue
-            when (val value = json.get(key)) {
+        for ((key, value) in values) {
+            if (key in setOf("wallpaper", "app_wallpaper") && value is String && value.startsWith("content://")) {
+                val readable = runCatching { context.contentResolver.openInputStream(Uri.parse(value))?.use { true } ?: false }.getOrDefault(false)
+                if (!readable) continue
+            }
+            when (value) {
                 is Boolean -> edit.putBoolean(key, value)
                 is Int -> edit.putInt(key, value)
                 is Long -> edit.putLong(key, value)
-                is Double -> edit.putFloat(key, value.toFloat())
-                is String -> {
-                    // Backups can contain document-provider URIs whose persisted grant
-                    // belonged to another install/device. Skip stale wallpaper URIs so
-                    // restore cannot leave D2 pointing at inaccessible content.
-                    if (key in uriBackedKeys && !canReadRestoredUri(value)) continue
-                    edit.putString(key, value)
-                }
-                else -> continue
+                is Float -> edit.putFloat(key, value)
+                is String -> edit.putString(key, value)
             }
             count++
         }
-        edit.apply()
+        check(edit.commit()) { "Could not save restored settings" }
+        if (modern) {
+            val e = context.getSharedPreferences("d2_appearance", Context.MODE_PRIVATE).edit()
+            for (key in appearance.keys()) e.putInt(key, (appearance.get(key) as Number).toInt())
+            check(e.commit()) { "Could not restore appearance" }
+            IconManager.apply(context, icon!!)
+        }
         return count
     }
 
@@ -109,7 +142,7 @@ object Prefs {
 
     fun activeProfile(context: Context) = prefs(context).getString("active_profile", "custom") ?: "custom"
 
-    private val profileExcluded = setOf("enabled", "root_mode", "root_kiosk", "adb_recovery", "shizuku_enabled", "active_profile")
+    private val profileExcluded = SettingsSchema.protectedKeys
 
     fun customProfileNames(context: Context): List<String> {
         val raw = prefs(context).getString("custom_profiles", "{}") ?: "{}"
@@ -125,12 +158,8 @@ object Prefs {
         require(clean.isNotBlank())
         val store = runCatching { org.json.JSONObject(prefs(context).getString("custom_profiles", "{}") ?: "{}") }
             .getOrDefault(org.json.JSONObject())
-        val snapshot = org.json.JSONObject()
-        prefs(context).all.forEach { (key, value) ->
-            if (key !in profileExcluded && key != "custom_profiles") when (value) {
-                is Boolean, is Int, is Long, is Float, is String -> snapshot.put(key, value)
-            }
-        }
+        val snapshot = org.json.JSONObject(exportSettings(context))
+        snapshot.getJSONObject("lock").remove("custom_profiles")
         store.put(clean, snapshot)
         prefs(context).edit().putString("custom_profiles", store.toString()).putString("active_profile", "custom:$clean").apply()
     }
@@ -138,19 +167,9 @@ object Prefs {
     fun applyCustomProfile(context: Context, name: String): Boolean {
         val store = runCatching { org.json.JSONObject(prefs(context).getString("custom_profiles", "{}") ?: "{}") }.getOrNull() ?: return false
         val snapshot = store.optJSONObject(name) ?: return false
-        val edit = prefs(context).edit()
-        val keys = snapshot.keys()
-        while (keys.hasNext()) {
-            val key = keys.next()
-            when (val value = snapshot.get(key)) {
-                is Boolean -> edit.putBoolean(key, value)
-                is Int -> edit.putInt(key, value)
-                is Long -> edit.putLong(key, value)
-                is Double -> edit.putFloat(key, value.toFloat())
-                is String -> edit.putString(key, value)
-            }
-        }
-        edit.putString("active_profile", "custom:$name").apply()
+        val restored = runCatching { importSettings(context, snapshot.toString()) }.isSuccess
+        if (!restored) return false
+        prefs(context).edit().putString("active_profile", "custom:$name").apply()
         return true
     }
 
@@ -164,7 +183,7 @@ object Prefs {
 
     // Xposed integration switches. Behavioral hooks default OFF so they can be validated one by one.
     fun xposedMaster(context: Context) = prefs(context).getBoolean("xposed_master", true)
-    fun setXposedMaster(context: Context, value: Boolean) = prefs(context).edit().putBoolean("xposed_master", value).apply()
+    fun setXposedMaster(context: Context, value: Boolean) { prefs(context).edit().putBoolean("xposed_master", value).apply(); syncBootPolicy(context) }
     fun xposedSafeDiagnostics(context: Context) = prefs(context).getBoolean("xposed_safe_diagnostics", true)
     fun setXposedSafeDiagnostics(context: Context, value: Boolean) = prefs(context).edit().putBoolean("xposed_safe_diagnostics", value).apply()
     fun xposedImmediateRelock(context: Context) = prefs(context).getBoolean("xposed_immediate_relock", false)
@@ -210,9 +229,9 @@ object Prefs {
     fun setXposedAutomaticFallback(context: Context, value: Boolean) = prefs(context).edit().putBoolean("xposed_automatic_fallback", value).apply()
 
     fun enabled(context: Context) = prefs(context).getBoolean("enabled", false)
-    fun setEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean("enabled", value).apply()
+    fun setEnabled(context: Context, value: Boolean) { prefs(context).edit().putBoolean("enabled", value).apply(); syncBootPolicy(context) }
     fun rootMode(context: Context) = prefs(context).getBoolean("root_mode", false)
-    fun setRootMode(context: Context, value: Boolean) = prefs(context).edit().putBoolean("root_mode", value).apply()
+    fun setRootMode(context: Context, value: Boolean) { prefs(context).edit().putBoolean("root_mode", value).apply(); syncBootPolicy(context) }
     fun kiosk(context: Context) = prefs(context).getBoolean("root_kiosk", false)
     fun setKiosk(context: Context, value: Boolean) = prefs(context).edit().putBoolean("root_kiosk", value).apply()
     fun adbRecovery(context: Context) = prefs(context).getBoolean("adb_recovery", false)

@@ -96,7 +96,7 @@ class D2SecurityTest {
                 scenario.onActivity { assertFalse(it.isFinishing) }
                 var decor: View? = null
                 scenario.onActivity { decor = it.window.decorView }
-                onView(withText("PIN")).inRoot(withDecorView(sameInstance(decor))).perform(click())
+                InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
                 onView(withId(app.d2lock.R.id.d2_pin_input)).inRoot(isDialog()).perform(typeText("246810"), closeSoftKeyboard())
                 onView(withText("Unlock")).inRoot(isDialog()).perform(click())
                 val deadline = SystemClock.elapsedRealtime() + 15000

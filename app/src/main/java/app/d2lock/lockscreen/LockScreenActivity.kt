@@ -80,7 +80,7 @@ class LockScreenActivity : Activity() {
     private val idleSleep = Runnable {
         if (!preview && !unlocking && !isFinishing && !isDestroyed && hasWindowFocus() &&
             getSystemService(PowerManager::class.java).isInteractive && Prefs.rootMode(this)) {
-            Thread { runCatching { Runtime.getRuntime().exec(arrayOf("su", "-c", "input keyevent 26")).waitFor() } }.start()
+            Thread { runCatching { app.d2lock.root.ShellRunner.run(listOf("su", "-c", "input keyevent 223"), 3).exitCode } }.start()
         }
     }
     private fun resetIdleSleep() {
@@ -123,7 +123,7 @@ class LockScreenActivity : Activity() {
         if (Prefs.rootMode(this)) {
             Thread {
                 val ok = runCatching {
-                    Runtime.getRuntime().exec(arrayOf("su", "-c", "input keyevent 26")).waitFor() == 0
+                    app.d2lock.root.ShellRunner.run(listOf("su", "-c", "input keyevent 223"), 3).exitCode == 0
                 }.getOrDefault(false)
                 if (ok) {
                     Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_ROOT")
@@ -139,7 +139,7 @@ class LockScreenActivity : Activity() {
     }
 
     private fun sleepViaShizukuOrDeviceAdmin() {
-        val shizukuReady = runCatching {
+        val shizukuReady = Prefs.shizukuEnabled(this) && runCatching {
             Shizuku.pingBinder() && Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
         }.getOrDefault(false)
         if (shizukuReady) {
@@ -153,8 +153,8 @@ class LockScreenActivity : Activity() {
                         Array<String>::class.java,
                         String::class.java
                     )
-                    val process = method.invoke(null, arrayOf("sh", "-c", "input keyevent 26"), null, null) as Process
-                    process.waitFor() == 0
+                    val process = method.invoke(null, arrayOf("sh", "-c", "input keyevent 223"), null, null) as Process
+                    process.waitFor(3, java.util.concurrent.TimeUnit.SECONDS).also { if (!it) process.destroyForcibly() } && process.exitValue() == 0
                 }.getOrDefault(false)
                 if (ok) {
                     Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_SHIZUKU")
@@ -456,9 +456,15 @@ class LockScreenActivity : Activity() {
                 // Probe root once, after first frame. The old path called
                 // RootManager.isAvailable() twice synchronously in onResume.
                 if (!preview && !unlocking && !biometricRunning) {
-                    val rootAvailable = app.d2lock.root.RootManager.isAvailable()
-                    if (rootAvailable) startGuardianFingerprint()
-                    else fingerprintGlass?.visibility = View.GONE
+                    Thread {
+                        val rootAvailable = app.d2lock.root.RootManager.probe()
+                        runOnUiThread {
+                            if (!isDestroyed && !isFinishing && hasWindowFocus() && !unlocking) {
+                                if (rootAvailable) startGuardianFingerprint()
+                                else fingerprintGlass?.visibility = View.GONE
+                            }
+                        }
+                    }.start()
                 }
             }
         }
@@ -479,6 +485,14 @@ class LockScreenActivity : Activity() {
 
     override fun onNewIntent(newIntent: Intent) {
         super.onNewIntent(newIntent)
+        // A real lock may upgrade a preview; no incoming request may downgrade a lock.
+        if (preview && !newIntent.getBooleanExtra("preview", false)) {
+            intent = newIntent
+            preview = false
+            recreate()
+            return
+        }
+        if (!preview) newIntent.putExtra("preview", false)
         intent = newIntent
         if (unlocking || GuardianWatchdog.isTrustedAuthenticationActive()) {
             Log.i("SamsungLockD2", "GUARDIAN_NEW_INTENT_DEFERRED_AUTH")
@@ -571,14 +585,14 @@ class LockScreenActivity : Activity() {
         if (NotificationStore.onChanged != null) NotificationStore.onChanged = null
         app.d2lock.notifications.CallNotificationStore.onChanged = null
         NotificationStore.onPosted = null
-        // A watchdog/shell reassert can recreate this Activity while Samsung's
-        // biometric surface still owns authentication. Do not cancel that session
-        // merely because the Activity instance is being replaced.
-        if (isChangingConfigurations || fingerprintSessionActive) {
-            Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_PRESERVE_ON_DESTROY active=$fingerprintSessionActive changingConfig=$isChangingConfigurations")
-        } else {
-            cancelGuardianFingerprint("activity_destroyed")
-        }
+        // Prompt callbacks belong to this Activity. Tear down its ownership before a replacement starts.
+        cancelGuardianFingerprint("activity_destroyed")
+        clearFingerprintSession("activity_destroyed")
+        pinDialog?.dismiss()
+        pinDialog = null
+        GuardianWatchdog.endTrustedAuthentication("activity_destroyed")
+        handler.removeCallbacksAndMessages(null)
+
         KioskD2Guardian.stop(this)
         super.onDestroy()
     }
@@ -880,7 +894,7 @@ class LockScreenActivity : Activity() {
 
         // Guardian fingerprint glass: this is D2's visual layer. The secure
         // authentication itself remains Android/Samsung BIOMETRIC_STRONG.
-        if (!preview && app.d2lock.root.RootManager.isAvailable()) {
+        if (!preview) {
             fingerprintGlass = buildFingerprintGlass().also { glass ->
                 frame.addView(glass, FrameLayout.LayoutParams(dp(228), dp(58), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
                     // Samsung test device reports FOD center at y=2410 on a 3120px panel.
@@ -1407,7 +1421,10 @@ class LockScreenActivity : Activity() {
         prompt.authenticate(cancel, mainExecutor, object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 super.onAuthenticationSucceeded(result)
-                if (!biometricRunning || unlocking || isFinishing || isDestroyed) return
+                if (!biometricRunning || unlocking || isFinishing || isDestroyed) {
+                    clearFingerprintSession("dropped_success")
+                    return
+                }
                 biometricRunning = false
                 biometricCancel = null
                 clearFingerprintSession("success")
@@ -1437,6 +1454,7 @@ class LockScreenActivity : Activity() {
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 super.onAuthenticationError(errorCode, errString)
+                if (!ownsBiometricSession) return
                 biometricRunning = false
                 biometricCancel = null
                 clearFingerprintSession("error_$errorCode")

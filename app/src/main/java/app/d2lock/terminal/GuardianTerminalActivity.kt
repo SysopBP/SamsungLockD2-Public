@@ -3,8 +3,10 @@ import android.app.Activity
 import android.os.Bundle
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import app.d2lock.security.PinUi
+import app.d2lock.security.PinStore
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import android.view.Gravity
 import android.widget.*
 import app.d2lock.Appearance
@@ -15,6 +17,11 @@ import rikka.shizuku.Shizuku
 
 class GuardianTerminalActivity:Activity(){
  enum class Backend{ROOT,SHIZUKU,SYSTEM_SERVER,ZYGOTE}
+ private var authorized = false
+ private var generation = 0
+ private var pinDialog: android.app.AlertDialog? = null
+ private val worker = Executors.newSingleThreadExecutor()
+ private var commandTask: Future<*>? = null
  var backend=Backend.ROOT
  lateinit var out:TextView; lateinit var input:EditText; lateinit var state:TextView
  val logs=mutableMapOf<Backend,MutableList<String>>()
@@ -24,7 +31,17 @@ class GuardianTerminalActivity:Activity(){
   setColor(Color.argb(alpha.coerceIn(0,255),5,6,8))
   setStroke(dp(1),Color.argb(72,255,255,255))
  }
- override fun onCreate(b:Bundle?){super.onCreate(b);Appearance.apply(this);window.statusBarColor=Color.BLACK;window.navigationBarColor=Color.BLACK;setContentView(ui());refresh();banner()}
+ override fun onCreate(b:Bundle?){super.onCreate(b);Appearance.apply(this);window.statusBarColor=Color.BLACK;window.navigationBarColor=Color.BLACK;PinUi.protect(this);RootManager.refreshAsync()}
+ override fun onResume(){super.onResume();if(!authorized && pinDialog?.isShowing!=true){
+  if(!PinStore(this).configured()){Toast.makeText(this,"Configure a D2 PIN before using the terminal",Toast.LENGTH_LONG).show();finish();return}
+  pinDialog=PinUi.show(this,success={authorized=true;setContentView(ui());refresh();banner()},cancel={finish()})
+ }}
+ override fun onStop(){authorized=false;generation++;commandTask?.cancel(true);pinDialog?.dismiss();pinDialog=null
+  if(::input.isInitialized)input.text.clear()
+  logs.clear();setContentView(TextView(this).apply{text="Terminal locked";setTextColor(Color.WHITE)})
+  super.onStop()
+ }
+ override fun onDestroy(){commandTask?.cancel(true);worker.shutdownNow();super.onDestroy()}
  fun ui()=ScrollView(this).apply{setBackgroundColor(Color.rgb(3,4,6));addView(LinearLayout(this@GuardianTerminalActivity).apply{
   orientation=LinearLayout.VERTICAL;setPadding(dp(16),dp(18),dp(16),dp(24))
   addView(TextView(this@GuardianTerminalActivity).apply{text="GUARDIAN TERMINAL";textSize=11f;letterSpacing=.12f;setTextColor(Appearance.accent(this@GuardianTerminalActivity))})
@@ -37,10 +54,36 @@ class GuardianTerminalActivity:Activity(){
    addView(TextView(this@GuardianTerminalActivity).apply{text="RUN";gravity=Gravity.CENTER;textSize=12f;setTextColor(Appearance.text(this@GuardianTerminalActivity));background=blackGlass(20f,235);setPadding(dp(14),dp(12),dp(14),dp(12));setOnClickListener{run()}})
   })
  })}
- fun refresh(){val r=RootManager.isAvailable();val sh=runCatching{Shizuku.pingBinder()&&Shizuku.checkSelfPermission()==android.content.pm.PackageManager.PERMISSION_GRANTED}.getOrDefault(false);val sy=KeyguardSignalReceiver.systemHealth(this).status=="CONNECTED";state.text="ROOT ${if(r)"✓ ACTIVE" else "○ WAITING"}   ·   SHIZUKU ${if(sh)"✓ ACTIVE" else "○ WAITING"}\nSYSTEM SERVER ${if(sy)"✓ ACTIVE" else "○ WAITING"}   ·   ZYGOTE ${if(sy)"✓ BRIDGE READY" else "○ WAITING"}"}
- fun banner(){out.text=(logs[backend]?:mutableListOf()).joinToString("\n");add("— ${backend.name.replace('_',' ')} SESSION —");add(when(backend){Backend.ROOT->"KernelSU root shell · stdout/stderr + exit code";Backend.SHIZUKU->"Independent Shizuku shell · no root fallback";Backend.SYSTEM_SERVER->"Controlled LSPosed system_server diagnostics · no root fallback";Backend.ZYGOTE->"Controlled Zygote/LSPosed diagnostics console"})}
- fun add(v:String){logs.getOrPut(backend){mutableListOf()}.add(v);out.append(if(out.text.isEmpty())v else "\n$v")}
- fun run(){val cmd=input.text.toString().trim();if(cmd.isEmpty())return;input.text.clear();if(cmd=="clear"){logs[backend]?.clear();out.text="";banner();return};add("\nD2[${backend.name.lowercase()}]> $cmd");Thread{val x=when(backend){Backend.ROOT->RootManager.exec(cmd,15);Backend.SHIZUKU->shizukuExec(cmd);Backend.SYSTEM_SERVER->console(cmd,true);Backend.ZYGOTE->zygote(cmd)};runOnUiThread{add(x);refresh()}}.start()}
+ fun refresh(){
+  if(!authorized)return
+  val r=RootManager.isAvailable()
+  val sh=runCatching{Shizuku.pingBinder()&&Shizuku.checkSelfPermission()==android.content.pm.PackageManager.PERMISSION_GRANTED}.getOrDefault(false)
+  val h=KeyguardSignalReceiver.systemHealth(this)
+  state.text="ROOT ${if(r)"AVAILABLE" else "NOT VERIFIED"} · SHIZUKU ${if(sh)"BINDER AVAILABLE" else "WAITING"}\nFramework event: ${h.event?:"none observed"} · Zygote: no command connection"
+ }
+ fun banner(){
+  out.text=(logs[backend]?:mutableListOf()).joinToString("\n")
+  add("— ${backend.name.replace('_',' ')} SESSION —")
+  add(when(backend){Backend.ROOT->"Root shell · bounded output and 15-second timeout";Backend.SHIZUKU->"Binder diagnostics only · command execution not implemented";Backend.SYSTEM_SERVER->"Recorded framework events · no command connection";Backend.ZYGOTE->"Local process diagnostics · no Zygote command connection"})
+ }
+ fun add(v:String,target:Backend=backend){
+  val history=logs.getOrPut(target){mutableListOf()}
+  history.add(v.takeLast(65536))
+  while(history.size>100 || history.sumOf{it.length}>65536)history.removeAt(0)
+  if(authorized && target==backend)out.text=history.joinToString("\n")
+ }
+ fun run(){
+  if(!authorized || commandTask?.isDone==false)return
+  val cmd=input.text.toString().trim();if(cmd.isEmpty())return
+  val selected=backend;val session=generation
+  input.text.clear()
+  if(cmd=="clear"){logs[selected]?.clear();out.text="";banner();return}
+  add("\nD2[${selected.name.lowercase()}]> $cmd",selected)
+  commandTask=worker.submit{
+   val x=runCatching{when(selected){Backend.ROOT->RootManager.exec(cmd,15);Backend.SHIZUKU->console(cmd,false);Backend.SYSTEM_SERVER->console(cmd,true);Backend.ZYGOTE->zygote(cmd)}}.getOrElse{it.message?:"Command failed"}
+   runOnUiThread{if(authorized && generation==session && !isDestroyed && !isFinishing){add(x,selected);refresh()}}
+  }
+ }
  fun shizukuExec(cmd:String):String{
   if(!runCatching{Shizuku.pingBinder()}.getOrDefault(false))return "Shizuku is not connected."
   if(runCatching{Shizuku.checkSelfPermission()}.getOrDefault(android.content.pm.PackageManager.PERMISSION_DENIED)!=android.content.pm.PackageManager.PERMISSION_GRANTED)return "Shizuku permission is not granted."

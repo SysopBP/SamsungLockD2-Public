@@ -11,7 +11,8 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 
 /** Independent app credential. Never reads or writes Android lock settings. */
-class PinStore(context: Context, private val now: () -> Long = System::currentTimeMillis) {
+class PinStore(context: Context, now: (() -> Long)? = null) {
+    private val throttle = AttemptThrottle(context, now)
     private val file = AtomicFile(File(context.noBackupFilesDir, "d2-pin.json"))
     companion object { private val guard = Any(); private const val ITERATIONS = 210_000 }
     fun configured(): Boolean = synchronized(guard) { file.baseFile.exists() || File(file.baseFile.path + ".bak").exists() }
@@ -44,11 +45,11 @@ class PinStore(context: Context, private val now: () -> Long = System::currentTi
         val valid = pin.size == 6 && pin.all { it in '0'..'9' } && MessageDigest.isEqual(
             Base64.decode(state.getString("hash"), Base64.NO_WRAP),
             hash(pin, Base64.decode(state.getString("salt"), Base64.NO_WRAP)))
-        if (valid) { state.put("failures", 0).put("until", 0L) }
+        if (valid) { state.put("failures", 0); throttle.reset(state) }
         else {
             val failures = (state.optInt("failures") + 1).coerceAtMost(100)
             state.put("failures", failures)
-            if (failures >= 5) state.put("until", now() + (30_000L shl ((failures - 5) / 5).coerceAtMost(5)))
+            if (failures >= 5) throttle.record(state, 30_000L shl ((failures - 5) / 5).coerceAtMost(5))
         }
         write(state)
         valid
@@ -56,6 +57,6 @@ class PinStore(context: Context, private val now: () -> Long = System::currentTi
     fun change(oldPin: CharArray, newPin: CharArray): Boolean = synchronized(guard) {
         if (!verify(oldPin)) false else { save(newPin); true }
     }
-    private fun remaining(state: JSONObject) = (state.optLong("until") - now()).coerceAtLeast(0L)
+    private fun remaining(state: JSONObject) = throttle.remaining(state)
     fun remainingMillis(): Long = synchronized(guard) { remaining(read()) }
 }

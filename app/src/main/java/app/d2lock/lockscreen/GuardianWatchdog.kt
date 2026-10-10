@@ -13,7 +13,6 @@ object GuardianWatchdog {
 
     private const val TAG = "SamsungLockD2"
     private const val REASSERT_COOLDOWN_MS = 2_500L
-    private const val TRUSTED_AUTH_TIMEOUT_MS = 15_000L
 
     @Volatile private var state = State.PROTECTED
     @Volatile private var lastReassertAt = 0L
@@ -31,7 +30,7 @@ object GuardianWatchdog {
             Log.i(TAG, "GUARDIAN_REASSERT_DEFERRED_CALL reason=$reason")
             return false
         }
-        if (trustedAuthentication) {
+        if (isTrustedAuthenticationActive()) {
             Log.i(TAG, "GUARDIAN_REASSERT_DEFERRED_AUTH reason=$reason")
             return false
         }
@@ -56,20 +55,16 @@ object GuardianWatchdog {
         // the privileged shell launch as the authoritative path and do not fall
         // through to a launch Android has already told us it will reject.
         if (Prefs.rootMode(context)) {
-            val launched = RootManager.launchCompanion()
-            KeyguardSignalReceiver.recordGuardianStage(
-                context,
-                if (launched) "D2_LAUNCH_ACCEPTED" else "D2_LAUNCH_REJECTED",
-                "root:$reason"
-            )
-            KeyguardSignalReceiver.recordDecision(
-                context,
-                if (launched) "LAUNCH" else "DEFERRED",
-                "root_launch:$reason"
-            )
-            Log.i(TAG, "GUARDIAN_REASSERT_REQUESTED path=root accepted=$launched reason=$reason callActive=$callActive")
-            if (!launched) transition(State.TEMPORARILY_RELEASED, "root_launch_failed")
-            return launched
+            val appContext = context.applicationContext
+            Thread {
+                if (!Prefs.enabled(appContext) || !Prefs.rootMode(appContext) || isTrustedAuthenticationActive() ||
+                    app.d2lock.notifications.CallNotificationStore.isCallActive(appContext)) return@Thread
+                val launched = RootManager.launchCompanion()
+                KeyguardSignalReceiver.recordGuardianStage(appContext,
+                    if (launched) "D2_LAUNCH_ACCEPTED" else "D2_LAUNCH_REJECTED", "root:$reason")
+                if (!launched) transition(State.TEMPORARILY_RELEASED, "root_launch_failed")
+            }.start()
+            return true
         }
 
         // Non-root remains a best-effort compatibility path. A successful
@@ -104,20 +99,7 @@ object GuardianWatchdog {
         Log.i(TAG, "GUARDIAN_AUTH_END reason=$reason")
     }
 
-    fun isTrustedAuthenticationActive(): Boolean {
-        if (!trustedAuthentication) return false
-        val elapsed = SystemClock.elapsedRealtime() - trustedAuthenticationStartedAt
-        if (elapsed <= TRUSTED_AUTH_TIMEOUT_MS) return true
-        synchronized(this) {
-            if (trustedAuthentication && SystemClock.elapsedRealtime() - trustedAuthenticationStartedAt > TRUSTED_AUTH_TIMEOUT_MS) {
-                trustedAuthentication = false
-                trustedAuthenticationStartedAt = 0L
-                transition(State.PROTECTED, "auth_timeout")
-                Log.w(TAG, "GUARDIAN_AUTH_TIMEOUT")
-            }
-        }
-        return trustedAuthentication
-    }
+    fun isTrustedAuthenticationActive(): Boolean = trustedAuthentication
 
     @Synchronized fun markProtected(reason: String) = transition(State.PROTECTED, reason)
     @Synchronized fun markTrustedUi(reason: String) = transition(State.TRUSTED_UI, reason)
