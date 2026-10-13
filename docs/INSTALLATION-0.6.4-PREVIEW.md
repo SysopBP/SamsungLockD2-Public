@@ -82,7 +82,7 @@ Missing or unsupported shutdown hooks may leave stock Samsung power actions ungu
 - **Disabled framework/Galaxy Island controls:** these are marked in development and are intentionally unavailable.
 - **Forgotten D2 credential:** there is no master PIN. Clearing app data resets D2 and its settings; do not do this expecting to retain configuration.
 
-For diagnostics, use /storage/emulated/0/Download by default. Relevant markers include DMC_POWER_HOOK_INSTALLED, D2_POWER_MENU_HOOK_INSTALLED, DMC_POWER_VERIFIED and DMC_POWER_CANCELLED. Technical DMC log names are retained despite the D2 SRP UI name.
+For diagnostics, use /storage/emulated/0/Download by default. Check hook installation, verification and cancellation results in the Guardian logs. 
 
 ## Credits
 
