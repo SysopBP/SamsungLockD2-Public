@@ -94,8 +94,8 @@ class LockScreenActivity : Activity() {
     // Keep Samsung authoritative until credential storage has unlocked this boot.
     private fun updateKeyguardOcclusion() {
         val unlocked = getSystemService(android.os.UserManager::class.java)?.isUserUnlocked == true
-        val cover = !preview && !unlocking && unlocked &&
-            Prefs.enabled(this) && Prefs.kiosk(this)
+        val cover = samsungAuthenticationPending || (!preview && !unlocking && unlocked &&
+            Prefs.enabled(this) && Prefs.kiosk(this))
         setShowWhenLocked(cover)
     }
 
@@ -1693,21 +1693,11 @@ class LockScreenActivity : Activity() {
             } else if (android.os.SystemClock.elapsedRealtime() < deadline) {
                 handler.postDelayed({ confirmDismissal() }, 100L)
             } else {
-                keyguardHandoffPending = false
-                unlocking = false
-                GuardianWatchdog.endTrustedAuthentication("keyguard_handoff_failed")
-                updateKeyguardOcclusion()
-                if (Prefs.quickSettingsGuard(this)) handler.post(quickSettingsGuard)
+                // Keep the verified D2 result and watchdog grace while handing
+                // directly to Samsung. Resetting unlocking here can reopen D2
+                // authentication before Samsung's credential surface is ready.
                 Log.w("SamsungLockD2", "D2_KEYGUARD_HANDOFF_TIMEOUT stock_locked=true")
-                app.d2lock.GuardianDialogs.showInfo(
-                    this, "Samsung unlock required",
-                    "Samsung still requires authentication, or the SystemUI unlock hook is unavailable. D2 remains locked. Unlock Samsung to finish this already verified D2 unlock.",
-                    primary = "Unlock Samsung",
-                    onPrimary = {
-                        beginSamsungAuthentication(afterUnlock)
-                    },
-                    secondary = "Stay in D2"
-                )
+                beginSamsungAuthentication(afterUnlock)
             }
         }
         confirmDismissal()
@@ -1728,7 +1718,10 @@ class LockScreenActivity : Activity() {
         // Samsung's credential surface must be allowed outside our lock task.
         RootKiosk.unlock(this) {
             if (isDestroyed || isFinishing) return@unlock
-            setShowWhenLocked(false)
+            // requestDismissKeyguard requires a visible Activity above keyguard.
+            // Releasing lock task lets Samsung show its credential UI; removing
+            // showWhenLocked first makes the request ineligible on some firmware.
+            setShowWhenLocked(true)
             val keyguard = getSystemService(android.app.KeyguardManager::class.java)
             fun restoreD2(reason: String) {
                 if (isDestroyed || isFinishing || !samsungAuthenticationPending) return
