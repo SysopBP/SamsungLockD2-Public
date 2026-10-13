@@ -63,7 +63,7 @@ class SettingsPagesTest {
                 onView(withContentDescription(containsString("CORE search"))).perform(click())
                 onView(withHint("Search D2 settings")).perform(typeText("Change PIN"),closeSoftKeyboard())
                 onView(withText(containsString("Change PIN\nSECURITY CENTER"))).perform(click())
-                onView(withText("‹ Back")).perform(click())
+                androidx.test.espresso.Espresso.pressBack()
                 onView(withText(startsWith("Security center  ›"))).check(matches(isDisplayed()))
                 assertTrue(PinStore(context).verify("246810".toCharArray()))
             }
