@@ -352,7 +352,7 @@ class MainActivity : Activity() {
         val detail = label(13f, true)
         body.addView(detail)
         body.addView(label(12f, true).apply {
-            text = "Runs automatically inside System Server through the D2 Xposed module after boot. Enable D2 for System Framework in LSPosed. Root supports setup; vault access uses System Server. Android credentials and D2 PIN/Pattern are separate."
+            text = "DMC status requires a successful vault read-back. Unknown means the current state could not be verified. Download Mode eligibility is calculated from the DMC flags; the AT-command flag does not verify an AT-command response. Android credentials and D2 PIN/Pattern are separate."
             setPadding(0, dp(12), 0, dp(12))
         })
         body.addView(label(15f).apply {
@@ -384,8 +384,7 @@ class MainActivity : Activity() {
                 rows.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
             }
             fun flag(value: Int?) = when (value) { 0 -> "Disabled"; 1 -> "Enabled"; else -> "Unknown" }
-            row("⚡", "Root access (setup)", when (status.root) { true -> "Available"; false -> "Unavailable"; null -> "Unknown" }, "Available", status.root == true)
-            row("🧩", "System Server recovery", "Unknown", "Verified vault read-back", false)
+            row("🧩", "DMC vault read-back", if (status.verified) "Verified" else "Unknown", "Verified", status.verified)
             row("🔒", "Screen lock (DMC)", flag(status.screenLock), "Disabled", status.verified && status.screenLock == 0)
             row("🛠", "Maintenance Mode (DMC)", flag(status.maintenance), "Disabled", status.verified && status.maintenance == 0)
             row("⌨", "Download Mode AT command", flag(status.atCommand), "Enabled", status.verified && status.atCommand == 1)
