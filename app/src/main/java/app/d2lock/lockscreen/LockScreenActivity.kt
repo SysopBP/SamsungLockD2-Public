@@ -483,7 +483,7 @@ class LockScreenActivity : Activity() {
                         val rootAvailable = app.d2lock.root.RootManager.probe()
                         runOnUiThread {
                             if (!isDestroyed && !isFinishing && hasWindowFocus() && !unlocking) {
-                                if (rootAvailable) startGuardianFingerprint()
+                                if (rootAvailable || Prefs.unlockMethod(this) == "fingerprint") startGuardianFingerprint()
                                 else fingerprintGlass?.visibility = View.GONE
                             }
                         }

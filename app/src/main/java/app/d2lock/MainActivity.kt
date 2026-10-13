@@ -749,7 +749,7 @@ class MainActivity : Activity() {
                     })
                 })
                 addView(TextView(this@MainActivity).apply {
-                    val method=if(Prefs.unlockMethod(this@MainActivity)=="pattern") "Pattern" else "PIN"
+                    val method=when(Prefs.unlockMethod(this@MainActivity)) { "pattern" -> "Pattern"; "fingerprint" -> "Fingerprint"; else -> "PIN" }
                     text="$method unlock  ·  "+if(passkeys.isEmpty()) "No passkeys" else "${passkeys.size} passkey${if(passkeys.size==1) "" else "s"}"
                     textSize=12f
                     setTextColor(Appearance.secondary(this@MainActivity))
@@ -764,12 +764,29 @@ class MainActivity : Activity() {
                     background=Appearance.glass(this@MainActivity,22f,26,true)
                     setPadding(dp(11),dp(7),dp(11),dp(7))
                     setOnClickListener {
-                        val methods=arrayOf("PIN","Pattern")
-                        val current=if(Prefs.unlockMethod(this@MainActivity)=="pattern") 1 else 0
+                        val methods=arrayOf("PIN","Pattern","Login with fingerprint")
+                        val current=when(Prefs.unlockMethod(this@MainActivity)) { "pattern" -> 1; "fingerprint" -> 2; else -> 0 }
                         val dialog=AlertDialog.Builder(this@MainActivity)
                             .setTitle("D2 unlock method")
                             .setSingleChoiceItems(methods,current) { d,which ->
-                                if(which==0) {
+                                if(which==2) {
+                                    d.dismiss()
+                                    val biometricStatus=getSystemService(BiometricManager::class.java)?.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                                    if(biometricStatus==BiometricManager.BIOMETRIC_SUCCESS) {
+                                        Prefs.setUnlockMethod(this@MainActivity,"fingerprint")
+                                        setContentView(buildSettings())
+                                        AlertDialog.Builder(this@MainActivity)
+                                            .setTitle("Login with fingerprint")
+                                            .setMessage("In Samsung Settings → Fingerprints, turn off Fingerprint unlock, but keep your fingerprint enrolled. D2 will use the enrolled fingerprint through the secure biometric prompt. If Samsung shows its PIN screen first, complete it before using D2 fingerprint login. Your D2 PIN remains available if biometrics are unavailable or you cancel.")
+                                            .setPositiveButton("OK",null).show()
+                                    } else {
+                                        AlertDialog.Builder(this@MainActivity)
+                                            .setTitle("Fingerprint unavailable")
+                                            .setMessage("Enroll a fingerprint in Samsung Settings and complete any required Samsung PIN unlock, then try again. Your existing D2 unlock method has been kept.")
+                                            .setPositiveButton("Open settings") { _,_ -> startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) }
+                                            .setNegativeButton("Cancel",null).show()
+                                    }
+                                } else if(which==0) {
                                     Prefs.setUnlockMethod(this@MainActivity,"pin")
                                     d.dismiss()
                                     setContentView(buildSettings())
