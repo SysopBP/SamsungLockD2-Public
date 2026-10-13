@@ -45,6 +45,13 @@ class GuardianXposedBridge : XposedModule() {
     override fun onPackageReady(param: io.github.libxposed.api.XposedModuleInterface.PackageReadyParam) {
         if (param.packageName != "com.android.systemui" || !param.isFirstPackage) return
         runCatching {
+            // Resolve only D2's two synthetic IDs; all Samsung resources keep their normal path.
+            val drawable = android.content.res.Resources::class.java.getDeclaredMethod(
+                "getDrawable", Int::class.javaPrimitiveType, android.content.res.Resources.Theme::class.java)
+            hook(drawable).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
+                val resources = chain.thisObject as android.content.res.Resources
+                D2PowerMenu.icon(chain.args[0] as Int, resources.displayMetrics.density) ?: chain.proceed()
+            }
             val owner = param.classLoader.loadClass("com.samsung.android.globalactions.presentation.SamsungGlobalActionsPresenter")
             val create = owner.getDeclaredMethod("createActions").apply { isAccessible = true }
             hook(create).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->

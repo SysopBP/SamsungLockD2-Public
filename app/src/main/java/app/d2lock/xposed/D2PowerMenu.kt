@@ -6,6 +6,12 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PixelFormat
+import android.graphics.ColorFilter
+import android.graphics.drawable.Drawable
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
@@ -19,6 +25,53 @@ import java.util.UUID
 /** Samsung hosts the actions and confirmations; D2 adds guarded soft restart and live status. */
 internal object D2PowerMenu {
     private const val TAG = "D2PowerMenu"
+    const val SOFT_RESTART_ICON = 0x7ed20001
+    const val SRP_STATUS_ICON = 0x7ed20002
+
+    /** Draw directly in SystemUI: module resource IDs belong to a different APK. */
+    fun icon(id: Int, density: Float): Drawable? {
+        if (id != SOFT_RESTART_ICON && id != SRP_STATUS_ICON) return null
+        return object : Drawable() {
+            private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                style = Paint.Style.STROKE
+                strokeWidth = 1.8f
+                strokeCap = Paint.Cap.ROUND
+                strokeJoin = Paint.Join.ROUND
+            }
+            override fun draw(canvas: Canvas) {
+                val save = canvas.save()
+                canvas.translate(bounds.left.toFloat(), bounds.top.toFloat())
+                canvas.scale(bounds.width() / 24f, bounds.height() / 24f)
+                if (id == SOFT_RESTART_ICON) {
+                    canvas.drawArc(4f, 4f, 20f, 20f, 45f, 285f, false, paint)
+                    canvas.drawPath(Path().apply {
+                        moveTo(16f, 3f); lineTo(20f, 7f); lineTo(20f, 2f)
+                    }, paint)
+                    canvas.drawPath(Path().apply {
+                        moveTo(13f, 8f); lineTo(10f, 12f); lineTo(14f, 12f); lineTo(11f, 16f)
+                    }, paint)
+                } else {
+                    canvas.drawPath(Path().apply {
+                        moveTo(12f, 2.5f); lineTo(20f, 5.5f); lineTo(20f, 11f)
+                        cubicTo(20f, 16f, 16f, 19.5f, 12f, 21.5f)
+                        cubicTo(8f, 19.5f, 4f, 16f, 4f, 11f)
+                        lineTo(4f, 5.5f); close()
+                    }, paint)
+                    canvas.drawPath(Path().apply {
+                        moveTo(8f, 11.5f); lineTo(11f, 14.5f); lineTo(16f, 9f)
+                    }, paint)
+                }
+                canvas.restoreToCount(save)
+            }
+            override fun getIntrinsicWidth() = (32f * density).toInt()
+            override fun getIntrinsicHeight() = (32f * density).toInt()
+            override fun setAlpha(alpha: Int) { paint.alpha = alpha; invalidateSelf() }
+            override fun setColorFilter(colorFilter: ColorFilter?) { paint.colorFilter = colorFilter; invalidateSelf() }
+            @Deprecated("Deprecated in Java")
+            override fun getOpacity() = PixelFormat.TRANSLUCENT
+        }
+    }
     fun context(): Context = Class.forName("android.app.ActivityThread")
         .getDeclaredMethod("currentApplication").invoke(null) as Context
 
@@ -80,7 +133,7 @@ internal object D2PowerMenu {
         val power = stock("power", "D2 power off")
         val restart = stock("restart", "D2 restart")
         // Preserve stock emergency, lockdown, safe-mode and other unrelated actions.
-        val soft = action("d2_soft_restart", "D2 soft restart", android.R.drawable.ic_popup_sync) { proxy ->
+        val soft = action("d2_soft_restart", "D2 soft restart", SOFT_RESTART_ICON) { proxy ->
             if (call(presenter, "isActionConfirming") != true) {
                 call(presenter, "confirmAction", proxy)
             } else {
@@ -91,7 +144,7 @@ internal object D2PowerMenu {
                     BroadcastOptions.makeBasic().setShareIdentityEnabled(true).toBundle())
             }
         }
-        val status = action("d2_dmc_status", "D2 SRP status", android.R.drawable.ic_menu_info_details) {
+        val status = action("d2_dmc_status", "D2 SRP status", SRP_STATUS_ICON) {
             // Samsung's global-actions window sits above KEYGUARD_DIALOG windows.
             // Close it before presenting status, allowing its exit animation to finish.
             call(presenter, "dismissDialog", false)
