@@ -68,6 +68,7 @@ class MainActivity : Activity() {
         PinUi.protect(this)
         Prefs.syncBootPolicy(this)
         RootManager.refreshAsync()
+        app.d2lock.root.DmcRecovery.request(this, "app_open")
         window.statusBarColor = Color.TRANSPARENT
         setContentView(buildLockedBackdrop())
         Shizuku.addBinderReceivedListenerSticky(shizukuBinderReceived)
@@ -77,6 +78,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        app.d2lock.root.DmcRecovery.request(this, "app_resume")
         if (setupSecurityStepPending) {
             setupSecurityStepPending = false
             window.decorView.post { showSetupWizard(2) }
@@ -288,7 +290,7 @@ class MainActivity : Activity() {
             setPadding(dp(16), dp(14), dp(16), dp(18)); background = Appearance.glass(this@MainActivity, 26f, 28, true)
         }
         fun whatsNew() {
-            content.text = "WHAT'S NEW  •  OCTOBER 1, 2026  •  D2 ${versionName ?: "current"}\n\n🔧 HOTFIXES\n• Voicemail / call-state relock: prevents an incoming call transitioning to voicemail from incorrectly locking D2 while retaining normal post-call Guardian relock behavior\n• Double-tap screen-off now works from empty lock-screen space while interactive controls stay protected\n• Notifications and call cards no longer disable double-tap sleep across the entire lock screen; D2 checks the actual touch target\n\n💤 SCREEN-OFF FALLBACKS\n• Root → Shizuku → Device Admin fallback chain\n• Root remains the privileged path; Shizuku is used when available and authorized\n• Device Admin lockNow() is the opt-in non-root fallback and requires Android approval\n\n🧊 GUARDIAN DOCK / FLOATING BAR\n• Dock and CORE/CHECK now hide and restore together\n• Smooth slide/fade behavior with bottom gesture-navigation clearance\n• New Floating Bar scroll behavior modes: Always visible, Hide on scroll (default), and Exit after scrolling\n• Find the new modes in Settings → Shortcuts & Bar → Floating Bar\n\n⚡ BOOT SAFETY\n• These UI and gesture updates remain isolated from the token-integrated early-boot path; the fast-boot architecture is preserved"
+            content.text = "WHAT'S NEW  •  OCTOBER 12, 2026  •  D2 ${versionName ?: "current"}\n\n🛡 DMC POWER-ACTION GUARD\n• Verifies fresh vault read-back before normal restart, power off and supported orderly soft restart\n• Cancels on failure or a 5-second timeout; late checks never trigger a delayed restart\n• Battery/thermal emergencies and direct root/hardware resets remain outside this guard\n\n🧩 AUTOMATIC DMC RECOVERY\n• Runs inside Xposed System Server (UID 1000)\n• Targets: DMC screen-lock and Maintenance Mode flags disabled; Download Mode AT-command flag enabled; derived Download Mode eligibility allowed\n• Validates the vault record and verifies read-back; unknown or failed checks stay unverified\n\n🔄 SECURITY SETUP DETECTION\n• Watches completed PIN/password/pattern changes and fingerprint/face additions or removals\n• Refreshes 2 seconds after setup changes and checks again at 12 seconds for delayed Samsung updates\n• Firmware detection still needs device testing; Android credentials and biometric enrollment stay separate from DMC flags\n\n✅ LIVE FEATURE STATUS\n• Glass status dialog with icons, target checks, System Server identity and last-check time\n\n💤 RECENT HOTFIXES\n• Voicemail/call-state relock fix\n• Double-tap screen-off from empty space, with notification and call controls protected\n• Floating Bar visibility modes and coordinated dock/CORE/CHECK behavior\n\n🙏 DMC DISCOVERY CREDIT\n• @diablOw — originally discovered the DMC behavior behind this recovery feature"
         }
         fun whatsNext() {
             val lock = if (PinStore(this@MainActivity).configured()) "✓" else "○"
@@ -320,6 +322,102 @@ class MainActivity : Activity() {
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(Appearance.secondary(this@MainActivity))
         }
         dialog.show()
+    }
+
+    private fun showDmcStatus() {
+        val dialog = android.app.Dialog(this)
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        val body = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(20), dp(20), dp(16))
+            background = Appearance.glass(this@MainActivity, 30f, 76, true)
+        }
+        fun label(size: Float, secondary: Boolean = false) = TextView(this).apply {
+            textSize = size
+            setTextColor(if (secondary) Appearance.secondary(this@MainActivity) else Appearance.text(this@MainActivity))
+            setLineSpacing(0f, 1.12f)
+        }
+        body.addView(label(12f, true).apply { text = "D2  •  SYSTEM SERVER RECOVERY" })
+        body.addView(label(22f).apply {
+            text = "Feature status"
+            setPadding(0, dp(6), 0, dp(12))
+        })
+        val summary = label(15f)
+        body.addView(summary)
+        val rows = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(8), 0, dp(8))
+        }
+        body.addView(rows)
+        val detail = label(13f, true)
+        body.addView(detail)
+        body.addView(label(12f, true).apply {
+            text = "DMC status requires a successful vault read-back. Unknown means the current state could not be verified. Download Mode eligibility is calculated from the DMC flags; the AT-command flag does not verify an AT-command response. Android credentials and D2 PIN/Pattern are separate."
+            setPadding(0, dp(12), 0, dp(12))
+        })
+        body.addView(label(15f).apply {
+            text = "Close"; gravity = Gravity.CENTER
+            setTextColor(Appearance.accent(this@MainActivity))
+            setPadding(dp(12), dp(14), dp(12), dp(14))
+            background = Appearance.glass(this@MainActivity, 22f, 30, true)
+            setOnClickListener { dialog.dismiss() }
+        }, LinearLayout.LayoutParams(-1, -2))
+        fun render(status: app.d2lock.root.DmcRecovery.Status) {
+            summary.text = if (status.targetsMet) "✅ All four targets verified" else "⚠ Targets not yet verified"
+            rows.removeAllViews()
+            fun row(icon: String, title: String, state: String, target: String, matches: Boolean) {
+                val card = LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(12), dp(12), dp(12), dp(12))
+                    background = Appearance.glass(this@MainActivity, 20f, 28, true)
+                }
+                card.addView(label(21f).apply { text = icon; gravity = Gravity.CENTER }, LinearLayout.LayoutParams(dp(38), -2))
+                val info = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
+                info.addView(label(14f).apply { text = title })
+                info.addView(label(12f, true).apply { text = "$state  •  Target: $target" })
+                card.addView(info, LinearLayout.LayoutParams(0, -2, 1f))
+                card.addView(label(18f).apply {
+                    text = if (matches) "✅" else if (state == "Unknown") "○" else "⚠"
+                    contentDescription = if (matches) "$title target verified" else "$title target not verified"
+                    setPadding(dp(8), 0, 0, 0)
+                })
+                rows.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+            }
+            fun flag(value: Int?) = when (value) { 0 -> "Disabled"; 1 -> "Enabled"; else -> "Unknown" }
+            row("🧩", "DMC vault read-back", if (status.verified) "Verified" else "Unknown", "Verified", status.verified)
+            row("🔒", "Screen lock (DMC)", flag(status.screenLock), "Disabled", status.verified && status.screenLock == 0)
+            row("🛠", "Maintenance Mode (DMC)", flag(status.maintenance), "Disabled", status.verified && status.maintenance == 0)
+            row("⌨", "Download Mode AT command", flag(status.atCommand), "Enabled", status.verified && status.atCommand == 1)
+            row("⬇", "Download Mode eligibility", when (status.downloadAllowed) { true -> "Allowed"; false -> "Blocked"; null -> "Unknown" }, "Allowed", status.verified && status.downloadAllowed == true)
+            detail.text = buildString {
+                append(status.detail)
+                if (status.checkedAt > 0L) append("\nChecked: ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(status.checkedAt))}")
+            }
+        }
+        render(app.d2lock.root.DmcRecovery.status(this))
+        val scroll = ScrollView(this).apply { isFillViewport = false; addView(body) }
+        dialog.setContentView(scroll)
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+        dialog.show()
+        val panelWidth = (resources.displayMetrics.widthPixels - dp(32)).coerceAtLeast(1)
+        scroll.measure(View.MeasureSpec.makeMeasureSpec(panelWidth, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec((resources.displayMetrics.heightPixels * .82f).toInt(), View.MeasureSpec.AT_MOST))
+        dialog.window?.setLayout(panelWidth, scroll.measuredHeight)
+        val updates = android.os.Handler(android.os.Looper.getMainLooper())
+        var displayed = app.d2lock.root.DmcRecovery.status(this)
+        val refresh = object : Runnable {
+            override fun run() {
+                if (isFinishing || isDestroyed || !dialog.isShowing) return
+                val current = app.d2lock.root.DmcRecovery.status(this@MainActivity)
+                if (current != displayed) { render(current); displayed = current }
+                updates.postDelayed(this, 1000L)
+            }
+        }
+        updates.postDelayed(refresh, 1000L)
+        dialog.setOnDismissListener { updates.removeCallbacks(refresh) }
+        app.d2lock.root.DmcRecovery.refresh(this) { status ->
+            if (!isFinishing && !isDestroyed && dialog.isShowing) { render(status); displayed = status }
+        }
     }
 
     private fun runRootAction(action: () -> Pair<Boolean, String>) {
@@ -966,6 +1064,41 @@ class MainActivity : Activity() {
                 dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true)) }
                 dialog.show()
             }
+        }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+        section(root, "AUTOMATIC DMC RECOVERY")
+        root.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            background = Appearance.glass(this@MainActivity, 28f, 36, true)
+            addView(TextView(this@MainActivity).apply {
+                text = "DMC Vault  •  System Server recovery"
+                textSize = 18f
+                setTextColor(Appearance.text(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = "Automatic after boot via D2’s Xposed System Server hook. Enable D2 for System Framework in LSPosed.\nTargets: Screen lock & Maintenance Mode disabled\nDownload Mode AT Command enabled • Download Mode allowed"
+                textSize = 13f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0, dp(8), 0, dp(8))
+            })
+            addView(TextView(this@MainActivity).apply {
+                val current = app.d2lock.root.DmcRecovery.status(this@MainActivity)
+                text = "System Server result: check recovery log\nRoot fallback: ${current.detail}"
+                textSize = 12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = "✓  View feature status"
+                textSize = 15f
+                gravity = Gravity.CENTER
+                setTextColor(Appearance.text(this@MainActivity))
+                setPadding(dp(12), dp(14), dp(12), dp(14))
+                background = Appearance.glass(this@MainActivity, 22f, 30, true)
+                isClickable = true
+                isFocusable = true
+                contentDescription = "View DMC feature status"
+                setOnClickListener { showDmcStatus() }
+            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
         section(root, "SYSTEM INTEGRATION")
         root.getChildAt(root.childCount - 1).tag = "root_shizuku"
