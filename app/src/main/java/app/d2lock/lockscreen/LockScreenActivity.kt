@@ -300,6 +300,37 @@ class LockScreenActivity : Activity() {
     private var fingerprintStatus: TextView? = null
     private var fingerprintPulse: ObjectAnimator? = null
     private var fingerprintDismissed = false
+    private var automaticFingerprintAttempted = false
+    private val automaticFingerprint = Runnable {
+        if (!preview && !unlocking && !biometricRunning && !fingerprintDismissed &&
+            !automaticFingerprintAttempted && !isFinishing && !isDestroyed &&
+            hasWindowFocus() && pinDialog?.isShowing != true &&
+            getSystemService(PowerManager::class.java).isInteractive &&
+            getSystemService(android.os.UserManager::class.java)?.isUserUnlocked == true &&
+            !app.d2lock.notifications.CallNotificationStore.isCallActive(this) &&
+            Prefs.unlockMethod(this) == "fingerprint") {
+            automaticFingerprintAttempted = true
+            startGuardianFingerprint()
+        }
+    }
+    private fun scheduleAutomaticFingerprint() {
+        handler.removeCallbacks(automaticFingerprint)
+        handler.postDelayed(automaticFingerprint, 350L)
+    }
+    private val fingerprintWakeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_SCREEN_OFF -> {
+                    handler.removeCallbacks(automaticFingerprint)
+                    automaticFingerprintAttempted = false
+                    fingerprintDismissed = false
+                    fingerprintRestartPending = false
+                    cancelGuardianFingerprint("screen_off")
+                }
+                Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_UNLOCKED -> scheduleAutomaticFingerprint()
+            }
+        }
+    }
     private var wallpaperActive = false
     private var emptyTapAt = 0L
     private val wallpaperExecutor = Executors.newSingleThreadExecutor()
@@ -403,6 +434,11 @@ class LockScreenActivity : Activity() {
         window.navigationBarColor = Color.TRANSPARENT
         val guardianUi = buildUi()
         setContentView(guardianUi)
+        registerReceiver(fingerprintWakeReceiver, IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_USER_UNLOCKED)
+        })
         if (!preview) {
             KeyguardSignalReceiver.recordGuardianStage(this, "D2_ACTIVITY_CREATED", "lock_surface")
             guardianUi.post {
@@ -448,6 +484,7 @@ class LockScreenActivity : Activity() {
         wallpaperActive = true
         wallpaperAnimations.forEach { it.resume() }
         scheduleDeferredStartup()
+        scheduleAutomaticFingerprint()
         if (!preview && !healthyReported) {
             healthyReported = true
             window.decorView.postDelayed({
@@ -552,7 +589,13 @@ class LockScreenActivity : Activity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) resetIdleSleep() else handler.removeCallbacks(idleSleep)
+        if (hasFocus) {
+            resetIdleSleep()
+            scheduleAutomaticFingerprint()
+        } else {
+            handler.removeCallbacks(idleSleep)
+            handler.removeCallbacks(automaticFingerprint)
+        }
         if (!preview && Prefs.kiosk(this)) {
             Log.i("SamsungLockD2", if (hasFocus) "GUARDIAN_WINDOW_FOCUS_GAINED" else "GUARDIAN_WINDOW_FOCUS_LOST")
             if (hasFocus && RootKiosk.isEnforced()) {
@@ -626,6 +669,7 @@ class LockScreenActivity : Activity() {
     override fun onBackPressed() { if (preview) finish() else authenticate() }
 
     override fun onDestroy() {
+        runCatching { unregisterReceiver(fingerprintWakeReceiver) }
         handler.removeCallbacks(keyguardPresentationPulse)
         reportKeyguardPresentation(false)
         handler.removeCallbacks(idleSleep)
@@ -963,7 +1007,11 @@ class LockScreenActivity : Activity() {
             elevation = dp(16).toFloat()
             addView(shortcutButton("left"), LinearLayout.LayoutParams(dp(58), dp(58)))
             addView(TextView(this@LockScreenActivity).apply {
-                text = "◆  " + if (Prefs.unlockMethod(this@LockScreenActivity) == "pattern") "PATTERN" else "PIN"
+                text = "◆  " + when (Prefs.unlockMethod(this@LockScreenActivity)) {
+                    "fingerprint" -> "FINGERPRINT"
+                    "pattern" -> "PATTERN"
+                    else -> "PIN"
+                }
                 textSize = 14f
                 gravity = Gravity.CENTER
                 setTextColor(Color.WHITE)
@@ -1414,6 +1462,7 @@ class LockScreenActivity : Activity() {
             ownsBiometricSession = true
         }
 
+        automaticFingerprintAttempted = true
         val manager = getSystemService(BiometricManager::class.java)
         val status = manager?.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
             ?: BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE
