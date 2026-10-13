@@ -87,6 +87,15 @@ class LockScreenActivity : Activity() {
             if (!isFinishing && !isDestroyed) handler.postDelayed(this, 1_000L)
         }
     }
+    // Occlude stock keyguard visually; never dismiss it or satisfy its credentials.
+    // Keep Samsung authoritative until credential storage has unlocked this boot.
+    private fun updateKeyguardOcclusion() {
+        val unlocked = getSystemService(android.os.UserManager::class.java)?.isUserUnlocked == true
+        val cover = !preview && !unlocking && unlocked &&
+            Prefs.enabled(this) && Prefs.kiosk(this)
+        setShowWhenLocked(cover)
+    }
+
     private fun reportKeyguardPresentation(visible: Boolean) {
         if (android.os.Build.VERSION.SDK_INT < 34) return
         runCatching {
@@ -327,7 +336,10 @@ class LockScreenActivity : Activity() {
                     fingerprintRestartPending = false
                     cancelGuardianFingerprint("screen_off")
                 }
-                Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_UNLOCKED -> scheduleAutomaticFingerprint()
+                Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_UNLOCKED -> {
+                    updateKeyguardOcclusion()
+                    scheduleAutomaticFingerprint()
+                }
             }
         }
     }
@@ -420,6 +432,7 @@ class LockScreenActivity : Activity() {
         super.onCreate(savedInstanceState)
         PinUi.protect(this)
         preview = intent.getBooleanExtra("preview", false)
+        updateKeyguardOcclusion()
         // BOOT_READY may arrive while credential-encrypted app storage is still
         // locked. Do not touch PinStore/noBackupFilesDir until Android says the
         // user is unlocked; the guardian can still draw and cover the launcher.
@@ -472,6 +485,7 @@ class LockScreenActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        updateKeyguardOcclusion()
         handler.removeCallbacks(keyguardPresentationPulse)
         handler.post(keyguardPresentationPulse)
         handler.removeCallbacks(stoppedAuthCleanup)

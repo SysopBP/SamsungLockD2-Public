@@ -264,3 +264,17 @@ With Guardian and kiosk enabled, D2 sends a short-lived visible-surface signal t
 D2 stops the signal when paused, destroyed, unlocking, or handing off to its biometric prompt. A suppressed Samsung PIN-panel request resumes when the surface is released or its three-second lease expires. Unsupported firmware methods leave stock behavior intact. The heartbeat requires Android 14 or newer and LSPosed SystemUI scope. This is an experimental hook: full lock-screen coverage, wake ordering, crash recovery and compatibility on One UI 9 require device validation. Samsung's underlying keyguard can still appear after D2 unlock; full credential integration is separate.
 
 Diagnostics: `D2_KEYGUARD_PRESENTATION_HOOK_INSTALLED`, `D2_KEYGUARD_PIN_DEFERRED`, `D2_KEYGUARD_PIN_RESTORED`, and `D2_KEYGUARD_PRESENTATION_UNAVAILABLE`.
+
+
+### Post-boot Samsung lock-screen overlap fix
+
+In enabled Guardian kiosk mode, the real D2 lock activity now uses Android's
+`setShowWhenLocked` presentation flag after `UserManager.isUserUnlocked` reports
+the first device unlock. The flag is refreshed on resume, screen-on, and user-unlock
+events so Samsung keyguard can remain underneath D2 on subsequent lock/wake cycles.
+Before that first unlock, and in Preview or disabled/non-kiosk mode, this flag is
+off. This does not dismiss keyguard, change Samsung credentials, or authenticate
+D2. The genuine biometric prompt and D2 credential fallback remain in use.
+
+Device validation pending: first reboot PIN, repeated lock/wake, D2 fingerprint
+and PIN fallback, incoming calls, and leaving D2.
