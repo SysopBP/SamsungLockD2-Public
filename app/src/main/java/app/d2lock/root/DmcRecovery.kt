@@ -31,14 +31,14 @@ object DmcRecovery {
             return buildString {
                 appendLine("Automatic System Server recovery: ${if(targetsMet) "Verified" else "Not verified"}")
                 appendLine("System Server: ${when(systemServer) { true -> "Available"; false -> "Unavailable"; null -> if(checkedAt == 0L) "Checking" else "Not verified" }}")
-                appendLine("Screen lock (DMC): ${flag(screenLock)}  •  Target: Disabled")
-                appendLine("Maintenance Mode (DMC): ${flag(maintenance)}  •  Target: Disabled")
+                appendLine("Screen lock (SRP): ${flag(screenLock)}  •  Target: Disabled")
+                appendLine("Maintenance Mode (SRP): ${flag(maintenance)}  •  Target: Disabled")
                 appendLine("Download Mode AT Command: ${flag(atCommand)}  •  Target: Enabled")
                 appendLine("Download Mode: ${when(downloadAllowed) { true -> "Allowed"; false -> "Blocked"; null -> "Unknown" }}  •  Target: Allowed")
                 appendLine()
                 appendLine(detail)
                 if (checkedAt > 0L) appendLine("Checked: ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(checkedAt))}")
-                append("Runs automatically inside Xposed System Server. DMC flags are separate from Android credentials and D2's PIN/Pattern.")
+                append("Samsung Recovery Protection (D2 SRP) runs automatically inside Xposed System Server. Samsung DMC vault flags are separate from Android credentials and D2's PIN/Pattern.")
             }
         }
     }
@@ -75,7 +75,7 @@ object DmcRecovery {
             try {
                 lastAttempt = SystemClock.elapsedRealtime()
                 val result = if (Process.myUid() / 100000 != 0) {
-                    Status(detail = "Automatic DMC recovery supports the primary user only")
+                    Status(detail = "D2 SRP supports the primary user only")
                 } else {
                     if (android.os.Build.VERSION.SDK_INT < 34) {
                         Status(detail = "System Server recovery requires Android 14 or newer")

@@ -1,3 +1,5 @@
+> **User-facing name:** Samsung Recovery Protection (**D2 SRP**). The Samsung vault and technical identifiers remain `DMC`. Menu labels use **D2 SRP status**; longer explanations use Samsung Recovery Protection. These names do not change verification behavior or guarantee recovery.
+
 # Automatic System Server DMC recovery
 
 D2 automatically targets these Samsung DMC vault states:

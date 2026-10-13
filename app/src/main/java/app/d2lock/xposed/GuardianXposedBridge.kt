@@ -313,7 +313,7 @@ class GuardianXposedBridge : XposedModule() {
                     if (callerPackage != "com.android.systemui") return
                     if (!softRestartGuardInstalled) {
                         Log.e(TAG, "DMC_SOFT_RESTART_CANCELLED reason=guard_unavailable")
-                        runCatching { android.widget.Toast.makeText(app, "D2 soft restart cancelled: DMC guard unavailable.", android.widget.Toast.LENGTH_LONG).show() }
+                        runCatching { android.widget.Toast.makeText(app, "D2 soft restart cancelled: SRP guard unavailable.", android.widget.Toast.LENGTH_LONG).show() }
                         return
                     }
                     runCatching {

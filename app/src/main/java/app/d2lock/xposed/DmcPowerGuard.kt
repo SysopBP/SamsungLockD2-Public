@@ -57,11 +57,11 @@ internal object DmcPowerGuard {
         val decision = DmcPowerDecision(deadline)
         activeDecision = decision
         fun message(text: String) { runCatching { Toast.makeText(context, text, Toast.LENGTH_LONG).show() } }
-        main.post { message("D2: checking DMC before $action…") }
+        main.post { message("D2 SRP: checking before $action…") }
         val timeout = Runnable {
             if (decision.cancel()) {
                 Log.e(TAG, "DMC_POWER_CANCELLED action=$action reason=timeout")
-                message("D2 cancelled $action: DMC verification timed out. Check DMC status before retrying.")
+                message("D2 cancelled $action: D2 SRP verification timed out. Check SRP status before retrying.")
                 // Keep busy while a stuck vault call is still running; never queue more workers.
             }
         }
@@ -82,7 +82,7 @@ internal object DmcPowerGuard {
                             try { resume() } finally { bypass.remove() }
                         }, onFailure = {
                             Log.e(TAG, "DMC_POWER_CANCELLED action=$action reason=verification_failed", it)
-                            message("D2 cancelled $action: DMC could not be verified. Open D2 DMC status and retry.")
+                            message("D2 cancelled $action: Samsung Recovery Protection could not be verified. Open D2 SRP status and retry.")
                         })
                     } catch (error: Throwable) {
                         Log.e(TAG, "DMC_POWER_RESUME_FAILED action=$action", error)

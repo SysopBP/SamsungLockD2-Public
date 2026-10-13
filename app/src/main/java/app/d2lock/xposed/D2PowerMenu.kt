@@ -36,7 +36,7 @@ internal object D2PowerMenu {
             val info = infoClass.getDeclaredConstructor().newInstance()
             call(info, "setName", name)
             call(info, "setLabel", title)
-            call(info, "setDescription", if (name == "d2_soft_restart") "DMC verification required" else "Fresh System Server vault check")
+            call(info, "setDescription", if (name == "d2_soft_restart") "D2 SRP verification required" else "Fresh System Server vault check")
             call(info, "setIcon", icon)
             call(info, "setViewType", viewType)
             return Proxy.newProxyInstance(loader, arrayOf(actionInterface)) { proxy, method, args ->
@@ -74,7 +74,7 @@ internal object D2PowerMenu {
             val model = call(factory, "createActionViewModel", presenter, name) ?: error("Missing Samsung $name action")
             val info = call(model, "getActionInfo") ?: error("Missing Samsung action info")
             call(info, "setLabel", label)
-            call(info, "setStateLabel", "DMC checked before continuing")
+            call(info, "setStateLabel", "D2 SRP checked before continuing")
             return model
         }
         val power = stock("power", "D2 power off")
@@ -91,7 +91,7 @@ internal object D2PowerMenu {
                     BroadcastOptions.makeBasic().setShareIdentityEnabled(true).toBundle())
             }
         }
-        val status = action("d2_dmc_status", "DMC protection status", android.R.drawable.ic_menu_info_details) {
+        val status = action("d2_dmc_status", "D2 SRP status", android.R.drawable.ic_menu_info_details) {
             showStatus(context())
         }
         call(presenter, "clearActions", "power")
@@ -109,8 +109,8 @@ internal object D2PowerMenu {
         if (Build.VERSION.SDK_INT < 34) return
         val handler = Handler(Looper.getMainLooper())
         val dialog = AlertDialog.Builder(app)
-            .setTitle("D2 • DMC protection")
-            .setMessage("Checking the DMC vault inside System Server…")
+            .setTitle("D2 SRP")
+            .setMessage("Samsung Recovery Protection\n\nChecking the Samsung DMC vault inside System Server…")
             .setPositiveButton("Close", null).create()
         dialog.window?.setType(WindowManager.LayoutParams.TYPE_KEYGUARD_DIALOG)
         val reply = "app.d2lock.action.DMC_RESULT." + UUID.randomUUID()
@@ -127,7 +127,7 @@ internal object D2PowerMenu {
                 cleanup()
                 val verified = intent.getBooleanExtra("verified", false)
                 fun flag(key: String, target: Int) = if (verified && intent.getIntExtra(key, -1) == target) "✓" else "?"
-                dialog.setMessage("${if (verified) "✓ Vault targets verified" else "? Vault unverified"}\n\n${flag("lock", 0)} DMC screen-lock flag: disabled\n${flag("maint", 0)} Maintenance Mode flag: disabled\n${flag("at", 1)} Download AT-command flag: enabled\n\n${intent.getStringExtra("detail") ?: "No details"}\n\nEvery guarded power action performs its own fresh check. This does not guarantee firmware persistence.")
+                dialog.setMessage("${if (verified) "✓ Vault targets verified" else "? Vault unverified"}\n\n${flag("lock", 0)} SRP screen-lock flag: disabled\n${flag("maint", 0)} Maintenance Mode flag: disabled\n${flag("at", 1)} Download AT-command flag: enabled\n\n${intent.getStringExtra("detail") ?: "No details"}\n\nSamsung Recovery Protection (D2 SRP) performs a fresh check for every guarded power action. This does not guarantee firmware persistence.")
             }
         }
         try {
