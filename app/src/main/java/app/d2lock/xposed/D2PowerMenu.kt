@@ -92,7 +92,10 @@ internal object D2PowerMenu {
             }
         }
         val status = action("d2_dmc_status", "D2 SRP status", android.R.drawable.ic_menu_info_details) {
-            showStatus(context())
+            // Samsung's global-actions window sits above KEYGUARD_DIALOG windows.
+            // Close it before presenting status, allowing its exit animation to finish.
+            call(presenter, "dismissDialog", false)
+            Handler(Looper.getMainLooper()).postDelayed({ showStatus(context()) }, 350L)
         }
         call(presenter, "clearActions", "power")
         call(presenter, "clearActions", "restart")
