@@ -55,6 +55,9 @@ class MainActivity : Activity() {
     private val pageScrollPositions = mutableMapOf<String, Int>()
     private val navigationHistory = java.util.ArrayDeque<String>()
     private var navigatingBack = false
+    private var programmaticNavigation = false
+    private var navigationGeneration = 0
+    private var revealDock: (() -> Unit)? = null
     private var pageNavigator: ((String, View?) -> Unit)? = null
     private val sectionTitles = java.util.IdentityHashMap<View, String>()
     private var readinessDialog: AlertDialog? = null
@@ -3474,6 +3477,8 @@ class MainActivity : Activity() {
             return if(title==null) "home" else SettingsNavigation.pageForSection(title)+"|"+title
         }
         fun render(route:String,target:View?) {
+            programmaticNavigation=true
+            val generation=++navigationGeneration
             val actual=if(target!=null) routeFor(target) else route
             val page=actual.substringBefore('|'); val detail=actual.substringAfter('|',"")
             dockDestination=actual
@@ -3487,6 +3492,7 @@ class MainActivity : Activity() {
             (root.getChildAt(0) as? TextView)?.text=if(detail.isNotEmpty()) detail.lowercase().replaceFirstChar { it.uppercase() } else when(page) { "home"->"D2 Guardian"; "appearance"->"Appearance"; else->page.replaceFirstChar { it.uppercase() } }
             selected(page)
             scroll.post {
+                revealDock?.invoke()
                 if(target==null) scroll.scrollTo(0,pageScrollPositions[actual] ?: 0)
                 else {
                     val summary=summaries.entries.firstOrNull { it.value===target }?.key
@@ -3495,6 +3501,7 @@ class MainActivity : Activity() {
                     root.offsetDescendantRectToMyCoords(visibleTarget,rect)
                     scroll.smoothScrollTo(0,(rect.top-dp(18)).coerceAtLeast(0)); flashSettingsTarget(visibleTarget)
                 }
+                scroll.postDelayed({ if(generation==navigationGeneration) programmaticNavigation=false }, 400)
             }
         }
         pageNavigator={ destination,target ->
@@ -3765,7 +3772,12 @@ class MainActivity : Activity() {
                     .withEndAction { if (!dockVisible) core.visibility = View.INVISIBLE }.start()
             }
         }
+        revealDock = { setDockVisible(true) }
         scroll.setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
+            if(programmaticNavigation) {
+                setDockVisible(true)
+                return@setOnScrollChangeListener
+            }
             val delta = scrollY - oldScrollY
             when (dockScrollBehavior) {
                 "always_visible" -> setDockVisible(true)
