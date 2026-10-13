@@ -4,6 +4,10 @@ Published as a preview from successful [Build 1057](https://github.com/SysopBP/S
 
 ![D2 Guardian preview and fingerprint setup](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.6.4-preview.2/D2-0.6.4-Preview-Setup-Collage.png)
 
+## Updated D2 Guardian interface
+
+![D2 Guardian Home with protection status and floating CORE navigation](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.6.4-preview.2/D2-Guardian-Home-UI.jpg)
+
 ## Build 1057 hotfix and UI update
 
 ### Incoming-call black-screen hotfix

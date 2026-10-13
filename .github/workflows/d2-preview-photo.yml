@@ -1,0 +1,28 @@
+name: Add D2 Preview 2 Home screenshot
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/d2-preview-photo.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add screenshot and refresh notes and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release download v0.6.4-preview.2 --dir dist
+          (cd dist && sha256sum --check SHA256SUMS.txt)
+          cp docs/screenshots/d2-guardian-home-ui.jpg dist/D2-Guardian-Home-UI.jpg
+          cp docs/RELEASE-0.6.4-PREVIEW.md dist/D2-0.6.4-Release-Notes.md
+          (cd dist && sha256sum *.apk *.zip *.md *.png *.jpg runtime-dependencies.txt > SHA256SUMS.txt)
+          gh release upload v0.6.4-preview.2 dist/D2-Guardian-Home-UI.jpg dist/D2-0.6.4-Release-Notes.md dist/SHA256SUMS.txt --clobber
+          gh release edit v0.6.4-preview.2 --notes-file docs/RELEASE-0.6.4-PREVIEW.md
+          gh release view v0.6.4-preview.2 --json url,assets
