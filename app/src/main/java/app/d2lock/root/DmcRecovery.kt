@@ -64,14 +64,15 @@ object DmcRecovery {
     }
 
     /** Callback always completes promptly even if another boot source already owns the check. */
-    fun request(context: Context, source: String, retry: Int = 0, force: Boolean = false, done: (() -> Unit)? = null) {
+    fun request(context: Context, source: String, retry: Int = 0, force: Boolean = false, actionResult: ((Status) -> Unit)? = null, done: (() -> Unit)? = null) {
         val app = context.applicationContext
-        if (!busy.compareAndSet(false, true)) { done?.invoke(); return }
+        if (!busy.compareAndSet(false, true)) { actionResult?.let { main.post { it(Status(detail = "Another SRP check is in progress; retry shortly")) } }; done?.invoke(); return }
         if (!force && retry == 0 && SystemClock.elapsedRealtime() - lastAttempt < 10_000L) {
             busy.set(false); done?.invoke(); return
         }
         worker.execute {
             var success = false
+            var outcome = Status(detail = "SRP verification failed")
             try {
                 lastAttempt = SystemClock.elapsedRealtime()
                 val result = if (Process.myUid() / 100000 != 0) {
@@ -103,6 +104,7 @@ object DmcRecovery {
                     }
                 }
                 val stamped = result.copy(checkedAt = System.currentTimeMillis())
+                outcome = stamped
                 success = stamped.targetsMet
                 prefs(app).edit().putInt("boot", bootCount(app))
                     .putInt("system_server", stamped.systemServer?.let { if(it) 1 else 0 } ?: -1)
@@ -120,11 +122,17 @@ object DmcRecovery {
                 Log.w(TAG, "DMC_AUTO_CHECK_FAILED source=$source", error)
             } finally {
                 busy.set(false)
+                actionResult?.let { callback -> val result = outcome; main.post { callback(result) } }
                 done?.invoke()
             }
             if (!success && retry < 3) worker.schedule({ request(app, source, retry + 1) },
                 longArrayOf(5, 15, 30)[retry], TimeUnit.SECONDS)
         }
+    }
+
+    /** One forced check; never authorize recovery using the cached status. */
+    fun verifyForAction(context: Context, done: (Status) -> Unit) {
+        request(context, "recovery_action", retry = 3, force = true, actionResult = done)
     }
 
     fun refresh(context: Context, done: (Status) -> Unit) {

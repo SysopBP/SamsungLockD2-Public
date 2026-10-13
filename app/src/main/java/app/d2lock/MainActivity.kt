@@ -1604,27 +1604,34 @@ class MainActivity : Activity() {
                 }
                 val systemUi=recoveryAction("Restart SystemUI") {
                     if(!RootManager.isAvailable()) Toast.makeText(this@MainActivity,"KernelSU/root access is required",Toast.LENGTH_LONG).show()
-                    else android.app.AlertDialog.Builder(this@MainActivity)
-                        .setTitle("Restart System UI?")
-                        .setMessage("System UI will briefly disappear and reload. Kiosk D2 Boot Guardian itself will not be reset.")
-                        .setNegativeButton("Cancel",null)
-                        .setPositiveButton("Restart") { _,_-> runRootAction { RootManager.restartSystemUi() } }
-                        .show()
+                    else GuardianDialogs.showInfo(this@MainActivity, "Restart SystemUI?",
+                        "SystemUI will briefly disappear and reload. D2 will verify Samsung Recovery Protection before continuing. Failed, unknown or timed-out verification cancels this action.",
+                        primary = "Check & restart", secondary = "Cancel", onPrimary = {
+                            Toast.makeText(this@MainActivity, "D2 SRP: checking before SystemUI restart…", Toast.LENGTH_LONG).show()
+                            app.d2lock.root.DmcRecovery.verifyForAction(this@MainActivity) { status ->
+                                if (!isFinishing && !isDestroyed && authorized && !appStopped) {
+                                    if (status.targetsMet) runRootAction { RootManager.restartSystemUi() }
+                                    else GuardianDialogs.showInfo(this@MainActivity, "Restart cancelled", "D2 SRP could not be verified.\n\n${status.detail}\n\nCheck Feature status and retry.")
+                                }
+                            }
+                        })
                 }
-                val reboot=recoveryAction("Soft Reboot") {
-                    if(!RootManager.isAvailable()) Toast.makeText(this@MainActivity,"KernelSU/root access is required",Toast.LENGTH_LONG).show()
-                    else android.app.AlertDialog.Builder(this@MainActivity)
-                        .setTitle("Soft reboot Android?")
-                        .setMessage("Android's framework will restart. Unsaved work in other apps may be lost. Guardian will restore through its existing startup path.")
-                        .setNegativeButton("Cancel",null)
-                        .setPositiveButton("Soft reboot") { _,_-> runRootAction { RootManager.softReboot() } }
-                        .show()
+                val reboot=recoveryAction("Soft restart") {
+                    GuardianDialogs.showInfo(this@MainActivity, "Soft restart Android?",
+                        "Android’s framework will restart; unsaved work may be lost. System Server performs a fresh D2 SRP check before continuing. Failed, unknown or timed-out verification cancels the restart. Requires D2’s LSPosed System Framework integration.",
+                        primary = "Check & restart", secondary = "Cancel", onPrimary = {
+                            if (android.os.Build.VERSION.SDK_INT >= 34) {
+                                sendBroadcast(Intent("app.d2lock.action.DMC_SOFT_RESTART").setPackage("android"), null,
+                                    android.app.BroadcastOptions.makeBasic().setShareIdentityEnabled(true).toBundle())
+                                Toast.makeText(this@MainActivity, "Guarded soft restart requested. If System Server is unavailable, no restart will occur.", Toast.LENGTH_LONG).show()
+                            } else Toast.makeText(this@MainActivity, "Guarded soft restart requires Android 14 or newer", Toast.LENGTH_LONG).show()
+                        })
                 }
                 addView(systemUi,LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(6) })
                 addView(reboot,LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(6) })
             })
             addView(TextView(this@MainActivity).apply {
-                text="Root-only recovery • confirmation required"
+                text="D2 SRP verification • confirmation required • SystemUI restart requires root"
                 textSize=11f
                 setTextColor(Appearance.secondary(this@MainActivity))
                 setPadding(0,dp(10),0,0)
