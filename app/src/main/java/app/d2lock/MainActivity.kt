@@ -325,27 +325,98 @@ class MainActivity : Activity() {
     }
 
     private fun showDmcStatus() {
-        val dialog = AlertDialog.Builder(this)
-            .setTitle("Automatic DMC feature status")
-            .setMessage(app.d2lock.root.DmcRecovery.status(this).report())
-            .setPositiveButton("Close", null)
-            .create()
-        dialog.setOnShowListener {
-            dialog.window?.setBackgroundDrawable(Appearance.glass(this, 30f, 76, true))
+        val dialog = android.app.Dialog(this)
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        val body = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(20), dp(20), dp(16))
+            background = Appearance.glass(this@MainActivity, 30f, 76, true)
         }
+        fun label(size: Float, secondary: Boolean = false) = TextView(this).apply {
+            textSize = size
+            setTextColor(if (secondary) Appearance.secondary(this@MainActivity) else Appearance.text(this@MainActivity))
+            setLineSpacing(0f, 1.12f)
+        }
+        body.addView(label(12f, true).apply { text = "D2  •  AUTOMATIC ROOT RECOVERY" })
+        body.addView(label(22f).apply {
+            text = "Feature status"
+            setPadding(0, dp(6), 0, dp(12))
+        })
+        val summary = label(15f)
+        body.addView(summary)
+        val rows = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(8), 0, dp(8))
+        }
+        body.addView(rows)
+        val detail = label(13f, true)
+        body.addView(detail)
+        body.addView(label(12f, true).apply {
+            text = "Runs automatically with granted root. These are DMC flags; Android credentials and D2 PIN/Pattern are separate. Download eligibility is derived from the flags."
+            setPadding(0, dp(12), 0, dp(12))
+        })
+        body.addView(label(15f).apply {
+            text = "Close"; gravity = Gravity.CENTER
+            setTextColor(Appearance.accent(this@MainActivity))
+            setPadding(dp(12), dp(14), dp(12), dp(14))
+            background = Appearance.glass(this@MainActivity, 22f, 30, true)
+            setOnClickListener { dialog.dismiss() }
+        }, LinearLayout.LayoutParams(-1, -2))
+        fun render(status: app.d2lock.root.DmcRecovery.Status) {
+            summary.text = if (status.targetsMet) "✅ All four targets verified" else "⚠ Targets not yet verified"
+            rows.removeAllViews()
+            fun row(icon: String, title: String, state: String, target: String, matches: Boolean) {
+                val card = LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(12), dp(12), dp(12), dp(12))
+                    background = Appearance.glass(this@MainActivity, 20f, 28, true)
+                }
+                card.addView(label(21f).apply { text = icon; gravity = Gravity.CENTER }, LinearLayout.LayoutParams(dp(38), -2))
+                val info = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
+                info.addView(label(14f).apply { text = title })
+                info.addView(label(12f, true).apply { text = "$state  •  Target: $target" })
+                card.addView(info, LinearLayout.LayoutParams(0, -2, 1f))
+                card.addView(label(18f).apply {
+                    text = if (matches) "✅" else if (state == "Unknown") "○" else "⚠"
+                    contentDescription = if (matches) "$title target verified" else "$title target not verified"
+                    setPadding(dp(8), 0, 0, 0)
+                })
+                rows.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+            }
+            fun flag(value: Int?) = when (value) { 0 -> "Disabled"; 1 -> "Enabled"; else -> "Unknown" }
+            row("⚡", "Root access", when (status.root) { true -> "Available"; false -> "Unavailable"; null -> "Unknown" }, "Available", status.root == true)
+            row("🔒", "Screen lock (DMC)", flag(status.screenLock), "Disabled", status.verified && status.screenLock == 0)
+            row("🛠", "Maintenance Mode (DMC)", flag(status.maintenance), "Disabled", status.verified && status.maintenance == 0)
+            row("⌨", "Download Mode AT command", flag(status.atCommand), "Enabled", status.verified && status.atCommand == 1)
+            row("⬇", "Download Mode eligibility", when (status.downloadAllowed) { true -> "Allowed"; false -> "Blocked"; null -> "Unknown" }, "Allowed", status.verified && status.downloadAllowed == true)
+            detail.text = buildString {
+                append(status.detail)
+                if (status.checkedAt > 0L) append("\nChecked: ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(status.checkedAt))}")
+            }
+        }
+        render(app.d2lock.root.DmcRecovery.status(this))
+        val scroll = ScrollView(this).apply { isFillViewport = false; addView(body) }
+        dialog.setContentView(scroll)
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
         dialog.show()
+        val panelWidth = (resources.displayMetrics.widthPixels - dp(32)).coerceAtLeast(1)
+        scroll.measure(View.MeasureSpec.makeMeasureSpec(panelWidth, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec((resources.displayMetrics.heightPixels * .82f).toInt(), View.MeasureSpec.AT_MOST))
+        dialog.window?.setLayout(panelWidth, scroll.measuredHeight)
         val updates = android.os.Handler(android.os.Looper.getMainLooper())
+        var displayed = app.d2lock.root.DmcRecovery.status(this)
         val refresh = object : Runnable {
             override fun run() {
                 if (isFinishing || isDestroyed || !dialog.isShowing) return
-                dialog.setMessage(app.d2lock.root.DmcRecovery.status(this@MainActivity).report())
+                val current = app.d2lock.root.DmcRecovery.status(this@MainActivity)
+                if (current != displayed) { render(current); displayed = current }
                 updates.postDelayed(this, 1000L)
             }
         }
         updates.postDelayed(refresh, 1000L)
         dialog.setOnDismissListener { updates.removeCallbacks(refresh) }
         app.d2lock.root.DmcRecovery.refresh(this) { status ->
-            if (!isFinishing && !isDestroyed && dialog.isShowing) dialog.setMessage(status.report())
+            if (!isFinishing && !isDestroyed && dialog.isShowing) { render(status); displayed = status }
         }
     }
 

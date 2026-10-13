@@ -10,8 +10,10 @@ public final class DmcVaultPolicy {
     }
 
     public static void validate(byte[] data) {
-        if (data == null || data.length != 32)
-            throw new IllegalStateException("Unsupported DMC record length");
+        if (data == null)
+            throw new IllegalStateException("DMC read returned no record; vault access or initialization must be checked");
+        if (data.length != 32)
+            throw new IllegalStateException("Unsupported DMC record length: " + data.length + " bytes (expected 32)");
         for (int i = 0; i < 3; i++) {
             if (data[i] != 0 && data[i] != 1)
                 throw new IllegalStateException("Unsupported DMC flag value");

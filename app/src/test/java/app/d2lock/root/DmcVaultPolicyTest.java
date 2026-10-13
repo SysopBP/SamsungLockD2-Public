@@ -50,6 +50,20 @@ public class DmcVaultPolicyTest {
         assertEquals(0, vault.writes);
     }
 
+    @Test public void distinguishesMissingRecordsFromUnsupportedLengths() {
+        IllegalStateException missing = assertThrows(IllegalStateException.class,
+            () -> DmcVaultPolicy.validate(null));
+        assertTrue(missing.getMessage().contains("no record"));
+        for (int length : new int[] {0, 3, 31, 33, 64}) {
+            FakeVault vault = new FakeVault();
+            vault.data = new byte[length];
+            IllegalStateException unsupported = assertThrows(IllegalStateException.class,
+                () -> DmcVaultPolicy.enforce(vault));
+            assertTrue(unsupported.getMessage().contains(length + " bytes"));
+            assertEquals(0, vault.writes);
+        }
+    }
+
     @Test public void neverReportsRejectedOrUnverifiedWritesAsSuccess() {
         FakeVault vault = new FakeVault();
         vault.rc = -1;
