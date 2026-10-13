@@ -166,7 +166,7 @@ internal object D2PowerMenu {
         val handler = Handler(Looper.getMainLooper())
         val dialog = AlertDialog.Builder(app)
             .setTitle("D2 SRP")
-            .setMessage("Samsung Recovery Protection\n\nChecking the Samsung DMC vault inside System Server…")
+            .setMessage("Samsung Recovery Protection\n\nChecking the Samsung recovery vault inside System Server…")
             .setPositiveButton("Close", null).create()
         dialog.window?.setType(WindowManager.LayoutParams.TYPE_KEYGUARD_DIALOG)
         val reply = "app.d2lock.action.DMC_RESULT." + UUID.randomUUID()

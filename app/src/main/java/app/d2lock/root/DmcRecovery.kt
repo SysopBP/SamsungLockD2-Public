@@ -38,7 +38,7 @@ object DmcRecovery {
                 appendLine()
                 appendLine(detail)
                 if (checkedAt > 0L) appendLine("Checked: ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(checkedAt))}")
-                append("Samsung Recovery Protection (D2 SRP) runs automatically inside Xposed System Server. Samsung DMC vault flags are separate from Android credentials and D2's PIN/Pattern.")
+                append("Samsung Recovery Protection (D2 SRP) runs automatically inside Xposed System Server. Samsung recovery vault flags are separate from Android credentials and D2's PIN/Pattern.")
             }
         }
     }
