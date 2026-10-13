@@ -160,8 +160,8 @@ class GuardianXposedBridge : XposedModule() {
         }
     }
 
-    /** One read-only probe in system_server; never invoke the CLI helper or write the vault. */
-    private fun scheduleDmcReadProbe() {
+    /** One guarded recovery attempt in system_server; validate before writing and verify read-back. */
+    private fun scheduleDmcRecovery() {
         runCatching {
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 runCatching {
@@ -170,28 +170,36 @@ class GuardianXposedBridge : XposedModule() {
                         try {
                             val uid = android.os.Process.myUid()
                             val pid = android.os.Process.myPid()
-                            Log.i(TAG, "DMC_SYSTEM_SERVER_PROBE_START uid=$uid pid=$pid mode=read_only")
+                            Log.i(TAG, "DMC_SYSTEM_SERVER_RECOVERY_START uid=$uid pid=$pid mode=guarded_recovery")
                             check(uid == 1000) { "Probe requires system_server UID 1000" }
                             val api = Class.forName("com.samsung.android.service.vaultkeeper.VaultKeeperManager")
                             val manager = api.getMethod("getInstance", String::class.java).invoke(null, "DMC")
                                 ?: error("VaultKeeper manager unavailable")
                             val data = api.getMethod("read", Int::class.javaPrimitiveType).invoke(manager, 1) as? ByteArray
                             if (data == null) {
-                                Log.w(TAG, "DMC_SYSTEM_SERVER_PROBE_NO_RECORD uid=$uid pid=$pid access_or_initialization_unverified")
+                                Log.w(TAG, "DMC_SYSTEM_SERVER_RECOVERY_NO_RECORD uid=$uid pid=$pid access_or_initialization_unverified")
                             } else {
                                 app.d2lock.root.DmcVaultPolicy.validate(data)
-                                Log.i(TAG, "DMC_SYSTEM_SERVER_PROBE_SUCCESS uid=$uid pid=$pid length=${data.size} screenLock=${data[0]} maintenanceMode=${data[1]} downloadAtCommand=${data[2]} downloadAllowed=${app.d2lock.root.DmcVaultPolicy.downloadAllowed(data)} targetsMet=${app.d2lock.root.DmcVaultPolicy.matchesTarget(data)} mode=read_only")
+                                val readMethod = api.getMethod("read", Int::class.javaPrimitiveType)
+                                val writeMethod = api.getMethod("write", Int::class.javaPrimitiveType, ByteArray::class.java)
+                                val vault = object : app.d2lock.root.DmcVaultPolicy.Vault {
+                                    override fun read(): ByteArray? = readMethod.invoke(manager, 1) as? ByteArray
+                                    override fun write(record: ByteArray): Int = writeMethod.invoke(manager, 1, record) as Int
+                                }
+                                val verified = app.d2lock.root.DmcVaultPolicy.enforce(vault)
+                                Log.i(TAG, "DMC_SYSTEM_SERVER_RECOVERY_VERIFIED screenLock=${verified[0]} maintenanceMode=${verified[1]} downloadAtCommand=${verified[2]} downloadAllowed=${app.d2lock.root.DmcVaultPolicy.downloadAllowed(verified)}")
+                                Log.i(TAG, "DMC_SYSTEM_SERVER_RECOVERY_INITIAL_READ uid=$uid pid=$pid length=${data.size} screenLock=${data[0]} maintenanceMode=${data[1]} downloadAtCommand=${data[2]} downloadAllowed=${app.d2lock.root.DmcVaultPolicy.downloadAllowed(data)} targetsMet=${app.d2lock.root.DmcVaultPolicy.matchesTarget(data)} mode=guarded_recovery")
                             }
                         } catch (error: Throwable) {
                             val cause = (error as? java.lang.reflect.InvocationTargetException)?.targetException ?: error
-                            Log.w(TAG, "DMC_SYSTEM_SERVER_PROBE_FAILED mode=read_only", cause)
+                            Log.w(TAG, "DMC_SYSTEM_SERVER_RECOVERY_FAILED mode=guarded_recovery", cause)
                         } finally {
                             android.os.Binder.restoreCallingIdentity(identity)
                         }
-                    }, "D2-DMC-ReadProbe").apply { isDaemon = true }.start()
-                }.onFailure { Log.w(TAG, "DMC_SYSTEM_SERVER_PROBE_THREAD_FAILED", it) }
+                    }, "D2-DMC-Recovery").apply { isDaemon = true }.start()
+                }.onFailure { Log.w(TAG, "DMC_SYSTEM_SERVER_RECOVERY_THREAD_FAILED", it) }
             }, 10_000L)
-        }.onFailure { Log.w(TAG, "DMC_SYSTEM_SERVER_PROBE_SCHEDULE_FAILED", it) }
+        }.onFailure { Log.w(TAG, "DMC_SYSTEM_SERVER_RECOVERY_SCHEDULE_FAILED", it) }
     }
 
     private fun signalBootReady() {
@@ -224,7 +232,7 @@ class GuardianXposedBridge : XposedModule() {
             )
 
             log(Log.INFO, TAG, "GUARDIAN_MINIMAL_BOOT_READY_SENT")
-            scheduleDmcReadProbe()
+            scheduleDmcRecovery()
         }.onFailure {
             // No retry loop or heartbeat. If signalling fails, leave Android alone.
             log(Log.WARN, TAG, "GUARDIAN_MINIMAL_BOOT_READY_SIGNAL_FAILED", it)
