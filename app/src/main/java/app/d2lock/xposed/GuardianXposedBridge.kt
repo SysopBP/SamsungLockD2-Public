@@ -219,6 +219,9 @@ class GuardianXposedBridge : XposedModule() {
      * post-call and never changes arguments/results, so Android remains authoritative.
      */
     private fun installWakeObserver(classLoader: ClassLoader) {
+        // Create the worker before installing hooks, never on a framework wake stack.
+        val wakeThread = android.os.HandlerThread("D2WakeSignal").apply { start() }
+        val wakeHandler = android.os.Handler(wakeThread.looper)
         val className = "com.android.server.power.PowerManagerService\$BinderService"
         val owner = runCatching { Class.forName(className, false, classLoader) }.getOrElse {
             log(Log.WARN, TAG, "GUARDIAN_WAKE_CLASS_MISSING target=$className", it)
@@ -240,7 +243,7 @@ class GuardianXposedBridge : XposedModule() {
                     .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                     .intercept { chain ->
                         val result = chain.proceed()
-                        signalWakeObserved(method.name, owner.name)
+                        queueWakeObserved(wakeHandler, method.name, owner.name)
                         result
                     }
                 log(Log.INFO, TAG, "GUARDIAN_WAKE_HOOK_INSTALLED target=${owner.name}#${method.name}")
@@ -250,11 +253,21 @@ class GuardianXposedBridge : XposedModule() {
         }
     }
 
-    private fun signalWakeObserved(method: String, source: String) {
+    private fun queueWakeObserved(handler: android.os.Handler, method: String, source: String) {
         val now = android.os.SystemClock.elapsedRealtime()
         val previous = lastWakeSignalMs.get()
         if (now - previous < WAKE_DEDUPE_MS || !lastWakeSignalMs.compareAndSet(previous, now)) return
 
+        // wakeUp may run inside WMS.relayoutWindow with its global lock held.
+        // Broadcasting here would acquire AMS in the opposite order to appDiedLocked,
+        // deadlocking screen wake and system_server. Only enqueue on this stack;
+        // the worker resolves Context and sends without owning the caller's locks.
+        if (!handler.post { signalWakeObserved(method, source) }) {
+            log(Log.WARN, TAG, "GUARDIAN_WAKE_QUEUE_FAILED method=$method")
+        }
+    }
+
+    private fun signalWakeObserved(method: String, source: String) {
         runCatching {
             val app = Class.forName("android.app.ActivityThread")
                 .getDeclaredMethod("currentApplication")
