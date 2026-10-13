@@ -160,6 +160,40 @@ class GuardianXposedBridge : XposedModule() {
         }
     }
 
+    /** One read-only probe in system_server; never invoke the CLI helper or write the vault. */
+    private fun scheduleDmcReadProbe() {
+        runCatching {
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                runCatching {
+                    Thread({
+                        val identity = android.os.Binder.clearCallingIdentity()
+                        try {
+                            val uid = android.os.Process.myUid()
+                            val pid = android.os.Process.myPid()
+                            Log.i(TAG, "DMC_SYSTEM_SERVER_PROBE_START uid=$uid pid=$pid mode=read_only")
+                            check(uid == 1000) { "Probe requires system_server UID 1000" }
+                            val api = Class.forName("com.samsung.android.service.vaultkeeper.VaultKeeperManager")
+                            val manager = api.getMethod("getInstance", String::class.java).invoke(null, "DMC")
+                                ?: error("VaultKeeper manager unavailable")
+                            val data = api.getMethod("read", Int::class.javaPrimitiveType).invoke(manager, 1) as? ByteArray
+                            if (data == null) {
+                                Log.w(TAG, "DMC_SYSTEM_SERVER_PROBE_NO_RECORD uid=$uid pid=$pid access_or_initialization_unverified")
+                            } else {
+                                app.d2lock.root.DmcVaultPolicy.validate(data)
+                                Log.i(TAG, "DMC_SYSTEM_SERVER_PROBE_SUCCESS uid=$uid pid=$pid length=${data.size} screenLock=${data[0]} maintenanceMode=${data[1]} downloadAtCommand=${data[2]} downloadAllowed=${app.d2lock.root.DmcVaultPolicy.downloadAllowed(data)} targetsMet=${app.d2lock.root.DmcVaultPolicy.matchesTarget(data)} mode=read_only")
+                            }
+                        } catch (error: Throwable) {
+                            val cause = (error as? java.lang.reflect.InvocationTargetException)?.targetException ?: error
+                            Log.w(TAG, "DMC_SYSTEM_SERVER_PROBE_FAILED mode=read_only", cause)
+                        } finally {
+                            android.os.Binder.restoreCallingIdentity(identity)
+                        }
+                    }, "D2-DMC-ReadProbe").apply { isDaemon = true }.start()
+                }.onFailure { Log.w(TAG, "DMC_SYSTEM_SERVER_PROBE_THREAD_FAILED", it) }
+            }, 10_000L)
+        }.onFailure { Log.w(TAG, "DMC_SYSTEM_SERVER_PROBE_SCHEDULE_FAILED", it) }
+    }
+
     private fun signalBootReady() {
         if (!bootReadySent.compareAndSet(false, true)) {
             log(Log.DEBUG, TAG, "GUARDIAN_MINIMAL_BOOT_READY_DEDUPED")
@@ -190,6 +224,7 @@ class GuardianXposedBridge : XposedModule() {
             )
 
             log(Log.INFO, TAG, "GUARDIAN_MINIMAL_BOOT_READY_SENT")
+            scheduleDmcReadProbe()
         }.onFailure {
             // No retry loop or heartbeat. If signalling fails, leave Android alone.
             log(Log.WARN, TAG, "GUARDIAN_MINIMAL_BOOT_READY_SIGNAL_FAILED", it)
