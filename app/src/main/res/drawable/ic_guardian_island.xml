@@ -1,1 +1,9 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFFFFFFF" android:pathData="M7,7h10a5,5 0,0 1,0 10H7A5,5 0,0 1,7 7zM7,10a2,2 0,1 0,0 4h10a2,2 0,1 0,0 -4z"/></vector>
+<?xml version="1.0" encoding="utf-8"?>
+<!-- D2 Outline: original 24-unit artwork; color supplied by the active theme. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M6,8 H18 A4,4 0,0 1,18 16 H6 A4,4 0,0 1,6 8 Z M7,12 H10 M17,12 h0.1" />
+</vector>
