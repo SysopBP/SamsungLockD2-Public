@@ -1698,14 +1698,16 @@ class LockScreenActivity : Activity() {
                 updateKeyguardOcclusion()
                 if (Prefs.quickSettingsGuard(this)) handler.post(quickSettingsGuard)
                 Log.w("SamsungLockD2", "D2_KEYGUARD_HANDOFF_TIMEOUT stock_locked=true")
-                AlertDialog.Builder(this)
-                    .setTitle("Samsung unlock required")
-                    .setMessage("Samsung still requires authentication, or the SystemUI hook is unavailable. D2 remains locked. Unlock Samsung to recover, then try D2 again.")
-                    .setPositiveButton("Unlock Samsung") { _, _ ->
+                app.d2lock.GuardianDialogs.showInfo(
+                    this, "Samsung unlock required",
+                    "Samsung still requires authentication, or the SystemUI unlock hook is unavailable. D2 remains locked. Unlock Samsung to recover, then try D2 again.",
+                    primary = "Unlock Samsung",
+                    onPrimary = {
                         reportKeyguardPresentation(false)
                         keyguard?.requestDismissKeyguard(this, null)
-                    }
-                    .setNegativeButton("Stay in D2", null).show()
+                    },
+                    secondary = "Stay in D2"
+                )
             }
         }
         confirmDismissal()
