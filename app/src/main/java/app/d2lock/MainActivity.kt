@@ -50,6 +50,7 @@ import rikka.shizuku.Shizuku
 class MainActivity : Activity() {
     private val wallpaperPicker = 701
     private val appWallpaperPicker = 702
+    private var gestureBackCallback: android.window.OnBackInvokedCallback? = null
     private var dockDestination = "home"
     private val pageScrollPositions = mutableMapOf<String, Int>()
     private val navigationHistory = java.util.ArrayDeque<String>()
@@ -75,6 +76,11 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(if (Appearance.dark(this)) R.style.Theme_D2_Dark else R.style.Theme_SamsungLock)
         super.onCreate(savedInstanceState)
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            gestureBackCallback = android.window.OnBackInvokedCallback { handleSettingsBack() }
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, gestureBackCallback!!)
+        }
         Appearance.apply(this)
         PinUi.protect(this)
         Prefs.syncBootPolicy(this)
@@ -501,6 +507,10 @@ class MainActivity : Activity() {
         Shizuku.removeBinderReceivedListener(shizukuBinderReceived)
         Shizuku.removeBinderDeadListener(shizukuBinderDead)
         Shizuku.removeRequestPermissionResultListener(shizukuPermission)
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            gestureBackCallback?.let { onBackInvokedDispatcher.unregisterOnBackInvokedCallback(it) }
+            gestureBackCallback = null
+        }
         readinessDialog?.dismiss(); readinessDialog=null
         appBiometricSession.cancel()
         appBiometricCancel?.cancel()
@@ -3546,13 +3556,21 @@ class MainActivity : Activity() {
         render(dockDestination.takeIf { it in listOf("home","security","guardian","tools","appearance") } ?: "home",null)
     }
 
-    @Deprecated("Android Activity back callback")
-    override fun onBackPressed() {
-        if(authorized && pageNavigator!=null && dockDestination!="home") {
-            val previous=if(navigationHistory.isEmpty()) "home" else navigationHistory.removeLast()
-            pageNavigator?.invoke(previous,null)
-            if(!navigationHistory.isEmpty()) navigationHistory.removeLast()
-        } else super.onBackPressed()
+    private fun handleSettingsBack() {
+        if (authorized && pageNavigator != null && dockDestination != "home") {
+            val previous = if (navigationHistory.isEmpty()) "home" else navigationHistory.removeLast()
+            pageNavigator?.invoke(previous, null)
+            if (!navigationHistory.isEmpty()) navigationHistory.removeLast()
+        } else finish()
+    }
+
+    // API 31–32 dispatch Back as a key event; API 33+ uses the gesture callback.
+    override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < 33 && keyCode == android.view.KeyEvent.KEYCODE_BACK) {
+            handleSettingsBack()
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
     }
 
     private fun showGlobalSearch(root:LinearLayout, scroll:ScrollView) {
