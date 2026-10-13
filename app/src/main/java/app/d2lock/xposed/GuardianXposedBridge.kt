@@ -72,14 +72,27 @@ class GuardianXposedBridge : XposedModule() {
             D2KeyguardPresentation.register(app)
             runCatching {
                 val mediator = loader.loadClass("com.android.systemui.keyguard.KeyguardViewMediator")
-                val done = mediator.getDeclaredMethod("keyguardDone", Int::class.javaPrimitiveType).apply { isAccessible = true }
+                // Android/Samsung releases expose either (userId) or
+                // (strongAuth, userId). Never claim strong authentication for D2.
+                val done = mediator.declaredMethods.firstOrNull {
+                    it.name == "keyguardDone" && it.parameterTypes.contentEquals(
+                        arrayOf(Int::class.javaPrimitiveType))
+                } ?: mediator.declaredMethods.firstOrNull {
+                    it.name == "keyguardDone" && it.parameterTypes.contentEquals(
+                        arrayOf(Boolean::class.javaPrimitiveType, Int::class.javaPrimitiveType))
+                } ?: error("No supported keyguardDone signature")
+                done.isAccessible = true
+                Log.i(TAG, "D2_KEYGUARD_HANDOFF_SIGNATURE parameters=${done.parameterCount}")
                 val capture = mediator.declaredMethods.filter { it.name in setOf("setupLocked", "showLocked", "doKeyguardLocked") }
                 check(capture.isNotEmpty()) { "No supported keyguard mediator lifecycle" }
                 capture.forEach { method ->
                     hook(method).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
                         val result = chain.proceed()
                         val target = chain.thisObject
-                        D2KeyguardPresentation.bindDismiss { done.invoke(target, 0) }
+                        D2KeyguardPresentation.bindDismiss {
+                            if (done.parameterCount == 1) done.invoke(target, 0)
+                            else done.invoke(target, false, 0)
+                        }
                         result
                     }
                 }
