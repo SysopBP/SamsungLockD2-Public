@@ -219,6 +219,13 @@ object Prefs {
     fun xposedAutomaticFallback(context: Context) = prefs(context).getBoolean("xposed_automatic_fallback", true)
     fun setXposedAutomaticFallback(context: Context, value: Boolean) = prefs(context).edit().putBoolean("xposed_automatic_fallback", value).apply()
 
+    fun compactLayout(context: Context) = prefs(context).getBoolean("compact_layout", true)
+    fun setCompactLayout(context: Context, value: Boolean) = prefs(context).edit().putBoolean("compact_layout", value).apply()
+    fun compactDetails(context: Context) = prefs(context).getBoolean("compact_details", false)
+    fun setCompactDetails(context: Context, value: Boolean) = prefs(context).edit().putBoolean("compact_details", value).apply()
+    fun compactBridge(context: Context) = prefs(context).getBoolean("compact_bridge", false)
+    fun setCompactBridge(context: Context, value: Boolean) = prefs(context).edit().putBoolean("compact_bridge", value).apply()
+
     fun enabled(context: Context) = prefs(context).getBoolean("enabled", false)
     fun setEnabled(context: Context, value: Boolean) { prefs(context).edit().putBoolean("enabled", value).apply(); syncBootPolicy(context) }
     fun rootMode(context: Context) = prefs(context).getBoolean("root_mode", false)

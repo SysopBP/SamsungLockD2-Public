@@ -5,6 +5,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SettingsSchemaTest {
+    @Test fun compactPresentationCanBeRestoredWithoutRestoringProtection() {
+        val backup = JSONObject().put("compact_layout", true).put("compact_details", false)
+            .put("compact_bridge", true).put("enabled", true).put("root_kiosk", true)
+        assertEquals(mapOf("compact_layout" to true, "compact_details" to false, "compact_bridge" to true), SettingsSchema.validate(backup))
+        assertFalse(SettingsSchema.validStoredType("compact_layout", "true"))
+        assertTrue(runCatching { SettingsSchema.validate(JSONObject().put("compact_details", 1)) }.isFailure)
+    }
+
     @Test fun rejectsWrongTypesAndUnknownKeys() {
         for (raw in listOf("{\"wallpaper_dim\":true}", "{\"clock_scale\":1.5}", "{\"surprise\":true}")) {
             assertTrue(raw, runCatching { SettingsSchema.validate(JSONObject(raw)) }.isFailure)

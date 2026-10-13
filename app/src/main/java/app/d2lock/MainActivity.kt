@@ -1076,7 +1076,8 @@ class MainActivity : Activity() {
                     query.contains("profile") || query.contains("experimental") || query.contains("advanced") -> "advanced_settings"
                     else -> "lock_screen_settings"
                 }
-                root.findViewWithTag<android.view.View>(target)?.let { view ->
+                revealCompactDetails(root)
+                    root.findViewWithTag<android.view.View>(target)?.let { view ->
                     (root.parent as? ScrollView)?.smoothScrollTo(0, view.top)
                     view.postDelayed({ flashSettingsTarget(view) }, 280)
                 }
@@ -3114,6 +3115,7 @@ class MainActivity : Activity() {
                 setOnClickListener {
                     performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
                     dialog.dismiss()
+                    revealCompactDetails(root)
                     root.findViewWithTag<android.view.View>(target)?.let { view ->
                         scroll.post {
                             val rect = android.graphics.Rect()
@@ -3211,7 +3213,153 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this).setView(body).setNegativeButton("Close",null).create().also { d -> d.setOnShowListener { d.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 34f, 84, true)); d.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Appearance.accent(this@MainActivity)) }; d.show() }
     }
 
+    /** Compact presentation delegates all security actions to the original controls. */
+    private fun applyCompactLayout(root: LinearLayout) {
+        if (!PinStore(this).configured()) return
+        val compact = Prefs.compactLayout(this)
+        fun label(text: String, size: Float = 14f) = TextView(this).apply {
+            this.text = text; textSize = size
+            setTextColor(Appearance.text(this@MainActivity))
+            setPadding(dp(4), dp(4), dp(4), dp(4))
+        }
+        fun card() = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            background = Appearance.glass(this@MainActivity, 28f, 42, true)
+        }
+        fun action(text: String, click: () -> Unit) = label(text).apply {
+            gravity = Gravity.CENTER; minimumHeight = dp(48)
+            isFocusable = true; isClickable = true
+            background = Appearance.glass(this@MainActivity, 22f, 34, true)
+            setOnClickListener { click() }
+        }
+        val selector = action(if (compact) "Layout: Compact  ›" else "Layout: Classic  ›") {
+            GuardianDialogs.showChoices(this, "Main layout", arrayOf("Compact", "Classic"), if (compact) 0 else 1) { dialog, which ->
+                Prefs.setCompactLayout(this, which == 0)
+                dialog.dismiss(); setContentView(buildSettings())
+            }
+        }
+        if (!compact) {
+            root.addView(selector, 2, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+            return
+        }
+        fun descendants(view: View): List<View> = listOf(view) +
+            if (view is ViewGroup) (0 until view.childCount).flatMap { descendants(view.getChildAt(it)) } else emptyList()
+        val originals = descendants(root)
+        fun control(text: String) = originals.filterIsInstance<TextView>().firstOrNull { it.text.toString() == text }
+        fun delegated(text: String, original: String) = action(text) {
+            control(original)?.performClick()
+        }
+        val details = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL; tag = "compact_details"
+            visibility = if (Prefs.compactDetails(this@MainActivity)) View.VISIBLE else View.GONE
+        }
+        // Preserve every original control, tag and handler for search and the dock.
+        val old = (2 until root.childCount).map { root.getChildAt(it) }
+        old.forEach { root.removeView(it); details.addView(it) }
+        (root.getChildAt(0) as? TextView)?.apply { text = "D2 Guardian"; textSize = 28f }
+        (root.getChildAt(1) as? TextView)?.apply {
+            text = "${if (Prefs.enabled(this@MainActivity)) "Enabled" else "Disabled"}  ·  ${android.os.Build.MODEL}  ·  Android ${android.os.Build.VERSION.RELEASE}"
+            textSize = 13f; setPadding(0, dp(4), 0, dp(12))
+        }
+        root.setPadding(dp(18), dp(48), dp(18), dp(20))
+        root.addView(selector, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+        val status = card()
+        fun pair(parent: LinearLayout, first: View, second: View) {
+            parent.addView(LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                addView(first, LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = dp(4) })
+                addView(second, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dp(4) })
+            }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+        }
+        val rootOk = RootManager.isAvailable()
+        val shizukuOk = Prefs.shizukuEnabled(this) && runCatching {
+            Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+        }.getOrDefault(false)
+        val serverOk = KeyguardSignalReceiver.systemHealth(this).status == "CONNECTED"
+        pair(status, action("Kiosk ${if (Prefs.kiosk(this)) "✓" else "○"}") { showGuardianCoreHealth() },
+            action("Root ${if (rootOk) "✓" else "○"}") { showGuardianCoreHealth() })
+        pair(status, action("Shizuku ${if (shizukuOk) "✓" else "○"}") { showGuardianCoreHealth() },
+            action("System Server ${if (serverOk) "✓" else "○"}") { showSystemServerDashboard() })
+        root.addView(status, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+        if (Prefs.shizukuEnabled(this) && !shizukuOk) root.addView(action("Shizuku needs attention  ›") { showGuardianCoreHealth() },
+            LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+        if (Prefs.unlockMethod(this) == "fingerprint" && getSystemService(BiometricManager::class.java)
+                ?.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) != BiometricManager.BIOMETRIC_SUCCESS) {
+            root.addView(delegated("Fingerprint unavailable · Review method  ›", "Unlock method"),
+                LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+        }
+        val security = card()
+        security.addView(label("Security", 20f))
+        val method = Prefs.unlockMethod(this).replaceFirstChar { it.uppercase() }
+        security.addView(label("$method login  ·  D2 PIN recovery ready", 13f))
+        pair(security, delegated("Unlock method", "Unlock method"), delegated("Change PIN", "Change PIN"))
+        root.addView(security, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+        fun quickSwitch(title: String, original: String): View {
+            val source = control(original) as? Switch
+            return card().apply {
+                addView(guardianSwitch().apply {
+                    text = title; textSize = 14f; minimumHeight = dp(48)
+                    setTextColor(Appearance.text(this@MainActivity)); isChecked = source?.isChecked == true
+                    isEnabled = source != null && source.isEnabled
+                    setOnCheckedChangeListener { _, checked ->
+                        if (source != null && checked != source.isChecked) source.performClick()
+                        setContentView(buildSettings())
+                    }
+                })
+            }
+        }
+        val quick = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        pair(quick, quickSwitch("Guardian", "Show D2 when the screen wakes"),
+            quickSwitch("Kiosk", "Require D2 authentication to leave"))
+        val island = originals.filterIsInstance<Switch>().firstOrNull { it.text.toString().startsWith("Galaxy Island  •") }
+        val islandCard = card().apply {
+            addView(guardianSwitch().apply {
+                text = "Galaxy Island"; textSize = 14f; minimumHeight = dp(48)
+                setTextColor(Appearance.text(this@MainActivity)); isChecked = island?.isChecked == true
+                isEnabled = island != null && island.isEnabled
+                setOnCheckedChangeListener { _, checked ->
+                    if (island != null && checked != island.isChecked) island.performClick()
+                    setContentView(buildSettings())
+                }
+            })
+        }
+        pair(quick, islandCard, action("Test lock  ›") {
+            startActivity(Intent(this, LockScreenActivity::class.java))
+        })
+        root.addView(quick)
+        val bridge = card()
+        val bridgeBody = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = if (Prefs.compactBridge(this@MainActivity)) View.VISIBLE else View.GONE
+            val fp = KeyguardSignalReceiver.fingerprintHealth(this@MainActivity)
+            val ui = KeyguardSignalReceiver.bridgeHealth(this@MainActivity)
+            addView(label("SystemUI telemetry: ${if (ui.status == "CONNECTED") "Observed" else "No event this boot"}", 13f))
+            addView(label("Fingerprint: ${fp.event ?: "No event this boot"}", 13f))
+            addView(action("Open diagnostics  ›") { showSystemServerDashboard() })
+        }
+        bridge.addView(action("System bridge · ${if (serverOk) "Observed" else "Waiting"}  ⌄") {
+            val open = bridgeBody.visibility != View.VISIBLE
+            bridgeBody.visibility = if (open) View.VISIBLE else View.GONE
+            Prefs.setCompactBridge(this, open)
+        })
+        bridge.addView(bridgeBody)
+        root.addView(bridge, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+        root.addView(label("Samsung may require its PIN after reboot. Keep your fingerprint enrolled.", 12f))
+        root.addView(action("All controls & device details  ⌄") {
+            val open = details.visibility != View.VISIBLE
+            details.visibility = if (open) View.VISIBLE else View.GONE
+            Prefs.setCompactDetails(this, open)
+        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8); bottomMargin = dp(8) })
+        root.addView(details)
+    }
+
+    private fun revealCompactDetails(root: LinearLayout) {
+        root.findViewWithTag<View>("compact_details")?.visibility = View.VISIBLE
+    }
+
     private fun settingsHost(root: LinearLayout): ViewGroup {
+        applyCompactLayout(root)
         val host = android.widget.FrameLayout(this).apply {
             setBackgroundColor(Appearance.background(this@MainActivity))
         }
@@ -3328,6 +3476,7 @@ class MainActivity : Activity() {
                 isClickable = true
                 isFocusable = true
                 contentDescription = label
+                if (index == 0) setOnLongClickListener { showGuardianCoreHealth(); true }
                 addView(ImageView(this@MainActivity).apply {
                     setImageResource(icon)
                     imageTintList = android.content.res.ColorStateList.valueOf(
@@ -3346,13 +3495,18 @@ class MainActivity : Activity() {
                     performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
                     if (target == "settings") {
                         showQuickSettingsSheet(root, scroll)
+                    } else if (index == 0 && Prefs.compactLayout(this@MainActivity)) {
+                        scroll.smoothScrollTo(0, 0)
                     } else {
-                        root.findViewWithTag<android.view.View>(target)?.let { view ->
-                            val rect = android.graphics.Rect()
-                            view.getDrawingRect(rect)
-                            root.offsetDescendantRectToMyCoords(view, rect)
-                            scroll.smoothScrollTo(0, (rect.top - dp(18)).coerceAtLeast(0))
-                            view.postDelayed({ flashSettingsTarget(view) }, 280)
+                        revealCompactDetails(root)
+                        scroll.post {
+                            root.findViewWithTag<android.view.View>(target)?.let { view ->
+                                val rect = android.graphics.Rect()
+                                view.getDrawingRect(rect)
+                                root.offsetDescendantRectToMyCoords(view, rect)
+                                scroll.smoothScrollTo(0, (rect.top - dp(18)).coerceAtLeast(0))
+                                view.postDelayed({ flashSettingsTarget(view) }, 280)
+                            }
                         }
                     }
                     select(this)
@@ -3367,7 +3521,7 @@ class MainActivity : Activity() {
         host.addView(nav, android.widget.FrameLayout.LayoutParams(-1, dp(72), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
             setMargins(dp(18), 0, dp(18), dp(18))
         })
-        host.addView(core, android.widget.FrameLayout.LayoutParams(dp(58), dp(58), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
+        if (!Prefs.compactLayout(this) || !PinStore(this).configured()) host.addView(core, android.widget.FrameLayout.LayoutParams(dp(58), dp(58), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
             setMargins(0, 0, 0, dp(62))
         })
 
