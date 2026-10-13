@@ -29,6 +29,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
 
     private fun receiveSignal(context: Context, intent: Intent) {
         if (intent.action == SYSTEM_ACTION && intent.getStringExtra("event") == "SECURITY_SETUP_CHANGED") {
+            recordDiagnosticObservation(context, "SECURITY_SETUP_CHANGED", intent.getStringExtra("source") ?: "unknown")
             app.d2lock.root.DmcRecovery.request(context, "security_setup_changed", force = true)
             recordGuardianStage(context, "DMC_SECURITY_SETUP_CHANGED", "refresh_requested")
             return
@@ -49,6 +50,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         val source = intent.getStringExtra("source") ?: "unknown"
         if (intent.action == SYSTEM_ACTION) {
             val event = intent.getStringExtra("event") ?: return
+            recordDiagnosticObservation(context, event, source)
             val method = intent.getStringExtra("method") ?: "unknown"
             val prefs = directBootPrefs(context)
             val now = System.currentTimeMillis()
@@ -346,6 +348,28 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
             return SystemHealth(if (currentBoot) "CONNECTED" else "WAITING", age, event, method, source)
         }
 
+        /** Separate diagnostic observations; never used to authorize Guardian or credentials. */
+        @Synchronized private fun recordDiagnosticObservation(context: Context, event: String, source: String) {
+            val prefs=directBootPrefs(context)
+            val boot=bootCount(context)
+            val sameBoot=prefs.getInt("diagnostic_boot", -2)==boot
+            val edit=prefs.edit()
+            if(!sameBoot) for(key in prefs.all.keys.filter { it.startsWith("diagnostic_count_") || it.startsWith("diagnostic_source_") }) edit.remove(key)
+            val count=if(sameBoot) prefs.getLong("diagnostic_count_$event",0L) else 0L
+            edit.putInt("diagnostic_boot",boot).putLong("diagnostic_count_$event",count+1L)
+                .putString("diagnostic_source_$event",source).apply()
+        }
+
+        fun diagnosticCount(context: Context, event: String): Long {
+            val prefs=directBootPrefs(context)
+            return if(prefs.getInt("diagnostic_boot",-2)==bootCount(context)) prefs.getLong("diagnostic_count_$event",0L) else 0L
+        }
+
+        fun diagnosticSource(context: Context, event: String): String? {
+            val prefs=directBootPrefs(context)
+            return if(prefs.getInt("diagnostic_boot",-2)==bootCount(context)) prefs.getString("diagnostic_source_$event",null) else null
+        }
+
         fun systemMetrics(context: Context): SystemMetrics {
             val prefs = directBootPrefs(context)
             return SystemMetrics(
@@ -360,6 +384,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
 
         /** Diagnostics only: called after Android accepts D2's biometric prompt. */
         fun recordFingerprintSuccess(context: Context, source: String) {
+            recordDiagnosticObservation(context, "D2_FINGERPRINT_SUCCESS", source)
             directBootPrefs(context).edit()
                 .putLong(KEY_LAST_FP_EVENT_MS, System.currentTimeMillis())
                 .putString(KEY_LAST_FP_EVENT, "VERIFIED · $source")
