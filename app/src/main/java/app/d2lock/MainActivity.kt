@@ -3435,6 +3435,7 @@ class MainActivity : Activity() {
             (view.parent as? ViewGroup)?.removeView(view)
             container.addView(view)
         }
+        groups.entries.removeAll { (_, content) -> content.childCount==1 && sectionTitles.containsKey(content.getChildAt(0)) }
         val homeViews=(2 until root.childCount).map { root.getChildAt(it) }.filter { it!==details }
         val summaries=linkedMapOf<String,View>()
         groups.forEach { (title,content) ->
@@ -3498,8 +3499,9 @@ class MainActivity : Activity() {
         }
         pageNavigator={ destination,target ->
             pageScrollPositions[dockDestination]=scroll.scrollY
-            if(!navigatingBack && (destination!=dockDestination || target!=null)) navigationHistory.addLast(dockDestination)
-            render(destination,target)
+            val next=if(target!=null) routeFor(target) else destination
+            if(!navigatingBack && next!=dockDestination) navigationHistory.addLast(dockDestination)
+            render(next,target)
         }
         val restored=dockDestination.takeIf { it.substringBefore('|') in listOf("home","security","guardian","tools","appearance") && (it.substringAfter('|',"").isEmpty() || groups.containsKey(it.substringAfter('|'))) } ?: "home"
         render(restored,null)

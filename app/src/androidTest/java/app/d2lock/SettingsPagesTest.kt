@@ -10,6 +10,7 @@ import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.d2lock.security.PinStore
+import org.hamcrest.Matchers.allOf
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.startsWith
 import org.junit.Assert.assertTrue
@@ -47,16 +48,22 @@ class SettingsPagesTest {
                 login()
                 onView(withContentDescription("Security")).perform(click())
                 onView(withText(startsWith("Security center  ›"))).perform(click())
-                onView(withText("Change PIN")).check(matches(isDisplayed()))
+                onView(allOf(withText("Change PIN"),isDisplayed())).check(matches(isDisplayed()))
                 scenario.recreate()
                 login()
-                onView(withText("Change PIN")).check(matches(isDisplayed()))
+                onView(allOf(withText("Change PIN"),isDisplayed())).check(matches(isDisplayed()))
                 onView(withText("‹ Back")).perform(click())
                 onView(withText(startsWith("Security center  ›"))).check(matches(isDisplayed()))
                 onView(withContentDescription(containsString("CORE search"))).perform(click())
                 onView(withHint("Search D2 settings")).perform(typeText("Change PIN"),closeSoftKeyboard())
                 onView(withText(containsString("Change PIN\nSECURITY CENTER"))).perform(click())
-                onView(withText("Change PIN")).check(matches(isDisplayed()))
+                onView(allOf(withText("Change PIN"),isDisplayed())).check(matches(isDisplayed()))
+                // Searching the same visible detail again must not add a duplicate Back entry.
+                onView(withContentDescription(containsString("CORE search"))).perform(click())
+                onView(withHint("Search D2 settings")).perform(typeText("Change PIN"),closeSoftKeyboard())
+                onView(withText(containsString("Change PIN\nSECURITY CENTER"))).perform(click())
+                onView(withText("‹ Back")).perform(click())
+                onView(withText(startsWith("Security center  ›"))).check(matches(isDisplayed()))
                 assertTrue(PinStore(context).verify("246810".toCharArray()))
             }
         } finally {
