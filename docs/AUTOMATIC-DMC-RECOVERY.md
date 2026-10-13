@@ -99,3 +99,15 @@ Verification is a point-in-time vault read, not a guarantee of firmware durabili
 With System Framework scope enabled, confirm both `DMC_POWER_HOOK_INSTALLED` entries. Test standard Restart and Power off first, then the exact soft-restart tool being used. Check `DMC_POWER_VERIFIED` before each covered action and read DMC status again after boot. Test failure and timeout cancellation in a controlled test setup before calling the guard validated. Do not test by deliberately enabling unsafe DMC flags on the daily-use device.
 
 Useful log tags: `D2XposedBridge`, `D2DmcPowerGuard`. Outcomes: `DMC_POWER_VERIFIED`, `DMC_POWER_CANCELLED`, `DMC_POWER_DUPLICATE`, `DMC_POWER_HOOK_UNAVAILABLE`, `DMC_POWER_RESUME_FAILED`.
+
+
+### Failed status versus a missing hook
+
+- **Covered action, failed/unknown check:** cancel that request, keep the phone on, and show the D2 status/retry message.
+- **Covered action, five-second timeout:** cancel that request. A later successful vault response cannot trigger a delayed reboot. A still-running vault worker keeps duplicate requests suppressed until it returns.
+- **Status dialog only:** run recovery/check and display results. No power action is requested; an unverified result does not globally disable all reboot routes.
+- **Shutdown hook absent or unsupported:** standard Samsung power actions may proceed without D2 verification. Protective Xposed fallback can also leave an action unguarded. Do not equate missing hooks with enforced cancellation.
+- **D2 soft restart with its guard unavailable:** refuse the D2 request and report the missing guard.
+- **Hardware/root bypass or power/thermal emergency:** these routes remain outside enforcement.
+
+After cancellation, open D2's DMC status, resolve the issue, and explicitly retry. This is a pre-action read-back check, not a guarantee of durable firmware persistence or protection against subsequent Samsung writes.

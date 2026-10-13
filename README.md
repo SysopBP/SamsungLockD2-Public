@@ -13,12 +13,20 @@ This is an action-list integration inspired by [OneUIX](https://github.com/SoCle
 With D2 enabled in LSPosed's **System Framework** scope, the new guard checks the actual DMC vault before the confirmed normal restart or power-off sequence. Safe-mode, recovery and download restarts are covered only when they enter the same framework path. Android's orderly `ActivityManagerService.restart()` soft restart has a separate guard.
 
 - Fresh vault validation, existing target enforcement, and a second read before continuing.
-- Five-second timeout; verification failure cancels the requested action.
+- Five-second timeout; verification failure cancels the requested action. The phone stays on; open D2's DMC status and retry. A late result cannot initiate a delayed reboot.
 - Duplicate requests are suppressed; a late result cannot cause a delayed reboot.
 - Battery/thermal emergency shutdown remains immediate.
 - Direct root process kills, init/property restarts, forced hardware resets and power loss are outside these hooks.
 
 Check `DMC_POWER_HOOK_INSTALLED` logs before relying on coverage. Firmware-specific missing hooks are reported and cannot provide protection. A verified read is not a guarantee that no Samsung service writes the settings later or that firmware has persisted them durably. Local policy/request tests and targeted hook compilation pass; full APK build and device reboot/power-off tests remain pending. See [validation and limits](docs/AUTOMATIC-DMC-RECOVERY.md#power-action-guard-experimental).
+
+### When protection does not pass
+
+For an active, supported guard, failed or unknown DMC verification cancels the requested power off, restart, or supported soft restart. The phone stays on and shows a message directing you to D2's DMC status. A five-second timeout also cancels the request; a late successful result cannot restart the phone. Fix the reported issue and explicitly retry the action.
+
+Opening **DMC protection status** performs the recovery/check and displays its result; it never requests shutdown or restart by itself. A failed status dialog does not globally disable every reboot route.
+
+**A missing guard is different from a failed check:** if the shutdown hook is not loaded, unsupported, or falls back through protective Xposed exception handling, Samsung's normal power action may proceed without D2 verification. D2's own soft-restart request is refused when its guard is unavailable. Forced hardware resets, direct root process kills, power loss, and battery/thermal emergency shutdown are outside enforcement. Hook installation and coverage must be verified on the actual firmware.
 
 ## Automatic DMC System Server preview (0.6.4)
 
