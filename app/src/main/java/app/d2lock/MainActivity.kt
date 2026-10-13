@@ -3685,12 +3685,11 @@ class MainActivity : Activity() {
             contentDescription = if (guardianHealthy) "Guardian Core protected. Tap for system health." else "Guardian Core needs attention. Tap for system health."
             background = Appearance.glass(this@MainActivity, 32f, 72, true)
             elevation = dp(30).toFloat()
-            addView(TextView(this@MainActivity).apply {
-                text = "◆"
-                textSize = 15f
-                gravity = Gravity.CENTER
-                setTextColor(Appearance.accent(this@MainActivity))
-            }, LinearLayout.LayoutParams(-1, dp(23)))
+            addView(ImageView(this@MainActivity).apply {
+                setImageResource(R.drawable.ic_core_search)
+                imageTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                contentDescription = null
+            }, LinearLayout.LayoutParams(dp(24), dp(24)))
             addView(TextView(this@MainActivity).apply {
                 text = if (guardianHealthy) "CORE" else "CHECK"
                 textSize = 8f
@@ -3796,7 +3795,6 @@ class MainActivity : Activity() {
         })
         core.contentDescription = "CORE search. Tap to search all settings; long press for health and logs."
         core.setOnLongClickListener { showGuardianCoreHealth(); true }
-        core.getChildAt(0).let { (it as? TextView)?.text = "⌕" }
         installPageNavigation(root, scroll) { page ->
             destinations.indexOfFirst { it.third == page }.takeIf { it >= 0 }?.let { select(items[it]) }
         }
@@ -3812,7 +3810,7 @@ class MainActivity : Activity() {
             if (dockVisible == visible) return
             dockVisible = visible
             val navDistance = (nav.height.takeIf { it > 0 } ?: dp(72)) + dp(34)
-            val coreDistance = navDistance + dp(54)
+            val coreDistance = navDistance
             nav.animate().cancel()
             core.animate().cancel()
             if (visible) {
@@ -3852,9 +3850,10 @@ class MainActivity : Activity() {
                 nav.layoutParams = params
             }
             (core.layoutParams as? android.widget.FrameLayout.LayoutParams)?.let { params ->
-                params.bottomMargin = dp(62) + bars.bottom
+                params.bottomMargin = dp(18) + bars.bottom
                 core.layoutParams = params
             }
+            scroll.setPadding(0, 0, 0, dp(118) + bars.bottom)
             insets
         }
         return host
