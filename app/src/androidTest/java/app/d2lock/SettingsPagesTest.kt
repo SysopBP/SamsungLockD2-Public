@@ -7,6 +7,7 @@ import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.*
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.*
+import androidx.test.espresso.matcher.RootMatchers.isDialog
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.d2lock.security.PinStore
@@ -34,8 +35,8 @@ class SettingsPagesTest {
                 .putBoolean("setup_wizard_complete",true).putInt("intro_seen_version",29).commit()
             ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java)).use { scenario ->
                 fun login() {
-                    onView(withId(R.id.d2_pin_input)).perform(typeText("246810"),closeSoftKeyboard())
-                    onView(withText("Unlock")).perform(click())
+                    onView(withId(R.id.d2_pin_input)).inRoot(isDialog()).perform(typeText("246810"),closeSoftKeyboard())
+                    onView(withText("Unlock")).inRoot(isDialog()).perform(click())
                     val deadline=SystemClock.uptimeMillis()+5000
                     while(SystemClock.uptimeMillis()<deadline) {
                         var ready=false
