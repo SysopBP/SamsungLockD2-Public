@@ -31,6 +31,7 @@ class GuardianXposedBridge : XposedModule() {
         private val bootReadySent = AtomicBoolean(false)
         private val lastWakeSignalMs = AtomicLong(0L)
         private const val WAKE_DEDUPE_MS = 750L
+        @Volatile private var softRestartGuardInstalled = false
     }
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
@@ -39,6 +40,21 @@ class GuardianXposedBridge : XposedModule() {
             TAG,
             "GUARDIAN_MINIMAL_LOADED api=$apiVersion framework=$frameworkName mode=ams_systemReady_plus_wake_observe"
         )
+    }
+
+    override fun onPackageReady(param: io.github.libxposed.api.XposedModuleInterface.PackageReadyParam) {
+        if (param.packageName != "com.android.systemui" || !param.isFirstPackage) return
+        runCatching {
+            val owner = param.classLoader.loadClass("com.samsung.android.globalactions.presentation.SamsungGlobalActionsPresenter")
+            val create = owner.getDeclaredMethod("createActions").apply { isAccessible = true }
+            hook(create).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
+                val result = chain.proceed()
+                runCatching { D2PowerMenu.addActions(chain.thisObject!!, param.classLoader) }
+                    .onFailure { Log.e(TAG, "D2_POWER_MENU_ACTIONS_UNAVAILABLE", it) }
+                result
+            }
+            Log.i(TAG, "D2_POWER_MENU_HOOK_INSTALLED target=SamsungGlobalActionsPresenter#createActions")
+        }.onFailure { Log.e(TAG, "D2_POWER_MENU_HOOK_UNAVAILABLE", it) }
     }
 
     override fun onSystemServerStarting(param: SystemServerStartingParam) {
@@ -108,6 +124,7 @@ class GuardianXposedBridge : XposedModule() {
                     null
                 }
             }
+            softRestartGuardInstalled = true
             Log.i(TAG, "DMC_POWER_HOOK_INSTALLED target=ActivityManagerService#restart")
         }.onFailure { Log.e(TAG, "DMC_POWER_HOOK_UNAVAILABLE target=ActivityManagerService#restart", it) }
     }
@@ -283,18 +300,42 @@ class GuardianXposedBridge : XposedModule() {
         if (android.os.Build.VERSION.SDK_INT < 34) return
         app.registerReceiver(object : android.content.BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                val allowedUid = runCatching { app.packageManager.getPackageUid("app.d2lock", 0) }.getOrNull() ?: return
-                if (sentFromUid != allowedUid || allowedUid / 100000 != 0) return
+                val appUid = runCatching { app.packageManager.getPackageUid("app.d2lock", 0) }.getOrNull()
+                val systemUiUid = runCatching { app.packageManager.getPackageUid("com.android.systemui", 0) }.getOrNull()
+                val sender = sentFromUid
+                if (sender < 0 || sender / 100000 != 0) return
+                val callerPackage = when (sender) {
+                    systemUiUid -> "com.android.systemui"
+                    appUid -> "app.d2lock"
+                    else -> return
+                }
+                if (intent.action == "app.d2lock.action.DMC_SOFT_RESTART") {
+                    if (callerPackage != "com.android.systemui") return
+                    if (!softRestartGuardInstalled) {
+                        Log.e(TAG, "DMC_SOFT_RESTART_CANCELLED reason=guard_unavailable")
+                        runCatching { android.widget.Toast.makeText(app, "D2 soft restart cancelled: DMC guard unavailable.", android.widget.Toast.LENGTH_LONG).show() }
+                        return
+                    }
+                    runCatching {
+                        val manager = Class.forName("android.app.ActivityManager").getDeclaredMethod("getService").invoke(null)
+                        val restart = manager.javaClass.getMethod("restart")
+                        val identity = android.os.Binder.clearCallingIdentity()
+                        try { restart.invoke(manager) } finally { android.os.Binder.restoreCallingIdentity(identity) }
+                    }.onFailure { Log.e(TAG, "DMC_SOFT_RESTART_REQUEST_FAILED", it) }
+                    return
+                }
                 val reply = intent.getStringExtra("reply") ?: return
                 if (!reply.startsWith("app.d2lock.action.DMC_RESULT.")) return
-                scheduleDmcRecovery(app, reply, 0L)
+                scheduleDmcRecovery(app, reply, 0L, callerPackage)
             }
-        }, android.content.IntentFilter("app.d2lock.action.DMC_REQUEST"), Context.RECEIVER_EXPORTED)
+        }, android.content.IntentFilter("app.d2lock.action.DMC_REQUEST").apply {
+            addAction("app.d2lock.action.DMC_SOFT_RESTART")
+        }, Context.RECEIVER_EXPORTED)
         Log.i(TAG, "DMC_SYSTEM_SERVER_RECEIVER_READY uid=${android.os.Process.myUid()} pid=${android.os.Process.myPid()}")
     }
 
     /** One guarded recovery attempt in system_server; validate before writing and verify read-back. */
-    private fun scheduleDmcRecovery(systemContext: Context, reply: String? = null, delay: Long = 10_000L) {
+    private fun scheduleDmcRecovery(systemContext: Context, reply: String? = null, delay: Long = 10_000L, replyPackage: String = "app.d2lock") {
         runCatching {
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 runCatching {
@@ -338,7 +379,7 @@ class GuardianXposedBridge : XposedModule() {
                             android.os.Binder.restoreCallingIdentity(identity)
                             if (reply != null && android.os.Build.VERSION.SDK_INT >= 34) runCatching {
                                 val data = verifiedRecord
-                                systemContext.sendBroadcast(Intent(reply).setPackage("app.d2lock")
+                                systemContext.sendBroadcast(Intent(reply).setPackage(replyPackage)
                                     .putExtra("verified", data != null).putExtra("detail", detail)
                                     .putExtra("lock", data?.get(0)?.toInt() ?: -1)
                                     .putExtra("maint", data?.get(1)?.toInt() ?: -1)

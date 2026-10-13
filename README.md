@@ -1,5 +1,13 @@
 # Samsung Lock D2
 
+## D2 power-menu integration (experimental)
+
+Enable D2 in **both SystemUI and System Framework** LSPosed scopes. Reload those processes using your established recovery procedure; installing an APK alone does not guarantee the hooks are active.
+
+Samsung's power menu presents **D2 power off** and **D2 restart** using the original Samsung action models, with native confirmation and long-press behavior. Emergency, lockdown and unrelated actions are retained. D2 adds **D2 soft restart** (with Samsung confirmation) and **DMC protection status** (a rounded dark live-status dialog). Power off and Restart use the System Server guard described below; soft restart requests are accepted only from the trusted primary-user SystemUI UID and refused if the soft-restart guard is unavailable. The live dialog checks System Server's sender identity and times out after six seconds.
+
+This is an action-list integration inspired by [OneUIX](https://github.com/SoClear/OneUIX), implemented independently using reflection and libxposed. It keeps Samsung's menu presentation; a complete replacement of the menu's visual layout is not included. It requires Samsung's `SamsungGlobalActionsPresenter#createActions` API. Missing APIs leave the standard menu available and are logged as `D2_POWER_MENU_HOOK_UNAVAILABLE` or `D2_POWER_MENU_ACTIONS_UNAVAILABLE`. Test interaction with other power-menu modules, including OneUIX, before relying on combined behavior.
+
 ## DMC checks before power actions (0.6.4 preview)
 
 With D2 enabled in LSPosed's **System Framework** scope, the new guard checks the actual DMC vault before the confirmed normal restart or power-off sequence. Safe-mode, recovery and download restarts are covered only when they enter the same framework path. Android's orderly `ActivityManagerService.restart()` soft restart has a separate guard.
