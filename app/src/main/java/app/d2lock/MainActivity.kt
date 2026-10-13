@@ -337,7 +337,7 @@ class MainActivity : Activity() {
             setTextColor(if (secondary) Appearance.secondary(this@MainActivity) else Appearance.text(this@MainActivity))
             setLineSpacing(0f, 1.12f)
         }
-        body.addView(label(12f, true).apply { text = "D2  •  AUTOMATIC ROOT RECOVERY" })
+        body.addView(label(12f, true).apply { text = "D2  •  SYSTEM SERVER RECOVERY" })
         body.addView(label(22f).apply {
             text = "Feature status"
             setPadding(0, dp(6), 0, dp(12))
@@ -352,7 +352,7 @@ class MainActivity : Activity() {
         val detail = label(13f, true)
         body.addView(detail)
         body.addView(label(12f, true).apply {
-            text = "Runs automatically with granted root. These are DMC flags; Android credentials and D2 PIN/Pattern are separate. Download eligibility is derived from the flags."
+            text = "Runs automatically inside System Server through the D2 Xposed module after boot. Enable D2 for System Framework in LSPosed. Root supports setup; vault access uses System Server. Android credentials and D2 PIN/Pattern are separate."
             setPadding(0, dp(12), 0, dp(12))
         })
         body.addView(label(15f).apply {
@@ -384,7 +384,8 @@ class MainActivity : Activity() {
                 rows.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
             }
             fun flag(value: Int?) = when (value) { 0 -> "Disabled"; 1 -> "Enabled"; else -> "Unknown" }
-            row("⚡", "Root access", when (status.root) { true -> "Available"; false -> "Unavailable"; null -> "Unknown" }, "Available", status.root == true)
+            row("⚡", "Root access (setup)", when (status.root) { true -> "Available"; false -> "Unavailable"; null -> "Unknown" }, "Available", status.root == true)
+            row("🧩", "System Server recovery", "Unknown", "Verified vault read-back", false)
             row("🔒", "Screen lock (DMC)", flag(status.screenLock), "Disabled", status.verified && status.screenLock == 0)
             row("🛠", "Maintenance Mode (DMC)", flag(status.maintenance), "Disabled", status.verified && status.maintenance == 0)
             row("⌨", "Download Mode AT command", flag(status.atCommand), "Enabled", status.verified && status.atCommand == 1)
@@ -1054,26 +1055,34 @@ class MainActivity : Activity() {
             setPadding(dp(16), dp(14), dp(16), dp(14))
             background = Appearance.glass(this@MainActivity, 28f, 36, true)
             addView(TextView(this@MainActivity).apply {
-                text = "DMC Vault  •  Automatic with root"
+                text = "DMC Vault  •  System Server recovery"
                 textSize = 18f
                 setTextColor(Appearance.text(this@MainActivity))
             })
             addView(TextView(this@MainActivity).apply {
-                text = "Targets: Screen lock & Maintenance Mode disabled\nDownload Mode AT Command enabled • Download Mode allowed"
+                text = "Automatic after boot via D2’s Xposed System Server hook. Enable D2 for System Framework in LSPosed.\nTargets: Screen lock & Maintenance Mode disabled\nDownload Mode AT Command enabled • Download Mode allowed"
                 textSize = 13f
                 setTextColor(Appearance.secondary(this@MainActivity))
                 setPadding(0, dp(8), 0, dp(8))
             })
             addView(TextView(this@MainActivity).apply {
                 val current = app.d2lock.root.DmcRecovery.status(this@MainActivity)
-                text = if (current.targetsMet) "✓ All four DMC targets verified" else "○ ${current.detail}"
+                text = "System Server result: check recovery log\nRoot fallback: ${current.detail}"
                 textSize = 12f
                 setTextColor(Appearance.secondary(this@MainActivity))
             })
-            addView(Button(this@MainActivity).apply {
-                text = "View feature status"
+            addView(TextView(this@MainActivity).apply {
+                text = "✓  View feature status"
+                textSize = 15f
+                gravity = Gravity.CENTER
+                setTextColor(Appearance.text(this@MainActivity))
+                setPadding(dp(12), dp(14), dp(12), dp(14))
+                background = Appearance.glass(this@MainActivity, 22f, 30, true)
+                isClickable = true
+                isFocusable = true
+                contentDescription = "View DMC feature status"
                 setOnClickListener { showDmcStatus() }
-            })
+            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
         section(root, "SYSTEM INTEGRATION")
         root.getChildAt(root.childCount - 1).tag = "root_shizuku"
