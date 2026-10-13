@@ -50,7 +50,11 @@ import rikka.shizuku.Shizuku
 class MainActivity : Activity() {
     private val wallpaperPicker = 701
     private val appWallpaperPicker = 702
-    private var dockDestination = "main_settings"
+    private var dockDestination = "home"
+    private val pageScrollPositions = mutableMapOf<String, Int>()
+    private val navigationHistory = java.util.ArrayDeque<String>()
+    private var pageNavigator: ((String, View?) -> Unit)? = null
+    private val sectionTitles = java.util.IdentityHashMap<View, String>()
     private var readinessDialog: AlertDialog? = null
     private var settingsScrollY = 0
     private var authorized = false
@@ -624,6 +628,7 @@ class MainActivity : Activity() {
     }
 
     private fun buildSettings(): ViewGroup {
+        sectionTitles.clear()
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(22), dp(56), dp(22), dp(210))
@@ -3382,6 +3387,11 @@ class MainActivity : Activity() {
         }
         root.setPadding(dp(18), dp(48), dp(18), dp(20))
         root.addView(selector, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+        val shortcuts=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
+        listOf("Security" to "security", "SRP" to "tools", "Guardian" to "guardian", "Style" to "appearance").forEach { (title,page) ->
+            shortcuts.addView(action(title) { pageNavigator?.invoke(page,null) },LinearLayout.LayoutParams(dp(112),-2).apply { marginEnd=dp(8) })
+        }
+        root.addView(android.widget.HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled=false; addView(shortcuts) },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
         val status = card()
         fun pair(parent: LinearLayout, first: View, second: View) {
             if (resources.configuration.fontScale >= 1.25f || resources.configuration.screenWidthDp < 360) {
@@ -3482,17 +3492,112 @@ class MainActivity : Activity() {
         bridge.addView(bridgeBody)
         root.addView(bridge, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         root.addView(label("Samsung may require its PIN after reboot. Keep your fingerprint enrolled.", 12f))
-        root.addView(action("All controls & device details  ${if(details.visibility == View.VISIBLE) "⌃" else "⌄"}") {
-            val open = details.visibility != View.VISIBLE
-            details.visibility = if (open) View.VISIBLE else View.GONE
-            Prefs.setCompactDetails(this, open)
-            refreshSettingsPreservingPosition()
+        root.addView(action("Explore tools & settings  ›") {
+            pageNavigator?.invoke("tools", null)
+            return@action
         }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8); bottomMargin = dp(8) })
         root.addView(details)
     }
 
     private fun revealCompactDetails(root: LinearLayout) {
         root.findViewWithTag<View>("compact_details")?.visibility = View.VISIBLE
+    }
+
+    private fun sectionPage(title: String) = SettingsNavigation.pageForSection(title)
+
+    private fun installPageNavigation(root: LinearLayout, scroll: ScrollView, selected: (String)->Unit) {
+        val details=root.findViewWithTag<LinearLayout>("compact_details")
+        if(details==null) { pageNavigator=null; return }
+        val pages=java.util.IdentityHashMap<View,String>()
+        var page="tools"
+        for(i in 0 until details.childCount) {
+            val child=details.getChildAt(i)
+            sectionTitles[child]?.let { page=sectionPage(it) }
+            pages[child]=page
+        }
+        val homeViews=(2 until root.childCount).map { root.getChildAt(it) }.filter { it!==details }
+        fun targetPage(target:View):String {
+            var child=target
+            while(child.parent is View && child.parent!==details) child=child.parent as View
+            return pages[child] ?: "home"
+        }
+        fun render(destination:String, target:View?) {
+            val actual=if(target!=null) targetPage(target) else destination
+            dockDestination=actual
+            homeViews.forEach { it.visibility=if(actual=="home") View.VISIBLE else View.GONE }
+            details.visibility=if(actual=="home") View.GONE else View.VISIBLE
+            for(i in 0 until details.childCount) details.getChildAt(i).let { it.visibility=if(pages[it]==actual) View.VISIBLE else View.GONE }
+            (root.getChildAt(0) as? TextView)?.text=when(actual) { "home"->"D2 Guardian"; "appearance"->"Appearance"; else->actual.replaceFirstChar { it.uppercase() } }
+            selected(actual)
+            scroll.post {
+                if(target==null) scroll.scrollTo(0,pageScrollPositions[actual] ?: 0)
+                else {
+                    val rect=android.graphics.Rect(); target.getDrawingRect(rect)
+                    root.offsetDescendantRectToMyCoords(target,rect)
+                    scroll.smoothScrollTo(0,(rect.top-dp(18)).coerceAtLeast(0)); flashSettingsTarget(target)
+                }
+            }
+        }
+        pageNavigator={ destination,target ->
+            pageScrollPositions[dockDestination]=scroll.scrollY
+            if(destination!=dockDestination || target!=null) navigationHistory.addLast(dockDestination)
+            render(destination,target)
+        }
+        render(dockDestination.takeIf { it in listOf("home","security","guardian","tools","appearance") } ?: "home",null)
+    }
+
+    @Deprecated("Android Activity back callback")
+    override fun onBackPressed() {
+        if(authorized && pageNavigator!=null && dockDestination!="home") {
+            val previous=if(navigationHistory.isEmpty()) "home" else navigationHistory.removeLast()
+            pageNavigator?.invoke(previous,null)
+            if(!navigationHistory.isEmpty()) navigationHistory.removeLast()
+        } else super.onBackPressed()
+    }
+
+    private fun showGlobalSearch(root:LinearLayout, scroll:ScrollView) {
+        val body=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(16),dp(12),dp(16),dp(16)) }
+        val input=android.widget.EditText(this).apply { hint="Search D2 settings"; textSize=16f; setSingleLine(true); setTextColor(Appearance.text(this@MainActivity)); setHintTextColor(Appearance.secondary(this@MainActivity)) }
+        body.addView(input,LinearLayout.LayoutParams(-1,dp(56)))
+        val health=TextView(this).apply { text="Guardian health & readiness  ›"; minimumHeight=dp(48); setTextColor(Appearance.text(this@MainActivity)) }
+        body.addView(health)
+        val results=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL }
+        body.addView(ScrollView(this).apply { addView(results) },LinearLayout.LayoutParams(-1,(resources.displayMetrics.heightPixels*.45f).toInt()))
+        val dialog=AlertDialog.Builder(this).setTitle("CORE · Search").setView(body).setNegativeButton("Close",null).create()
+        health.setOnClickListener { dialog.dismiss(); showReadiness() }
+        val entries=mutableListOf<Triple<TextView,View,String>>()
+        fun walk(view:View,section:String) {
+            if(view is ViewGroup) {
+                var current=section
+                for(i in 0 until view.childCount) { val child=view.getChildAt(i); sectionTitles[child]?.let { current=it }; walk(child,current) }
+            } else if(view is TextView && view.isClickable && view.text.isNotBlank()) {
+                entries.add(Triple(view,view,section))
+            }
+        }
+        walk(root,"Home")
+        fun update(query:String) {
+            results.removeAllViews()
+            val matches=entries.filter { query.isNotBlank() && (it.first.text.toString()+" "+it.third).contains(query,true) }.distinctBy { it.first.text.toString()+it.third }.take(40)
+            if(matches.isEmpty()) results.addView(TextView(this).apply { text=if(query.isBlank()) "Search controls, features, or section names" else "No matching controls"; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,dp(12),0,dp(12)) })
+            matches.forEach { (label,target,section) -> results.addView(TextView(this).apply {
+                text=label.text.toString()+if(label is Switch) " · ${if(label.isChecked) "On" else "Off"}" else ""; append("\n$section")
+                textSize=14f; minimumHeight=dp(56); setPadding(dp(12),dp(10),dp(12),dp(10)); setTextColor(Appearance.text(this@MainActivity)); background=Appearance.glass(this@MainActivity,20f,28,true)
+                setOnClickListener {
+                    dialog.dismiss()
+                    if(pageNavigator!=null) pageNavigator?.invoke("tools",target)
+                    else { revealCompactDetails(root); scroll.post { val r=android.graphics.Rect(); target.getDrawingRect(r); root.offsetDescendantRectToMyCoords(target,r); scroll.smoothScrollTo(0,r.top); flashSettingsTarget(target) } }
+                    if(!target.isEnabled) GuardianDialogs.showInfo(this@MainActivity,"Control unavailable","This control is disabled by its current setup or development state. Review the guidance in its settings section.")
+                }
+            },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(6) }) }
+        }
+        input.addTextChangedListener(object:android.text.TextWatcher {
+            override fun beforeTextChanged(s:CharSequence?,start:Int,count:Int,after:Int) {}
+            override fun onTextChanged(s:CharSequence?,start:Int,before:Int,count:Int) { update(s?.toString().orEmpty()) }
+            override fun afterTextChanged(s:android.text.Editable?) {}
+        })
+        update("")
+        dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this,32f,82,true)); input.requestFocus() }
+        dialog.show()
     }
 
     private fun settingsHost(root: LinearLayout): ViewGroup {
@@ -3530,7 +3635,13 @@ class MainActivity : Activity() {
             background = Appearance.glass(this@MainActivity, 36f, 82, true)
             elevation = dp(24).toFloat()
         }
-        val destinations = listOf(
+        val destinations = if (Prefs.compactLayout(this) && PinStore(this).configured()) listOf(
+            Triple(R.drawable.ic_nav_home, "Home", "home"),
+            Triple(R.drawable.ic_lock_security, "Security", "security"),
+            Triple(R.drawable.ic_guardian_shield, "Guardian", "guardian"),
+            Triple(R.drawable.ic_nav_settings, "Tools", "tools"),
+            Triple(R.drawable.ic_palette, "Style", "appearance")
+        ) else listOf(
             Triple(R.drawable.ic_nav_home, "Main", "main_settings"),
             Triple(R.drawable.ic_nav_clock, "Clock", "clock_weather"),
             Triple(R.drawable.ic_guardian_notifications, "Alerts", "notifications"),
@@ -3579,7 +3690,7 @@ class MainActivity : Activity() {
                 animate().cancel()
                 scaleX = .90f; scaleY = .90f
                 animate().scaleX(1f).scaleY(1f).setDuration(160).start()
-                showGuardianCoreHealth()
+                showGlobalSearch(root, scroll)
             }
         }
         val items = mutableListOf<LinearLayout>()
@@ -3631,7 +3742,9 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(-1, dp(18)))
                 setOnClickListener {
                     performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
-                    if (target == "settings") {
+                    if (Prefs.compactLayout(this@MainActivity) && PinStore(this@MainActivity).configured()) {
+                        pageNavigator?.invoke(target, null)
+                    } else if (target == "settings") {
                         showQuickSettingsSheet(root, scroll)
                     } else if (index == 0 && Prefs.compactLayout(this@MainActivity)) {
                         scroll.smoothScrollTo(0, 0)
@@ -3657,12 +3770,18 @@ class MainActivity : Activity() {
             })
         }
         items.getOrNull(destinations.indexOfFirst { it.third == dockDestination }.coerceAtLeast(0))?.let { select(it) }
-        host.addView(nav, android.widget.FrameLayout.LayoutParams(-1, dp(72), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
-            setMargins(dp(18), 0, dp(18), dp(18))
+        host.addView(nav, android.widget.FrameLayout.LayoutParams(-1, dp(72), Gravity.BOTTOM or Gravity.START).apply {
+            setMargins(dp(12), 0, dp(90), dp(18))
         })
-        if (!Prefs.compactLayout(this) || !PinStore(this).configured()) host.addView(core, android.widget.FrameLayout.LayoutParams(dp(58), dp(58), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
-            setMargins(0, 0, 0, dp(62))
+        host.addView(core, android.widget.FrameLayout.LayoutParams(dp(68), dp(72), Gravity.BOTTOM or Gravity.END).apply {
+            setMargins(0, 0, dp(12), dp(18))
         })
+        core.contentDescription = "CORE search. Tap to search all settings; long press for health and logs."
+        core.setOnLongClickListener { showGuardianCoreHealth(); true }
+        core.getChildAt(0).let { (it as? TextView)?.text = "⌕" }
+        installPageNavigation(root, scroll) { page ->
+            destinations.indexOfFirst { it.third == page }.takeIf { it >= 0 }?.let { select(items[it]) }
+        }
 
         // Keep the Guardian Dock out of the way while reading settings.
         // Downward scrolling hides both the dock and its CORE/CHECK button; upward
@@ -3803,6 +3922,7 @@ class MainActivity : Activity() {
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(8), dp(14), 0, dp(7))
         })
+        sectionTitles[parent.getChildAt(parent.childCount - 1)] = title
     }
     private fun pillBackground() = Appearance.glass(this, 22f, if (Appearance.dark(this)) 38 else 62, true)
 
@@ -4135,6 +4255,7 @@ class MainActivity : Activity() {
         if (isFinishing || isDestroyed || !authorized || appStopped) return
         settingsScrollY = findViewById<ViewGroup>(android.R.id.content)
             .findViewWithTag<ScrollView>("settings_scroll")?.scrollY ?: settingsScrollY
+        pageScrollPositions[dockDestination]=settingsScrollY
         setContentView(buildSettings())
     }
     private fun refreshShizukuUi() = runOnUiThread { refreshSettingsPreservingPosition() }
