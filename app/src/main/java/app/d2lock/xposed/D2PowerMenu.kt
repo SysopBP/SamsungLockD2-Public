@@ -25,6 +25,8 @@ import java.util.UUID
 /** Samsung hosts the actions and confirmations; D2 adds guarded soft restart and live status. */
 internal object D2PowerMenu {
     private const val TAG = "D2PowerMenu"
+    // Framework TYPE_VOLUME_OVERLAY is hidden from the public SDK.
+    private const val POWER_MENU_WINDOW_TYPE = 2020
     const val SOFT_RESTART_ICON = 0x7ed20001
     const val SRP_STATUS_ICON = 0x7ed20002
 
@@ -147,8 +149,11 @@ internal object D2PowerMenu {
         val status = action("d2_dmc_status", "D2 SRP status", SRP_STATUS_ICON) {
             // Samsung's global-actions window sits above KEYGUARD_DIALOG windows.
             // Close it before presenting status, allowing its exit animation to finish.
+            // Match Samsung's dialog layer when discoverable; its global-actions
+            // window normally uses TYPE_VOLUME_OVERLAY, above KEYGUARD_DIALOG.
+            val windowType = powerMenuWindowType(presenter)
             call(presenter, "dismissDialog", false)
-            Handler(Looper.getMainLooper()).postDelayed({ showStatus(context()) }, 350L)
+            Handler(Looper.getMainLooper()).postDelayed({ showStatus(context(), windowType) }, 350L)
         }
         call(presenter, "clearActions", "power")
         call(presenter, "clearActions", "restart")
@@ -161,14 +166,35 @@ internal object D2PowerMenu {
         Log.i(TAG, "D2_POWER_MENU_READY actions=d2_power_restart_soft_restart_and_status")
     }
 
-    private fun showStatus(app: Context) {
+    private fun powerMenuWindowType(presenter: Any): Int {
+        fun window(target: Any, depth: Int): android.view.Window? {
+            if (target is android.app.Dialog) return target.window
+            if (target is android.view.Window) return target
+            if (depth == 0) return null
+            for (type in generateSequence(target.javaClass as Class<*>?) { it.superclass }) {
+                for (field in type.declaredFields.filter {
+                    it.name in setOf("mView", "mDialog", "mGlobalActionsDialog", "mWindow") &&
+                        !java.lang.reflect.Modifier.isStatic(it.modifiers)
+                }) {
+                    val child = runCatching { field.isAccessible = true; field.get(target) }.getOrNull() ?: continue
+                    window(child, depth - 1)?.let { return it }
+                }
+            }
+            return null
+        }
+        return window(presenter, 3)?.attributes?.type
+            ?: POWER_MENU_WINDOW_TYPE
+    }
+
+    private fun showStatus(app: Context, windowType: Int) {
         if (Build.VERSION.SDK_INT < 34) return
         val handler = Handler(Looper.getMainLooper())
         val dialog = AlertDialog.Builder(app)
             .setTitle("D2 SRP")
             .setMessage("Samsung Recovery Protection\n\nChecking the Samsung recovery vault inside System Server…")
             .setPositiveButton("Close", null).create()
-        dialog.window?.setType(WindowManager.LayoutParams.TYPE_KEYGUARD_DIALOG)
+        dialog.window?.setType(windowType)
+        Log.i(TAG, "D2_POWER_STATUS_WINDOW type=$windowType")
         val reply = "app.d2lock.action.DMC_RESULT." + UUID.randomUUID()
         var registered = false
         var received = false
