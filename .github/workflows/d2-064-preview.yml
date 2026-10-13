@@ -47,5 +47,5 @@ jobs:
             echo "::error::Release already exists; refusing automatic replacement"
             exit 1
           fi
-          gh release create "$RELEASE_TAG" dist/* --target "$SOURCE_SHA" --title "D2 Guardian 0.6.4 Preview 2 — Call Hotfix & New UI" --notes-file docs/RELEASE-0.6.4-PREVIEW.md --prerelease
+          gh release create "$RELEASE_TAG" dist/* --target "${{ github.sha }}" --title "D2 Guardian 0.6.4 Preview 2 — Call Hotfix & New UI" --notes-file docs/RELEASE-0.6.4-PREVIEW.md --prerelease
           gh release view "$RELEASE_TAG" --json url,isPrerelease,assets
