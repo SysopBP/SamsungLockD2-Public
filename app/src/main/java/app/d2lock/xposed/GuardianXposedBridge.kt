@@ -70,6 +70,20 @@ class GuardianXposedBridge : XposedModule() {
         runCatching {
             val app = D2PowerMenu.context()
             D2KeyguardPresentation.register(app)
+            runCatching {
+                val mediator = loader.loadClass("com.android.systemui.keyguard.KeyguardViewMediator")
+                val done = mediator.getDeclaredMethod("keyguardDone", Int::class.javaPrimitiveType).apply { isAccessible = true }
+                val capture = mediator.declaredMethods.filter { it.name in setOf("setupLocked", "showLocked", "doKeyguardLocked") }
+                check(capture.isNotEmpty()) { "No supported keyguard mediator lifecycle" }
+                capture.forEach { method ->
+                    hook(method).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
+                        val result = chain.proceed()
+                        val target = chain.thisObject
+                        D2KeyguardPresentation.bindDismiss { done.invoke(target, 0) }
+                        result
+                    }
+                }
+            }.onFailure { Log.w(TAG, "D2_KEYGUARD_HANDOFF_UNAVAILABLE presentation_only=true", it) }
             val owner = loader.loadClass("com.android.systemui.statusbar.phone.StatusBarKeyguardViewManager")
             val methods = owner.declaredMethods.filter {
                 it.name in setOf("showBouncer", "showPrimaryBouncer") &&
