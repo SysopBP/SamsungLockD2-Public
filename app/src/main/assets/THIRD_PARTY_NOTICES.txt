@@ -1,5 +1,8 @@
 THIRD-PARTY NOTICES
 
+DMC discovery credit: @diablOw — originally discovered the DMC behavior
+behind D2’s recovery feature.
+
 D2 original code: Copyright (c) 2026 D2 Project. All rights reserved.
 The licenses below apply only to their respective third-party components.
 

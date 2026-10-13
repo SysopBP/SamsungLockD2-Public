@@ -76,3 +76,7 @@ Unit tests cover preserving unrelated vault bytes, idempotence, malformed and
 unknown records, write rejection, ineffective writes, read-back mismatch, and
 all eight combinations of the three DMC flags. An emulator cannot validate
 Samsung VaultKeeper permissions or bootloader eligibility.
+
+## Discovery credit
+
+@diablOw originally discovered the DMC behavior behind this recovery feature.

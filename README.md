@@ -1,13 +1,23 @@
 # Samsung Lock D2
 
-## Automatic DMC root preview (0.6.4)
+## Automatic DMC System Server preview (0.6.4)
 
-Rooted primary-user installs automatically apply and verify the DMC vault targets:
-screen-lock flag disabled, Maintenance Mode flag disabled, Download Mode AT Command
-enabled, and derived Download Mode eligibility allowed. There is no enable switch
-or manual Fix Now step. A live status dialog is available in Automatic DMC Recovery.
-This sets DMC flags, not Android credentials or the actual Maintenance Mode session.
-Samsung VaultKeeper may reject UID-0 access; device compatibility remains unverified.
+D2 applies and verifies the primary-user DMC vault targets inside Xposed System
+Server (UID 1000): screen-lock flag disabled, Maintenance Mode flag disabled,
+Download Mode AT-command flag enabled, and derived Download Mode eligibility
+allowed. Enable D2 for System Framework in LSPosed and reboot. Recovery has no
+root shell or app_process fallback and no manual Fix Now step.
+
+Completed PIN/password/pattern changes and fingerprint/face additions or removals
+trigger a refresh after 2 seconds, followed by a check at 12 seconds for delayed
+Samsung updates. Setup detection needs validation on the target firmware.
+The live glass status dialog shows target checks, System Server identity, and
+last-check time. Successful vault read-back is required to report verification.
+DMC flags are separate from Android credentials and biometric enrollment.
+
+**DMC discovery credit: @diablOw**, for originally discovering the DMC behavior
+behind this recovery feature.
+
 See [automatic DMC recovery behavior and limits](docs/AUTOMATIC-DMC-RECOVERY.md).
 
 > **September 29, 2026 development status:** Physical-device testing now confirms the token-integrated fast-boot path as the new known-good reference. `ActivityManagerService.systemReady()` delivers `BOOT_READY`, D2 performs the early root launch, confirms the boot token when `LockScreenActivity` is created, and reaches `GUARDIAN_FIRST_DRAW` about **305 ms after BOOT_READY** in the captured successful boot. When the normal Android boot receiver arrives later, it recognizes the claimed token and skips the duplicate launch. Preserve this ordering as the boot baseline. See [the verified baseline and measured boot timeline](.github/KIOSK_D2_BASELINE.md).
@@ -151,6 +161,8 @@ The app now uses the neutral package ID `app.d2lock`; source namespaces and modu
 Notification content stays in memory. Wallpaper selection stores a persistent image URI. Weather uses Open-Meteo with approximate last-known location only when permission is granted; no location history is stored by D2.
 
 ## Rights and credits
+
+**@diablOw** — original discovery of the DMC behavior used by D2’s recovery feature.
 
 Copyright (c) 2026 D2 Project. **All rights reserved.** D2's original code is publicly viewable but is not released under an open-source license. See [LICENSE](LICENSE). Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt) and **Licenses and credits** in the app.
 
