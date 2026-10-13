@@ -3466,6 +3466,7 @@ class MainActivity : Activity() {
         }
         root.addView(back,2,LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
         fun routeFor(target:View):String {
+            summaries.entries.firstOrNull { it.value===target }?.key?.let { return SettingsNavigation.pageForSection(it)+"|"+it }
             var child=target
             while(child.parent is View && child.parent!==details) child=child.parent as View
             val title=groups.entries.firstOrNull { it.value===child }?.key
@@ -3486,7 +3487,13 @@ class MainActivity : Activity() {
             selected(page)
             scroll.post {
                 if(target==null) scroll.scrollTo(0,pageScrollPositions[actual] ?: 0)
-                else { val rect=android.graphics.Rect(); target.getDrawingRect(rect); root.offsetDescendantRectToMyCoords(target,rect); scroll.smoothScrollTo(0,(rect.top-dp(18)).coerceAtLeast(0)); flashSettingsTarget(target) }
+                else {
+                    val summary=summaries.entries.firstOrNull { it.value===target }?.key
+                    val visibleTarget=summary?.let { groups[it]?.getChildAt(0) } ?: target
+                    val rect=android.graphics.Rect(); visibleTarget.getDrawingRect(rect)
+                    root.offsetDescendantRectToMyCoords(visibleTarget,rect)
+                    scroll.smoothScrollTo(0,(rect.top-dp(18)).coerceAtLeast(0)); flashSettingsTarget(visibleTarget)
+                }
             }
         }
         pageNavigator={ destination,target ->
