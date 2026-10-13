@@ -3255,12 +3255,17 @@ class MainActivity : Activity() {
         }
         fun action(text: String, click: () -> Unit) = label(text).apply {
             val icon = when {
+                text.startsWith("Security") || text.startsWith("Manage security") -> R.drawable.ic_lock_security
+                text.startsWith("SRP") || text.startsWith("D2 SRP") || text.startsWith("Readiness") -> R.drawable.ic_guardian_shield
+                text.startsWith("Guardian") -> R.drawable.ic_guardian_shield
+                text.startsWith("Appearance") -> R.drawable.ic_palette
+                text.startsWith("System bridge") || text.startsWith("System Server") -> R.drawable.ic_guardian_device
                 text.startsWith("Shizuku") -> R.drawable.ic_guardian_shizuku
                 text.startsWith("Root") -> R.drawable.ic_guardian_root
                 text.startsWith("Kiosk") -> R.drawable.ic_guardian_shield
                 text.startsWith("Change PIN") -> R.drawable.ic_lock_security
                 text.startsWith("Unlock") || text.startsWith("Fingerprint") -> R.drawable.ic_guardian_fingerprint
-                else -> R.drawable.ic_system_health
+                else -> R.drawable.ic_nav_settings
             }
             val drawable = getDrawable(icon)?.mutate()
             drawable?.setTint(Appearance.accent(this@MainActivity)); drawable?.setBounds(0,0,dp(18),dp(18))
@@ -3300,8 +3305,10 @@ class MainActivity : Activity() {
         }
         root.setPadding(dp(18), dp(48), dp(18), dp(20))
         val shortcuts=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
-        listOf("Security" to "security", "SRP" to "tools", "Guardian" to "guardian", "Style" to "appearance").forEach { (title,page) ->
-            shortcuts.addView(action(title) { pageNavigator?.invoke(page,null) },LinearLayout.LayoutParams(dp(112),-2).apply { marginEnd=dp(8) })
+        listOf("Security" to "security", "SRP" to "tools", "Guardian" to "guardian", "Appearance" to "appearance").forEach { (title,page) ->
+            shortcuts.addView(action(title) {
+                if(title=="SRP") pageNavigator?.invoke("tools|D2 SRP",null) else pageNavigator?.invoke(page,null)
+            },LinearLayout.LayoutParams(dp(if(title=="Appearance") 148 else 112),-2).apply { marginEnd=dp(8) })
         }
         root.addView(android.widget.HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled=false; addView(shortcuts) },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
         val status = card()
@@ -3322,10 +3329,15 @@ class MainActivity : Activity() {
             Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
         }.getOrDefault(false)
         val serverOk = KeyguardSignalReceiver.systemHealth(this).status == "CONNECTED"
-        pair(status, action("Kiosk ${if (Prefs.kiosk(this)) "✓" else "○"}") { showReadiness() },
-            action("Root ${if (rootOk) "✓" else "○"}") { showReadiness() })
-        pair(status, action("Shizuku ${if (shizukuOk) "✓" else "○"}") { resolveShizuku() },
-            action("System Server ${if (serverOk) "✓" else "○"}") { showSystemServerDashboard() })
+        status.addView(label("Protection status",18f))
+        fun statusRow(text:String, click:()->Unit) = action(text,click).apply {
+            gravity=Gravity.START or Gravity.CENTER_VERTICAL
+            background=null
+        }
+        status.addView(statusRow("Kiosk · ${if(Prefs.kiosk(this)) "Enabled" else "Off"}") { showReadiness() })
+        status.addView(statusRow("Root · ${if(rootOk) "Available" else "Unavailable"}") { showReadiness() })
+        status.addView(statusRow("Shizuku · ${if(!Prefs.shizukuEnabled(this)) "Off" else if(shizukuOk) "Authorized" else "Needs attention"}") { resolveShizuku() })
+        status.addView(statusRow("System Server · ${if(serverOk) "Observed this boot" else "No event this boot"}") { showSystemServerDashboard() })
         root.addView(status, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         if (Prefs.shizukuEnabled(this) && !shizukuOk) root.addView(action("Shizuku needs attention  ›") { resolveShizuku() },
             LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
@@ -3337,13 +3349,13 @@ class MainActivity : Activity() {
         val srpStatus = app.d2lock.root.DmcRecovery.status(this)
         if (Prefs.xposedMaster(this) && !srpStatus.targetsMet) root.addView(action("D2 SRP needs verification  ›") { showDmcStatus() },
             LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
-        root.addView(action("Readiness & guided tests  ›") { showReadiness() },
+        root.addView(action("Readiness check  ›") { showReadiness() },
             LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         val security = card()
         security.addView(label("Security", 20f))
         val method = Prefs.unlockMethod(this).replaceFirstChar { it.uppercase() }
-        security.addView(label("$method login  ·  D2 PIN recovery ready", 13f))
-        pair(security, delegated("Unlock method", "Unlock method"), delegated("Change PIN", "Change PIN"))
+        security.addView(label("$method selected  ·  PIN recovery configured", 13f))
+        security.addView(action("Manage security  ›") { pageNavigator?.invoke("security|SECURITY CENTER",null) })
         root.addView(security, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         fun quickSwitch(title: String, original: String): View {
             val source = control(original) as? Switch
@@ -3363,20 +3375,6 @@ class MainActivity : Activity() {
         val quick = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         pair(quick, quickSwitch("Guardian", "Show D2 when the screen wakes"),
             quickSwitch("Kiosk", "Require D2 authentication to leave"))
-        val island = originals.filterIsInstance<Switch>().firstOrNull { it.text.toString().startsWith("Galaxy Island  •") }
-        val islandCard = card().apply {
-            addView(guardianSwitch().apply {
-                text = "Galaxy Island"; textSize = 14f; minimumHeight = dp(48)
-                setTextColor(Appearance.text(this@MainActivity)); isChecked = island?.isChecked == true
-                isEnabled = island != null && island.isEnabled
-                setOnCheckedChangeListener { _, checked ->
-                    if (island != null && checked != island.isChecked) island.performClick()
-                    refreshSettingsPreservingPosition()
-                    Toast.makeText(this@MainActivity, "Galaxy Island updated", Toast.LENGTH_SHORT).show()
-                }
-            })
-        }
-        pair(quick, islandCard, action("Test Guardian  ›") { showReadiness() })
         root.addView(quick)
         val bridge = card()
         val bridgeBody = LinearLayout(this).apply {
@@ -3404,7 +3402,7 @@ class MainActivity : Activity() {
         bridge.addView(bridgeBody)
         root.addView(bridge, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         root.addView(label("Samsung may require its PIN after reboot. Keep your fingerprint enrolled.", 12f))
-        root.addView(action("Explore tools & settings  ›") {
+        root.addView(action("Tools & settings  ›") {
             pageNavigator?.invoke("tools", null)
             return@action
         }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8); bottomMargin = dp(8) })
@@ -3630,7 +3628,7 @@ class MainActivity : Activity() {
             Triple(R.drawable.ic_lock_security, "Security", "security"),
             Triple(R.drawable.ic_guardian_shield, "Guardian", "guardian"),
             Triple(R.drawable.ic_nav_settings, "Tools", "tools"),
-            Triple(R.drawable.ic_palette, "Style", "appearance")
+            Triple(R.drawable.ic_palette, "Appearance", "appearance")
         )
         // Beta.2 Guardian Dock: the center core is a live health surface, not a fake
         // security indicator. Green requires the configured protection stack; amber
@@ -3719,9 +3717,10 @@ class MainActivity : Activity() {
                 addView(TextView(this@MainActivity).apply {
                     text = label
                     textSize = 10f
+                    maxLines = 2
                     gravity = Gravity.CENTER
                     setTextColor(Appearance.secondary(this@MainActivity))
-                }, LinearLayout.LayoutParams(-1, dp(18)))
+                }, LinearLayout.LayoutParams(-1, dp(26)))
                 setOnClickListener {
                     performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
                     pageNavigator?.invoke(target, null)

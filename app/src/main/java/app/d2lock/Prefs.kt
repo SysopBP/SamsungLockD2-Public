@@ -219,8 +219,8 @@ object Prefs {
     fun xposedAutomaticFallback(context: Context) = prefs(context).getBoolean("xposed_automatic_fallback", true)
     fun setXposedAutomaticFallback(context: Context, value: Boolean) = prefs(context).edit().putBoolean("xposed_automatic_fallback", value).apply()
 
-    fun compactBridge(context: Context) = prefs(context).getBoolean("compact_bridge", false)
-    fun setCompactBridge(context: Context, value: Boolean) = prefs(context).edit().putBoolean("compact_bridge", value).apply()
+    fun compactBridge(context: Context) = prefs(context).getBoolean("home_bridge_expanded", false)
+    fun setCompactBridge(context: Context, value: Boolean) = prefs(context).edit().putBoolean("home_bridge_expanded", value).apply()
 
     fun enabled(context: Context) = prefs(context).getBoolean("enabled", false)
     fun setEnabled(context: Context, value: Boolean) { prefs(context).edit().putBoolean("enabled", value).apply(); syncBootPolicy(context) }

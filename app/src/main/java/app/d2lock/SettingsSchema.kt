@@ -12,6 +12,7 @@ object SettingsSchema {
         "compact_layout" to "Boolean",
         "compact_details" to "Boolean",
         "compact_bridge" to "Boolean",
+        "home_bridge_expanded" to "Boolean",
         "clock_adaptive" to "Boolean",
         "clock_layout" to "String",
         "clock_scale" to "Int",
