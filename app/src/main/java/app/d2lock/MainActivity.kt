@@ -3148,6 +3148,16 @@ class MainActivity : Activity() {
         else GuardianDialogs.showInfo(this, "Shizuku authorized", "The service is connected and D2 permission is granted.")
     }
 
+    private fun showObservedGuidedResult(key: String, after: (() -> Unit)? = null) {
+        val label=key.replaceFirstChar { it.uppercase() }
+        GuardianDialogs.showChoices(this,"Observed $key result",arrayOf("$label worked","$label failed","Not tested"),-1) { d,which ->
+            if(which==2) guidedPrefs().edit().remove(key).remove(key+"_time").apply()
+            else recordGuidedResult(key,if(which==0) "User confirmed $key" else "User reported failure")
+            d.dismiss()
+            if(after!=null) after() else showReadiness()
+        }
+    }
+
     private fun showReadiness() {
         if(!authorized || appStopped) return
         readinessDialog?.dismiss()
@@ -3177,22 +3187,24 @@ class MainActivity : Activity() {
         row("D2 SRP · ${if(srp.targetsMet) "Targets verified" else "Not verified"}", "${srp.detail} · ${checkTime(srp.checkedAt)}. Tap for status/check.") { showDmcStatus() }
         for(key in listOf("pin","sensor","wake","relock")) {
             val result=guidedPrefs().getString(key,null)
-            row("${key.replaceFirstChar { it.uppercase() }} test history", if(result==null) "Not tested" else "$result · ${checkTime(guidedPrefs().getLong(key+"_time",0L))}")
+            row("${key.replaceFirstChar { it.uppercase() }} test history", (if(result==null) "Not tested" else "$result · ${checkTime(guidedPrefs().getLong(key+"_time",0L))}") + "\nTap to " + if(key=="pin" || key=="sensor") "run test" else "record observed result") {
+                when(key) {
+                    "pin" -> pinDialog=PinUi.show(this, success={ recordGuidedResult("pin","Verified D2 PIN"); showReadiness() })
+                    "sensor" -> runGuardianBiometricTest()
+                    else -> showObservedGuidedResult(key)
+                }
+            }
         }
         row("Test D2 unlock", "Open the real D2 lock surface; verify fingerprint and PIN fallback. This does not enable kiosk.") {
             startActivity(Intent(this,LockScreenActivity::class.java))
         }
         row("Wake / relock checklist", "Turn the screen off, wake it, unlock D2, and repeat. Record your observed outcome here after returning.") {
-            GuardianDialogs.showChoices(this,"Observed wake/relock result",arrayOf("Wake and relock worked","Wake failed","Relock failed"),-1) { d,which ->
-                recordGuidedResult("wake",if(which==1) "User reported failure" else "User confirmed wake")
-                recordGuidedResult("relock",if(which==2) "User reported failure" else if(which==0) "User confirmed relock" else "Not confirmed")
-                d.dismiss(); showReadiness()
-            }
+            showObservedGuidedResult("wake", after={ showObservedGuidedResult("relock") })
         }
         val scroll=ScrollView(this).apply { addView(panel) }
         AlertDialog.Builder(this).setTitle("Readiness & guided tests").setView(scroll)
             .setNegativeButton("Close",null).setPositiveButton("Refresh") { _,_ -> showReadiness() }
-            .create().also { d -> readinessDialog=d; d.setOnShowListener { d.window?.setBackgroundDrawable(Appearance.glass(this,32f,82,true)); d.window?.setLayout(-1,(resources.displayMetrics.heightPixels*.82f).toInt()) }; d.show() }
+            .create().also { d -> readinessDialog=d; d.setOnShowListener { d.window?.setBackgroundDrawable(Appearance.glass(this,32f,100,true)); d.window?.setDimAmount(0.82f); d.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND); d.window?.setLayout(-1,(resources.displayMetrics.heightPixels*.82f).toInt()) }; d.show() }
     }
 
     private fun showGuardianCoreHealth() {
