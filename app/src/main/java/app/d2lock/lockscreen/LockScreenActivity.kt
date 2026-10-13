@@ -1438,7 +1438,7 @@ class LockScreenActivity : Activity() {
                 if (!isFinishing && !isDestroyed) {
                     window.decorView.post {
                         window.decorView.requestFocus()
-                        authenticate()
+                        authenticate(forceCredential = true)
                     }
                 }
             }
@@ -1531,9 +1531,22 @@ class LockScreenActivity : Activity() {
         fingerprintGlass?.visibility = View.VISIBLE
     }
 
-    private fun authenticate(afterUnlock: (() -> Unit)? = null) {
+    private fun authenticate(forceCredential: Boolean = false, afterUnlock: (() -> Unit)? = null) {
         if (preview) { finish(); return }
-        if (pinDialog?.isShowing == true) return
+        if (pinDialog?.isShowing == true || biometricRunning) return
+        // Ordinary unlock gestures honor the selected method. Notification actions
+        // retain their credential flow so their pending action runs after unlock.
+        if (!forceCredential && afterUnlock == null && !fingerprintDismissed &&
+            Prefs.unlockMethod(this) == "fingerprint") {
+            val status = getSystemService(BiometricManager::class.java)
+                ?.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+            Log.i("SamsungLockD2", "GUARDIAN_UNLOCK_ROUTE method=fingerprint status=$status")
+            if (status == BiometricManager.BIOMETRIC_SUCCESS) {
+                startGuardianFingerprint()
+                return
+            }
+            Toast.makeText(this, "Fingerprint unavailable. Use your D2 PIN or pattern.", Toast.LENGTH_LONG).show()
+        }
 
         // Authentication grace window: mark the credential UI trusted before it
         // takes focus so kiosk/watchdog recovery cannot race PIN or pattern input.
