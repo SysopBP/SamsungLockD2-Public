@@ -1,5 +1,9 @@
 # Samsung Lock D2
 
+## Standard D2 information dialogs
+
+New information and choice dialogs use the reusable `GuardianDialogs` surface: rounded dark glass, a leading icon, readable text, large action buttons, and a transparent window without the square Android panel. Fingerprint setup, unavailable-fingerprint guidance, the unlock-method chooser and launcher-icon help now use this style. Fingerprint setup includes an **Open settings** shortcut and keeps the D2 PIN fallback guidance. Long information text scrolls while action buttons remain visible. Existing specialized dialogs are migrated separately; the secure Samsung biometric prompt remains system-rendered.
+
 ## In development — additional Xposed controls
 
 The framework and Galaxy Island control grids include disabled placeholders. Safe diagnostics, configurable screen/wake awareness, immediate relock, Home/Recents, gesture coordination, notifications, media, call-state integration, SystemUI recovery, QS/status guards, native lifecycle, fallback controls, and Galaxy Island event/positioning/sync controls require their individual hooks to be implemented and tested before those switches become available. Development is deferred to a later update; this release does not enable them.

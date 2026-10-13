@@ -10,8 +10,8 @@ android {
         applicationId = "app.d2lock"
         minSdk = 31
         targetSdk = 37
-        versionCode = 27
-        versionName = "0.6.4-dmc-power-menu"
+        versionCode = 28
+        versionName = "0.6.4-srp-glass-dialogs"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

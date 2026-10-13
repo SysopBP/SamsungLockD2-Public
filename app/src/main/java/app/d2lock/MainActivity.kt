@@ -290,7 +290,7 @@ class MainActivity : Activity() {
             setPadding(dp(16), dp(14), dp(16), dp(18)); background = Appearance.glass(this@MainActivity, 26f, 28, true)
         }
         fun whatsNew() {
-            content.text = "WHAT'S NEW  •  OCTOBER 12, 2026  •  D2 ${versionName ?: "current"}\n\n🧊 D2 POWER MENU\n• Adds confirmed soft restart and a rounded live D2 SRP status dialog to Samsung power controls\n• Requires LSPosed SystemUI plus System Framework scopes; preserves emergency and normal confirmation actions\n\n🛡 D2 SRP POWER-ACTION GUARD\n• Verifies fresh vault read-back before normal restart, power off and supported orderly soft restart\n• Cancels on failure or a 5-second timeout; late checks never trigger a delayed restart\n• Failed/unknown checks keep the phone on: open D2 SRP status, resolve the issue and retry\n• Status checks alone never shut down the phone; missing shutdown hooks may allow normal Samsung power actions without verification\n• Battery/thermal emergencies and direct root/hardware resets remain outside this guard\n\n🧩 D2 SRP — SAMSUNG RECOVERY PROTECTION\n• Runs inside Xposed System Server (UID 1000)\n• Targets: D2 SRP screen-lock and Maintenance Mode flags disabled; Download Mode AT-command flag enabled; derived Download Mode eligibility allowed\n• Validates the vault record and verifies read-back; unknown or failed checks stay unverified\n\n🔄 SECURITY SETUP DETECTION\n• Watches completed PIN/password/pattern changes and fingerprint/face additions or removals\n• Refreshes 2 seconds after setup changes and checks again at 12 seconds for delayed Samsung updates\n• Firmware detection still needs device testing; Android credentials and biometric enrollment stay separate from D2 SRP flags\n\n✅ LIVE FEATURE STATUS\n• Glass status dialog with icons, target checks, System Server identity and last-check time\n\n🚧 IN DEVELOPMENT\n• Additional framework controls and Galaxy Island Xposed integration remain disabled placeholders\n• Diagnostics, relock, Home/Recents, gestures, notification/media/call integration and related controls are planned for a later update\n• These switches do not control the current boot/wake observers, D2 SRP or power-menu hooks\n\n\n💤 RECENT HOTFIXES\n• Voicemail/call-state relock fix\n• Double-tap screen-off from empty space, with notification and call controls protected\n• Floating Bar visibility modes and coordinated dock/CORE/CHECK behavior\n\n🙏 SRP / DMC DISCOVERY CREDIT\n• @diablOw — originally discovered the DMC behavior behind this recovery feature"
+            content.text = "WHAT'S NEW  •  OCTOBER 12, 2026  •  D2 ${versionName ?: "current"}\n\n🧊 STANDARD GLASS DIALOGS\n• Rounded shared information and unlock-choice dialogs replace square platform panels\n• Fingerprint guidance now has numbered steps, an icon and Open settings / Got it buttons\n\n🧊 D2 POWER MENU\n• Adds confirmed soft restart and a rounded live D2 SRP status dialog to Samsung power controls\n• Requires LSPosed SystemUI plus System Framework scopes; preserves emergency and normal confirmation actions\n\n🛡 D2 SRP POWER-ACTION GUARD\n• Verifies fresh vault read-back before normal restart, power off and supported orderly soft restart\n• Cancels on failure or a 5-second timeout; late checks never trigger a delayed restart\n• Failed/unknown checks keep the phone on: open D2 SRP status, resolve the issue and retry\n• Status checks alone never shut down the phone; missing shutdown hooks may allow normal Samsung power actions without verification\n• Battery/thermal emergencies and direct root/hardware resets remain outside this guard\n\n🧩 D2 SRP — SAMSUNG RECOVERY PROTECTION\n• Runs inside Xposed System Server (UID 1000)\n• Targets: D2 SRP screen-lock and Maintenance Mode flags disabled; Download Mode AT-command flag enabled; derived Download Mode eligibility allowed\n• Validates the vault record and verifies read-back; unknown or failed checks stay unverified\n\n🔄 SECURITY SETUP DETECTION\n• Watches completed PIN/password/pattern changes and fingerprint/face additions or removals\n• Refreshes 2 seconds after setup changes and checks again at 12 seconds for delayed Samsung updates\n• Firmware detection still needs device testing; Android credentials and biometric enrollment stay separate from D2 SRP flags\n\n✅ LIVE FEATURE STATUS\n• Glass status dialog with icons, target checks, System Server identity and last-check time\n\n🚧 IN DEVELOPMENT\n• Additional framework controls and Galaxy Island Xposed integration remain disabled placeholders\n• Diagnostics, relock, Home/Recents, gestures, notification/media/call integration and related controls are planned for a later update\n• These switches do not control the current boot/wake observers, D2 SRP or power-menu hooks\n\n\n💤 RECENT HOTFIXES\n• Voicemail/call-state relock fix\n• Double-tap screen-off from empty space, with notification and call controls protected\n• Floating Bar visibility modes and coordinated dock/CORE/CHECK behavior\n\n🙏 SRP / DMC DISCOVERY CREDIT\n• @diablOw — originally discovered the DMC behavior behind this recovery feature"
         }
         fun whatsNext() {
             val lock = if (PinStore(this@MainActivity).configured()) "✓" else "○"
@@ -864,25 +864,27 @@ class MainActivity : Activity() {
                     setOnClickListener {
                         val methods=arrayOf("PIN","Pattern","Login with fingerprint")
                         val current=when(Prefs.unlockMethod(this@MainActivity)) { "pattern" -> 1; "fingerprint" -> 2; else -> 0 }
-                        val dialog=AlertDialog.Builder(this@MainActivity)
-                            .setTitle("D2 unlock method")
-                            .setSingleChoiceItems(methods,current) { d,which ->
+                        GuardianDialogs.showChoices(this@MainActivity, "D2 unlock method", methods, current) { d,which ->
                                 if(which==2) {
                                     d.dismiss()
                                     val biometricStatus=getSystemService(BiometricManager::class.java)?.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
                                     if(biometricStatus==BiometricManager.BIOMETRIC_SUCCESS) {
                                         Prefs.setUnlockMethod(this@MainActivity,"fingerprint")
                                         setContentView(buildSettings())
-                                        AlertDialog.Builder(this@MainActivity)
-                                            .setTitle("Login with fingerprint")
-                                            .setMessage("In Samsung Settings → Fingerprints, turn off Fingerprint unlock, but keep your fingerprint enrolled. D2 will use the enrolled fingerprint through the secure biometric prompt. If Samsung shows its PIN screen first, complete it before using D2 fingerprint login. Your D2 PIN remains available if biometrics are unavailable or you cancel.")
-                                            .setPositiveButton("OK",null).show()
+                                        GuardianDialogs.showInfo(this@MainActivity,
+                                            title = "Login with fingerprint",
+                                            message = "✓ Keep your fingerprint enrolled.\n\n1. Open Samsung Settings → Fingerprints.\n2. Turn Fingerprint unlock OFF.\n3. Use your enrolled fingerprint to unlock D2.\n\nIf Samsung asks for its PIN first, complete that screen before D2 fingerprint login.\n\nYour D2 PIN remains the fallback if biometrics are unavailable or you cancel.",
+                                            icon = R.drawable.ic_guardian_fingerprint,
+                                            secondary = "Open settings",
+                                            onSecondary = { startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) })
                                     } else {
-                                        AlertDialog.Builder(this@MainActivity)
-                                            .setTitle("Fingerprint unavailable")
-                                            .setMessage("Enroll a fingerprint in Samsung Settings and complete any required Samsung PIN unlock, then try again. Your existing D2 unlock method has been kept.")
-                                            .setPositiveButton("Open settings") { _,_ -> startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) }
-                                            .setNegativeButton("Cancel",null).show()
+                                        GuardianDialogs.showInfo(this@MainActivity,
+                                            title = "Fingerprint unavailable",
+                                            message = "Enroll a fingerprint in Samsung Settings and complete any required Samsung PIN unlock, then try again.\n\nYour existing D2 unlock method has been kept.",
+                                            icon = R.drawable.ic_guardian_fingerprint,
+                                            primary = "Open settings",
+                                            onPrimary = { startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) },
+                                            secondary = "Cancel")
                                     }
                                 } else if(which==0) {
                                     Prefs.setUnlockMethod(this@MainActivity,"pin")
@@ -899,9 +901,7 @@ class MainActivity : Activity() {
                                         setContentView(buildSettings())
                                     })
                                 }
-                            }.setNegativeButton("Cancel",null).create()
-                        dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,30f,76,true)) }
-                        dialog.show()
+                            }
                     }
                 },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
 
@@ -1801,7 +1801,7 @@ class MainActivity : Activity() {
             textSize = 11f
             setTextColor(Appearance.secondary(this@MainActivity))
             setPadding(dp(4), 0, dp(4), dp(10))
-            setOnClickListener { AlertDialog.Builder(this@MainActivity).setTitle("Launcher icon help").setMessage("If the preview changes but the Home screen icon does not, temporarily apply Samsung’s default icons and test again.").setPositiveButton("Done",null).show() }
+            setOnClickListener { GuardianDialogs.showInfo(this@MainActivity, "Launcher icon help", "If the preview changes but the Home screen icon does not, temporarily apply Samsung’s default icons and test again.") }
         })
 
         section(root, "APP THEME")
