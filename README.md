@@ -1,5 +1,13 @@
 # Samsung Lock D2
 
+## 0.6.4 prerelease preparation
+
+- [Installation and fingerprint setup](docs/INSTALLATION-0.6.4-PREVIEW.md)
+- [Release write-up, findings and credits](docs/RELEASE-0.6.4-PREVIEW.md)
+
+**Fingerprint setup:** configure Samsung PIN and enroll a fingerprint first; then turn Samsung **Fingerprint unlock OFF**, retaining the PIN and enrollment. Configure D2’s recovery credential and select **Login with fingerprint**. Samsung PIN is still required after D2 fingerprint in this preview, including the first device unlock after reboot.
+
+
 ## Standard D2 information dialogs
 
 New information and choice dialogs use the reusable `GuardianDialogs` surface: rounded dark glass, a leading icon, readable text, large action buttons, and a transparent window without the square Android panel. Fingerprint setup, unavailable-fingerprint guidance, the unlock-method chooser and launcher-icon help now use this style. Fingerprint setup includes an **Open settings** shortcut and keeps the D2 PIN fallback guidance. Long information text scrolls while action buttons remain visible. Existing specialized dialogs are migrated separately; the secure Samsung biometric prompt remains system-rendered.
