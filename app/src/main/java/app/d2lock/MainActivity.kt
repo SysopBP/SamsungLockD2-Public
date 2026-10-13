@@ -54,6 +54,7 @@ class MainActivity : Activity() {
     private var dockDestination = "home"
     private val pageScrollPositions = mutableMapOf<String, Int>()
     private val navigationHistory = java.util.ArrayDeque<String>()
+    private var navigatingBack = false
     private var pageNavigator: ((String, View?) -> Unit)? = null
     private val sectionTitles = java.util.IdentityHashMap<View, String>()
     private var readinessDialog: AlertDialog? = null
@@ -76,6 +77,9 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(if (Appearance.dark(this)) R.style.Theme_D2_Dark else R.style.Theme_SamsungLock)
         super.onCreate(savedInstanceState)
+        dockDestination=savedInstanceState?.getString("settings_route") ?: "home"
+        savedInstanceState?.getBundle("settings_positions")?.let { positions -> positions.keySet().forEach { key -> pageScrollPositions[key]=positions.getInt(key) } }
+        savedInstanceState?.getStringArrayList("settings_history")?.forEach { navigationHistory.addLast(it) }
         if (android.os.Build.VERSION.SDK_INT >= 33) {
             gestureBackCallback = android.window.OnBackInvokedCallback { handleSettingsBack() }
             onBackInvokedDispatcher.registerOnBackInvokedCallback(
@@ -520,7 +524,10 @@ class MainActivity : Activity() {
 
     override fun onStop() {
         super.onStop()
-        if (authorized) settingsScrollY = findViewById<ViewGroup>(android.R.id.content).findViewWithTag<ScrollView>("settings_scroll")?.scrollY ?: settingsScrollY
+        if (authorized) {
+            settingsScrollY = findViewById<ViewGroup>(android.R.id.content).findViewWithTag<ScrollView>("settings_scroll")?.scrollY ?: settingsScrollY
+            pageScrollPositions[dockDestination]=settingsScrollY
+        }
         appStopped = true
         if (authorized) appFingerprintAttempted = false
         authorized = false
@@ -694,7 +701,7 @@ class MainActivity : Activity() {
         }
         root.addView(settingsSearch, LinearLayout.LayoutParams(-1, dp(54)).apply { bottomMargin = dp(16) })
 
-        section(root, "GUARDIAN")
+        section(root, "DEVICE & OVERVIEW")
         root.getChildAt(root.childCount - 1).tag = "settings"
         val categories = if (configured) listOf(
             Triple("Lock Screen", "Unlock, wake behavior, haptics, clock & weather", "lock_screen_settings"),
@@ -3083,103 +3090,6 @@ class MainActivity : Activity() {
 
     private fun guardianSlider(): GuardianSlider = GuardianSlider(this)
 
-    private fun showQuickSettingsSheet(root: LinearLayout, scroll: ScrollView) {
-        val panel = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(18))
-            background = Appearance.glass(this@MainActivity, 36f, 90, true)
-        }
-        panel.addView(TextView(this).apply {
-            text = "All Settings"
-            textSize = 22f
-            setTextColor(Appearance.text(this@MainActivity))
-            setPadding(dp(4), dp(2), dp(4), dp(2))
-        })
-        panel.addView(TextView(this).apply {
-            text = "Jump to a Guardian settings section"
-            textSize = 13f
-            setTextColor(Appearance.secondary(this@MainActivity))
-            setPadding(dp(4), 0, dp(4), dp(12))
-        })
-
-        val grid = android.widget.GridLayout(this).apply {
-            columnCount = 2
-            alignmentMode = android.widget.GridLayout.ALIGN_BOUNDS
-            useDefaultMargins = false
-        }
-        panel.addView(grid, LinearLayout.LayoutParams(-1, -2))
-
-        val shortcuts = listOf(
-            Triple("◉", "Lock Screen", "lock_screen_settings"),
-            Triple("✦", "Appearance", "app_theme"),
-            Triple("▣", "Notifications", "notifications"),
-            Triple("▬", "Shortcuts & Bar", "floating_bar"),
-            Triple("◆", "Guardian & Kiosk", "guardian_kiosk"),
-            Triple("⌁", "Root & Shizuku", "root_shizuku"),
-            Triple("＋", "Recovery & Safety", "recovery_safety"),
-            Triple("⚙", "Advanced", "advanced_settings")
-        )
-        val dialog = AlertDialog.Builder(this).setView(panel).create()
-        shortcuts.forEachIndexed { index, (icon, label, target) ->
-            val bubble = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                isClickable = true
-                isFocusable = true
-                setPadding(dp(10), dp(12), dp(10), dp(10))
-                background = Appearance.glass(this@MainActivity, 32f, 46, true)
-                addView(TextView(this@MainActivity).apply {
-                    text = icon
-                    textSize = 22f
-                    gravity = Gravity.CENTER
-                    setTextColor(Appearance.text(this@MainActivity))
-                })
-                addView(TextView(this@MainActivity).apply {
-                    text = label
-                    textSize = 13f
-                    gravity = Gravity.CENTER
-                    maxLines = 2
-                    setTextColor(Appearance.text(this@MainActivity))
-                    setPadding(0, dp(4), 0, 0)
-                })
-                setOnClickListener {
-                    performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
-                    dialog.dismiss()
-                    revealCompactDetails(root)
-                    root.findViewWithTag<android.view.View>(target)?.let { view ->
-                        scroll.post {
-                            val rect = android.graphics.Rect()
-                            view.getDrawingRect(rect)
-                            root.offsetDescendantRectToMyCoords(view, rect)
-                            scroll.smoothScrollTo(0, (rect.top - dp(18)).coerceAtLeast(0))
-                            view.postDelayed({ flashSettingsTarget(view) }, 280)
-                        }
-                    }
-                }
-            }
-            val lp = android.widget.GridLayout.LayoutParams(
-                android.widget.GridLayout.spec(index / 2),
-                android.widget.GridLayout.spec(index % 2, 1f)
-            ).apply {
-                width = 0
-                height = dp(78)
-                setMargins(dp(4), dp(4), dp(4), dp(4))
-            }
-            grid.addView(bubble, lp)
-        }
-        dialog.setOnShowListener {
-            dialog.window?.apply {
-                setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
-                setDimAmount(0.34f)
-                attributes = attributes.apply { gravity = Gravity.BOTTOM }
-            }
-            panel.translationY = dp(36).toFloat()
-            panel.alpha = 0f
-            panel.animate().translationY(0f).alpha(1f).setDuration(210).start()
-        }
-        dialog.show()
-    }
-
     private fun flashSettingsTarget(view: android.view.View) {
         // Highlight only the exact tagged destination. The previous implementation
         // promoted the target to its parent container, so jumping to one setting
@@ -3327,10 +3237,9 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this).setView(body).setNegativeButton("Close",null).create().also { d -> d.setOnShowListener { d.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 34f, 84, true)); d.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Appearance.accent(this@MainActivity)) }; d.show() }
     }
 
-    /** Compact presentation delegates all security actions to the original controls. */
-    private fun applyCompactLayout(root: LinearLayout) {
+    /** Home presentation delegates all security actions to the original controls. */
+    private fun applyHomeLayout(root: LinearLayout) {
         if (!PinStore(this).configured()) return
-        val compact = Prefs.compactLayout(this)
         fun label(text: String, size: Float = 14f) = TextView(this).apply {
             this.text = text; textSize = size
             setTextColor(Appearance.text(this@MainActivity))
@@ -3364,18 +3273,6 @@ class MainActivity : Activity() {
             background = Appearance.glass(this@MainActivity, 22f, 34, true)
             setOnClickListener { click() }
         }
-        val selector = action(if (compact) "Layout: Compact  ›" else "Layout: Classic  ›") {
-            GuardianDialogs.showChoices(this, "Main layout", arrayOf("Compact", "Classic"), if (compact) 0 else 1) { dialog, which ->
-                Prefs.setCompactLayout(this, which == 0)
-                dialog.dismiss(); setContentView(buildSettings())
-            }
-        }
-        if (!compact) {
-            root.addView(action("Readiness & guided tests  ›") { showReadiness() }, 2,
-                LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
-            root.addView(selector, 2, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
-            return
-        }
         fun descendants(view: View): List<View> = listOf(view) +
             if (view is ViewGroup) (0 until view.childCount).flatMap { descendants(view.getChildAt(it)) } else emptyList()
         val originals = descendants(root)
@@ -3385,18 +3282,20 @@ class MainActivity : Activity() {
         }
         val details = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; tag = "compact_details"
-            visibility = if (Prefs.compactDetails(this@MainActivity)) View.VISIBLE else View.GONE
+            visibility = View.GONE
         }
         // Preserve every original control, tag and handler for search and the dock.
         val old = (2 until root.childCount).map { root.getChildAt(it) }
-        old.forEach { root.removeView(it); details.addView(it) }
+        old.forEach {
+            root.removeView(it)
+            if (it !is android.widget.EditText || it.hint?.toString() != "Search settings") details.addView(it)
+        }
         (root.getChildAt(0) as? TextView)?.apply { text = "D2 Guardian"; textSize = 28f }
         (root.getChildAt(1) as? TextView)?.apply {
             text = "${if (Prefs.enabled(this@MainActivity)) "Enabled" else "Disabled"}  ·  ${android.os.Build.MODEL}  ·  Android ${android.os.Build.VERSION.RELEASE}"
             textSize = 13f; setPadding(0, dp(4), 0, dp(12))
         }
         root.setPadding(dp(18), dp(48), dp(18), dp(20))
-        root.addView(selector, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         val shortcuts=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
         listOf("Security" to "security", "SRP" to "tools", "Guardian" to "guardian", "Style" to "appearance").forEach { (title,page) ->
             shortcuts.addView(action(title) { pageNavigator?.invoke(page,null) },LinearLayout.LayoutParams(dp(112),-2).apply { marginEnd=dp(8) })
@@ -3518,50 +3417,102 @@ class MainActivity : Activity() {
     private fun installPageNavigation(root: LinearLayout, scroll: ScrollView, selected: (String)->Unit) {
         val details=root.findViewWithTag<LinearLayout>("compact_details")
         if(details==null) { pageNavigator=null; return }
-        val pages=java.util.IdentityHashMap<View,String>()
-        var page="tools"
-        for(i in 0 until details.childCount) {
-            val child=details.getChildAt(i)
-            sectionTitles[child]?.let { page=sectionPage(it) }
-            pages[child]=page
+        // Split nested appearance/media sections into their own focused groups.
+        val original=(0 until details.childCount).map { details.getChildAt(it) }
+        val flattened=mutableListOf<View>()
+        original.forEach { view ->
+            if(view is LinearLayout && (0 until view.childCount).any { sectionTitles.containsKey(view.getChildAt(it)) }) {
+                val children=(0 until view.childCount).map { view.getChildAt(it) }
+                children.forEach { view.removeView(it); flattened.add(it) }
+            } else flattened.add(view)
+        }
+        details.removeAllViews()
+        val groups=linkedMapOf<String,LinearLayout>()
+        var section="DEVICE & OVERVIEW"
+        flattened.forEach { view ->
+            sectionTitles[view]?.let { section=it }
+            val container=groups.getOrPut(section) { LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; tag="detail_group:$section" } }
+            (view.parent as? ViewGroup)?.removeView(view)
+            container.addView(view)
         }
         val homeViews=(2 until root.childCount).map { root.getChildAt(it) }.filter { it!==details }
-        fun targetPage(target:View):String {
+        val summaries=linkedMapOf<String,View>()
+        groups.forEach { (title,content) ->
+            val row=TextView(this).apply {
+                text=title.lowercase().replaceFirstChar { it.uppercase() }+"  ›\n"+when(title) {
+                    "SECURITY CENTER" -> "Unlock method, PIN recovery, and passkeys"
+                    "FINGERPRINT CENTER" -> "Sensor setup, availability, and testing"
+                    "D2 SRP" -> "Samsung Recovery Protection status and checks"
+                    "SYSTEM INTEGRATION" -> "Root, Shizuku, and system connections"
+                    "LOCK & WAKE" -> "Screen wake and lock behavior"
+                    "GUARDIAN & KIOSK" -> "Kiosk authentication and shade protection"
+                    "CLOCK & WEATHER" -> "Clock style, size, and weather"
+                    "MEDIA" -> "Player appearance and controls"
+                    "ABOUT & DATA" -> "Guides, credits, updates, and backups"
+                    else -> "Open controls and setup guidance"
+                }
+                textSize=16f; minimumHeight=dp(64); setPadding(dp(18),dp(16),dp(18),dp(16))
+                setTextColor(Appearance.text(this@MainActivity)); background=Appearance.glass(this@MainActivity,28f,38,true)
+                isFocusable=true; contentDescription="Open $title settings"
+                setOnClickListener { pageNavigator?.invoke(SettingsNavigation.pageForSection(title)+"|"+title,null) }
+            }
+            summaries[title]=row
+            details.addView(row,LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
+            details.addView(content,LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
+        }
+        val back=TextView(this).apply {
+            text="‹ Back"; textSize=16f; minimumHeight=dp(48); setTextColor(Appearance.text(this@MainActivity))
+            setOnClickListener { handleSettingsBack() }
+        }
+        root.addView(back,2,LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
+        fun routeFor(target:View):String {
             var child=target
             while(child.parent is View && child.parent!==details) child=child.parent as View
-            return pages[child] ?: "home"
+            val title=groups.entries.firstOrNull { it.value===child }?.key
+            return if(title==null) "home" else SettingsNavigation.pageForSection(title)+"|"+title
         }
-        fun render(destination:String, target:View?) {
-            val actual=if(target!=null) targetPage(target) else destination
+        fun render(route:String,target:View?) {
+            val actual=if(target!=null) routeFor(target) else route
+            val page=actual.substringBefore('|'); val detail=actual.substringAfter('|',"")
             dockDestination=actual
-            homeViews.forEach { it.visibility=if(actual=="home") View.VISIBLE else View.GONE }
-            details.visibility=if(actual=="home") View.GONE else View.VISIBLE
-            for(i in 0 until details.childCount) details.getChildAt(i).let { it.visibility=if(pages[it]==actual) View.VISIBLE else View.GONE }
-            (root.getChildAt(0) as? TextView)?.text=when(actual) { "home"->"D2 Guardian"; "appearance"->"Appearance"; else->actual.replaceFirstChar { it.uppercase() } }
-            selected(actual)
+            homeViews.forEach { it.visibility=if(page=="home") View.VISIBLE else View.GONE }
+            details.visibility=if(page=="home") View.GONE else View.VISIBLE
+            groups.forEach { (title,content) ->
+                summaries[title]?.visibility=if(detail.isEmpty() && SettingsNavigation.pageForSection(title)==page) View.VISIBLE else View.GONE
+                content.visibility=if(title==detail) View.VISIBLE else View.GONE
+            }
+            back.visibility=if(detail.isNotEmpty()) View.VISIBLE else View.GONE
+            (root.getChildAt(0) as? TextView)?.text=if(detail.isNotEmpty()) detail.lowercase().replaceFirstChar { it.uppercase() } else when(page) { "home"->"D2 Guardian"; "appearance"->"Appearance"; else->page.replaceFirstChar { it.uppercase() } }
+            selected(page)
             scroll.post {
                 if(target==null) scroll.scrollTo(0,pageScrollPositions[actual] ?: 0)
-                else {
-                    val rect=android.graphics.Rect(); target.getDrawingRect(rect)
-                    root.offsetDescendantRectToMyCoords(target,rect)
-                    scroll.smoothScrollTo(0,(rect.top-dp(18)).coerceAtLeast(0)); flashSettingsTarget(target)
-                }
+                else { val rect=android.graphics.Rect(); target.getDrawingRect(rect); root.offsetDescendantRectToMyCoords(target,rect); scroll.smoothScrollTo(0,(rect.top-dp(18)).coerceAtLeast(0)); flashSettingsTarget(target) }
             }
         }
         pageNavigator={ destination,target ->
             pageScrollPositions[dockDestination]=scroll.scrollY
-            if(destination!=dockDestination || target!=null) navigationHistory.addLast(dockDestination)
+            if(!navigatingBack && (destination!=dockDestination || target!=null)) navigationHistory.addLast(dockDestination)
             render(destination,target)
         }
-        render(dockDestination.takeIf { it in listOf("home","security","guardian","tools","appearance") } ?: "home",null)
+        val restored=dockDestination.takeIf { it.substringBefore('|') in listOf("home","security","guardian","tools","appearance") && (it.substringAfter('|',"").isEmpty() || groups.containsKey(it.substringAfter('|'))) } ?: "home"
+        render(restored,null)
     }
 
     private fun handleSettingsBack() {
         if (authorized && pageNavigator != null && dockDestination != "home") {
-            val previous = if (navigationHistory.isEmpty()) "home" else navigationHistory.removeLast()
-            pageNavigator?.invoke(previous, null)
-            if (!navigationHistory.isEmpty()) navigationHistory.removeLast()
+            val previous=if(navigationHistory.isEmpty()) dockDestination.substringBefore('|').takeIf { dockDestination.contains('|') } ?: "home" else navigationHistory.removeLast()
+            navigatingBack=true
+            try { pageNavigator?.invoke(previous,null) } finally { navigatingBack=false }
         } else finish()
+    }
+
+    override fun onSaveInstanceState(outState:Bundle) {
+        val scroll=findViewById<ViewGroup>(android.R.id.content)?.findViewWithTag<ScrollView>("settings_scroll")
+        if(authorized && scroll!=null) pageScrollPositions[dockDestination]=scroll.scrollY
+        outState.putString("settings_route",dockDestination)
+        outState.putBundle("settings_positions",Bundle().apply { pageScrollPositions.forEach { (key,value) -> putInt(key,value) } })
+        outState.putStringArrayList("settings_history",ArrayList(navigationHistory))
+        super.onSaveInstanceState(outState)
     }
 
     // API 31–32 dispatch Back as a key event; API 33+ uses the gesture callback.
@@ -3583,12 +3534,17 @@ class MainActivity : Activity() {
         body.addView(ScrollView(this).apply { addView(results) },LinearLayout.LayoutParams(-1,(resources.displayMetrics.heightPixels*.45f).toInt()))
         val dialog=AlertDialog.Builder(this).setTitle("CORE · Search").setView(body).setNegativeButton("Close",null).create()
         health.setOnClickListener { dialog.dismiss(); showReadiness() }
+        dialog.setOnDismissListener { input.clearFocus() }
         val entries=mutableListOf<Triple<TextView,View,String>>()
         fun walk(view:View,section:String) {
             if(view is ViewGroup) {
+                if(view.isClickable) {
+                    val label=(0 until view.childCount).map { view.getChildAt(it) }.filterIsInstance<TextView>().firstOrNull { it.text.isNotBlank() }
+                    if(label!=null) entries.add(Triple(label,view,section))
+                }
                 var current=section
                 for(i in 0 until view.childCount) { val child=view.getChildAt(i); sectionTitles[child]?.let { current=it }; walk(child,current) }
-            } else if(view is TextView && view.isClickable && view.text.isNotBlank()) {
+            } else if(view is TextView && view.text.isNotBlank() && (view.isClickable || view.tag?.toString()?.endsWith("_label")==true)) {
                 entries.add(Triple(view,view,section))
             }
         }
@@ -3619,7 +3575,7 @@ class MainActivity : Activity() {
     }
 
     private fun settingsHost(root: LinearLayout): ViewGroup {
-        applyCompactLayout(root)
+        applyHomeLayout(root)
         val host = android.widget.FrameLayout(this).apply {
             setBackgroundColor(Appearance.background(this@MainActivity))
         }
@@ -3653,19 +3609,12 @@ class MainActivity : Activity() {
             background = Appearance.glass(this@MainActivity, 36f, 82, true)
             elevation = dp(24).toFloat()
         }
-        val destinations = if (Prefs.compactLayout(this) && PinStore(this).configured()) listOf(
+        val destinations = listOf(
             Triple(R.drawable.ic_nav_home, "Home", "home"),
             Triple(R.drawable.ic_lock_security, "Security", "security"),
             Triple(R.drawable.ic_guardian_shield, "Guardian", "guardian"),
             Triple(R.drawable.ic_nav_settings, "Tools", "tools"),
             Triple(R.drawable.ic_palette, "Style", "appearance")
-        ) else listOf(
-            Triple(R.drawable.ic_nav_home, "Main", "main_settings"),
-            Triple(R.drawable.ic_nav_clock, "Clock", "clock_weather"),
-            Triple(R.drawable.ic_guardian_notifications, "Alerts", "notifications"),
-            Triple(R.drawable.ic_palette, "Theme", "app_theme"),
-            Triple(R.drawable.ic_nav_bar, "Bar", "floating_bar"),
-            Triple(R.drawable.ic_nav_settings, "All", "settings")
         )
         // Beta.2 Guardian Dock: the center core is a live health surface, not a fake
         // security indicator. Green requires the configured protection stack; amber
@@ -3759,25 +3708,7 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(-1, dp(18)))
                 setOnClickListener {
                     performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
-                    if (Prefs.compactLayout(this@MainActivity) && PinStore(this@MainActivity).configured()) {
-                        pageNavigator?.invoke(target, null)
-                    } else if (target == "settings") {
-                        showQuickSettingsSheet(root, scroll)
-                    } else if (index == 0 && Prefs.compactLayout(this@MainActivity)) {
-                        scroll.smoothScrollTo(0, 0)
-                    } else {
-                        revealCompactDetails(root)
-                        scroll.post {
-                            root.findViewWithTag<android.view.View>(target)?.let { view ->
-                                val rect = android.graphics.Rect()
-                                view.getDrawingRect(rect)
-                                root.offsetDescendantRectToMyCoords(view, rect)
-                                scroll.smoothScrollTo(0, (rect.top - dp(18)).coerceAtLeast(0))
-                                view.postDelayed({ flashSettingsTarget(view) }, 280)
-                            }
-                        }
-                    }
-                    dockDestination = target
+                    pageNavigator?.invoke(target, null)
                     select(this)
                 }
             }

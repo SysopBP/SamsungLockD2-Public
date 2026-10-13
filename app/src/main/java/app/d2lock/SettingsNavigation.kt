@@ -4,8 +4,8 @@ package app.d2lock
 object SettingsNavigation {
     fun pageForSection(title: String): String = when(title) {
         "SECURITY CENTER", "FINGERPRINT CENTER", "LOCK-SCREEN PROFILES" -> "security"
-        "LOCK & WAKE", "HOME SCREEN WIDGET", "GUARDIAN & KIOSK", "NOTIFICATIONS", "ACCESS CENTER" -> "guardian"
-        "THEME & COLORS", "ICON CENTER", "APP THEME", "WALLPAPER CENTER", "FLOATING BAR" -> "appearance"
+        "LOCK & WAKE", "HOME SCREEN WIDGET", "GUARDIAN & KIOSK", "NOTIFICATIONS", "ACCESS CENTER", "MEDIA" -> "guardian"
+        "THEME & COLORS", "ICON CENTER", "APP THEME", "WALLPAPER CENTER", "FLOATING BAR", "LOCK SCREEN EXTRAS", "CLOCK & WEATHER" -> "appearance"
         else -> "tools"
     }
 }

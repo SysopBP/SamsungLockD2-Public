@@ -11,6 +11,11 @@ class SettingsNavigationTest {
         assertEquals("tools", SettingsNavigation.pageForSection("ADB / USB RECOVERY"))
         assertEquals("appearance", SettingsNavigation.pageForSection("FLOATING BAR"))
     }
+    @Test fun nestedSectionsAreAssignedWithoutLosingMediaOrClock() {
+        assertEquals("guardian", SettingsNavigation.pageForSection("MEDIA"))
+        assertEquals("appearance", SettingsNavigation.pageForSection("CLOCK & WEATHER"))
+        assertEquals("appearance", SettingsNavigation.pageForSection("LOCK SCREEN EXTRAS"))
+    }
     @Test fun newlyAddedSectionsStayReachable() {
         assertEquals("tools", SettingsNavigation.pageForSection("NEW FEATURE"))
         assertEquals("tools", SettingsNavigation.pageForSection("ABOUT & DATA"))
