@@ -3554,12 +3554,21 @@ class MainActivity : Activity() {
         val body=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(16),dp(12),dp(16),dp(16)) }
         val input=android.widget.EditText(this).apply { hint="Search D2 settings"; textSize=16f; setSingleLine(true); setTextColor(Appearance.text(this@MainActivity)); setHintTextColor(Appearance.secondary(this@MainActivity)) }
         body.addView(input,LinearLayout.LayoutParams(-1,dp(56)))
-        val health=TextView(this).apply { text="Guardian health & readiness  ›"; minimumHeight=dp(48); setTextColor(Appearance.text(this@MainActivity)) }
-        body.addView(health)
+
         val results=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL }
         body.addView(ScrollView(this).apply { addView(results) },LinearLayout.LayoutParams(-1,(resources.displayMetrics.heightPixels*.45f).toInt()))
         val dialog=AlertDialog.Builder(this).setTitle("CORE · Search").setView(body).setNegativeButton("Close",null).create()
-        health.setOnClickListener { dialog.dismiss(); showReadiness() }
+        fun shortcut(label: String, action: () -> Unit) {
+            body.addView(TextView(this).apply {
+                text="$label  ›"; minimumHeight=dp(48); textSize=14f
+                setTextColor(Appearance.text(this@MainActivity)); setPadding(dp(10),dp(8),dp(10),dp(8))
+                setOnClickListener { dialog.dismiss(); action() }
+            }, body.childCount-1)
+        }
+        shortcut("Overview") { showGuardianCoreHealth() }
+        shortcut("Readiness & guided tests") { showReadiness() }
+        shortcut("Guardian logs") { showGuardianLogCenter() }
+        shortcut("System Server") { showSystemServerDashboard() }
         dialog.setOnDismissListener { input.clearFocus() }
         val entries=mutableListOf<Triple<TextView,View,String>>()
         fun walk(view:View,section:String) {
@@ -4058,12 +4067,12 @@ class MainActivity : Activity() {
                 orientation=LinearLayout.HORIZONTAL
                 addView(metric("EVENTS",metrics.total.toString()),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
                 addView(metric("WAKE",metrics.wakeSleep.toString()),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3); rightMargin=dp(3) })
-                addView(metric("KEYGUARD",metrics.keyguard.toString()),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
+                addView(metric("KEYGUARD",if(metrics.keyguard>0L) metrics.keyguard.toString() else "—"),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
             },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(6) })
             addView(LinearLayout(this@MainActivity).apply {
                 orientation=LinearLayout.HORIZONTAL
-                addView(metric("BIOMETRIC",metrics.biometric.toString()),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
-                addView(metric("LOCK SETTINGS",metrics.lockSettings.toString()),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3); rightMargin=dp(3) })
+                addView(metric("D2 FINGERPRINT",KeyguardSignalReceiver.diagnosticCount(this@MainActivity,"D2_FINGERPRINT_SUCCESS").toString()),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
+                addView(metric("SETUP CHANGES",KeyguardSignalReceiver.diagnosticCount(this@MainActivity,"SECURITY_SETUP_CHANGED").toString()),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3); rightMargin=dp(3) })
                 addView(metric("LAST",age(sys.ageMs)),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
             },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(12) })
             addView(LinearLayout(this@MainActivity).apply {
@@ -4074,7 +4083,7 @@ class MainActivity : Activity() {
                     text="LIVE STATE"; textSize=11f; letterSpacing=.08f; setTextColor(Appearance.secondary(this@MainActivity))
                 })
                 addView(TextView(this@MainActivity).apply {
-                    text="Framework  •  ${sys.event ?: "Waiting"}\nMethod  •  ${sys.method ?: "—"}\nSystemUI heartbeat  •  ${age(ui.ageMs)}\nFingerprint  •  ${fp.event ?: "Waiting"}"
+                    text="Framework  •  ${sys.event ?: "Waiting"}\nMethod  •  ${sys.method ?: "—"}\nSystemUI last signal  •  ${age(ui.ageMs)}\nFingerprint  •  ${fp.event ?: "Waiting"}"
                     textSize=13f; setLineSpacing(0f,1.15f); setTextColor(Appearance.text(this@MainActivity)); setPadding(0,dp(6),0,0)
                 })
             },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
@@ -4103,12 +4112,11 @@ class MainActivity : Activity() {
                 textSize=10f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,0,0,dp(10))
             })
             addView(TextView(this@MainActivity).apply {
-                text="HOOK COVERAGE + COMPATIBILITY"; textSize=11f; letterSpacing=.08f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,0,0,dp(6))
+                text="OBSERVED SIGNALS + COMPATIBILITY"; textSize=11f; letterSpacing=.08f; setTextColor(Appearance.secondary(this@MainActivity)); setPadding(0,0,0,dp(6))
             })
             addView(TextView(this@MainActivity).apply {
-                val active=metrics.timeline.mapNotNull { it.split("|",limit=3).getOrNull(2) }.toSet()
-                fun seen(name:String)=if(active.any { it.contains(name) }) "OBSERVED" else "NO EVENT YET"
-                text="LockSettingsService  •  ${seen("LockSettings")}\nBiometricService  •  ${seen("BiometricService")}\nKeyguardController  •  ${seen("KeyguardController")}\nActivityTaskManager  •  ${seen("ActivityTaskManager")}\nPowerManagerService  •  ${seen("PowerManagerService")}\n\nFirmware  •  ${android.os.Build.MODEL} / Android ${android.os.Build.VERSION.RELEASE}\nBuild  •  ${android.os.Build.DISPLAY}"
+                fun observed(event: String) = if(KeyguardSignalReceiver.diagnosticCount(this@MainActivity,event)>0L) "OBSERVED THIS BOOT" else "NO EVENT THIS BOOT"
+                text="AMS boot handoff  •  ${observed("BOOT_READY")}\nPowerManager wake  •  ${observed("WAKE")}\nSecurity setup observer  •  ${observed("SECURITY_SETUP_CHANGED")}\nD2 fingerprint callback  •  ${observed("D2_FINGERPRINT_SUCCESS")}\nFramework biometric/keyguard counters  •  No dedicated event observer in this build\nSystemUI signal  •  ${ui.status}\n\nObservation confirms a received event, not installation of every hook. Zero means no recorded event; — means no dedicated observer. New counters start after this update and reset each boot.\n\nFirmware  •  ${android.os.Build.MODEL} / Android ${android.os.Build.VERSION.RELEASE}\nBuild  •  ${android.os.Build.DISPLAY}"
                 textSize=11f; typeface=android.graphics.Typeface.MONOSPACE; setTextColor(Appearance.text(this@MainActivity))
                 setPadding(dp(12),dp(10),dp(12),dp(10)); background=Appearance.glass(this@MainActivity,20f,24,true)
             },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
