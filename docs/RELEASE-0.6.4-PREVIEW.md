@@ -1,8 +1,32 @@
-# D2 Guardian 0.6.4 Preview — Samsung Recovery Protection & Fingerprint Login
+# D2 Guardian 0.6.4 Preview 2 — Call Hotfix & New UI
 
-Published as a preview from successful [Build 1031](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38351847380), source commit `e75a33a2ab94932c3ee74c13f595e923ecf307a5`. APK version: `0.6.4-srp-fingerprint-login`, versionCode 29. Original signing certificate preserved by the build workflow.
+Published as a preview from successful [Build 1057](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38462517827), source commit `54ad8616b9b6f1ecd90feeaed5d3cec40a78abdd`. APK version: `0.6.4-srp-fingerprint-login`, versionCode 29. Original signing certificate preserved by the build workflow.
 
-![D2 Guardian preview and fingerprint setup](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.6.4-preview.1/D2-0.6.4-Preview-Setup-Collage.png)
+![D2 Guardian preview and fingerprint setup](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.6.4-preview.2/D2-0.6.4-Preview-Setup-Collage.png)
+
+## Build 1057 hotfix and UI update
+
+### Incoming-call black-screen hotfix
+
+An incoming call while the D2 lock screen was asleep could leave the display black while ringing, eventually followed by a soft reboot. Build 1057 moves the wake broadcast onto a dedicated worker so it does not execute inside the hooked System Server / WindowManager call path. This addresses the identified deadlock path. The build passed; the fix still needs confirmation with an incoming call on the physical Samsung device while the display is off.
+
+### Updated Guardian organization
+
+- Home, Security, Guardian, Tools, and Appearance replace Classic navigation and the Compact/Classic selector.
+- Grouped cards and focused detail screens organize settings.
+- CORE search sits beside the floating dock, opens visible detail screens, and retains navigation history.
+- Page restoration, dock visibility, window-inset alignment, and Android Back behavior have been corrected.
+- Home status and security actions are simplified while retaining themes.
+- The original D2 Outline icon set is used across app controls.
+
+### Guided tests and diagnostics
+
+- Guided test history supports actions and records wake and relock outcomes independently.
+- Verified lock-surface PIN recovery is recorded in test history.
+- Setup changes and successful D2 fingerprint authentication use boot-scoped diagnostic observations.
+- Telemetry dashboard meanings are corrected and CORE diagnostic shortcuts are visible again.
+
+The published APK, optional module, and source archive are the matching artifacts from successful Build 1057. No new APK was rebuilt solely for publishing. Existing Samsung credential requirements and SRP enforcement limits below still apply.
 
 ## Important fingerprint finding
 
@@ -148,7 +172,7 @@ The saved development checkpoint records three app-session authorization tests, 
 
 The packaging workflow pins the successful build and checks its original checksums and module layout. Continue device validation of repeated boot/lock/wake, fingerprint cancellation and PIN fallback, calls, status layering, SRP refresh after credential changes, and covered restart/power-off. Do not intentionally enable unsafe vault states on the daily-use phone to test rejection paths.
 
-Release assets include the D2 APK, optional KernelSU bridge ZIP, source ZIP, installation guide, release notes, setup collage, runtime dependency list and SHA-256 checksums. Build/lint/runtime checks passed in Build 1031; Samsung-specific physical validation remains limited to the reported findings.
+Release assets include the D2 APK, optional KernelSU bridge ZIP, source ZIP, installation guide, release notes, setup collage, runtime dependency list and SHA-256 checksums. Build/lint/runtime checks passed in Build 1057; Samsung-specific physical validation remains limited to the reported findings.
 
 ## Credits and acknowledgments
 
@@ -166,7 +190,7 @@ D2 original code: Copyright (c) 2026 D2 Project. All rights reserved. Third-part
 ## Evidence
 
 - Current README: https://github.com/SysopBP/SamsungLockD2-Public/blob/main/README.md
-- Latest reviewed commit: https://github.com/SysopBP/SamsungLockD2-Public/commit/e75a33a2ab94932c3ee74c13f595e923ecf307a5
+- Latest reviewed commit: https://github.com/SysopBP/SamsungLockD2-Public/commit/54ad8616b9b6f1ecd90feeaed5d3cec40a78abdd
 - Version metadata: https://github.com/SysopBP/SamsungLockD2-Public/blob/main/app/build.gradle.kts
 - Third-party notices: https://github.com/SysopBP/SamsungLockD2-Public/blob/main/THIRD_PARTY_NOTICES.txt
 - Saved October 12 reboot checkpoint and user's October 13 device-test findings.
