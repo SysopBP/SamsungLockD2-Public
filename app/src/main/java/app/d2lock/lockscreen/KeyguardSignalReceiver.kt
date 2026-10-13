@@ -358,9 +358,23 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
             )
         }
 
+        /** Diagnostics only: called after Android accepts D2's biometric prompt. */
+        fun recordFingerprintSuccess(context: Context, source: String) {
+            directBootPrefs(context).edit()
+                .putLong(KEY_LAST_FP_EVENT_MS, System.currentTimeMillis())
+                .putString(KEY_LAST_FP_EVENT, "VERIFIED · $source")
+                .putString(KEY_LAST_FP_SOURCE, source)
+                .apply()
+            recordPipeline(context, "FINGERPRINT", "VERIFIED · $source")
+        }
+
         fun fingerprintHealth(context: Context): FingerprintHealth {
             val prefs = directBootPrefs(context)
             val timestamp = prefs.getLong(KEY_LAST_FP_EVENT_MS, 0L)
+            val bootWallMs = System.currentTimeMillis() - SystemClock.elapsedRealtime()
+            if (timestamp <= 0L || timestamp < bootWallMs - 5_000L) {
+                return FingerprintHealth(null, null, null)
+            }
             return FingerprintHealth(
                 if (timestamp > 0L) (System.currentTimeMillis() - timestamp).coerceAtLeast(0L) else null,
                 prefs.getString(KEY_LAST_FP_EVENT, null),

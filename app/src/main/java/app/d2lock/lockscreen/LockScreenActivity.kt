@@ -1551,6 +1551,7 @@ class LockScreenActivity : Activity() {
                     "GUARDIAN_743_HANDOFF_BEGIN type=${result.authenticationType} keyguardLocked=${keyguard?.isKeyguardLocked} deviceLocked=${keyguard?.isDeviceLocked} focus=${hasWindowFocus()}"
                 )
                 Log.i("SamsungLockD2", "GUARDIAN_FINGERPRINT_SUCCESS type=${result.authenticationType}")
+                KeyguardSignalReceiver.recordFingerprintSuccess(this@LockScreenActivity, "D2 lock screen")
                 setFingerprintGlassState("success")
                 GuardianWatchdog.endTrustedAuthentication("auth_success")
                 Log.i("SamsungLockD2", "GUARDIAN_BIOMETRIC_HANDOFF_END reason=success")

@@ -3,7 +3,7 @@ package app.d2lock.bridge
 import android.content.Context
 import android.net.Uri
 
-/** Private, persistent privacy state; only a verified PIN clears an active lock. */
+/** Private, persistent privacy state; verified D2 authentication clears an active lock. */
 object IslandBridge {
     val uri: Uri = Uri.parse("content://app.d2lock.island")
     private fun prefs(context: Context) =

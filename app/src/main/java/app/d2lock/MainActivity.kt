@@ -152,6 +152,7 @@ class MainActivity : Activity() {
                     if (!appBiometricSession.consume(token)) return
                     appBiometricCancel = null
                     Log.i("D2AppAuth", "D2_APP_BIOMETRIC_SUCCESS type=${result.authenticationType}")
+                    KeyguardSignalReceiver.recordFingerprintSuccess(this@MainActivity, "D2 app login")
                     completeAppLogin()
                 }
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
@@ -191,7 +192,7 @@ class MainActivity : Activity() {
         val messages = listOf(
             "Kiosk D2 Boot Guardian can become your primary rooted lock surface. Complete and test D2 authentication and your recovery path before enabling full kiosk protection.",
             if (PinStore(this).configured()) "D2 authentication is configured. You can continue." else "Create a D2 PIN before full Guardian protection can be enabled. Pattern can be selected later in Security Center.",
-            "For the intended rooted D2 configuration, remove the existing Samsung screen-lock credential and enrolled lock-screen biometrics before enabling Guardian protection. This includes Samsung PIN, pattern or password, fingerprints, face unlock, and other lock-screen biometrics. D2 will never remove them automatically. Open Samsung lock settings, make the changes yourself, then return here and check again.",
+            "For fingerprint login, first configure a Samsung PIN and enroll your fingerprint. Keep both configured, then open Samsung Settings → Fingerprints and turn Fingerprint unlock OFF. D2 uses the enrolled fingerprint through Android BiometricPrompt. Samsung may still require its own PIN after reboot or when strong authentication is required; complete that screen before using D2 fingerprint login. Your separate 6-digit D2 PIN remains the recovery method.",
             buildString {
                 append(if (RootManager.isAvailable()) "✓ KernelSU Superuser granted to D2" else "○ KernelSU Superuser required")
                 append("\n")
@@ -208,7 +209,7 @@ class MainActivity : Activity() {
                 append(if (Prefs.xposedMaster(this@MainActivity)) "✓ LSPosed/Xposed integration configured" else "○ Xposed integration optional")
                 append("\n")
                 append(if (app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)) "✓ Galaxy Island paired" else "○ Galaxy Island pairing optional")
-                append("\n\nRequired for full D2 operation: KernelSU Superuser + Shizuku authorized + Notification Access. Fingerprint unlock remains experimental.")
+                append("\n\nRequired for full D2 operation: KernelSU Superuser + Shizuku authorized + Notification Access. Fingerprint login requires an enrolled strong biometric; keep your D2 PIN available for recovery.")
             },
             "Recommended starting point: enable Show D2 when the screen wakes, keep Automatic fallback on, and verify call/relock behavior before enabling kiosk authentication.",
             "Use Test Guardian to open the lock surface and successfully return with your D2 credential. Full kiosk protection stays unchanged until you explicitly enable it after this test.",
@@ -236,7 +237,7 @@ class MainActivity : Activity() {
                         setupSecurityStepPending=true
                         runCatching { startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) }.onFailure {
                             setupSecurityStepPending=false
-                            Toast.makeText(this@MainActivity,"Open Settings > Lock screen and remove Samsung credentials and biometrics.",Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@MainActivity,"Open Samsung Settings > Fingerprints and turn Fingerprint unlock OFF. Keep your Samsung PIN and fingerprint enrolled.",Toast.LENGTH_LONG).show()
                         }
                     }
                 },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
@@ -688,7 +689,7 @@ class MainActivity : Activity() {
         if (configured) {
             val fingerprintIdentity=RootManager.fingerprintHardwareInfo()
             val rootReady=RootManager.isAvailable()
-            val shizukuReady=Prefs.shizukuEnabled(this) && runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+            val shizukuReady=Prefs.shizukuEnabled(this) && runCatching { Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED }.getOrDefault(false)
             val xposedReady=Prefs.xposedMaster(this)
             val systemUiHealth=KeyguardSignalReceiver.bridgeHealth(this)
             val systemHealth=KeyguardSignalReceiver.systemHealth(this)
@@ -729,7 +730,7 @@ class MainActivity : Activity() {
                     setPadding(0,0,0,dp(10))
                 })
                 addView(TextView(this@MainActivity).apply {
-                    text="Protected  •  "+Prefs.unlockMethod(this@MainActivity).replaceFirstChar { it.uppercase() }
+                    text=(if (Prefs.enabled(this@MainActivity)) "Guardian enabled" else "Guardian disabled")+"  •  "+Prefs.unlockMethod(this@MainActivity).replaceFirstChar { it.uppercase() }
                     textSize=17f
                     setTextColor(Appearance.text(this@MainActivity))
                     setPadding(0,0,0,dp(8))
@@ -781,8 +782,8 @@ class MainActivity : Activity() {
                     val serverOk=systemHealth.status=="CONNECTED"
                     val uiOk=systemUiHealth.status=="CONNECTED"
                     addView(bridgeRow(R.drawable.ic_system_health,"System Server",if(serverOk) "OBSERVED" else "WAITING",serverOk))
-                    addView(bridgeRow(R.drawable.ic_guardian_device,"SystemUI",if(uiOk) "OBSERVED" else "WAITING",uiOk))
-                    addView(bridgeRow(R.drawable.ic_guardian_fingerprint,"Fingerprint event",fingerprintHealth.event ?: "Waiting",fingerprintHealth.event != null))
+                    addView(bridgeRow(R.drawable.ic_guardian_device,"SystemUI telemetry",if(uiOk) "OBSERVED" else "NO EVENT THIS BOOT",uiOk))
+                    addView(bridgeRow(R.drawable.ic_guardian_fingerprint,"Fingerprint telemetry",fingerprintHealth.event ?: "NO EVENT THIS BOOT",fingerprintHealth.event != null))
                     addView(TextView(this@MainActivity).apply {
                         val detail = systemHealth.event?.let { event -> "Last framework event: $event · ${systemHealth.method ?: "unknown"}" }
                             ?: "Waiting for first system_server event after reboot"
@@ -796,7 +797,7 @@ class MainActivity : Activity() {
                         imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity)); contentDescription=null
                     },LinearLayout.LayoutParams(dp(20),dp(20)).apply { rightMargin=dp(8) })
                     addView(guardianSwitch().apply {
-                        text=if(app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)) "Galaxy Island  •  Connected" else "Galaxy Island  •  Disconnected"
+                        text=if(app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)) "Galaxy Island  •  Enabled" else "Galaxy Island  •  Disabled"
                         textSize=14f; setTextColor(Appearance.text(this@MainActivity))
                         isChecked=app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)
                         setOnCheckedChangeListener { _,value -> app.d2lock.bridge.IslandBridge.setEnabled(this@MainActivity,value) }
@@ -1049,7 +1050,7 @@ class MainActivity : Activity() {
                     }
                 })
                 addView(TextView(this@MainActivity).apply {
-                    text="Your 6-digit D2 PIN remains the recovery unlock method. D2 authentication stays independent of Samsung Keyguard."
+                    text="Your 6-digit D2 PIN remains the recovery unlock method. D2 and Samsung use separate credentials. Samsung may still require its PIN after reboot or when strong authentication is required."
                     textSize=12f
                     setTextColor(Appearance.secondary(this@MainActivity))
                     setPadding(dp(4),dp(10),dp(4),0)
