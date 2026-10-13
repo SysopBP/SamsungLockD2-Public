@@ -1661,13 +1661,19 @@ class LockScreenActivity : Activity() {
                 finish()
             }
         }
+        val pinUnlocked = {
+            getSharedPreferences("d2_guided_tests", MODE_PRIVATE).edit()
+                .putString("pin", "Verified D2 PIN on lock surface")
+                .putLong("pin_time", System.currentTimeMillis()).apply()
+            unlocked()
+        }
         if (Prefs.unlockMethod(this) == "pattern" && PatternStore(this).configured()) {
             pinDialog = PatternUi.show(this, success = unlocked, usePin = {
                 // Keep the grace window active while switching credential methods.
-                pinDialog = PinUi.show(this, success = unlocked, cancel = cancelled)
+                pinDialog = PinUi.show(this, success = pinUnlocked, cancel = cancelled)
             }, cancel = cancelled)
         } else {
-            pinDialog = PinUi.show(this, success = unlocked, cancel = cancelled)
+            pinDialog = PinUi.show(this, success = pinUnlocked, cancel = cancelled)
         }
     }
 
