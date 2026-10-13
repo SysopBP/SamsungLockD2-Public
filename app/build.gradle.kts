@@ -10,8 +10,8 @@ android {
         applicationId = "app.d2lock"
         minSdk = 31
         targetSdk = 37
-        versionCode = 28
-        versionName = "0.6.4-srp-glass-dialogs"
+        versionCode = 29
+        versionName = "0.6.4-srp-fingerprint-login"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

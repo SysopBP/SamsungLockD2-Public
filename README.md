@@ -243,3 +243,15 @@ Notification access must be granted for either option. Secret notifications stay
 
 
 <!-- rebuild: 2026-09-28 fresh 918 early-boot validation -->
+
+
+### Fingerprint Center test versus login
+
+**Test Fingerprint** checks whether Android accepts an enrolled strong biometric. It does not unlock D2 or change the selected unlock method. Samsung renders the secure authentication prompt; its visual layout is separate from D2's glass dialogs. Success and non-cancellation error results use the shared D2 glass style. **Login with fingerprint** authenticates on D2's actual lock screen and retains the D2 PIN fallback.
+
+
+### Unlock the D2 app with fingerprint
+
+When **Login with fingerprint** is selected and a D2 PIN is configured, opening the app requests Samsung's secure **Unlock D2** biometric prompt before showing protected settings. Successful strong-biometric authentication opens the same app session as a correct D2 PIN. **Use D2 PIN**, cancellation, unavailable biometrics and authentication errors use the D2 PIN fallback. A non-matching scan never authorizes settings. Leaving the app revokes authorization, cancels a pending prompt and invalidates late callbacks. An interrupted/cancelled attempt falls back to PIN on return; re-entering after a completed session can request biometrics again.
+
+The Fingerprint Center sensor test stays diagnostic and does not authorize settings. Samsung renders the secure authentication prompt; D2 styles its own guidance and result dialogs.

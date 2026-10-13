@@ -51,6 +51,10 @@ class MainActivity : Activity() {
     private val wallpaperPicker = 701
     private val appWallpaperPicker = 702
     private var authorized = false
+    private var appStopped = true
+    private var appFingerprintAttempted = false
+    private var appBiometricCancel: CancellationSignal? = null
+    private val appBiometricSession = app.d2lock.security.BiometricSessionGate()
     private var pinDialog: AlertDialog? = null
     private val shizukuRequestCode = 910
     private var setupIntegrationStepPending = false
@@ -78,6 +82,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        appStopped = false
         app.d2lock.root.DmcRecovery.request(this, "app_resume")
         if (setupSecurityStepPending) {
             setupSecurityStepPending = false
@@ -89,17 +94,11 @@ class MainActivity : Activity() {
             window.decorView.post { showSetupWizard(4) }
             return
         }
-        if (!authorized && pinDialog?.isShowing != true) {
+        if (!authorized && pinDialog?.isShowing != true && appBiometricCancel == null) {
             if (PinStore(this).configured()) {
-                pinDialog = PinUi.show(this, success = {
-                    authorized = true
-                    app.d2lock.bridge.IslandBridge.setLocked(this, false)
-                    if (Prefs.enabled(this)) {
-                        runCatching { LockScreenService.start(this) }
-                    }
-                    setContentView(buildSettings())
-                    if (!Prefs.setupWizardSeen(this)) showSetupWizard() else maybeShowWhatsNew()
-                }, cancel = { finish() })
+                if (Prefs.unlockMethod(this) == "fingerprint" && !appFingerprintAttempted) {
+                    authenticateAppWithFingerprint()
+                } else showAppPinLogin()
             } else {
                 // Upgrades must not leave the old unprotected service enabled.
                 Prefs.setEnabled(this, false)
@@ -107,6 +106,66 @@ class MainActivity : Activity() {
                 setContentView(buildSettings())
                 maybeShowWhatsNew()
             }
+        }
+    }
+
+    private fun completeAppLogin() {
+        if (appStopped || isFinishing || isDestroyed) return
+        authorized = true
+        app.d2lock.bridge.IslandBridge.setLocked(this, false)
+        if (Prefs.enabled(this)) runCatching { LockScreenService.start(this) }
+        setContentView(buildSettings())
+        if (!Prefs.setupWizardSeen(this)) showSetupWizard() else maybeShowWhatsNew()
+    }
+
+    private fun showAppPinLogin() {
+        if (appStopped || authorized || isFinishing || isDestroyed || pinDialog?.isShowing == true) return
+        pinDialog = PinUi.show(this, success = { completeAppLogin() }, cancel = { finish() })
+    }
+
+    private fun authenticateAppWithFingerprint() {
+        if (appStopped || authorized || isFinishing || isDestroyed || appBiometricCancel != null) return
+        appFingerprintAttempted = true
+        val manager = getSystemService(BiometricManager::class.java)
+        if (manager?.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) != BiometricManager.BIOMETRIC_SUCCESS) {
+            showAppPinLogin()
+            return
+        }
+        val token = appBiometricSession.begin()
+        val cancel = CancellationSignal()
+        appBiometricCancel = cancel
+        fun fallback() {
+            if (!appBiometricSession.consume(token)) return
+            appBiometricCancel = null
+            showAppPinLogin()
+        }
+        try {
+            val prompt = BiometricPrompt.Builder(this)
+                .setTitle("Unlock D2")
+                .setSubtitle("Login with fingerprint")
+                .setDescription("Authenticate to open the D2 app and protected settings, or use your D2 PIN.")
+                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                .setNegativeButton("Use D2 PIN", mainExecutor) { _, _ -> fallback() }
+                .build()
+            prompt.authenticate(cancel, mainExecutor, object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    if (!appBiometricSession.consume(token)) return
+                    appBiometricCancel = null
+                    Log.i("D2AppAuth", "D2_APP_BIOMETRIC_SUCCESS type=${result.authenticationType}")
+                    completeAppLogin()
+                }
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    Log.i("D2AppAuth", "D2_APP_BIOMETRIC_ERROR code=$errorCode")
+                    fallback()
+                }
+                override fun onAuthenticationFailed() {
+                    // A non-match leaves the system prompt active; it never authorizes settings.
+                    Log.i("D2AppAuth", "D2_APP_BIOMETRIC_NON_MATCH")
+                }
+            })
+        } catch (error: Throwable) {
+            Log.w("D2AppAuth", "D2_APP_BIOMETRIC_START_FAILED", error)
+            fallback()
         }
     }
 
@@ -290,7 +349,7 @@ class MainActivity : Activity() {
             setPadding(dp(16), dp(14), dp(16), dp(18)); background = Appearance.glass(this@MainActivity, 26f, 28, true)
         }
         fun whatsNew() {
-            content.text = "WHAT'S NEW  •  OCTOBER 12, 2026  •  D2 ${versionName ?: "current"}\n\n🧊 STANDARD GLASS DIALOGS\n• Rounded shared information and unlock-choice dialogs replace square platform panels\n• Fingerprint guidance now has numbered steps, an icon and Open settings / Got it buttons\n\n🧊 D2 POWER MENU\n• Adds confirmed soft restart and a rounded live D2 SRP status dialog to Samsung power controls\n• Requires LSPosed SystemUI plus System Framework scopes; preserves emergency and normal confirmation actions\n\n🛡 D2 SRP POWER-ACTION GUARD\n• Verifies fresh vault read-back before normal restart, power off and supported orderly soft restart\n• Cancels on failure or a 5-second timeout; late checks never trigger a delayed restart\n• Failed/unknown checks keep the phone on: open D2 SRP status, resolve the issue and retry\n• Status checks alone never shut down the phone; missing shutdown hooks may allow normal Samsung power actions without verification\n• Battery/thermal emergencies and direct root/hardware resets remain outside this guard\n\n🧩 D2 SRP — SAMSUNG RECOVERY PROTECTION\n• Runs inside Xposed System Server (UID 1000)\n• Targets: D2 SRP screen-lock and Maintenance Mode flags disabled; Download Mode AT-command flag enabled; derived Download Mode eligibility allowed\n• Validates the vault record and verifies read-back; unknown or failed checks stay unverified\n\n🔄 SECURITY SETUP DETECTION\n• Watches completed PIN/password/pattern changes and fingerprint/face additions or removals\n• Refreshes 2 seconds after setup changes and checks again at 12 seconds for delayed Samsung updates\n• Firmware detection still needs device testing; Android credentials and biometric enrollment stay separate from D2 SRP flags\n\n✅ LIVE FEATURE STATUS\n• Glass status dialog with icons, target checks, System Server identity and last-check time\n\n🚧 IN DEVELOPMENT\n• Additional framework controls and Galaxy Island Xposed integration remain disabled placeholders\n• Diagnostics, relock, Home/Recents, gestures, notification/media/call integration and related controls are planned for a later update\n• These switches do not control the current boot/wake observers, D2 SRP or power-menu hooks\n\n\n💤 RECENT HOTFIXES\n• Voicemail/call-state relock fix\n• Double-tap screen-off from empty space, with notification and call controls protected\n• Floating Bar visibility modes and coordinated dock/CORE/CHECK behavior\n\n🙏 SRP / DMC DISCOVERY CREDIT\n• @diablOw — originally discovered the DMC behavior behind this recovery feature"
+            content.text = "WHAT'S NEW  •  OCTOBER 12, 2026  •  D2 ${versionName ?: "current"}\n\n🔓 FINGERPRINT APP LOGIN\n• Login with fingerprint now opens the D2 app and protected settings through Samsung’s secure biometric prompt\n• Use D2 PIN remains available; unavailable/error results fall back to PIN\n• Backgrounding revokes the session and rejects late biometric callbacks\n\n🧊 STANDARD GLASS DIALOGS\n• Rounded shared information and unlock-choice dialogs replace square platform panels\n• Fingerprint guidance now has numbered steps, an icon and Open settings / Got it buttons\n\n🧊 D2 POWER MENU\n• Adds confirmed soft restart and a rounded live D2 SRP status dialog to Samsung power controls\n• Requires LSPosed SystemUI plus System Framework scopes; preserves emergency and normal confirmation actions\n\n🛡 D2 SRP POWER-ACTION GUARD\n• Verifies fresh vault read-back before normal restart, power off and supported orderly soft restart\n• Cancels on failure or a 5-second timeout; late checks never trigger a delayed restart\n• Failed/unknown checks keep the phone on: open D2 SRP status, resolve the issue and retry\n• Status checks alone never shut down the phone; missing shutdown hooks may allow normal Samsung power actions without verification\n• Battery/thermal emergencies and direct root/hardware resets remain outside this guard\n\n🧩 D2 SRP — SAMSUNG RECOVERY PROTECTION\n• Runs inside Xposed System Server (UID 1000)\n• Targets: D2 SRP screen-lock and Maintenance Mode flags disabled; Download Mode AT-command flag enabled; derived Download Mode eligibility allowed\n• Validates the vault record and verifies read-back; unknown or failed checks stay unverified\n\n🔄 SECURITY SETUP DETECTION\n• Watches completed PIN/password/pattern changes and fingerprint/face additions or removals\n• Refreshes 2 seconds after setup changes and checks again at 12 seconds for delayed Samsung updates\n• Firmware detection still needs device testing; Android credentials and biometric enrollment stay separate from D2 SRP flags\n\n✅ LIVE FEATURE STATUS\n• Glass status dialog with icons, target checks, System Server identity and last-check time\n\n🚧 IN DEVELOPMENT\n• Additional framework controls and Galaxy Island Xposed integration remain disabled placeholders\n• Diagnostics, relock, Home/Recents, gestures, notification/media/call integration and related controls are planned for a later update\n• These switches do not control the current boot/wake observers, D2 SRP or power-menu hooks\n\n\n💤 RECENT HOTFIXES\n• Voicemail/call-state relock fix\n• Double-tap screen-off from empty space, with notification and call controls protected\n• Floating Bar visibility modes and coordinated dock/CORE/CHECK behavior\n\n🙏 SRP / DMC DISCOVERY CREDIT\n• @diablOw — originally discovered the DMC behavior behind this recovery feature"
         }
         fun whatsNext() {
             val lock = if (PinStore(this@MainActivity).configured()) "✓" else "○"
@@ -431,12 +490,20 @@ class MainActivity : Activity() {
         Shizuku.removeBinderReceivedListener(shizukuBinderReceived)
         Shizuku.removeBinderDeadListener(shizukuBinderDead)
         Shizuku.removeRequestPermissionResultListener(shizukuPermission)
+        appBiometricSession.cancel()
+        appBiometricCancel?.cancel()
+        appBiometricCancel = null
         super.onDestroy()
     }
 
     override fun onStop() {
         super.onStop()
+        appStopped = true
+        if (authorized) appFingerprintAttempted = false
         authorized = false
+        appBiometricSession.cancel()
+        appBiometricCancel?.cancel()
+        appBiometricCancel = null
         pinDialog?.dismiss()
         pinDialog = null
         setContentView(buildLockedBackdrop())
@@ -448,15 +515,18 @@ class MainActivity : Activity() {
             ?: BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE
         Log.i("D2FingerprintLab", "GUARDIAN_BIOMETRIC_TEST_CAN_AUTH status=$status")
         if (status != BiometricManager.BIOMETRIC_SUCCESS) {
-            Toast.makeText(this, "Android biometric unavailable (status $status)", Toast.LENGTH_LONG).show()
+            GuardianDialogs.showInfo(this, "Fingerprint test unavailable",
+                "Android reports that strong biometrics are unavailable (status $status).\n\nCheck your enrolled fingerprint and complete any required Samsung PIN unlock, then try again.",
+                icon = R.drawable.ic_guardian_fingerprint)
+
             return
         }
 
         val cancel = CancellationSignal()
         val prompt = BiometricPrompt.Builder(this)
-            .setTitle("Guardian fingerprint test")
-            .setSubtitle("Diagnostic only — Guardian will not unlock")
-            .setDescription("Authenticate with an enrolled strong biometric.")
+            .setTitle("D2 fingerprint test")
+            .setSubtitle("Sensor test only")
+            .setDescription("Confirm an enrolled strong biometric works. To unlock D2, use Login with fingerprint on the D2 lock screen.")
             .setNegativeButton("Cancel", mainExecutor) { _, _ ->
                 Log.i("D2FingerprintLab", "GUARDIAN_BIOMETRIC_TEST_CANCELLED")
             }
@@ -468,7 +538,10 @@ class MainActivity : Activity() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 super.onAuthenticationSucceeded(result)
                 Log.i("D2FingerprintLab", "GUARDIAN_BIOMETRIC_TEST_SUCCESS type=${result.authenticationType}")
-                Toast.makeText(this@MainActivity, "Fingerprint test: genuine Android success", Toast.LENGTH_LONG).show()
+                if (!isFinishing && !isDestroyed) GuardianDialogs.showInfo(this@MainActivity,
+                    "Fingerprint test passed",
+                    "✓ Android accepted your enrolled strong biometric.\n\nThis sensor test does not change app authorization or dismiss the D2 lock screen. Use Login with fingerprint when opening the D2 app or unlocking its lock screen.",
+                    icon = R.drawable.ic_guardian_fingerprint)
             }
 
             override fun onAuthenticationFailed() {
@@ -479,7 +552,11 @@ class MainActivity : Activity() {
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 super.onAuthenticationError(errorCode, errString)
                 Log.i("D2FingerprintLab", "GUARDIAN_BIOMETRIC_TEST_ERROR code=$errorCode message=$errString")
-                Toast.makeText(this@MainActivity, "Fingerprint test error $errorCode: $errString", Toast.LENGTH_LONG).show()
+                val cancelled = errorCode == BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED ||
+                    errorCode == BiometricPrompt.BIOMETRIC_ERROR_CANCELED
+                if (!cancelled && !isFinishing && !isDestroyed) GuardianDialogs.showInfo(this@MainActivity,
+                    "Fingerprint test unavailable", "${errString}\n\nError $errorCode. Your D2 unlock method has not changed.",
+                    icon = R.drawable.ic_guardian_fingerprint)
             }
         })
     }
@@ -873,7 +950,7 @@ class MainActivity : Activity() {
                                         setContentView(buildSettings())
                                         GuardianDialogs.showInfo(this@MainActivity,
                                             title = "Login with fingerprint",
-                                            message = "✓ Keep your fingerprint enrolled.\n\n1. Open Samsung Settings → Fingerprints.\n2. Turn Fingerprint unlock OFF.\n3. Use your enrolled fingerprint to unlock D2.\n\nIf Samsung asks for its PIN first, complete that screen before D2 fingerprint login.\n\nYour D2 PIN remains the fallback if biometrics are unavailable or you cancel.",
+                                            message = "✓ Keep your fingerprint enrolled.\n\n1. Open Samsung Settings → Fingerprints.\n2. Turn Fingerprint unlock OFF.\n3. Use your enrolled fingerprint to unlock D2.\n\nIf Samsung asks for its PIN first, complete that screen before D2 fingerprint login.\n\nFingerprint login also opens the D2 app and protected settings. Your D2 PIN remains the fallback if biometrics are unavailable or you cancel.",
                                             icon = R.drawable.ic_guardian_fingerprint,
                                             secondary = "Open settings",
                                             onSecondary = { startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) })
@@ -1480,7 +1557,7 @@ class MainActivity : Activity() {
                 addView(enroll,LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(6) })
             })
             addView(TextView(this@MainActivity).apply {
-                text="ⓘ Diagnostic only • does not unlock Guardian or change SystemUI/keyguard state"
+                text="ⓘ Sensor test only • fingerprint login is used on the D2 lock screen"
                 textSize=11f
                 setTextColor(Appearance.secondary(this@MainActivity))
                 setPadding(0,dp(10),0,0)
