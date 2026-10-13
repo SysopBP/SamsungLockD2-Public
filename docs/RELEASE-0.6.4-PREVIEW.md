@@ -1,9 +1,8 @@
 # D2 Guardian 0.6.4 Preview — Samsung Recovery Protection & Fingerprint Login
 
-Prepared October 13, 2026. Release copy and findings; publication pending.
-Suggested tag: `v0.6.4-preview.1` (confirm availability before creating).
-Current source version: `0.6.4-srp-fingerprint-login`, versionCode 29.
-Reviewed source head: `e75a33a2ab94932c3ee74c13f595e923ecf307a5`.
+Published as a preview from successful [Build 1031](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38351847380), source commit `e75a33a2ab94932c3ee74c13f595e923ecf307a5`. APK version: `0.6.4-srp-fingerprint-login`, versionCode 29. Original signing certificate preserved by the build workflow.
+
+![D2 Guardian preview and fingerprint setup](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.6.4-preview.1/D2-0.6.4-Preview-Setup-Collage.png)
 
 ## Important fingerprint finding
 
@@ -125,11 +124,11 @@ Normal power-off/restart is covered only when the installed hooks receive the ac
 
 These presentation protections reduce stale overlays; they do not provide a completed D2-only Samsung unlock flow.
 
-See [automatic recovery implementation and limits](AUTOMATIC-DMC-RECOVERY.md) for the detailed vault and power-guard behavior. These are implementation protections with firmware-specific validation requirements, not a claim that every failure path has been tested on every device.
+See [automatic recovery implementation and limits](https://github.com/SysopBP/SamsungLockD2-Public/blob/main/docs/AUTOMATIC-DMC-RECOVERY.md) for the detailed vault and power-guard behavior. These are implementation protections with firmware-specific validation requirements, not a claim that every failure path has been tested on every device.
 
 ## Installation guide
 
-See [Installation and fingerprint setup](INSTALLATION-0.6.4-PREVIEW.md) for the complete steps. **Set up Samsung PIN and enroll a fingerprint first**, then turn Samsung Fingerprint unlock OFF while keeping both. Configure D2’s recovery PIN/pattern and select Login with fingerprint.
+See [Installation and fingerprint setup](https://github.com/SysopBP/SamsungLockD2-Public/blob/main/docs/INSTALLATION-0.6.4-PREVIEW.md) for the complete steps. **Set up Samsung PIN and enroll a fingerprint first**, then turn Samsung Fingerprint unlock OFF while keeping both. Configure D2’s recovery PIN/pattern and select Login with fingerprint.
 
 ## Setup and update
 
@@ -147,9 +146,9 @@ User device: SM-S948U1, Android 17 / One UI 9. User reports SRP working, power-m
 
 The saved development checkpoint records three app-session authorization tests, nine vault/power-decision tests and targeted hook compilation passing at that checkpoint. These are historical targeted results, not a fresh full validation of the final release APK.
 
-Before attaching release assets, pin the chosen commit and successful workflow; confirm APK version, signing compatibility and checksums; verify repeated boot/lock/wake, fingerprint cancellation and PIN fallback, calls, status layering, SRP refresh after credential changes, and covered restart/power-off. Do not intentionally enable unsafe vault states on the daily-use phone to test rejection paths.
+The packaging workflow pins the successful build and checks its original checksums and module layout. Continue device validation of repeated boot/lock/wake, fingerprint cancellation and PIN fallback, calls, status layering, SRP refresh after credential changes, and covered restart/power-off. Do not intentionally enable unsafe vault states on the daily-use phone to test rejection paths.
 
-No APK/module is attached to this preparation document. A release build and final artifact verification are still required.
+Release assets include the D2 APK, optional KernelSU bridge ZIP, source ZIP, installation guide, release notes, setup collage, runtime dependency list and SHA-256 checksums. Build/lint/runtime checks passed in Build 1031; Samsung-specific physical validation remains limited to the reported findings.
 
 ## Credits and acknowledgments
 
