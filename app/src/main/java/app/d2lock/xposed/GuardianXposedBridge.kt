@@ -44,6 +44,7 @@ class GuardianXposedBridge : XposedModule() {
 
     override fun onPackageReady(param: io.github.libxposed.api.XposedModuleInterface.PackageReadyParam) {
         if (param.packageName != "com.android.systemui" || !param.isFirstPackage) return
+        installKeyguardPresentation(param.classLoader)
         runCatching {
             // Resolve only D2's two synthetic IDs; all Samsung resources keep their normal path.
             val drawable = android.content.res.Resources::class.java.getDeclaredMethod(
@@ -62,6 +63,32 @@ class GuardianXposedBridge : XposedModule() {
             }
             Log.i(TAG, "D2_POWER_MENU_HOOK_INSTALLED target=SamsungGlobalActionsPresenter#createActions")
         }.onFailure { Log.e(TAG, "D2_POWER_MENU_HOOK_UNAVAILABLE", it) }
+    }
+
+    /** Narrow PIN-panel presentation hooks; unsupported firmware keeps Samsung behavior. */
+    private fun installKeyguardPresentation(loader: ClassLoader) {
+        runCatching {
+            val app = D2PowerMenu.context()
+            D2KeyguardPresentation.register(app)
+            val owner = loader.loadClass("com.android.systemui.statusbar.phone.StatusBarKeyguardViewManager")
+            val methods = owner.declaredMethods.filter {
+                it.name in setOf("showBouncer", "showPrimaryBouncer") &&
+                    it.returnType == Void.TYPE && it.parameterTypes.contentEquals(arrayOf(Boolean::class.javaPrimitiveType))
+            }
+            check(methods.isNotEmpty()) { "No supported Samsung PIN presentation method" }
+            methods.forEach { method ->
+                method.isAccessible = true
+                hook(method).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
+                    if (D2KeyguardPresentation.shouldSuppress(app)) {
+                        val target = chain.thisObject
+                        val args = chain.args.map { it }.toTypedArray()
+                        D2KeyguardPresentation.defer { method.invoke(target, *args) }
+                        null
+                    } else chain.proceed()
+                }
+                Log.i(TAG, "D2_KEYGUARD_PRESENTATION_HOOK_INSTALLED method=${method.name}")
+            }
+        }.onFailure { Log.w(TAG, "D2_KEYGUARD_PRESENTATION_UNAVAILABLE stock_retained=true", it) }
     }
 
     override fun onSystemServerStarting(param: SystemServerStartingParam) {

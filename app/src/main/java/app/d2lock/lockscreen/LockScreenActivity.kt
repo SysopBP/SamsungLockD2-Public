@@ -77,6 +77,25 @@ class LockScreenActivity : Activity() {
         @Volatile private var fingerprintSessionActive = false
     }
     private val handler = Handler(Looper.getMainLooper())
+    private val keyguardPresentationPulse = object : Runnable {
+        override fun run() {
+            val visible = !preview && !unlocking && !biometricRunning && !isFinishing && !isDestroyed &&
+                Prefs.enabled(this@LockScreenActivity) && Prefs.kiosk(this@LockScreenActivity) &&
+                hasWindowFocus() && window.decorView.isShown &&
+                getSystemService(android.os.UserManager::class.java)?.isUserUnlocked == true
+            reportKeyguardPresentation(visible)
+            if (!isFinishing && !isDestroyed) handler.postDelayed(this, 1_000L)
+        }
+    }
+    private fun reportKeyguardPresentation(visible: Boolean) {
+        if (android.os.Build.VERSION.SDK_INT < 34) return
+        runCatching {
+            sendBroadcast(Intent("app.d2lock.action.KEYGUARD_PRESENTATION")
+                .setPackage("com.android.systemui").putExtra("visible", visible), null,
+                android.app.BroadcastOptions.makeBasic().setShareIdentityEnabled(true).toBundle())
+        }.onFailure { Log.w("SamsungLockD2", "D2_KEYGUARD_PRESENTATION_SIGNAL_FAILED", it) }
+    }
+
     private val sleepPending = java.util.concurrent.atomic.AtomicBoolean(false)
     private val stoppedAuthCleanup = object : Runnable {
         override fun run() {
@@ -417,6 +436,8 @@ class LockScreenActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        handler.removeCallbacks(keyguardPresentationPulse)
+        handler.post(keyguardPresentationPulse)
         handler.removeCallbacks(stoppedAuthCleanup)
         resetIdleSleep()
         if (!preview) {
@@ -552,6 +573,8 @@ class LockScreenActivity : Activity() {
     }
 
     override fun onPause() {
+        handler.removeCallbacks(keyguardPresentationPulse)
+        reportKeyguardPresentation(false)
         handler.removeCallbacks(idleSleep)
         if (!preview && Prefs.kiosk(this)) Log.i("SamsungLockD2", "GUARDIAN_ACTIVITY_PAUSED")
         wallpaperActive = false
@@ -603,6 +626,8 @@ class LockScreenActivity : Activity() {
     override fun onBackPressed() { if (preview) finish() else authenticate() }
 
     override fun onDestroy() {
+        handler.removeCallbacks(keyguardPresentationPulse)
+        reportKeyguardPresentation(false)
         handler.removeCallbacks(idleSleep)
         if (!preview && Prefs.kiosk(this)) Log.i("SamsungLockD2", "GUARDIAN_ACTIVITY_DESTROYED changingConfig=$isChangingConfigurations")
         RootKiosk.detach(this)

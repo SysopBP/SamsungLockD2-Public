@@ -255,3 +255,12 @@ Notification access must be granted for either option. Secret notifications stay
 When **Login with fingerprint** is selected and a D2 PIN is configured, opening the app requests Samsung's secure **Unlock D2** biometric prompt before showing protected settings. Successful strong-biometric authentication opens the same app session as a correct D2 PIN. **Use D2 PIN**, cancellation, unavailable biometrics and authentication errors use the D2 PIN fallback. A non-matching scan never authorizes settings. Leaving the app revokes authorization, cancels a pending prompt and invalidates late callbacks. An interrupted/cancelled attempt falls back to PIN on return; re-entering after a completed session can request biometrics again.
 
 The Fingerprint Center sensor test stays diagnostic and does not authorize settings. Samsung renders the secure authentication prompt; D2 styles its own guidance and result dialogs.
+
+
+## Experimental D2-only PIN-panel presentation
+
+With Guardian and kiosk enabled, D2 sends a short-lived visible-surface signal to SystemUI. Supported `StatusBarKeyguardViewManager` PIN-panel show methods defer their presentation only while this signal is fresh and Android reports the user unlocked. Before the first device-credential unlock after reboot, Samsung presentation remains allowed. This hook does not dismiss Android keyguard, satisfy Samsung credentials, or change biometric authentication results.
+
+D2 stops the signal when paused, destroyed, unlocking, or handing off to its biometric prompt. A suppressed Samsung PIN-panel request resumes when the surface is released or its three-second lease expires. Unsupported firmware methods leave stock behavior intact. The heartbeat requires Android 14 or newer and LSPosed SystemUI scope. This is an experimental hook: full lock-screen coverage, wake ordering, crash recovery and compatibility on One UI 9 require device validation. Samsung's underlying keyguard can still appear after D2 unlock; full credential integration is separate.
+
+Diagnostics: `D2_KEYGUARD_PRESENTATION_HOOK_INSTALLED`, `D2_KEYGUARD_PIN_DEFERRED`, `D2_KEYGUARD_PIN_RESTORED`, and `D2_KEYGUARD_PRESENTATION_UNAVAILABLE`.
