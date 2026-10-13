@@ -1,4 +1,4 @@
-# Automatic root-only DMC recovery
+# Automatic System Server DMC recovery
 
 D2 automatically targets these Samsung DMC vault states:
 
@@ -9,12 +9,33 @@ D2 automatically targets these Samsung DMC vault states:
 | Download Mode AT Command (`AT+SUDDLMOD`) flag | Enabled |
 | Download Mode eligibility derived from DMC flags | Allowed |
 
-There is no enable switch or Fix Now requirement. Checks run on D2's early
-`BOOT_READY` signal, locked/normal boot broadcasts, app updates, Guardian service
-creation, and app opening/resuming. Existing Guardian boot launch and token
-confirmation run independently. A short-lived helper runs only through `su`,
-requires UID 0, and supports the primary user. Shizuku/UID 1000 is not a fallback.
-Root must already be granted by the root manager; D2 cannot grant itself root.
+There is no enable switch or Fix Now requirement. Recovery runs inside Xposed
+System Server (UID 1000). Enable D2 in LSPosed for System Framework and reboot.
+There is no root shell or app_process fallback. Only the primary user's DMC
+policy is supported. Guardian boot handoff remains independent.
+
+## Credential and biometric setup detection
+
+Post-call observers watch successful `LockSettingsService.setLockCredential`
+and `setLockCredentialWithToken` operations (PIN, pattern, password changes or
+removal), plus `FingerprintUtils` and `FaceUtils` enrollment additions/removals.
+Rejected credential changes do not refresh recovery. No credentials, tokens,
+biometric templates, or hook arguments are inspected, stored, or logged.
+
+Setup bursts are coalesced into a check 2 seconds after the last change, with a
+second check at 12 seconds to catch delayed Samsung DMC updates. Both use the
+existing guarded recovery and full read-back verification; matching records are
+not rewritten. The app also receives a refresh signal to update its cached
+feature status, bypassing the ordinary startup cooldown. Changes in another
+profile can trigger a check, but recovery still applies only to the primary
+user. Authentication attempts and template renames are not observed.
+
+Hook installation failures are isolated and logged as
+`DMC_SETUP_OBSERVER_*`/`DMC_SETUP_CLASS_UNAVAILABLE`; they never block Android
+setup. Samsung firmware may use different methods, so on-device validation is
+required. Existing boot/app checks remain available if a setup hook is absent.
+`DMC_SECURITY_SETUP_CHANGED` records detection, and
+`DMC_SYSTEM_SERVER_RECOVERY_VERIFIED` records successful vault read-back.
 
 Failed checks have three bounded retries after 5, 15, and 30 seconds while the app
 process remains alive. Subsequent startup events can try again. Installing a new
@@ -43,10 +64,11 @@ Android passwords, PINs, patterns, or biometric enrollment, and it does not
 start/stop the actual Samsung Maintenance Mode session. The panel reports the
 corresponding DMC vault flags, separately from D2 authentication.
 
-Root does not guarantee Samsung VaultKeeper will authorize the caller's UID,
-package, or SELinux domain. Such failures are visible and do not trigger an
-injection, UID impersonation, service patch, or credential-removal workaround.
-Real Samsung firmware validation is required before claiming device support.
+System Server identity does not guarantee Samsung VaultKeeper access on every
+firmware. Unknown, denied, unsupported, and failed reads remain unverified.
+The observer only refreshes DMC flags; it does not modify Android credentials
+or enrollments. Validate PIN replacement, fingerprint add/remove, and face
+add/remove on the target phone before claiming firmware compatibility.
 
 ## Validation
 

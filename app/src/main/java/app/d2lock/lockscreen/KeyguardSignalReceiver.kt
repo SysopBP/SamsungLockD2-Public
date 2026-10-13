@@ -28,6 +28,11 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
     }
 
     private fun receiveSignal(context: Context, intent: Intent) {
+        if (intent.action == SYSTEM_ACTION && intent.getStringExtra("event") == "SECURITY_SETUP_CHANGED") {
+            app.d2lock.root.DmcRecovery.request(context, "security_setup_changed", force = true)
+            recordGuardianStage(context, "DMC_SECURITY_SETUP_CHANGED", "refresh_requested")
+            return
+        }
         if (intent.action == SYSTEM_ACTION && intent.getStringExtra("event") == "BOOT_READY") {
             // Separate worker: VaultKeeper readiness must never delay Guardian's boot token.
             app.d2lock.root.DmcRecovery.request(context, "BOOT_READY")

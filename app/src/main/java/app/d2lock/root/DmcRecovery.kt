@@ -64,10 +64,10 @@ object DmcRecovery {
     }
 
     /** Callback always completes promptly even if another boot source already owns the check. */
-    fun request(context: Context, source: String, retry: Int = 0, done: (() -> Unit)? = null) {
+    fun request(context: Context, source: String, retry: Int = 0, force: Boolean = false, done: (() -> Unit)? = null) {
         val app = context.applicationContext
         if (!busy.compareAndSet(false, true)) { done?.invoke(); return }
-        if (retry == 0 && SystemClock.elapsedRealtime() - lastAttempt < 10_000L) {
+        if (!force && retry == 0 && SystemClock.elapsedRealtime() - lastAttempt < 10_000L) {
             busy.set(false); done?.invoke(); return
         }
         worker.execute {

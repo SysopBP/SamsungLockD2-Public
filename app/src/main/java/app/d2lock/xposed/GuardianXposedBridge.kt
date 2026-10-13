@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicLong
  * Purpose:
  * - Preserve D2's UID 1000/system-app design.
  * - Keep only the proven ActivityManagerService.systemReady handoff.
- * - Do not hook SystemUI, keyguard, biometrics, lock settings, ATMS or power.
+ * - Observe completed credential/enrollment mutations without changing their results.
  * - Never change framework arguments/results.
  * - Fail open if the hook or D2 signal fails.
  *
@@ -49,6 +49,7 @@ class GuardianXposedBridge : XposedModule() {
         )
         installBootReadyHook(param.classLoader)
         installWakeObserver(param.classLoader)
+        installSecuritySetupObservers(param.classLoader)
     }
 
     private fun installBootReadyHook(classLoader: ClassLoader) {
@@ -159,6 +160,63 @@ class GuardianXposedBridge : XposedModule() {
         }.onFailure {
             log(Log.WARN, TAG, "GUARDIAN_WAKE_SIGNAL_FAILED method=$method", it)
         }
+    }
+
+    private val securityRefreshHandler by lazy { android.os.Handler(android.os.Looper.getMainLooper()) }
+    private val securityRefreshLock = Any()
+    private val securityRefresh = Runnable { refreshAfterSecuritySetup() }
+    private val securityFollowUp = Runnable { refreshAfterSecuritySetup() }
+
+    /** Observe committed setup operations only; never inspect credentials or template contents. */
+    private fun installSecuritySetupObservers(classLoader: ClassLoader) {
+        val targets = mapOf(
+            "com.android.server.locksettings.LockSettingsService" to setOf("setLockCredential", "setLockCredentialWithToken"),
+            "com.android.server.biometrics.sensors.fingerprint.FingerprintUtils" to setOf("addBiometricForUser", "removeBiometricForUser"),
+            "com.android.server.biometrics.sensors.face.FaceUtils" to setOf("addBiometricForUser", "removeBiometricForUser")
+        )
+        targets.forEach { (className, names) ->
+            runCatching {
+                val owner = Class.forName(className, false, classLoader)
+                val methods = owner.declaredMethods.filter { it.name in names && !it.isBridge && !it.isSynthetic }
+                if (methods.isEmpty()) Log.w(TAG, "DMC_SETUP_OBSERVER_UNAVAILABLE target=$className")
+                methods.forEach { method ->
+                    runCatching {
+                        method.isAccessible = true
+                        hook(method).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
+                            val result = chain.proceed()
+                            // A rejected credential change returns false; exceptions never reach here.
+                            if (result != false) runCatching {
+                                synchronized(securityRefreshLock) {
+                                    securityRefreshHandler.removeCallbacks(securityRefresh)
+                                    securityRefreshHandler.removeCallbacks(securityFollowUp)
+                                    securityRefreshHandler.postDelayed(securityRefresh, 2_000L)
+                                    // Samsung can update DMC after the framework call returns.
+                                    securityRefreshHandler.postDelayed(securityFollowUp, 12_000L)
+                                }
+                                Log.i(TAG, "DMC_SECURITY_SETUP_CHANGED source=$className#${method.name}")
+                            }.onFailure { Log.w(TAG, "DMC_SETUP_REFRESH_SCHEDULE_FAILED", it) }
+                            result
+                        }
+                        Log.i(TAG, "DMC_SETUP_OBSERVER_INSTALLED target=$className#${method.name}")
+                    }.onFailure { Log.w(TAG, "DMC_SETUP_OBSERVER_FAILED target=$className#${method.name}", it) }
+                }
+            }.onFailure { Log.w(TAG, "DMC_SETUP_CLASS_UNAVAILABLE target=$className", it) }
+        }
+    }
+
+    private fun refreshAfterSecuritySetup() {
+        runCatching {
+            val app = Class.forName("android.app.ActivityThread")
+                .getDeclaredMethod("currentApplication").invoke(null) as? Context
+                ?: error("system_server application unavailable")
+            // Recover even if D2's app is stopped. The app signal also refreshes its cached UI status.
+            scheduleDmcRecovery(app, delay = 0L)
+            app.sendBroadcast(Intent("app.d2lock.action.XPOSED_SYSTEM_EVENT")
+                .setComponent(ComponentName("app.d2lock", "app.d2lock.lockscreen.KeyguardSignalReceiver"))
+                .putExtra("event", "SECURITY_SETUP_CHANGED")
+                .putExtra("method", "setup_completed")
+                .putExtra("source", "system_server_security_setup_observer"))
+        }.onFailure { Log.w(TAG, "DMC_SETUP_REFRESH_FAILED", it) }
     }
 
     private fun installDmcReceiver(app: Context) {
