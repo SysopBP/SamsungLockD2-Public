@@ -1,5 +1,11 @@
 # Samsung Lock D2
 
+## In development — additional Xposed controls
+
+The framework and Galaxy Island control grids include disabled placeholders. Safe diagnostics, configurable screen/wake awareness, immediate relock, Home/Recents, gesture coordination, notifications, media, call-state integration, SystemUI recovery, QS/status guards, native lifecycle, fallback controls, and Galaxy Island event/positioning/sync controls require their individual hooks to be implemented and tested before those switches become available. Development is deferred to a later update; this release does not enable them.
+
+The current boot/wake observers, security-setup refresh, D2 SRP checks and power-menu hooks run separately. The disabled grid switches do not control those existing hooks. **Accept framework signals** is a separate app-side control.
+
 ## Feature naming
 
 **D2 SRP** is the short name for **Samsung Recovery Protection**. Compact buttons and messages use D2 SRP; setup instructions and explanations spell out the full name. SRP is D2's feature name, not a guarantee of successful firmware recovery. The underlying Samsung vault remains named `DMC`; code identifiers, broadcast actions and diagnostic log tags retain that technical name. Credit to **@diablOw** remains for the original DMC discovery.
