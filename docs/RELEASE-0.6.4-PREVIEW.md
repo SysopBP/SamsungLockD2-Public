@@ -71,6 +71,62 @@ Reusable rounded dark glass dialogs add leading icons, readable text, large butt
 
 Additional System Framework and Galaxy Island control-grid switches remain disabled placeholders. Their individual hooks require implementation and testing. Existing boot/wake observers, security-setup refresh, SRP checks and power-menu hooks run separately; disabled grid switches do not control them. Development of these additional controls is deferred.
 
+## New safety protections
+
+### Vault integrity and honest status
+
+- Validate the expected 32-byte Samsung vault record and boolean flag values; reject malformed or unknown layouts.
+- Change only the three intended flags and preserve the other 29 bytes.
+- Avoid rewriting an already-correct record.
+- Require successful writes and a full matching read-back before reporting verified.
+- Keep unknown, denied, unsupported, failed and timed-out results unverified.
+- Scope cached status to the current Android boot count; show the check time and update the open status dialog.
+- Report Download Mode eligibility as a derived result, not a separate writable flag or a physical Odin/bootloader test.
+
+### Recovery scheduling and setup privacy
+
+- Coalesce successful credential/enrollment setup changes into checks after two and twelve seconds.
+- Do not inspect, store or log PINs, passwords, credential tokens, biometric templates or hook arguments.
+- Ignore rejected credential changes for setup-triggered recovery.
+- Isolate observer installation failures so they do not block Android security setup.
+- Bound failed app-side checks to retries after five, fifteen and thirty seconds while the app remains alive; later startup events can try again.
+- Limit vault enforcement to the primary user, even when a different profile triggers a refresh.
+
+### Power-request safety
+
+- Serialize recovery and power verification with the shared vault lock and a single background worker.
+- Keep the UI thread free while checks run.
+- Validate, apply the target policy, and perform another fresh read before resuming a covered power action.
+- Cancel failed/unknown checks and requests exceeding five seconds; never reboot on a late successful result.
+- Suppress repeated requests while checking. A hung vault call keeps the guard busy instead of spawning unlimited workers.
+- Preserve the original permission check for orderly ActivityManager soft restart.
+- Accept D2 soft-restart requests only from the trusted primary-user SystemUI or D2 app UID; refuse them if the guard is unavailable.
+- Verify the System Server sender identity for live status responses, with a six-second response timeout.
+- Route Recovery Center soft restart through the guarded System Server path and require fresh SRP verification before its Restart SystemUI root action.
+- Preserve immediate battery/thermal emergency shutdown and cancel any pending approval for those emergencies.
+
+Normal power-off/restart is covered only when the installed hooks receive the action. Safe-mode, recovery and download restarts are covered only if they enter that same supported framework path. Direct root zygote/process restarts and hardware/power-loss routes remain outside enforcement. A missing shutdown hook can leave stock actions unguarded; this is different from an active guard cancelling a failed check.
+
+### Fingerprint authorization and recovery
+
+- Require successful strong-biometric authentication or the configured D2 credential before opening protected settings; a non-match does not authorize access.
+- Retain PIN/pattern recovery when biometrics are cancelled, unavailable or fail.
+- Revoke the app session when leaving the app, cancel pending prompts and invalidate late callbacks.
+- Keep the Fingerprint Center sensor test separate from real login authorization.
+- Keep Samsung credentials and enrollment intact; D2 fingerprint success does not satisfy Samsung keyguard or remove its PIN requirement.
+
+### Lock-screen presentation recovery
+
+- Limit Samsung PIN-panel deferral to a fresh D2 visible-surface lease after the first device unlock.
+- Release the signal on pause, destruction, unlock and biometric handoff; expire it after three seconds.
+- Restore deferred Samsung presentation when the surface is released or the lease expires.
+- Leave stock behavior available on unsupported firmware.
+- Restrict the post-unlock show-when-locked behavior to the enabled Guardian kiosk surface, rather than Preview/disabled modes.
+
+These presentation protections reduce stale overlays; they do not provide a completed D2-only Samsung unlock flow.
+
+See [automatic recovery implementation and limits](AUTOMATIC-DMC-RECOVERY.md) for the detailed vault and power-guard behavior. These are implementation protections with firmware-specific validation requirements, not a claim that every failure path has been tested on every device.
+
 ## Installation guide
 
 See [Installation and fingerprint setup](INSTALLATION-0.6.4-PREVIEW.md) for the complete steps. **Set up Samsung PIN and enroll a fingerprint first**, then turn Samsung Fingerprint unlock OFF while keeping both. Configure D2’s recovery PIN/pattern and select Login with fingerprint.
