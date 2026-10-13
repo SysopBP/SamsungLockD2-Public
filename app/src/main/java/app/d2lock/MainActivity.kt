@@ -68,6 +68,7 @@ class MainActivity : Activity() {
         PinUi.protect(this)
         Prefs.syncBootPolicy(this)
         RootManager.refreshAsync()
+        app.d2lock.root.DmcRecovery.request(this, "app_open")
         window.statusBarColor = Color.TRANSPARENT
         setContentView(buildLockedBackdrop())
         Shizuku.addBinderReceivedListenerSticky(shizukuBinderReceived)
@@ -77,6 +78,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        app.d2lock.root.DmcRecovery.request(this, "app_resume")
         if (setupSecurityStepPending) {
             setupSecurityStepPending = false
             window.decorView.post { showSetupWizard(2) }
@@ -320,6 +322,31 @@ class MainActivity : Activity() {
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(Appearance.secondary(this@MainActivity))
         }
         dialog.show()
+    }
+
+    private fun showDmcStatus() {
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Automatic DMC feature status")
+            .setMessage(app.d2lock.root.DmcRecovery.status(this).report())
+            .setPositiveButton("Close", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.window?.setBackgroundDrawable(Appearance.glass(this, 30f, 76, true))
+        }
+        dialog.show()
+        val updates = android.os.Handler(android.os.Looper.getMainLooper())
+        val refresh = object : Runnable {
+            override fun run() {
+                if (isFinishing || isDestroyed || !dialog.isShowing) return
+                dialog.setMessage(app.d2lock.root.DmcRecovery.status(this@MainActivity).report())
+                updates.postDelayed(this, 1000L)
+            }
+        }
+        updates.postDelayed(refresh, 1000L)
+        dialog.setOnDismissListener { updates.removeCallbacks(refresh) }
+        app.d2lock.root.DmcRecovery.refresh(this) { status ->
+            if (!isFinishing && !isDestroyed && dialog.isShowing) dialog.setMessage(status.report())
+        }
     }
 
     private fun runRootAction(action: () -> Pair<Boolean, String>) {
@@ -949,6 +976,33 @@ class MainActivity : Activity() {
                 dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 30f, 76, true)) }
                 dialog.show()
             }
+        }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+        section(root, "AUTOMATIC DMC RECOVERY")
+        root.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            background = Appearance.glass(this@MainActivity, 28f, 36, true)
+            addView(TextView(this@MainActivity).apply {
+                text = "DMC Vault  •  Automatic with root"
+                textSize = 18f
+                setTextColor(Appearance.text(this@MainActivity))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = "Targets: Screen lock & Maintenance Mode disabled\nDownload Mode AT Command enabled • Download Mode allowed"
+                textSize = 13f
+                setTextColor(Appearance.secondary(this@MainActivity))
+                setPadding(0, dp(8), 0, dp(8))
+            })
+            addView(TextView(this@MainActivity).apply {
+                val current = app.d2lock.root.DmcRecovery.status(this@MainActivity)
+                text = if (current.targetsMet) "✓ All four DMC targets verified" else "○ ${current.detail}"
+                textSize = 12f
+                setTextColor(Appearance.secondary(this@MainActivity))
+            })
+            addView(Button(this@MainActivity).apply {
+                text = "View feature status"
+                setOnClickListener { showDmcStatus() }
+            })
         }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
         section(root, "SYSTEM INTEGRATION")
         root.getChildAt(root.childCount - 1).tag = "root_shizuku"

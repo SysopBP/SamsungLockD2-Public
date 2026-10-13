@@ -18,6 +18,12 @@ import app.d2lock.security.PinStore
 class CompanionStartupReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
+        // Independent of Guardian enablement/PIN setup. Do not block its fast boot restore.
+        if (action in setOf(Intent.ACTION_LOCKED_BOOT_COMPLETED, Intent.ACTION_BOOT_COMPLETED,
+                Intent.ACTION_MY_PACKAGE_REPLACED)) {
+            val pending = goAsync()
+            app.d2lock.root.DmcRecovery.request(context, action) { pending.finish() }
+        }
         when (action) {
             Intent.ACTION_LOCKED_BOOT_COMPLETED -> {
                 Log.i(TAG, "GUARDIAN_LOCKED_BOOT_RECEIVED")

@@ -46,6 +46,7 @@ class LockScreenService : Service() {
             .setOngoing(true)
             .build()
         startForeground(ID, notification)
+        app.d2lock.root.DmcRecovery.request(this, "guardian_service")
         registerReceiver(screenReceiver, IntentFilter(Intent.ACTION_SCREEN_ON))
     }
 

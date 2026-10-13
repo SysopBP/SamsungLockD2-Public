@@ -1,5 +1,15 @@
 # Samsung Lock D2
 
+## Automatic DMC root preview (0.6.4)
+
+Rooted primary-user installs automatically apply and verify the DMC vault targets:
+screen-lock flag disabled, Maintenance Mode flag disabled, Download Mode AT Command
+enabled, and derived Download Mode eligibility allowed. There is no enable switch
+or manual Fix Now step. A live status dialog is available in Automatic DMC Recovery.
+This sets DMC flags, not Android credentials or the actual Maintenance Mode session.
+Samsung VaultKeeper may reject UID-0 access; device compatibility remains unverified.
+See [automatic DMC recovery behavior and limits](docs/AUTOMATIC-DMC-RECOVERY.md).
+
 > **September 29, 2026 development status:** Physical-device testing now confirms the token-integrated fast-boot path as the new known-good reference. `ActivityManagerService.systemReady()` delivers `BOOT_READY`, D2 performs the early root launch, confirms the boot token when `LockScreenActivity` is created, and reaches `GUARDIAN_FIRST_DRAW` about **305 ms after BOOT_READY** in the captured successful boot. When the normal Android boot receiver arrives later, it recognizes the claimed token and skips the duplicate launch. Preserve this ordering as the boot baseline. See [the verified baseline and measured boot timeline](.github/KIOSK_D2_BASELINE.md).
 
 ## October 1, 2026 — New features & hotfixes
