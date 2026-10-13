@@ -11,7 +11,7 @@ android {
         minSdk = 31
         targetSdk = 37
         versionCode = 25
-        versionName = "0.6.4-dmc-status-preview"
+        versionName = "0.6.4-dmc-systemserver-fix"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicLong
 class GuardianXposedBridge : XposedModule() {
     companion object {
         private const val TAG = "D2XposedBridge"
+        private val dmcLock = Any()
         private val bootReadySent = AtomicBoolean(false)
         private val lastWakeSignalMs = AtomicLong(0L)
         private const val WAKE_DEDUPE_MS = 750L
@@ -160,23 +161,41 @@ class GuardianXposedBridge : XposedModule() {
         }
     }
 
+    private fun installDmcReceiver(app: Context) {
+        if (android.os.Build.VERSION.SDK_INT < 34) return
+        app.registerReceiver(object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val allowedUid = runCatching { app.packageManager.getPackageUid("app.d2lock", 0) }.getOrNull() ?: return
+                if (sentFromUid != allowedUid || allowedUid / 100000 != 0) return
+                val reply = intent.getStringExtra("reply") ?: return
+                if (!reply.startsWith("app.d2lock.action.DMC_RESULT.")) return
+                scheduleDmcRecovery(app, reply, 0L)
+            }
+        }, android.content.IntentFilter("app.d2lock.action.DMC_REQUEST"), Context.RECEIVER_EXPORTED)
+        Log.i(TAG, "DMC_SYSTEM_SERVER_RECEIVER_READY uid=${android.os.Process.myUid()} pid=${android.os.Process.myPid()}")
+    }
+
     /** One guarded recovery attempt in system_server; validate before writing and verify read-back. */
-    private fun scheduleDmcRecovery() {
+    private fun scheduleDmcRecovery(systemContext: Context, reply: String? = null, delay: Long = 10_000L) {
         runCatching {
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 runCatching {
                     Thread({
+                        var verifiedRecord: ByteArray? = null
+                        var detail = "System Server recovery failed"
                         val identity = android.os.Binder.clearCallingIdentity()
                         try {
                             val uid = android.os.Process.myUid()
                             val pid = android.os.Process.myPid()
                             Log.i(TAG, "DMC_SYSTEM_SERVER_RECOVERY_START uid=$uid pid=$pid mode=guarded_recovery")
                             check(uid == 1000) { "Probe requires system_server UID 1000" }
+                            synchronized(dmcLock) {
                             val api = Class.forName("com.samsung.android.service.vaultkeeper.VaultKeeperManager")
                             val manager = api.getMethod("getInstance", String::class.java).invoke(null, "DMC")
                                 ?: error("VaultKeeper manager unavailable")
                             val data = api.getMethod("read", Int::class.javaPrimitiveType).invoke(manager, 1) as? ByteArray
                             if (data == null) {
+                                detail = "System Server DMC read returned no record; access or initialization unverified"
                                 Log.w(TAG, "DMC_SYSTEM_SERVER_RECOVERY_NO_RECORD uid=$uid pid=$pid access_or_initialization_unverified")
                             } else {
                                 app.d2lock.root.DmcVaultPolicy.validate(data)
@@ -187,18 +206,32 @@ class GuardianXposedBridge : XposedModule() {
                                     override fun write(record: ByteArray): Int = writeMethod.invoke(manager, 1, record) as Int
                                 }
                                 val verified = app.d2lock.root.DmcVaultPolicy.enforce(vault)
+                                verifiedRecord = verified
+                                detail = "Targets verified inside System Server UID $uid PID $pid"
                                 Log.i(TAG, "DMC_SYSTEM_SERVER_RECOVERY_VERIFIED screenLock=${verified[0]} maintenanceMode=${verified[1]} downloadAtCommand=${verified[2]} downloadAllowed=${app.d2lock.root.DmcVaultPolicy.downloadAllowed(verified)}")
                                 Log.i(TAG, "DMC_SYSTEM_SERVER_RECOVERY_INITIAL_READ uid=$uid pid=$pid length=${data.size} screenLock=${data[0]} maintenanceMode=${data[1]} downloadAtCommand=${data[2]} downloadAllowed=${app.d2lock.root.DmcVaultPolicy.downloadAllowed(data)} targetsMet=${app.d2lock.root.DmcVaultPolicy.matchesTarget(data)} mode=guarded_recovery")
                             }
+                            }
                         } catch (error: Throwable) {
                             val cause = (error as? java.lang.reflect.InvocationTargetException)?.targetException ?: error
+                            detail = "${cause.javaClass.simpleName}: ${cause.message}"
                             Log.w(TAG, "DMC_SYSTEM_SERVER_RECOVERY_FAILED mode=guarded_recovery", cause)
                         } finally {
                             android.os.Binder.restoreCallingIdentity(identity)
+                            if (reply != null && android.os.Build.VERSION.SDK_INT >= 34) runCatching {
+                                val data = verifiedRecord
+                                systemContext.sendBroadcast(Intent(reply).setPackage("app.d2lock")
+                                    .putExtra("verified", data != null).putExtra("detail", detail)
+                                    .putExtra("lock", data?.get(0)?.toInt() ?: -1)
+                                    .putExtra("maint", data?.get(1)?.toInt() ?: -1)
+                                    .putExtra("at", data?.get(2)?.toInt() ?: -1)
+                                    .putExtra("download", if (data != null) 1 else -1), null,
+                                    android.app.BroadcastOptions.makeBasic().setShareIdentityEnabled(true).toBundle())
+                            }.onFailure { Log.w(TAG, "DMC_SYSTEM_SERVER_RESULT_FAILED", it) }
                         }
                     }, "D2-DMC-Recovery").apply { isDaemon = true }.start()
                 }.onFailure { Log.w(TAG, "DMC_SYSTEM_SERVER_RECOVERY_THREAD_FAILED", it) }
-            }, 10_000L)
+            }, delay)
         }.onFailure { Log.w(TAG, "DMC_SYSTEM_SERVER_RECOVERY_SCHEDULE_FAILED", it) }
     }
 
@@ -232,7 +265,8 @@ class GuardianXposedBridge : XposedModule() {
             )
 
             log(Log.INFO, TAG, "GUARDIAN_MINIMAL_BOOT_READY_SENT")
-            scheduleDmcRecovery()
+            installDmcReceiver(app)
+            scheduleDmcRecovery(app)
         }.onFailure {
             // No retry loop or heartbeat. If signalling fails, leave Android alone.
             log(Log.WARN, TAG, "GUARDIAN_MINIMAL_BOOT_READY_SIGNAL_FAILED", it)
