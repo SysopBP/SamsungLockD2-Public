@@ -15,14 +15,14 @@ D2's PIN/pattern, D2 biometric authorization, and Samsung's device credential ar
 
 ### Samsung Recovery Protection — D2 SRP
 
-D2 SRP is the short name for Samsung Recovery Protection. The underlying Samsung vault remains DMC; technical identifiers and logs retain that name.
+D2 SRP is the short name for Samsung Recovery Protection. Release explanations and feature labels use D2 SRP or Samsung Recovery Protection.
 
 Recovery runs within the Xposed System Server context (UID 1000), rather than through a root shell or app_process fallback. The primary-user vault targets are:
 
 | Target | Intended state |
 | --- | --- |
-| DMC screen-lock flag | Disabled |
-| DMC Maintenance Mode flag | Disabled |
+| SRP screen-lock flag | Disabled |
+| SRP Maintenance Mode flag | Disabled |
 | Download Mode AT-command flag | Enabled |
 | Derived Download Mode eligibility | Allowed |
 
