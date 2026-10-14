@@ -77,20 +77,23 @@ class D2Widget : AppWidgetProvider() {
             val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 80)
             val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 140)
             fun available(value: Boolean?) = when (value) { true -> "OK"; false -> "No"; null -> "?" }
+            // Full SRP telemetry is shown whenever the widget has sufficient room.
+            // Unknown values are never presented as verified protection.
             val rows = if (height >= 120) listOf(
                 summary,
-                "Server: ${available(status.systemServer)}",
-                "SRP lock: ${flag(status.screenLock)}",
-                "Maint: ${flag(status.maintenance)}",
-                "AT: ${flag(status.atCommand)}",
-                "Download: ${available(status.downloadAllowed)}",
-                "Checked $checked"
+                "System Server: ${available(status.systemServer)}",
+                "Screen lock: ${flag(status.screenLock)}",
+                "Maintenance: ${flag(status.maintenance)}",
+                "AT command: ${flag(status.atCommand)}",
+                "Download allowed: ${available(status.downloadAllowed)}",
+                "Verified: ${if (status.verified) "Yes" else "No"}",
+                "Checked: $checked"
             ) else if (height >= 80) listOf(
                 summary,
-                "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
-                "AT ${flag(status.atCommand)} · DL ${available(status.downloadAllowed)}",
-                checked
-            ) else listOf(summary, checked)
+                "Server ${available(status.systemServer)} · Lock ${flag(status.screenLock)}",
+                "Maint ${flag(status.maintenance)} · AT ${flag(status.atCommand)}",
+                "Download ${available(status.downloadAllowed)} · $checked"
+            ) else listOf(summary, "Checked: $checked")
             val stats = rows.joinToString("\n")
             view.setTextViewText(R.id.d2_widget_srp, stats)
             view.setViewVisibility(R.id.d2_widget_srp, if (WidgetPrefs.srp(context, id)) View.VISIBLE else View.GONE)
@@ -116,7 +119,7 @@ class D2Widget : AppWidgetProvider() {
                 Intent(context, D2Widget::class.java).setAction(REFRESH),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             view.setOnClickPendingIntent(R.id.d2_widget_srp, refresh)
-            view.setContentDescription(R.id.d2_widget_srp, "$stats. Tap to refresh SRP status.")
+            view.setContentDescription(R.id.d2_widget_srp, "$stats. ${status.detail}. Tap to refresh SRP status.")
             manager.updateAppWidget(id, view)
         }
     }
