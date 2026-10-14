@@ -11,7 +11,10 @@ OneUIX: SoClear and contributors, https://github.com/SoClear/OneUIX
 License: GNU Affero General Public License version 3 (AGPL-3.0).
 Reference revision: 591d09c9cc69faf3c8faf258e39869b2df7981f4.
 OneUIX is the reference for the requested Samsung customization integration.
-This licensing change does not itself import or enable new OneUIX hooks.
+PeriodicCredentialHook.kt adapts the OneUIX periodic strong-auth scheduler
+control on October 14, 2026. D2 adds explicit opt-in, primary-user and
+device-policy guards, exact-signature probing, fail-open behavior and telemetry.
+Other requested OneUIX features are not imported by this change.
 For subsequent adaptations, retain upstream notices and document changed files,
 source revision, and modification date. Credit does not imply endorsement.
 
