@@ -53,3 +53,30 @@ inventory and source archives. Physical S26 Ultra testing remains necessary for
 Samsung private APIs, LSPosed scopes, saved customization settings, calls,
 Direct Boot, wake/sleep and stability. Keep the optional bridge state and test
 one imported customization group at a time after installing the combined APK.
+
+## Verified combined build — 1107
+
+- Code commit: `232336abe8c264b6f17f35371a856e05ffd86fe6` (parents include both
+  previous development and Build 1095).
+- [Successful workflow](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38631433723)
+- [Download the combined deliverables](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38631433723/artifacts/11926312104)
+- 40 unit tests and 27 emulator tests passed; zero failures/skips. Compilation,
+  original signature verification, source packaging and feature inventory pass.
+  Lint completes with 720 warnings, zero errors; this is not warning-free.
+- Outer ZIP: 11,803,135 bytes; APK: 22,502,503 bytes; 19 DEX files and all four
+  DexKit ABIs. Downloaded artifact checksums and every nested ZIP/APK verified.
+- DEX inspection retains all named classes from both 1095 and 1106. Both tracked
+  source inventories are retained; required source files are in the archive.
+- Optional KernelSU scripts are byte-identical to 1095. The module remains
+  optional and does not embed or mount the APK.
+- Negative preservation test: the new APK guard rejects the smaller 1106
+  artifact because its OneUI feature class is missing. The combined APK passes.
+- Repository `AGENTS.md` names this branch as the canonical baseline for future
+  work. The following documentation commit does not change the tested APK.
+
+Install this combined APK over the current app, keep the tested KernelSU/module
+configuration, and reboot normally for LSPosed hooks. Check Tools → Experimental:
+OneUI feature port and D2 Hooks. Verify Apply read-back before testing one
+customization group at a time. Test required Samsung credentials, fingerprint,
+repeated wake/sleep, screen-off incoming calls and watchdog return. Firmware
+compatibility and the perceived startup delay still require S26 Ultra results.
