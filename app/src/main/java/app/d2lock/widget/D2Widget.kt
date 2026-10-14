@@ -87,7 +87,7 @@ class D2Widget : AppWidgetProvider() {
             // App-widget heights are dp and differ across launchers. Never render
             // eight lines into a small widget: RemoteViews otherwise clips them.
             val rows = when {
-                height >= 190 -> listOf(
+                height >= 260 -> listOf(
                     summary,
                     "Server: ${available(status.systemServer)}",
                     "SRP lock: ${flag(status.screenLock)}",
@@ -100,7 +100,7 @@ class D2Widget : AppWidgetProvider() {
                     "PIN timer: unverified",
                     "Checked $checked"
                 )
-                height >= 145 -> listOf(
+                height >= 175 -> listOf(
                     summary,
                     "Server: ${available(status.systemServer)}",
                     "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
@@ -109,14 +109,14 @@ class D2Widget : AppWidgetProvider() {
                     "PIN timer: unverified",
                     "Checked $checked"
                 )
-                height >= 100 -> listOf(
+                height >= 125 -> listOf(
                     summary,
                     "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
                     "AT ${flag(status.atCommand)} · DL ${available(status.downloadAllowed)}",
                     "Wake $wakeCount · Boot $bootCount",
                     "PIN: unverified"
                 )
-                height >= 65 -> listOf(summary, "PIN: unverified", "Tap for SRP")
+                height >= 75 -> listOf(summary, "PIN: unverified", "Tap for SRP")
                 else -> listOf(summary, "PIN: ?")
             }
             val stats = rows.joinToString("\n")
