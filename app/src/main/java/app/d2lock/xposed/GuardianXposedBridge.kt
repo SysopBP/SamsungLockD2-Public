@@ -350,6 +350,15 @@ class GuardianXposedBridge : XposedModule() {
         }.onFailure { Log.w(TAG, "DMC_SETUP_REFRESH_FAILED", it) }
     }
 
+    /** Executes only in the privileged System Server after SRP verification. */
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun guardedFirmwareReboot(app: Context,mode: String) {
+        check(android.os.Process.myUid()==1000) { "System Server identity required" }
+        check(mode in setOf("recovery","download")) { "Unsupported reboot target" }
+        app.enforceCallingOrSelfPermission(android.Manifest.permission.REBOOT,"D2 guarded firmware reboot")
+        app.getSystemService(android.os.PowerManager::class.java).reboot(mode)
+    }
+
     private fun installDmcReceiver(app: Context) {
         if (android.os.Build.VERSION.SDK_INT < 34) return
         app.registerReceiver(object : android.content.BroadcastReceiver() {
@@ -373,7 +382,7 @@ class GuardianXposedBridge : XposedModule() {
                             val target=am.runningAppProcesses?.firstOrNull { it.processName=="com.android.systemui" && it.uid==android.os.Process.myUid() && it.pid!=android.os.Process.myPid() }
                                 ?: error("No supported same-UID SystemUI process")
                             android.os.Process.killProcess(target.pid)
-                        } else app.getSystemService(android.os.PowerManager::class.java).reboot(action)
+                        } else guardedFirmwareReboot(app,action)
                     }
                     return
                 }
