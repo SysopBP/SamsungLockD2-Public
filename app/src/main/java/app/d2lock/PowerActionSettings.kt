@@ -16,7 +16,7 @@ object PowerActionSettings {
       isEnabled=item.getString("name") !in setOf("emergency_call","medical_info")
       if(!isEnabled) { isChecked=true;item.put("visible",true) };setOnCheckedChangeListener { _,v -> item.put("visible",v) }
     },LinearLayout.LayoutParams(0,-2,1f))
-    row.addView(Button(a).apply { text="↑";isEnabled=index>0;setOnClickListener { java.util.Collections.swap(rows,index,index-1);render();FeatureGlass.style(a,dialog!!) } });body.addView(row)
+    row.addView(Button(a).apply { text="↑";isEnabled=index>0;setOnClickListener { java.util.Collections.swap(rows,index,index-1);render();dialog?.let { FeatureGlass.style(a,it) } } });body.addView(row)
    }
    state.put("powerMenuActions",JSONArray(rows))
   }

@@ -361,7 +361,7 @@ class GuardianXposedBridge : XposedModule() {
         val binder=Class.forName("android.os.ServiceManager").getDeclaredMethod("getService",String::class.java).invoke(null,"power")
         val service=Class.forName("android.os.IPowerManager\$Stub").getDeclaredMethod("asInterface",android.os.IBinder::class.java).invoke(null,binder)
         // wait=false: do not block System Server's main thread while its shutdown hook verifies SRP.
-        service.javaClass.getMethod("reboot",Boolean::class.javaPrimitiveType,String::class.java,Boolean::class.javaPrimitiveType).invoke(service,false,mode,false)
+        service.javaClass.getMethod("reboot",Boolean::class.javaPrimitiveType,String::class.java,Boolean::class.javaPrimitiveType).apply { isAccessible=true }.invoke(service,false,mode,false)
     }
 
     private fun installDmcReceiver(app: Context) {
