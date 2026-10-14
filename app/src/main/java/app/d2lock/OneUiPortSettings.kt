@@ -75,7 +75,7 @@ object OneUiPortSettings {
         val state = JSONObject(prefs(activity).getString("config", defaults())!!)
         val body = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL; setPadding(24,16,24,16) }
         val status = TextView(activity).apply {
-            text = "Experimental OneUI features • Android 17 testing required\nEnable D2 in LSPosed for the selected feature's app scope. Apply saves the configuration; soft reboot once after framework changes, or restart the affected Samsung app for app features. Saved does not mean the hook exists on this firmware.\n\nD2's SRP-guarded power menu and 72-hour PIN/pattern option remain separate. Galaxy Island is optional."
+            text = "Experimental OneUI features • Android 17 testing required\nEnable D2 in LSPosed for the selected feature's app scope. Apply saves the configuration; soft reboot once after framework changes, or restart the affected Samsung app for app features. Saved does not mean the hook exists on this firmware.\n\nD2's SRP-guarded power menu and 72-hour PIN/pattern diagnostics remain separate. Galaxy Island is optional."
         }; body.addView(status)
         val guide=status.text.toString()
         status.text="Choose features below. Apply saves through LSPosed; soft reboot after framework changes. Samsung compatibility remains unverified until device testing."
@@ -83,7 +83,7 @@ object OneUiPortSettings {
         body.addView(Button(activity).apply { text="Custom charging limit"; setOnClickListener { ChargingLimitSettings.show(activity) } })
         body.addView(Switch(activity).apply { text="Enable OneUI feature port"; isChecked=state.optBoolean("d2PortEnabled"); setOnCheckedChangeListener { _, v -> state.put("d2PortEnabled",v) } })
         body.addView(TextView(activity).apply { text="Add D2 5G and D2 immersive mode through Quick Settings → Edit tiles. The 5G tile uses the active data SIM and requires root. Both tiles report unavailable if their device APIs fail." })
-        body.addView(Button(activity).apply { text="72-hour PIN / pattern option"; setOnClickListener { PeriodicCredentialSettings.show(activity) } })
+        body.addView(Button(activity).apply { text="72-hour PIN / pattern diagnostics"; setOnClickListener { PeriodicCredentialSettings.show(activity) } })
         val search=EditText(activity).apply { hint="Search features or categories";isSingleLine=true };body.addView(search)
         val categoryButtons=mutableListOf<Pair<Button,String>>()
         groups.forEach { (title,path) ->

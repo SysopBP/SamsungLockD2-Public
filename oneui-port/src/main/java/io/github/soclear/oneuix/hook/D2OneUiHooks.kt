@@ -16,6 +16,9 @@ import io.github.soclear.oneuix.hook.PowerMenuPreferences
 import io.github.soclear.oneuix.hook.util.PreferenceProvider
 
 object D2OneUiHooks {
+    // D2 modification 2026-10-14: reject unsupported scopes before remote preference reads.
+    private val supportedPackages = setOf(Package.BROWSER, Package.CALENDAR, Package.CAMERA, Package.DIALER, Package.DUAL_APP, Package.GALLERY, Package.HEALTH_MONITOR, Package.INCALLUI, Package.LAUNCHER, Package.MDEC_SERVICE, Package.MESSAGING, Package.NOTES, Package.PHOTO_RETOUCHING, Package.SETTINGS, Package.SKETCH_BOOK, Package.SM_CN, Package.STORE, Package.SYSTEMUI, Package.TELEPHONYUI, Package.WEATHER, Package.VIDEO, Package.WATCH_MANAGER, Package.TRANSLATION)
+    fun supportsPackage(packageName: String): Boolean = packageName in supportedPackages
     private var processName = ""
 
     fun onModuleLoaded(param: XposedModuleInterface.ModuleLoadedParam) {
@@ -25,7 +28,7 @@ object D2OneUiHooks {
     context(xposedModule: XposedModule)
     fun onPackageReady(param: XposedModuleInterface.PackageReadyParam) = with(param) {
         if (android.os.Build.VERSION.SDK_INT < 33) return@with
-        if (!isFirstPackage) return@with
+        if (!isFirstPackage || !supportsPackage(packageName)) return@with
         val preference = PreferenceProvider.loadPreference() ?: return@with
 
         when (packageName) {

@@ -51,8 +51,9 @@ object Call {
     fun showGeocodedLocationInRecentCall() {
         if (param.packageName != Package.DIALER) return
         afterAttach {
-            val hookConfig = getHookConfig { getHookConfigFromDexKit() } ?: return@afterAttach
+            // D2 modification 2026-10-14: discovery failures must retain the stock Dialer.
             try {
+                val hookConfig = getHookConfig { getHookConfigFromDexKit() } ?: return@afterAttach
                 val methodInstance =
                     DexMethod(hookConfig.setSubTextMethod).getMethodInstance(classLoader)
                 val geoCodedLocationField =
@@ -118,7 +119,14 @@ object Call {
                 }
             }.singleOrNull() ?: return null
             val baseCallLogClass = baseCallLogClassData.getInstance(classLoader)
-            val instance = baseCallLogClass.getDeclaredConstructor().apply { isAccessible = true }.newInstance()
+            // New Samsung obfuscations may have no zero-argument constructor.
+            // Do not guess constructor arguments or allocate an uninitialized framework model.
+            val constructor = baseCallLogClass.declaredConstructors.singleOrNull { it.parameterCount == 0 }
+            if (constructor == null) {
+                android.util.Log.w("D2OneUIX", "D2_DIALER_LOCATION_UNAVAILABLE reason=no_zero_arg_constructor stock_retained=true")
+                return null
+            }
+            val instance = constructor.apply { isAccessible = true }.newInstance()
 
             val tokenToField = mutableMapOf<String, Field>()
 

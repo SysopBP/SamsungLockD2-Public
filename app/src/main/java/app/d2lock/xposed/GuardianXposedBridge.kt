@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicLong
 class GuardianXposedBridge : XposedModule() {
     companion object {
         private const val TAG = "D2XposedBridge"
-        private val dmcLock = DmcPowerGuard.vaultLock
+        private val dmcLock by lazy { DmcPowerGuard.vaultLock }
         private val bootReadySent = AtomicBoolean(false)
         private val lastWakeSignalMs = AtomicLong(0L)
         private const val WAKE_DEDUPE_MS = 750L
@@ -37,6 +37,7 @@ class GuardianXposedBridge : XposedModule() {
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
         io.github.soclear.oneuix.hook.D2OneUiHooks.onModuleLoaded(param)
+        if (param.processName != "system_server" && param.processName != "com.android.systemui") return
         log(
             Log.INFO,
             TAG,
@@ -45,9 +46,10 @@ class GuardianXposedBridge : XposedModule() {
     }
 
     override fun onPackageReady(param: io.github.libxposed.api.XposedModuleInterface.PackageReadyParam) {
+        if (!param.isFirstPackage || !io.github.soclear.oneuix.hook.D2OneUiHooks.supportsPackage(param.packageName)) return
         runCatching { with(this) { io.github.soclear.oneuix.hook.D2OneUiHooks.onPackageReady(param) } }
             .onFailure { Log.w(TAG, "D2_ONEUI_PACKAGE_UNAVAILABLE", it) }
-        if (param.packageName != "com.android.systemui" || !param.isFirstPackage) return
+        if (param.packageName != "com.android.systemui" || android.app.Application.getProcessName() != "com.android.systemui") return
         installKeyguardPresentation(param.classLoader)
         runCatching {
             // Resolve only D2's two synthetic IDs; all Samsung resources keep their normal path.

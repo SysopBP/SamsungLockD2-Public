@@ -1,12 +1,12 @@
 # OneUIX integration test build
 
-Baseline: successful D2 Build 1074, plus Build 1075 AGPL/source packaging and Build 1076 experimental periodic credential option. Upstream: SoClear/OneUIX revision b8f81448b2bcaa314c0cb8abec0c8ff527a14e27 (AGPL-3.0); author/contributor credits retained.
+Baseline: successful GitHub Actions run 38598510630 (build 1090), commit db294a12d035827ce625fdfc79809f9ac4320df4. Checked for newer successful runs on October 14, 2026 before continuing; none existed. Upstream OneUIX author/contributor credits and AGPL-3.0 terms are retained.
 
 ## Scope and actual status
 
 | Requested category | Implementation | Device status |
 |---|---|---|
-| 72-hour PIN/pattern | Existing narrow PeriodicCredentialHook; upstream blanket bypass is not used | Experimental; PIN and pattern each require real timeout tests |
+| 72-hour PIN/pattern | Read-only PeriodicCredentialHook; all scheduler suppression removed | Separate PIN/pattern verification pending; unsupported signatures retain stock behavior |
 | Calls | Recording, recording button, location, CHN log, call/text other devices | Ported; Samsung app method lookup needs device verification |
 | Samsung Settings | Refresh-rate option, outdoor mode, battery/package info, Wi-Fi speed, fonts, auto power, displayed Official status | Ported; not a Knox attestation change |
 | Framework | Keep-open count, blockable notification categories, app-jump block, rotations, FCM limit, unplug wake suppression, Writing Toolkit | Ported; firmware checks required |
@@ -26,15 +26,15 @@ Baseline: successful D2 Build 1074, plus Build 1075 AGPL/source packaging and Bu
 - Kotlin context parameters and serialization use D2's Kotlin/Java 17 toolchain instead of changing D2 to upstream Java 25.
 - Every imported interceptor uses libxposed PROTECTIVE exception handling. Unsupported signatures keep the original behavior and are logged; installation is not proof of effect.
 - All imported Boolean feature defaults are off. The private remote-file configuration requires an explicit master opt-in. No external writable preference provider is added.
-- D2's existing power guard, credential hook, accessibility fallback, boot handoff and watchdog remain separate. No unguarded upstream restart actions or broad periodic authentication hook are routed.
+- D2's existing power guard, read-only credential diagnostics, accessibility fallback, boot handoff and watchdog remain separate. No unguarded upstream restart actions or broad periodic authentication hook are routed.
 - Original camera/Call/Health Monitor DexKit discovery and versioned caches remain. DexKit and Kotlin serialization are runtime dependencies; CI includes the resolved dependency report with deliverables.
 - The framework observers change no arguments, results, or authentication state. Signals are debounced and dispatched off the system_server callback. Safe diagnostics defaults to recording only; explicit Immediate relock can use the existing Guardian reassert path after user unlock.
 - Galaxy Island remains optional. Its disabled native integration controls have not been silently activated.
 
 ## Device acceptance
 
-1. Install over Build 1074; accessibility service must remain in the APK component list. Confirm its saved opt-in, Shizuku-first screen off and watchdog health still work.
-2. With imported master OFF, perform cold boot, soft reboot, lock/wake, fingerprint/PIN recovery and incoming-call tests. Behavior must match 1074.
+1. Install over successful build 38598510630 (1090); accessibility service must remain in the APK component list. Confirm its saved opt-in, Shizuku-first screen off and watchdog health still work.
+2. With imported master OFF, perform cold boot, soft reboot, lock/wake, fingerprint/PIN recovery and incoming-call tests. Existing working behavior must match build 1090.
 3. Enable D2 in LSPosed and select only the affected scopes. Apply config and confirm read-back, then soft reboot once. Test one category at a time; collect [OneUIX] and D2Framework logs plus app behavior.
 4. Turn master OFF, Apply, then soft reboot/restart affected processes. Existing process hooks need process restart to restore stock behavior.
 5. Test optional framework diagnostics with safe mode ON. Confirm sleep/keyguard/resume timeline entries, no relock loops, and no notification content in logs. Disable safe mode only for isolated Immediate relock tests; verify call/emergency/authenticated surfaces still yield through Guardian's existing guards.
@@ -46,7 +46,7 @@ CI can verify compilation, lint and generic emulator tests; it cannot verify Sam
 
 The current upstream HEAD was checked at b8f81448b2bcaa314c0cb8abec0c8ff527a14e27 on October 14, 2026. The new ChargingLimitItem is adapted into D2's root-assisted 20–100% charging-limit panel with settings read-back. Additional hook routing covers Browser, Calendar, Dual App, Gallery, Samsung Home, Photo Retouching, SketchBook, Samsung Device Care CN, Galaxy Store, Weather, Video, Watch Manager, SPen translation and optional FLAG_SECURE screenshot controls. Feature defaults remain off.
 
-Paid Theme Center trial-expiry bypass is excluded. D2's narrow periodic credential control replaces the upstream blanket scheduler bypass. Power-menu order/visibility is exposed through D2's existing Samsung-hosted actions; SystemUI, recovery and download restart actions require confirmation and fresh SRP verification. Emergency call and medical information are always preserved; unsupported action reconstruction leaves the original menu intact. SystemUI restart is only available for the expected same-UID SystemUI process, never system_server.
+Paid Theme Center trial-expiry bypass is excluded. D2's read-only periodic credential diagnostics replace its prior opt-out; the upstream scheduler bypass is removed. Power-menu order/visibility is exposed through D2's existing Samsung-hosted actions; SystemUI, recovery and download restart actions require confirmation and fresh SRP verification. Emergency call and medical information are always preserved; unsupported action reconstruction leaves the original menu intact. SystemUI restart is only available for the expected same-UID SystemUI process, never system_server.
 
 The root D2 5G QS tile supports the active data SIM through a separate UID-0 app_process worker. It changes only the user network-type NR bit, reads back that policy, and preserves other RAT flags. It is an experimental replacement for the upstream native 5G hook's Android-14-only path; carrier connection to 5G is not guaranteed. D2 immersive mode remains an explicit QS tile.
 

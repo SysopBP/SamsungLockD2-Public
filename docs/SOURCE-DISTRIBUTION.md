@@ -61,8 +61,8 @@ contributors: https://github.com/SoClear/OneUIX. Its repository supplies the ful
 GNU AGPL version 3 license. Reference commit:
 `591d09c9cc69faf3c8faf258e39869b2df7981f4`.
 
-PeriodicCredentialHook.kt adapts the periodic timeout scheduler hook and carries
-a dated provenance notice. Selected screenshot categories are now adapted in oneui-port/ with supporting compile-only stubs in oneui-stub/. See ONEUIX-INTEGRATION.md for the complete scope and changed-file provenance.
+PeriodicCredentialHook.kt references the periodic timeout scheduler implementation
+and now provides read-only diagnostics, with a dated provenance notice. Selected screenshot categories are now adapted in oneui-port/ with supporting compile-only stubs in oneui-stub/. See ONEUIX-INTEGRATION.md for the complete scope and changed-file provenance.
 Every further port must retain attribution, include source, and carry a dated
 modification notice.
 

@@ -122,21 +122,8 @@ object Android {
         }
     }
 
-    // 禁用每 72 小时验证锁屏密码
-    context(xposedModule: XposedModule, param: XposedModuleInterface.SystemServerStartingParam)
-    fun disablePinVerifyPer72h() {
-        try {
-            param.classLoader
-                .loadClass("com.android.server.locksettings.LockSettingsStrongAuth")
-                .declaredMethods
-                .filter { it.name == "rescheduleStrongAuthTimeoutAlarm" }
-                .forEach {
-                    xposedModule.hook(it).setExceptionMode(io.github.libxposed.api.XposedInterface.ExceptionMode.PROTECTIVE).intercept { null }
-                }
-        } catch (t: Throwable) {
-            xlog(t)
-        }
-    }
+    // D2 modification 2026-10-14: upstream scheduler bypass removed.
+    // PeriodicCredentialHook supplies read-only strong-auth diagnostics.
 
     // 移除充电器时禁止亮屏
     // PowerManagerService.updateIsPoweredLocked 在插拔充电器时会调用 wakePowerGroupLocked 点亮屏幕，

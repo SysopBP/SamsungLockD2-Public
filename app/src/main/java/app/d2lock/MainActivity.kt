@@ -1276,7 +1276,7 @@ class MainActivity : Activity() {
             }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
         addButton(root, "Experimental: OneUI feature port") { OneUiPortSettings.show(this) }
-        addButton(root, "Experimental: periodic PIN / pattern check") { PeriodicCredentialSettings.show(this) }
+        addButton(root, "72-hour PIN / pattern diagnostics") { PeriodicCredentialSettings.show(this) }
         section(root, "SYSTEM INTEGRATION")
         root.getChildAt(root.childCount - 1).tag = "root_shizuku"
         root.addView(LinearLayout(this).apply {

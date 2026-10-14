@@ -230,7 +230,7 @@ Notification content stays in memory. Wallpaper selection stores a persistent im
 
 Copyright (c) 2026 D2 Project and contributors. D2's original software and accompanying project documentation in this revision are released under **AGPL-3.0-only**. See [LICENSE](LICENSE). Third-party components retain their own licenses and notices. The APK includes the full AGPL text, credits and source access under **Legal, privacy & licenses**.
 
-**OneUIX — SoClear and contributors:** [upstream project](https://github.com/SoClear/OneUIX), licensed under AGPL-3.0. The requested Samsung customization work will preserve its upstream notices and record adaptations. The experimental periodic PIN/pattern timeout scheduler control and the requested OneUI feature categories are adapted. See [integration status](docs/ONEUIX-INTEGRATION.md) for scope, unsupported firmware paths and testing requirements.
+**OneUIX — SoClear and contributors:** [upstream project](https://github.com/SoClear/OneUIX), licensed under AGPL-3.0. The requested Samsung customization work will preserve its upstream notices and record adaptations. Read-only periodic PIN/pattern strong-auth diagnostics and the requested OneUI feature categories are adapted. See [integration status](docs/ONEUIX-INTEGRATION.md) for scope, unsupported firmware paths and testing requirements.
 
 See [source and build instructions](docs/SOURCE-DISTRIBUTION.md). Distribute a source archive matching each APK revision alongside that APK; source from a later branch head is not a substitute. The license transition applies to this revision and future covered releases, not a claim about older binaries.
 
@@ -291,21 +291,23 @@ D2. The genuine biometric prompt and D2 credential fallback remain in use.
 Device validation pending: first reboot PIN, repeated lock/wake, D2 fingerprint
 and PIN fallback, incoming calls, and leaving D2.
 
-## Experimental periodic Samsung credential check
+## Samsung strong-auth diagnostics
 
-Tools → System Integration → **Experimental: periodic PIN / pattern check**.
-This opt-in/off-by-default option requires root and the D2 System Framework
-LSPosed scope. It suppresses only the candidate periodic timeout scheduler for
-an unmanaged primary user with Samsung’s normal 72-hour policy. The app reports
-this boot’s hook status and suppressed schedule count; installation is not proof
-of PIN/pattern behavior on a device. Keep Samsung’s backup credential.
+Tools → System Integration → **72-hour PIN / pattern diagnostics**.
+The previous experimental timeout opt-out is unavailable; saved opt-out values
+are ignored. Samsung's scheduler, strong-auth requirements and credential
+verification are preserved.
 
-After enabling or disabling, perform one soft reboot and authenticate Samsung
-once. Already active timeout requirements are not cleared. Reboot/first-unlock,
-lockdown, failure and administrator requirements retain their normal paths.
-See [validation priorities](docs/ONEUIX-PORT-VALIDATION.md). This is experimental
-and is not yet a recommended alternative to Samsung face recognition.
+With root and D2's System Framework LSPosed scope, the panel reports supported
+signatures, hook registration, callback counts, last requested reasons and
+last sampled current flags. PIN and pattern have separate pending validation
+labels. A registered hook or saved configuration is not proof of a verified
+72-hour behavior. Refresh reads the stored sample and displays its age.
+
+See [validation priorities](docs/ONEUIX-PORT-VALIDATION.md) and the
+[issue #69 review](docs/ISSUE-69-REVIEW.md). No system_server kill or forced
+reauthentication bypass is part of the diagnostic workflow.
 
 ### Experimental OneUI feature port
 
-Tools → Experimental: OneUI feature port provides categorized configuration for the requested OneUIX hooks. All imported feature switches default off; Apply publishes through LSPosed's private remote-file service and verifies read-back. Select each affected app in D2's LSPosed scope and soft reboot after framework changes. Configuration is distinct from hook installation or device verification. D2 retains the 1074 accessibility and watchdog behavior. See [integration and test matrix](docs/ONEUIX-INTEGRATION.md).
+Tools → Experimental: OneUI feature port provides categorized configuration for the requested OneUIX hooks. All imported feature switches default off; Apply publishes through LSPosed's private remote-file service and verifies read-back. Select each affected app in D2's LSPosed scope and soft reboot after framework changes. Configuration is distinct from hook installation or device verification. D2 continues successful build 38598510630 (1090), retaining the subsequent authentication, launcher and UI improvements. See [integration and test matrix](docs/ONEUIX-INTEGRATION.md).
