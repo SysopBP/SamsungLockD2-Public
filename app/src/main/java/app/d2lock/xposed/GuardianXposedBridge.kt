@@ -181,6 +181,7 @@ class GuardianXposedBridge : XposedModule() {
             return
         }
 
+        log(Log.INFO, TAG, "D2_BOOT_HOOK_DISCOVERED candidates=${methods.size} elapsedMs=${android.os.SystemClock.elapsedRealtime()}")
         methods.forEach { method ->
             try {
                 method.isAccessible = true
@@ -190,6 +191,7 @@ class GuardianXposedBridge : XposedModule() {
                         // Android/system_server always gets control first. D2 is signalled
                         // only after the real systemReady invocation returns successfully.
                         val result = chain.proceed()
+                        log(Log.INFO, TAG, "D2_BOOT_SYSTEM_READY_RETURNED elapsedMs=${android.os.SystemClock.elapsedRealtime()}")
                         signalBootReady()
                         result
                     }
@@ -236,6 +238,7 @@ class GuardianXposedBridge : XposedModule() {
             return
         }
 
+        log(Log.INFO, TAG, "D2_WAKE_HOOK_DISCOVERED candidates=${methods.size} elapsedMs=${android.os.SystemClock.elapsedRealtime()}")
         methods.forEach { method ->
             try {
                 method.isAccessible = true
