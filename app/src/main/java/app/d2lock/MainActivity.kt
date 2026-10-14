@@ -3455,6 +3455,10 @@ class MainActivity : Activity() {
             root.addView(delegated("Fingerprint unavailable · Review method  ›", "Unlock method"),
                 LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         }
+        root.addView(action("D2 Hooks · Diagnostics  ›") {
+            GuardianDialogs.showInfo(this, "D2 Hooks", app.d2lock.lockscreen.HookDiagnostics.summary(this) +
+                "\n\nBoot delivery and launch timeline:\n" + KeyguardSignalReceiver.pipelineMetrics(this).timeline.joinToString("\n"))
+        }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         val srpStatus = app.d2lock.root.DmcRecovery.status(this)
         if (Prefs.xposedMaster(this) && !srpStatus.targetsMet) root.addView(action("D2 SRP needs verification  ›") { showDmcStatus() },
             LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })

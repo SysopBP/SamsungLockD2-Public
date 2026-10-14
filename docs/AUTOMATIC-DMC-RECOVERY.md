@@ -1,6 +1,6 @@
 > **User-facing name:** Samsung Recovery Protection (**D2 SRP**). The Samsung vault and technical identifiers remain `DMC`. Menu labels use **D2 SRP status**; longer explanations use Samsung Recovery Protection. These names do not change verification behavior or guarantee recovery.
 
-# Automatic System Server DMC recovery
+# Automatic System Server D2 SRP recovery
 
 D2 automatically targets these Samsung DMC vault states:
 
@@ -44,7 +44,7 @@ process remains alive. Subsequent startup events can try again. Installing a new
 app does not itself deliver a boot broadcast, and Android suppresses broadcasts
 to a never-opened/force-stopped app; open D2 once after initial installation.
 
-The **Automatic DMC Recovery → View feature status** dialog shows all four
+The **D2 SRP → View feature status** dialog shows all four
 observed states, targets, verification result, and check time. It updates while
 open. Unknown, denied, unsupported, and timed-out states never count as verified.
 Stored status is scoped to Android's boot count.
@@ -81,7 +81,7 @@ Samsung VaultKeeper permissions or bootloader eligibility.
 
 ## Discovery credit
 
-@diablOw originally discovered the DMC behavior behind this recovery feature.
+@diablOw originally discovered the Samsung recovery behavior behind this recovery feature.
 
 
 ## Power-action guard (experimental)
@@ -98,9 +98,9 @@ Verification is a point-in-time vault read, not a guarantee of firmware durabili
 
 ### On-device validation still required
 
-With System Framework scope enabled, confirm both `DMC_POWER_HOOK_INSTALLED` entries. Test standard Restart and Power off first, then the exact soft-restart tool being used. Check `DMC_POWER_VERIFIED` before each covered action and read DMC status again after boot. Test failure and timeout cancellation in a controlled test setup before calling the guard validated. Do not test by deliberately enabling unsafe DMC flags on the daily-use device.
+With System Framework scope enabled, confirm both `D2_SRP_POWER_HOOK_INSTALLED` entries. Test standard Restart and Power off first, then the exact soft-restart tool being used. Check `D2_SRP_POWER_VERIFIED` before each covered action and read DMC status again after boot. Test failure and timeout cancellation in a controlled test setup before calling the guard validated. Do not test by deliberately enabling unsafe DMC flags on the daily-use device.
 
-Useful log tags: `D2XposedBridge`, `D2DmcPowerGuard`. Outcomes: `DMC_POWER_VERIFIED`, `DMC_POWER_CANCELLED`, `DMC_POWER_DUPLICATE`, `DMC_POWER_HOOK_UNAVAILABLE`, `DMC_POWER_RESUME_FAILED`.
+Useful log tags: `D2XposedBridge`, `D2DmcPowerGuard`. Outcomes: `D2_SRP_POWER_VERIFIED`, `D2_SRP_POWER_CANCELLED`, `D2_SRP_POWER_DUPLICATE`, `D2_SRP_POWER_HOOK_UNAVAILABLE`, `D2_SRP_POWER_RESUME_FAILED`.
 
 
 ### Failed status versus a missing hook
@@ -112,4 +112,4 @@ Useful log tags: `D2XposedBridge`, `D2DmcPowerGuard`. Outcomes: `DMC_POWER_VERIF
 - **D2 soft restart with its guard unavailable:** refuse the D2 request and report the missing guard.
 - **Hardware/root bypass or power/thermal emergency:** these routes remain outside enforcement.
 
-After cancellation, open D2's DMC status, resolve the issue, and explicitly retry. This is a pre-action read-back check, not a guarantee of durable firmware persistence or protection against subsequent Samsung writes.
+After cancellation, open D2 SRP status, resolve the issue, and explicitly retry. This is a pre-action read-back check, not a guarantee of durable firmware persistence or protection against subsequent Samsung writes.

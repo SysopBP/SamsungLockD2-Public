@@ -81,43 +81,47 @@ class D2Widget : AppWidgetProvider() {
             val hookHealth = KeyguardSignalReceiver.systemHealth(context)
             val wakeCount = KeyguardSignalReceiver.diagnosticCount(context, "WAKE")
             val bootCount = KeyguardSignalReceiver.diagnosticCount(context, "BOOT_READY")
+            val lastSuccess = DmcRecovery.lastSuccessfulVerification(context)
+            val verifiedTime = if (lastSuccess > 0) java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(lastSuccess)) else "not observed"
+            val credential = app.d2lock.lockscreen.HookDiagnostics.credentialCompact(context)
+            val health = app.d2lock.lockscreen.HookDiagnostics.health(context)
             val guardianSuppressed = KeyguardSignalReceiver.decisionMetrics(context).suppressed
             // SRP verification describes recovery targets only; it is not proof
             // that Android's periodic credential / strong-auth hook executed.
             // App-widget heights are dp and differ across launchers. Never render
             // eight lines into a small widget: RemoteViews otherwise clips them.
             val rows = when {
-                height >= 260 -> listOf(
+                height >= 280 && width >= 160 -> listOf(
                     summary,
                     "Server: ${available(status.systemServer)}",
                     "SRP lock: ${flag(status.screenLock)}",
                     "Maintenance: ${flag(status.maintenance)}",
                     "AT command: ${flag(status.atCommand)}",
                     "Download: ${available(status.downloadAllowed)}",
-                    "Bridge: ${hookHealth.status}",
+                    "Hooks: $health",
                     "Wake $wakeCount · Boot $bootCount",
                     "Guardian skipped: $guardianSuppressed",
-                    "PIN timer: unverified",
-                    "Checked $checked"
+                    "PIN/pattern: $credential",
+                    "SRP verified $verifiedTime"
                 )
-                height >= 175 -> listOf(
+                height >= 190 && width >= 160 -> listOf(
                     summary,
                     "Server: ${available(status.systemServer)}",
                     "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
                     "AT ${flag(status.atCommand)} · DL ${available(status.downloadAllowed)}",
                     "Wake $wakeCount · Boot $bootCount",
-                    "PIN timer: unverified",
-                    "Checked $checked"
+                    "PIN/pattern: $credential",
+                    "SRP verified $verifiedTime"
                 )
-                height >= 125 -> listOf(
+                height >= 140 && width >= 140 -> listOf(
                     summary,
                     "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
                     "AT ${flag(status.atCommand)} · DL ${available(status.downloadAllowed)}",
                     "Wake $wakeCount · Boot $bootCount",
-                    "PIN: unverified"
+                    "PIN/pattern: $credential"
                 )
-                height >= 75 -> listOf(summary, "PIN: unverified", "Tap for SRP")
-                else -> listOf(summary, "PIN: ?")
+                height >= 75 -> listOf(summary, "PIN/pattern: $credential", "Tap for SRP")
+                else -> listOf(summary, "PIN/pattern: ?")
             }
             val stats = rows.joinToString("\n")
             view.setTextViewText(R.id.d2_widget_srp, stats)

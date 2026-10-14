@@ -86,4 +86,4 @@ For diagnostics, use /storage/emulated/0/Download by default. Check hook install
 
 ## Credits
 
-**@diablOw** originally discovered the DMC behavior behind D2 SRP. **SoClear / OneUIX** inspired the independent Samsung power-menu action integration. See [release notes and acknowledgments](RELEASE-0.6.4-PREVIEW.md), [third-party notices](../THIRD_PARTY_NOTICES.txt), and [license](../LICENSE).
+**@diablOw** originally discovered the Samsung recovery behavior behind D2 SRP. **SoClear / OneUIX** inspired the independent Samsung power-menu action integration. See [release notes and acknowledgments](RELEASE-0.6.4-PREVIEW.md), [third-party notices](../THIRD_PARTY_NOTICES.txt), and [license](../LICENSE).

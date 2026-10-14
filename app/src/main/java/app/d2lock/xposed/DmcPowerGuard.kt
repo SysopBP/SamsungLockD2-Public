@@ -27,10 +27,10 @@ internal object DmcPowerGuard {
     fun isResuming() = bypass.get() == true
 
     fun verifyVault(): ByteArray = synchronized(vaultLock) {
-        check(Process.myUid() == 1000) { "DMC verification requires System Server UID 1000" }
+        check(Process.myUid() == 1000) { "D2 SRP verification requires System Server UID 1000" }
         val api = Class.forName("com.samsung.android.service.vaultkeeper.VaultKeeperManager")
         val manager = api.getMethod("getInstance", String::class.java).invoke(null, "DMC")
-            ?: error("DMC VaultKeeper unavailable")
+            ?: error("D2 SRP VaultKeeper unavailable")
         val read = api.getMethod("read", Int::class.javaPrimitiveType)
         val write = api.getMethod("write", Int::class.javaPrimitiveType, ByteArray::class.java)
         val vault = object : DmcVaultPolicy.Vault {
@@ -42,14 +42,14 @@ internal object DmcPowerGuard {
         val finalRead = vault.read()
         DmcVaultPolicy.validate(finalRead)
         check(verified.contentEquals(finalRead) && DmcVaultPolicy.matchesTarget(finalRead)) {
-            "DMC changed during power-action verification"
+            "D2 SRP changed during power-action verification"
         }
         finalRead!!
     }
 
     fun intercept(context: Context, action: String, resume: () -> Unit) {
         if (!busy.compareAndSet(false, true)) {
-            Log.w(TAG, "DMC_POWER_DUPLICATE action=$action")
+            Log.w(TAG, "D2_SRP_POWER_DUPLICATE action=$action")
             return
         }
         val main = Handler(Looper.getMainLooper())
@@ -60,7 +60,7 @@ internal object DmcPowerGuard {
         main.post { message("D2 SRP: checking before $action…") }
         val timeout = Runnable {
             if (decision.cancel()) {
-                Log.e(TAG, "DMC_POWER_CANCELLED action=$action reason=timeout")
+                Log.e(TAG, "D2_SRP_POWER_CANCELLED action=$action reason=timeout")
                 message("D2 cancelled $action: D2 SRP verification timed out. Check SRP status before retrying.")
                 // Keep busy while a stuck vault call is still running; never queue more workers.
             }
@@ -77,25 +77,25 @@ internal object DmcPowerGuard {
                         if (!decision.complete(SystemClock.elapsedRealtime())) return@post
                         main.removeCallbacks(timeout)
                         result.fold(onSuccess = {
-                            Log.i(TAG, "DMC_POWER_VERIFIED action=$action uid=${Process.myUid()} pid=${Process.myPid()} lock=${it[0]} maintenance=${it[1]} at=${it[2]}")
+                            Log.i(TAG, "D2_SRP_POWER_VERIFIED action=$action uid=${Process.myUid()} pid=${Process.myPid()} lock=${it[0]} maintenance=${it[1]} at=${it[2]}")
                             bypass.set(true)
                             try { resume() } finally { bypass.remove() }
                         }, onFailure = {
-                            Log.e(TAG, "DMC_POWER_CANCELLED action=$action reason=verification_failed", it)
+                            Log.e(TAG, "D2_SRP_POWER_CANCELLED action=$action reason=verification_failed", it)
                             message("D2 cancelled $action: Samsung Recovery Protection could not be verified. Open D2 SRP status and retry.")
                         })
                     } catch (error: Throwable) {
-                        Log.e(TAG, "DMC_POWER_RESUME_FAILED action=$action", error)
+                        Log.e(TAG, "D2_SRP_POWER_RESUME_FAILED action=$action", error)
                         message("D2 could not continue $action. Please retry from the power menu.")
                     } finally { activeDecision = null; busy.set(false) }
                 }
-            }, "D2-DMC-PowerGuard").apply { isDaemon = true }.start()
+            }, "D2-SRP-PowerGuard").apply { isDaemon = true }.start()
         } catch (error: Throwable) {
             main.removeCallbacks(timeout)
             decision.cancel()
             activeDecision = null
             busy.set(false)
-            Log.e(TAG, "DMC_POWER_CANCELLED action=$action reason=worker_failed", error)
+            Log.e(TAG, "D2_SRP_POWER_CANCELLED action=$action reason=worker_failed", error)
             main.post { message("D2 cancelled $action: verification could not start.") }
         }
     }

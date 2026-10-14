@@ -180,7 +180,7 @@ Release assets include the D2 APK, optional KernelSU bridge ZIP, source ZIP, ins
 
 ## Credits and acknowledgments
 
-- **@diablOw** — original discovery of the Samsung DMC behavior behind D2 SRP. This discovery credit belongs prominently in the release, README and in-app credits.
+- **@diablOw** — original discovery of the Samsung Samsung recovery behavior behind D2 SRP. This discovery credit belongs prominently in the release, README and in-app credits.
 - **SoClear / OneUIX** — inspiration for Samsung power-menu action integration. D2's implementation is independent, using reflection and libxposed. https://github.com/SoClear/OneUIX
 - **LSPosed and libxposed contributors** — the Xposed framework/API used for System Framework and SystemUI integration.
 - **RikkaApps / Shizuku contributors** — privileged-service API/provider used by D2's Shizuku integration. This is separate from the current SRP System Server execution path.

@@ -20,7 +20,7 @@ The current boot/wake observers, security-setup refresh, D2 SRP checks and power
 
 ## Feature naming
 
-**D2 SRP** is the short name for **Samsung Recovery Protection**. Compact buttons and messages use D2 SRP; setup instructions and explanations spell out the full name. SRP is D2's feature name, not a guarantee of successful firmware recovery. The underlying Samsung vault remains named `DMC`; code identifiers, broadcast actions and diagnostic log tags retain that technical name. Credit to **@diablOw** remains for the original DMC discovery.
+**D2 SRP** is the short name for **Samsung Recovery Protection**. Compact buttons and messages use D2 SRP; setup instructions and explanations spell out the full name. SRP is D2's feature name, not a guarantee of successful firmware recovery. The underlying Samsung vault remains named `DMC`; code identifiers, broadcast actions retain that technical name for compatibility; diagnostic logs use D2_SRP. Credit to **@diablOw** remains for the original D2 SRP discovery.
 
 ## D2 power-menu integration (experimental)
 
@@ -35,16 +35,16 @@ This is an action-list integration inspired by [OneUIX](https://github.com/SoCle
 With D2 enabled in LSPosed's **System Framework** scope, the new guard checks the actual DMC vault before the confirmed normal restart or power-off sequence. Safe-mode, recovery and download restarts are covered only when they enter the same framework path. Android's orderly `ActivityManagerService.restart()` soft restart has a separate guard.
 
 - Fresh vault validation, existing target enforcement, and a second read before continuing.
-- Five-second timeout; verification failure cancels the requested action. The phone stays on; open D2's DMC status and retry. A late result cannot initiate a delayed reboot.
+- Five-second timeout; verification failure cancels the requested action. The phone stays on; open D2 SRP status and retry. A late result cannot initiate a delayed reboot.
 - Duplicate requests are suppressed; a late result cannot cause a delayed reboot.
 - Battery/thermal emergency shutdown remains immediate.
 - Direct root process kills, init/property restarts, forced hardware resets and power loss are outside these hooks.
 
-Check `DMC_POWER_HOOK_INSTALLED` logs before relying on coverage. Firmware-specific missing hooks are reported and cannot provide protection. A verified read is not a guarantee that no Samsung service writes the settings later or that firmware has persisted them durably. Local policy/request tests and targeted hook compilation pass; full APK build and device reboot/power-off tests remain pending. See [validation and limits](docs/AUTOMATIC-DMC-RECOVERY.md#power-action-guard-experimental).
+Check `D2_SRP_POWER_HOOK_INSTALLED` logs before relying on coverage. Firmware-specific missing hooks are reported and cannot provide protection. A verified read is not a guarantee that no Samsung service writes the settings later or that firmware has persisted them durably. Local policy/request tests and targeted hook compilation pass; full APK build and device reboot/power-off tests remain pending. See [validation and limits](docs/AUTOMATIC-DMC-RECOVERY.md#power-action-guard-experimental).
 
 ### When protection does not pass
 
-For an active, supported guard, failed or unknown DMC verification cancels the requested power off, restart, or supported soft restart. The phone stays on and shows a message directing you to D2's DMC status. A five-second timeout also cancels the request; a late successful result cannot restart the phone. Fix the reported issue and explicitly retry the action.
+For an active, supported guard, failed or unknown DMC verification cancels the requested power off, restart, or supported soft restart. The phone stays on and shows a message directing you to D2 SRP status. A five-second timeout also cancels the request; a late successful result cannot restart the phone. Fix the reported issue and explicitly retry the action.
 
 Opening **D2 SRP status** performs the recovery/check and displays its result; it never requests shutdown or restart by itself. A failed status dialog does not globally disable every reboot route.
 
@@ -65,7 +65,7 @@ The live glass status dialog shows target checks, System Server identity, and
 last-check time. Successful vault read-back is required to report verification.
 DMC flags are separate from Android credentials and biometric enrollment.
 
-**DMC discovery credit: @diablOw**, for originally discovering the DMC behavior
+**D2 SRP discovery credit: @diablOw**, for originally discovering the Samsung recovery behavior
 behind this recovery feature.
 
 See [automatic DMC recovery behavior and limits](docs/AUTOMATIC-DMC-RECOVERY.md).
@@ -226,7 +226,7 @@ Notification content stays in memory. Wallpaper selection stores a persistent im
 
 ## Rights and credits
 
-**@diablOw** — original discovery of the DMC behavior used by D2’s recovery feature.
+**@diablOw** — original discovery of the Samsung recovery behavior used by D2’s recovery feature.
 
 Copyright (c) 2026 D2 Project. **All rights reserved.** D2's original code is publicly viewable but is not released under an open-source license. See [LICENSE](LICENSE). Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt) and **Licenses and credits** in the app.
 

@@ -104,7 +104,8 @@ jobs:
           chmod 755 module/*.sh
           (cd module && zip -r ../dist/Kiosk-D2-Guardian-KernelSU-OPTIONAL.zip .)
           unzip -t dist/Kiosk-D2-Guardian-KernelSU-OPTIONAL.zip
-          zip -r dist/Kiosk-D2-Guardian-source.zip app/src app/build.gradle.kts build.gradle.kts settings.gradle.kts gradle.properties gradle gradlew gradlew.bat module README.md LICENSE THIRD_PARTY_NOTICES.txt docs .github
+          zip -r dist/Kiosk-D2-Guardian-source.zip app/src app/build.gradle.kts build.gradle.kts settings.gradle.kts gradle.properties gradle gradlew gradlew.bat module README.md LICENSE THIRD_PARTY_NOTICES.txt docs scripts .github
+          python3 scripts/verify_deliverables.py dist
           cp runtime-dependencies.txt dist/
           sha256sum dist/*.apk dist/*.zip > dist/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4

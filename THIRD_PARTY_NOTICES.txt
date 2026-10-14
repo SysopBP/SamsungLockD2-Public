@@ -1,4 +1,4 @@
-DMC discovery credit: @diablOw - originally discovered the DMC behavior
+D2 SRP discovery credit: @diablOw - originally discovered the Samsung recovery behavior
 behind D2's recovery feature.
 
 THIRD-PARTY NOTICES

@@ -454,12 +454,22 @@ class LockScreenActivity : Activity() {
         })
         if (!preview) {
             KeyguardSignalReceiver.recordGuardianStage(this, "D2_ACTIVITY_CREATED", "lock_surface")
-            guardianUi.post {
-                if (!isDestroyed && !isFinishing) {
-                    KeyguardSignalReceiver.recordGuardianStage(this, "D2_FIRST_DRAW", "decor_posted")
-                    Log.i("SamsungLockD2", "GUARDIAN_FIRST_DRAW")
+            val drawObserver = object : android.view.ViewTreeObserver.OnDrawListener {
+                private var recorded = false
+                override fun onDraw() {
+                    if (recorded) return
+                    recorded = true
+                    val drawnAt = android.os.SystemClock.elapsedRealtime()
+                    guardianUi.post {
+                        if (guardianUi.viewTreeObserver.isAlive) guardianUi.viewTreeObserver.removeOnDrawListener(this)
+                        if (!isDestroyed && !isFinishing) {
+                            KeyguardSignalReceiver.recordGuardianStage(this@LockScreenActivity, "D2_FIRST_DRAW", "onDraw:elapsed=$drawnAt")
+                            Log.i("SamsungLockD2", "GUARDIAN_FIRST_DRAW elapsedMs=$drawnAt")
+                        }
+                    }
                 }
             }
+            guardianUi.viewTreeObserver.addOnDrawListener(drawObserver)
         }
         if (Prefs.experimentalLockMotion(this)) {
             guardianUi.alpha = 0f

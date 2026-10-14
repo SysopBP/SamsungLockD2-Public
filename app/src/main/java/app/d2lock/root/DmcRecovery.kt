@@ -114,6 +114,8 @@ object DmcRecovery {
                     .putInt("download", stamped.downloadAllowed?.let { if(it) 1 else 0 } ?: -1)
                     .putBoolean("verified", stamped.verified).putString("detail", stamped.detail)
                     .putLong("checked", stamped.checkedAt).commit()
+                if (success) prefs(app).edit().putLong("last_success", stamped.checkedAt)
+                    .putInt("last_success_boot", bootCount(app)).apply()
                 Log.i(TAG, "D2_SRP_AUTO_CHECK source=$source retry=$retry targetsMet=$success detail=${stamped.detail}")
             } catch (error: Exception) {
                 prefs(app).edit().putInt("boot", bootCount(app)).putBoolean("verified", false)
@@ -136,6 +138,10 @@ object DmcRecovery {
     fun verifyForAction(context: Context, done: (Status) -> Unit) {
         request(context, "recovery_action", retry = 3, force = true, actionResult = done)
     }
+
+    fun lastSuccessfulVerification(context: Context): Long =
+        if (prefs(context).getInt("last_success_boot", -2) == bootCount(context))
+            prefs(context).getLong("last_success", 0L) else 0L
 
     fun refresh(context: Context, done: (Status) -> Unit) {
         request(context, "status_dialog") { main.post { done(status(context)) } }
