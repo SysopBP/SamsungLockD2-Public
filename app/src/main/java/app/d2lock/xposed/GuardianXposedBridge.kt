@@ -32,6 +32,7 @@ class GuardianXposedBridge : XposedModule() {
         private val lastWakeSignalMs = AtomicLong(0L)
         private const val WAKE_DEDUPE_MS = 750L
         @Volatile private var softRestartGuardInstalled = false
+        @Volatile private var shutdownGuardInstalled = false
     }
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
@@ -147,6 +148,7 @@ class GuardianXposedBridge : XposedModule() {
                     null
                 }
             }
+            shutdownGuardInstalled = true
             Log.i(TAG, "DMC_POWER_HOOK_INSTALLED target=ShutdownThread#beginShutdownSequence")
         }.onFailure { Log.e(TAG, "DMC_POWER_HOOK_UNAVAILABLE target=ShutdownThread", it) }
 
@@ -351,12 +353,15 @@ class GuardianXposedBridge : XposedModule() {
     }
 
     /** Executes only in the privileged System Server after SRP verification. */
-    @android.annotation.SuppressLint("MissingPermission")
     private fun guardedFirmwareReboot(app: Context,mode: String) {
         check(android.os.Process.myUid()==1000) { "System Server identity required" }
         check(mode in setOf("recovery","download")) { "Unsupported reboot target" }
         app.enforceCallingOrSelfPermission(android.Manifest.permission.REBOOT,"D2 guarded firmware reboot")
-        app.getSystemService(android.os.PowerManager::class.java).reboot(mode)
+        check(shutdownGuardInstalled) { "Shutdown SRP guard unavailable" }
+        val binder=Class.forName("android.os.ServiceManager").getDeclaredMethod("getService",String::class.java).invoke(null,"power")
+        val service=Class.forName("android.os.IPowerManager\$Stub").getDeclaredMethod("asInterface",android.os.IBinder::class.java).invoke(null,binder)
+        // wait=false: do not block System Server's main thread while its shutdown hook verifies SRP.
+        service.javaClass.getMethod("reboot",Boolean::class.javaPrimitiveType,String::class.java,Boolean::class.javaPrimitiveType).invoke(service,false,mode,false)
     }
 
     private fun installDmcReceiver(app: Context) {
@@ -376,13 +381,18 @@ class GuardianXposedBridge : XposedModule() {
                     if(callerPackage!="com.android.systemui") return
                     val action=intent.getStringExtra("mode") ?: return
                     if(action !in setOf("recovery","download","systemui")) return
-                    DmcPowerGuard.intercept(app,"restart $action") {
-                        if(action=="systemui") {
-                            val am=app.getSystemService(android.app.ActivityManager::class.java)
-                            val target=am.runningAppProcesses?.firstOrNull { it.processName=="com.android.systemui" && it.uid==android.os.Process.myUid() && it.pid!=android.os.Process.myPid() }
-                                ?: error("No supported same-UID SystemUI process")
-                            android.os.Process.killProcess(target.pid)
-                        } else guardedFirmwareReboot(app,action)
+                    if(action=="systemui") DmcPowerGuard.intercept(app,"restart SystemUI") {
+                        val am=app.getSystemService(android.app.ActivityManager::class.java)
+                        val target=am.runningAppProcesses?.firstOrNull { it.processName=="com.android.systemui" && it.uid==android.os.Process.myUid() && it.pid!=android.os.Process.myPid() }
+                            ?: error("No supported same-UID SystemUI process")
+                        android.os.Process.killProcess(target.pid)
+                    } else {
+                        Thread({ runCatching { guardedFirmwareReboot(app,action) }.onFailure {
+                            Log.e(TAG,"D2_FIRMWARE_REBOOT_CANCELLED mode=$action",it)
+                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                android.widget.Toast.makeText(app,"D2 restart cancelled: privileged shutdown guard unavailable.",android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        } },"D2-FirmwareReboot").apply { isDaemon=true }.start()
                     }
                     return
                 }
