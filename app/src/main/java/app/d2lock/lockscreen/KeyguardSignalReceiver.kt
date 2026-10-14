@@ -285,8 +285,12 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                 val now = System.currentTimeMillis()
                 val bootWallMs = now - SystemClock.elapsedRealtime()
                 if (earlyBootLaunchClaimedThisBoot(context)) {
-                    prefs.edit().putLong(KEY_EARLY_BOOT_CONFIRMED_MS, now).apply()
-                    Log.i(TAG, "GUARDIAN_BOOT_TOKEN_CONFIRMED stage=$stage")
+                    // Preserve the FIRST visibility confirmation. A later onResume
+                    // must not make an already-fast boot appear several seconds slower.
+                    if (prefs.getLong(KEY_EARLY_BOOT_CONFIRMED_MS, 0L) == 0L) {
+                        prefs.edit().putLong(KEY_EARLY_BOOT_CONFIRMED_MS, now).commit()
+                        Log.i(TAG, "GUARDIAN_BOOT_TOKEN_CONFIRMED stage=$stage")
+                    }
                 }
             }
         }
