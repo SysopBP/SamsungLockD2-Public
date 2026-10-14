@@ -27,12 +27,14 @@ internal object D2PowerMenu {
     private const val TAG = "D2PowerMenu"
     // Framework TYPE_VOLUME_OVERLAY is hidden from the public SDK.
     private const val POWER_MENU_WINDOW_TYPE = 2020
+    const val POWER_OFF_ICON = 0x7ed20003
+    const val RESTART_ICON = 0x7ed20004
     const val SOFT_RESTART_ICON = 0x7ed20001
     const val SRP_STATUS_ICON = 0x7ed20002
 
     /** Draw directly in SystemUI: module resource IDs belong to a different APK. */
     fun icon(id: Int, density: Float): Drawable? {
-        if (id != SOFT_RESTART_ICON && id != SRP_STATUS_ICON) return null
+        if (id !in setOf(SOFT_RESTART_ICON, SRP_STATUS_ICON, POWER_OFF_ICON, RESTART_ICON)) return null
         return object : Drawable() {
             private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.WHITE
@@ -45,7 +47,20 @@ internal object D2PowerMenu {
                 val save = canvas.save()
                 canvas.translate(bounds.left.toFloat(), bounds.top.toFloat())
                 canvas.scale(bounds.width() / 24f, bounds.height() / 24f)
-                if (id == SOFT_RESTART_ICON) {
+                paint.style = Paint.Style.FILL
+                paint.color = Color.BLACK
+                canvas.drawCircle(12f, 12f, 11.5f, paint)
+                paint.color = Color.WHITE
+                paint.style = Paint.Style.STROKE
+                paint.strokeWidth = 1.3f
+                canvas.scale(0.72f, 0.72f, 12f, 12f)
+                if (id == POWER_OFF_ICON) {
+                    canvas.drawArc(4f, 4f, 20f, 20f, -55f, 290f, false, paint)
+                    canvas.drawLine(12f, 2f, 12f, 11f, paint)
+                } else if (id == RESTART_ICON) {
+                    canvas.drawArc(4f, 4f, 20f, 20f, -65f, 290f, false, paint)
+                    canvas.drawPath(Path().apply { moveTo(15f, 2f); lineTo(20f, 4f); lineTo(18f, 9f) }, paint)
+                } else if (id == SOFT_RESTART_ICON) {
                     canvas.drawArc(4f, 4f, 20f, 20f, 45f, 285f, false, paint)
                     canvas.drawPath(Path().apply {
                         moveTo(16f, 3f); lineTo(20f, 7f); lineTo(20f, 2f)
@@ -66,8 +81,8 @@ internal object D2PowerMenu {
                 }
                 canvas.restoreToCount(save)
             }
-            override fun getIntrinsicWidth() = (32f * density).toInt()
-            override fun getIntrinsicHeight() = (32f * density).toInt()
+            override fun getIntrinsicWidth() = (64f * density).toInt()
+            override fun getIntrinsicHeight() = (64f * density).toInt()
             override fun setAlpha(alpha: Int) { paint.alpha = alpha; invalidateSelf() }
             override fun setColorFilter(colorFilter: ColorFilter?) { paint.colorFilter = colorFilter; invalidateSelf() }
             @Deprecated("Deprecated in Java")
@@ -129,6 +144,7 @@ internal object D2PowerMenu {
             val model = call(factory, "createActionViewModel", presenter, name) ?: error("Missing Samsung $name action")
             val info = call(model, "getActionInfo") ?: error("Missing Samsung action info")
             call(info, "setLabel", label)
+            call(info, "setIcon", if (name == "power") POWER_OFF_ICON else RESTART_ICON)
             call(info, "setStateLabel", "D2 SRP checked before continuing")
             return model
         }

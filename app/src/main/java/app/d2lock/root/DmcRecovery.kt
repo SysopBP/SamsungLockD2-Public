@@ -1,5 +1,6 @@
 package app.d2lock.root
 
+import app.d2lock.widget.D2Widget
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -122,6 +123,7 @@ object DmcRecovery {
                 Log.w(TAG, "DMC_AUTO_CHECK_FAILED source=$source", error)
             } finally {
                 busy.set(false)
+                main.post { runCatching { D2Widget.updateAll(app) } }
                 actionResult?.let { callback -> val result = outcome; main.post { callback(result) } }
                 done?.invoke()
             }

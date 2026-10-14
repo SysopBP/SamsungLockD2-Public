@@ -97,11 +97,21 @@ class WidgetConfigActivity : Activity() {
             isChecked=prefs.getBoolean("label_" + widgetId,true); setPadding(dp(10),dp(8),0,dp(8))
         }
         root.addView(showLabel)
+        val showSrp = CheckBox(this).apply {
+            text = "Show SRP status and last check"; textSize = 17f
+            setTextColor(Appearance.text(this@WidgetConfigActivity))
+            isChecked = prefs.getBoolean("srp_$widgetId", true)
+        }
+        root.addView(showSrp)
+        root.addView(TextView(this).apply {
+            text = "Long-press on Home to resize down to one cell. Tap the SRP line to refresh; the title keeps your lock action."
+            textSize = 13f; setTextColor(Appearance.secondary(this@WidgetConfigActivity))
+        })
         root.addView(TextView(this).apply {
             text="Save widget"; textSize=17f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@WidgetConfigActivity))
             background=Appearance.glass(this@WidgetConfigActivity,28f,42,true)
             setOnClickListener {
-                prefs.edit().putString("style_" + widgetId,style).putString("action_" + widgetId,action).putString("density_" + widgetId,density).putBoolean("label_" + widgetId,showLabel.isChecked).apply()
+                prefs.edit().putString("style_" + widgetId,style).putString("action_" + widgetId,action).putString("density_" + widgetId,density).putBoolean("label_" + widgetId,showLabel.isChecked).putBoolean("srp_$widgetId",showSrp.isChecked).apply()
                 D2Widget.update(this@WidgetConfigActivity,getSystemService(AppWidgetManager::class.java),widgetId)
                 setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,widgetId)); finish()
             }
