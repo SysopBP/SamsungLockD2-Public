@@ -18,6 +18,8 @@
 
     <permission android:name="app.d2lock.permission.ISLAND" android:protectionLevel="signature" />
     <queries>
+        <package android:name="me.weishu.kernelsu" />
+        <package android:name="org.lsposed.manager" />
         <intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.HOME" /></intent>
         <package android:name="app.cutout.ringpreview" />
         <package android:name="com.samsung.android.incallui" />
