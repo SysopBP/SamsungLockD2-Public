@@ -1,3 +1,4 @@
+# Modified by SysopBP, 2026-10-14: pin workflow dependencies to verified commits.
 name: Publish D2 0.6.3 Beta 2
 on:
   push:
@@ -19,7 +20,7 @@ jobs:
       SOURCE_SHA: f6a64d646646e851190e4d31df8029dffd1311ed
       RELEASE_TAG: v0.6.3-beta.2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Package successful Build 993
         shell: bash
         run: |
