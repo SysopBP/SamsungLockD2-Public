@@ -228,7 +228,11 @@ Notification content stays in memory. Wallpaper selection stores a persistent im
 
 **@diablOw** — original discovery of the DMC behavior used by D2’s recovery feature.
 
-Copyright (c) 2026 D2 Project. **All rights reserved.** D2's original code is publicly viewable but is not released under an open-source license. See [LICENSE](LICENSE). Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt) and **Licenses and credits** in the app.
+Copyright (c) 2026 D2 Project and contributors. D2's original software and accompanying project documentation in this revision are released under **AGPL-3.0-only**. See [LICENSE](LICENSE). Third-party components retain their own licenses and notices. The APK includes the full AGPL text, credits and source access under **Legal, privacy & licenses**.
+
+**OneUIX — SoClear and contributors:** [upstream project](https://github.com/SoClear/OneUIX), licensed under AGPL-3.0. The requested Samsung customization work will preserve its upstream notices and record adaptations. The experimental periodic PIN/pattern timeout scheduler control is the first adaptation. Other requested features remain unported.
+
+See [source and build instructions](docs/SOURCE-DISTRIBUTION.md). Distribute a source archive matching each APK revision alongside that APK; source from a later branch head is not a substitute. The license transition applies to this revision and future covered releases, not a claim about older binaries.
 
 Weather data by [Open-Meteo](https://open-meteo.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). D2 truncates temperatures and maps weather codes to short labels. No affiliation with or endorsement by Samsung, KernelSU, or Open-Meteo is implied.
 ## Current source update (0.4.0)
@@ -286,3 +290,18 @@ D2. The genuine biometric prompt and D2 credential fallback remain in use.
 
 Device validation pending: first reboot PIN, repeated lock/wake, D2 fingerprint
 and PIN fallback, incoming calls, and leaving D2.
+
+## Experimental periodic Samsung credential check
+
+Tools → System Integration → **Experimental: periodic PIN / pattern check**.
+This opt-in/off-by-default option requires root and the D2 System Framework
+LSPosed scope. It suppresses only the candidate periodic timeout scheduler for
+an unmanaged primary user with Samsung’s normal 72-hour policy. The app reports
+this boot’s hook status and suppressed schedule count; installation is not proof
+of PIN/pattern behavior on a device. Keep Samsung’s backup credential.
+
+After enabling or disabling, perform one soft reboot and authenticate Samsung
+once. Already active timeout requirements are not cleared. Reboot/first-unlock,
+lockdown, failure and administrator requirements retain their normal paths.
+See [validation priorities](docs/ONEUIX-PORT-VALIDATION.md). This is experimental
+and is not yet a recommended alternative to Samsung face recognition.

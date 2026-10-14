@@ -3,8 +3,20 @@ behind D2's recovery feature.
 
 THIRD-PARTY NOTICES
 
-D2 original code: Copyright (c) 2026 D2 Project. All rights reserved.
-The licenses below apply only to their respective third-party components.
+D2 original code: Copyright (c) 2026 D2 Project and contributors.
+SPDX-License-Identifier: AGPL-3.0-only. See LICENSE / LICENSE-AGPL-3.0.txt.
+Third-party components retain their original licenses and notices.
+
+OneUIX: SoClear and contributors, https://github.com/SoClear/OneUIX
+License: GNU Affero General Public License version 3 (AGPL-3.0).
+Reference revision: 591d09c9cc69faf3c8faf258e39869b2df7981f4.
+OneUIX is the reference for the requested Samsung customization integration.
+PeriodicCredentialHook.kt adapts the OneUIX periodic strong-auth scheduler
+control on October 14, 2026. D2 adds explicit opt-in, primary-user and
+device-policy guards, exact-signature probing, fail-open behavior and telemetry.
+Other requested OneUIX features are not imported by this change.
+For subsequent adaptations, retain upstream notices and document changed files,
+source revision, and modification date. Credit does not imply endorsement.
 
 Weather data: Open-Meteo, https://open-meteo.com/
 License: Creative Commons Attribution 4.0 International (CC BY 4.0)

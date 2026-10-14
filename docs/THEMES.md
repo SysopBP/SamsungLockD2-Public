@@ -26,7 +26,7 @@ The optional KernelSU Next bridge 0.5.6 ZIP bundles D2 0.4.4 for fresh installs.
 
 Theme options were inspired by KernelSU Next's Material 3/dynamic-color/AMOLED approach. This is an independent implementation, not a port of KernelSU code or Miuix, and it does not synchronize KernelSU Manager settings. Reference: https://github.com/KernelSU-Next/KernelSU-Next/blob/dev/manager/app/src/main/java/com/rifsxd/ksunext/ui/theme/Theme.kt
 
-Galaxy Island is based on EvanKoe's Expressive Cutout (GPL-3.0). D2: copyright 2026 D2 Project, all rights reserved. Weather: Open-Meteo.com, CC BY 4.0. Full notices are retained in the source archives and apps.
+Galaxy Island is based on EvanKoe's Expressive Cutout (GPL-3.0). D2: copyright 2026 D2 Project and contributors, AGPL-3.0-only for current covered revisions. Weather: Open-Meteo.com, CC BY 4.0. Full notices are retained in the source archives and apps.
 
 The user reported testing the earlier combo on a Samsung Galaxy S26 Ultra running Android 17. This update is checked separately with local builds and Android 16/API 36 emulator captures; it has not been physically tested on that handset. Screenshot messages and calls are simulated fixtures. See Build-verification.txt for exact results.
 
