@@ -79,28 +79,42 @@ class D2Widget : AppWidgetProvider() {
             fun available(value: Boolean?) = when (value) { true -> "OK"; false -> "No"; null -> "?" }
             // SRP verification describes DMC recovery targets only; it is not proof
             // that Android's periodic credential / strong-auth hook executed.
-            val rows = if (height >= 120) listOf(
-                summary,
-                "Server: ${available(status.systemServer)}",
-                "SRP lock: ${flag(status.screenLock)}",
-                "Maint: ${flag(status.maintenance)}",
-                "AT: ${flag(status.atCommand)}",
-                "Download: ${available(status.downloadAllowed)}",
-                "PIN timer: unverified",
-                "Checked $checked"
-            ) else if (height >= 80) listOf(
-                summary,
-                "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
-                "AT ${flag(status.atCommand)} · DL ${available(status.downloadAllowed)}",
-                "PIN timer: unverified",
-                checked
-            ) else listOf(summary, "PIN timer: unverified", checked)
+            // App-widget heights are dp and differ across launchers. Never render
+            // eight lines into a small widget: RemoteViews otherwise clips them.
+            val rows = when {
+                height >= 190 -> listOf(
+                    summary,
+                    "Server: ${available(status.systemServer)}",
+                    "SRP lock: ${flag(status.screenLock)}",
+                    "Maintenance: ${flag(status.maintenance)}",
+                    "AT command: ${flag(status.atCommand)}",
+                    "Download: ${available(status.downloadAllowed)}",
+                    "PIN timer: unverified",
+                    "Checked $checked"
+                )
+                height >= 145 -> listOf(
+                    summary,
+                    "Server: ${available(status.systemServer)}",
+                    "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
+                    "AT ${flag(status.atCommand)} · DL ${available(status.downloadAllowed)}",
+                    "PIN timer: unverified",
+                    "Checked $checked"
+                )
+                height >= 100 -> listOf(
+                    summary,
+                    "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
+                    "AT ${flag(status.atCommand)} · DL ${available(status.downloadAllowed)}",
+                    "PIN: unverified"
+                )
+                height >= 65 -> listOf(summary, "PIN: unverified", "Tap for SRP")
+                else -> listOf(summary, "PIN: ?")
+            }
             val stats = rows.joinToString("\n")
             view.setTextViewText(R.id.d2_widget_srp, stats)
             view.setViewVisibility(R.id.d2_widget_srp, if (WidgetPrefs.srp(context, id)) View.VISIBLE else View.GONE)
             view.setInt(R.id.d2_widget_srp, "setMaxLines", rows.size)
             view.setTextViewTextSize(R.id.d2_widget_srp, android.util.TypedValue.COMPLEX_UNIT_SP,
-                if (width < 110 || height < 80) 9f else 11f)
+                when { width < 110 || height < 100 -> 9f; height < 145 -> 10f; else -> 11f })
             val light = WidgetPrefs.style(context,id) == "light"
             val background = when (WidgetPrefs.style(context,id)) {
                 "galaxy" -> 0xB8141820.toInt()
