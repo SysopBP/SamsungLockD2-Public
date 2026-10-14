@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.widget.RemoteViews
 import app.d2lock.root.DmcRecovery
+import app.d2lock.lockscreen.KeyguardSignalReceiver
 import android.content.ComponentName
 import android.view.View
 import app.d2lock.MainActivity
@@ -77,7 +78,11 @@ class D2Widget : AppWidgetProvider() {
             val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 80)
             val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 140)
             fun available(value: Boolean?) = when (value) { true -> "OK"; false -> "No"; null -> "?" }
-            // SRP verification describes DMC recovery targets only; it is not proof
+            val hookHealth = KeyguardSignalReceiver.systemHealth(context)
+            val wakeCount = KeyguardSignalReceiver.diagnosticCount(context, "WAKE")
+            val bootCount = KeyguardSignalReceiver.diagnosticCount(context, "BOOT_READY")
+            val guardianSuppressed = KeyguardSignalReceiver.decisionMetrics(context).suppressed
+            // SRP verification describes recovery targets only; it is not proof
             // that Android's periodic credential / strong-auth hook executed.
             // App-widget heights are dp and differ across launchers. Never render
             // eight lines into a small widget: RemoteViews otherwise clips them.
@@ -89,6 +94,9 @@ class D2Widget : AppWidgetProvider() {
                     "Maintenance: ${flag(status.maintenance)}",
                     "AT command: ${flag(status.atCommand)}",
                     "Download: ${available(status.downloadAllowed)}",
+                    "Bridge: ${hookHealth.status}",
+                    "Wake $wakeCount · Boot $bootCount",
+                    "Guardian skipped: $guardianSuppressed",
                     "PIN timer: unverified",
                     "Checked $checked"
                 )
@@ -97,6 +105,7 @@ class D2Widget : AppWidgetProvider() {
                     "Server: ${available(status.systemServer)}",
                     "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
                     "AT ${flag(status.atCommand)} · DL ${available(status.downloadAllowed)}",
+                    "Wake $wakeCount · Boot $bootCount",
                     "PIN timer: unverified",
                     "Checked $checked"
                 )
@@ -104,6 +113,7 @@ class D2Widget : AppWidgetProvider() {
                     summary,
                     "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
                     "AT ${flag(status.atCommand)} · DL ${available(status.downloadAllowed)}",
+                    "Wake $wakeCount · Boot $bootCount",
                     "PIN: unverified"
                 )
                 height >= 65 -> listOf(summary, "PIN: unverified", "Tap for SRP")
