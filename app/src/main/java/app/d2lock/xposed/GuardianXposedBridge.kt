@@ -27,14 +27,17 @@ import java.util.concurrent.atomic.AtomicLong
 class GuardianXposedBridge : XposedModule() {
     companion object {
         private const val TAG = "D2XposedBridge"
-        private val dmcLock = DmcPowerGuard.vaultLock
+        private val dmcLock by lazy { DmcPowerGuard.vaultLock }
         private val bootReadySent = AtomicBoolean(false)
         private val lastWakeSignalMs = AtomicLong(0L)
         private const val WAKE_DEDUPE_MS = 750L
         @Volatile private var softRestartGuardInstalled = false
+        @Volatile private var shutdownGuardInstalled = false
     }
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
+        io.github.soclear.oneuix.hook.D2OneUiHooks.onModuleLoaded(param)
+        if (param.processName != "system_server" && param.processName != "com.android.systemui") return
         log(
             Log.INFO,
             TAG,
@@ -43,7 +46,10 @@ class GuardianXposedBridge : XposedModule() {
     }
 
     override fun onPackageReady(param: io.github.libxposed.api.XposedModuleInterface.PackageReadyParam) {
-        if (param.packageName != "com.android.systemui" || !param.isFirstPackage) return
+        if (!param.isFirstPackage || !io.github.soclear.oneuix.hook.D2OneUiHooks.supportsPackage(param.packageName)) return
+        runCatching { with(this) { io.github.soclear.oneuix.hook.D2OneUiHooks.onPackageReady(param) } }
+            .onFailure { Log.w(TAG, "D2_ONEUI_PACKAGE_UNAVAILABLE", it) }
+        if (param.packageName != "com.android.systemui" || android.app.Application.getProcessName() != "com.android.systemui") return
         installKeyguardPresentation(param.classLoader)
         runCatching {
             // Resolve only D2's two synthetic IDs; all Samsung resources keep their normal path.
@@ -97,6 +103,10 @@ class GuardianXposedBridge : XposedModule() {
             TAG,
             "GUARDIAN_MINIMAL_SYSTEM_SERVER_START uid=${android.os.Process.myUid()}"
         )
+        runCatching { with(this) { io.github.soclear.oneuix.hook.D2OneUiHooks.onSystemServerStarting(param) } }
+            .onFailure { Log.w(TAG, "D2_ONEUI_SYSTEM_UNAVAILABLE", it) }
+        PeriodicCredentialHook.install(this, param.classLoader)
+        FrameworkControlHooks.install(this, param.classLoader)
         installBootReadyHook(param.classLoader)
         installWakeObserver(param.classLoader)
         installSecuritySetupObservers(param.classLoader)
@@ -140,6 +150,7 @@ class GuardianXposedBridge : XposedModule() {
                     null
                 }
             }
+            shutdownGuardInstalled = true
             Log.i(TAG, "DMC_POWER_HOOK_INSTALLED target=ShutdownThread#beginShutdownSequence")
         }.onFailure { Log.e(TAG, "DMC_POWER_HOOK_UNAVAILABLE target=ShutdownThread", it) }
 
@@ -343,6 +354,18 @@ class GuardianXposedBridge : XposedModule() {
         }.onFailure { Log.w(TAG, "DMC_SETUP_REFRESH_FAILED", it) }
     }
 
+    /** Executes only in the privileged System Server after SRP verification. */
+    private fun guardedFirmwareReboot(app: Context,mode: String) {
+        check(android.os.Process.myUid()==1000) { "System Server identity required" }
+        check(mode in setOf("recovery","download")) { "Unsupported reboot target" }
+        app.enforceCallingOrSelfPermission(android.Manifest.permission.REBOOT,"D2 guarded firmware reboot")
+        check(shutdownGuardInstalled) { "Shutdown SRP guard unavailable" }
+        val binder=Class.forName("android.os.ServiceManager").getDeclaredMethod("getService",String::class.java).invoke(null,"power")
+        val service=Class.forName("android.os.IPowerManager\$Stub").getDeclaredMethod("asInterface",android.os.IBinder::class.java).invoke(null,binder)
+        // wait=false: do not block System Server's main thread while its shutdown hook verifies SRP.
+        service.javaClass.getMethod("reboot",Boolean::class.javaPrimitiveType,String::class.java,Boolean::class.javaPrimitiveType).apply { isAccessible=true }.invoke(service,false,mode,false)
+    }
+
     private fun installDmcReceiver(app: Context) {
         if (android.os.Build.VERSION.SDK_INT < 34) return
         app.registerReceiver(object : android.content.BroadcastReceiver() {
@@ -355,6 +378,25 @@ class GuardianXposedBridge : XposedModule() {
                     systemUiUid -> "com.android.systemui"
                     appUid -> "app.d2lock"
                     else -> return
+                }
+                if (intent.action == "app.d2lock.action.DMC_EXTENDED_POWER") {
+                    if(callerPackage!="com.android.systemui") return
+                    val action=intent.getStringExtra("mode") ?: return
+                    if(action !in setOf("recovery","download","systemui")) return
+                    if(action=="systemui") DmcPowerGuard.intercept(app,"restart SystemUI") {
+                        val am=app.getSystemService(android.app.ActivityManager::class.java)
+                        val target=am.runningAppProcesses?.firstOrNull { it.processName=="com.android.systemui" && it.uid==android.os.Process.myUid() && it.pid!=android.os.Process.myPid() }
+                            ?: error("No supported same-UID SystemUI process")
+                        android.os.Process.killProcess(target.pid)
+                    } else {
+                        Thread({ runCatching { guardedFirmwareReboot(app,action) }.onFailure {
+                            Log.e(TAG,"D2_FIRMWARE_REBOOT_CANCELLED mode=$action",it)
+                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                android.widget.Toast.makeText(app,"D2 restart cancelled: privileged shutdown guard unavailable.",android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        } },"D2-FirmwareReboot").apply { isDaemon=true }.start()
+                    }
+                    return
                 }
                 if (intent.action == "app.d2lock.action.DMC_SOFT_RESTART") {
                     if (!softRestartGuardInstalled) {
@@ -376,12 +418,15 @@ class GuardianXposedBridge : XposedModule() {
             }
         }, android.content.IntentFilter("app.d2lock.action.DMC_REQUEST").apply {
             addAction("app.d2lock.action.DMC_SOFT_RESTART")
+            addAction("app.d2lock.action.DMC_EXTENDED_POWER")
         }, Context.RECEIVER_EXPORTED)
         Log.i(TAG, "DMC_SYSTEM_SERVER_RECEIVER_READY uid=${android.os.Process.myUid()} pid=${android.os.Process.myPid()}")
     }
 
     /** One guarded recovery attempt in system_server; validate before writing and verify read-back. */
     private fun scheduleDmcRecovery(systemContext: Context, reply: String? = null, delay: Long = 10_000L, replyPackage: String = "app.d2lock") {
+        FrameworkControlHooks.ready(systemContext)
+        PeriodicCredentialHook.ready(systemContext)
         runCatching {
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 runCatching {

@@ -1,8 +1,10 @@
 KIOSK D2 GUARDIAN — USER AGREEMENT, PRIVACY & SAFETY NOTICE
-Effective: September 26, 2026
+Effective: October 14, 2026
 
 1. PROJECT AND LICENSE
-Kiosk D2 Guardian ("D2") is independently developed software. Copyright © 2026 D2 Project. All rights reserved. Except for third-party components governed by their own licenses, no open-source license or other permission to copy, modify, publish, sublicense, sell, or redistribute D2 source code, documentation, branding, or original artwork is granted merely because the repository or binaries are publicly accessible.
+Kiosk D2 Guardian ("D2") is independently developed software. Copyright © 2026 D2 Project and contributors. D2's original software and accompanying project documentation are licensed under the GNU Affero General Public License, version 3 only (AGPL-3.0-only). You may use, modify and redistribute covered materials under that license. Third-party components retain their respective licenses and notices. View the complete license and Corresponding Source through Legal, privacy & licenses in the app or https://github.com/SysopBP/SamsungLockD2-Public.
+
+The privacy and technical limitations below do not impose additional restrictions on the rights granted by AGPL-3.0. If wording in this project notice conflicts with an applicable software license, the software license controls. No trademark rights or third-party endorsement are granted.
 
 2. INDEPENDENT PROJECT
 D2 is an independent project and is not affiliated with, endorsed by, sponsored by, or an official product of Samsung Electronics, Google, Android, KernelSU, LSPosed, Shizuku, or other third-party projects or vendors. Names and trademarks belong to their respective owners.
@@ -36,7 +38,7 @@ To the maximum extent permitted by applicable law, the D2 Project and its contri
 11. THIRD-PARTY SOFTWARE AND DATA
 Third-party libraries, frameworks, services, data providers, trademarks, and other materials remain subject to their respective licenses and terms. See the Third-Party Licenses & Credits section bundled with D2.
 
-12. ACCEPTANCE
-By choosing to install, enable, or use D2, you acknowledge these limitations and accept responsibility for deciding whether D2 and its privileged or experimental features are appropriate for your device and use case.
+12. ACKNOWLEDGMENT
+These technical and privacy notices explain the behavior of privileged and experimental features. Acknowledging them is not an additional condition on exercising the rights granted by AGPL-3.0.
 
 This project notice is intended to describe D2's terms and technical limitations. It is not a substitute for jurisdiction-specific legal advice.

@@ -25,7 +25,7 @@ object GuardianWatchdog {
         // Phone/InCallUI is a trusted temporary foreground surface. Never turn a
         // proximity wake, voicemail transition, or call UI focus change into a
         // fresh D2 lock while Android still reports an active call notification.
-        if (callActive) {
+        if (callActive || app.d2lock.notifications.CallNotificationStore.isCallActive(context)) {
             transition(State.TRUSTED_UI, "call_active")
             Log.i(TAG, "GUARDIAN_REASSERT_DEFERRED_CALL reason=$reason")
             return false

@@ -91,6 +91,7 @@ class MainActivity : Activity() {
         }
         Appearance.apply(this)
         PinUi.protect(this)
+        OneUiPortSettings.init(this)
         Prefs.syncBootPolicy(this)
         RootManager.refreshAsync()
         app.d2lock.root.DmcRecovery.request(this, "app_open")
@@ -420,7 +421,7 @@ class MainActivity : Activity() {
             setPadding(dp(16), dp(14), dp(16), dp(18)); background = Appearance.glass(this@MainActivity, 26f, 28, true)
         }
         fun whatsNew() {
-            content.text = "WHAT'S NEW  •  OCTOBER 12, 2026  •  D2 ${versionName ?: "current"}\n\n🔓 FINGERPRINT APP LOGIN\n• Login with fingerprint now opens the D2 app and protected settings through Samsung’s secure biometric prompt\n• Use D2 PIN remains available; unavailable/error results fall back to PIN\n• Backgrounding revokes the session and rejects late biometric callbacks\n\n🧊 STANDARD GLASS DIALOGS\n• Rounded shared information and unlock-choice dialogs replace square platform panels\n• Fingerprint guidance now has numbered steps, an icon and Open settings / Got it buttons\n\n🧊 D2 POWER MENU\n• Adds confirmed soft restart and a rounded live D2 SRP status dialog to Samsung power controls\n• Requires LSPosed SystemUI plus System Framework scopes; preserves emergency and normal confirmation actions\n\n🛡 D2 SRP POWER-ACTION GUARD\n• Verifies fresh vault read-back before normal restart, power off and supported orderly soft restart\n• Cancels on failure or a 5-second timeout; late checks never trigger a delayed restart\n• Failed/unknown checks keep the phone on: open D2 SRP status, resolve the issue and retry\n• Status checks alone never shut down the phone; missing shutdown hooks may allow normal Samsung power actions without verification\n• Direct root zygote restarts can restart Android without an SRP check; other root apps, terminals and modules remain bypass paths\n• Recovery Center Soft restart uses the guarded System Server route; Restart SystemUI requires a fresh SRP check\n• Battery/thermal emergencies and direct root/hardware resets remain outside this guard\n\n🧩 D2 SRP — SAMSUNG RECOVERY PROTECTION\n• Runs inside Xposed System Server (UID 1000)\n• Targets: D2 SRP screen-lock and Maintenance Mode flags disabled; Download Mode AT-command flag enabled; derived Download Mode eligibility allowed\n• Validates the vault record and verifies read-back; unknown or failed checks stay unverified\n\n🔄 SECURITY SETUP DETECTION\n• Watches completed PIN/password/pattern changes and fingerprint/face additions or removals\n• Refreshes 2 seconds after setup changes and checks again at 12 seconds for delayed Samsung updates\n• Firmware detection still needs device testing; Android credentials and biometric enrollment stay separate from D2 SRP flags\n\n✅ LIVE FEATURE STATUS\n• Glass status dialog with icons, target checks, System Server identity and last-check time\n\n🚧 IN DEVELOPMENT\n• Additional framework controls and Galaxy Island Xposed integration remain disabled placeholders\n• Diagnostics, relock, Home/Recents, gestures, notification/media/call integration and related controls are planned for a later update\n• These switches do not control the current boot/wake observers, D2 SRP or power-menu hooks\n\n\n💤 RECENT HOTFIXES\n• Voicemail/call-state relock fix\n• Double-tap screen-off from empty space, with notification and call controls protected\n• Floating Bar visibility modes and coordinated dock/CORE/CHECK behavior\n\n🙏 D2 SRP DISCOVERY CREDIT\n• @diablOw — originally discovered the recovery behavior behind D2 SRP"
+            content.text = "WHAT'S NEW  •  OCTOBER 12, 2026  •  D2 ${versionName ?: "current"}\n\n🔓 FINGERPRINT APP LOGIN\n• Login with fingerprint now opens the D2 app and protected settings through Samsung’s secure biometric prompt\n• Use D2 PIN remains available; unavailable/error results fall back to PIN\n• Backgrounding revokes the session and rejects late biometric callbacks\n\n🧊 STANDARD GLASS DIALOGS\n• Rounded shared information and unlock-choice dialogs replace square platform panels\n• Fingerprint guidance now has numbered steps, an icon and Open settings / Got it buttons\n\n🧊 D2 POWER MENU\n• Adds confirmed soft restart and a rounded live D2 SRP status dialog to Samsung power controls\n• Requires LSPosed SystemUI plus System Framework scopes; preserves emergency and normal confirmation actions\n\n🛡 D2 SRP POWER-ACTION GUARD\n• Verifies fresh vault read-back before normal restart, power off and supported orderly soft restart\n• Cancels on failure or a 5-second timeout; late checks never trigger a delayed restart\n• Failed/unknown checks keep the phone on: open D2 SRP status, resolve the issue and retry\n• Status checks alone never shut down the phone; missing shutdown hooks may allow normal Samsung power actions without verification\n• Direct root zygote restarts can restart Android without an SRP check; other root apps, terminals and modules remain bypass paths\n• Recovery Center Soft restart uses the guarded System Server route; Restart SystemUI requires a fresh SRP check\n• Battery/thermal emergencies and direct root/hardware resets remain outside this guard\n\n🧩 D2 SRP — SAMSUNG RECOVERY PROTECTION\n• Runs inside Xposed System Server (UID 1000)\n• Targets: D2 SRP screen-lock and Maintenance Mode flags disabled; Download Mode AT-command flag enabled; derived Download Mode eligibility allowed\n• Validates the vault record and verifies read-back; unknown or failed checks stay unverified\n\n🔄 SECURITY SETUP DETECTION\n• Watches completed PIN/password/pattern changes and fingerprint/face additions or removals\n• Refreshes 2 seconds after setup changes and checks again at 12 seconds for delayed Samsung updates\n• Firmware detection still needs device testing; Android credentials and biometric enrollment stay separate from D2 SRP flags\n\n✅ LIVE FEATURE STATUS\n• Glass status dialog with icons, target checks, System Server identity and last-check time\n\n🚧 IN DEVELOPMENT\n• Optional sleep, keyguard and lifecycle observers are available for testing; remaining framework and Galaxy Island controls are planned\n• Use Safe diagnostics only for the new observers. Home/Recents, gestures and native notification/media/call integration remain planned\n• These switches do not control the current boot/wake observers, D2 SRP or power-menu hooks\n\n\n💤 RECENT HOTFIXES\n• Voicemail/call-state relock fix\n• Double-tap screen-off from empty space, with notification and call controls protected\n• Floating Bar visibility modes and coordinated dock/CORE/CHECK behavior\n\n🙏 D2 SRP DISCOVERY CREDIT\n• @diablOw — originally discovered the recovery behavior behind D2 SRP"
         }
         fun whatsNext() {
             val lock = if (PinStore(this@MainActivity).configured()) "✓" else "○"
@@ -1274,6 +1275,8 @@ class MainActivity : Activity() {
                 setOnClickListener { showDmcStatus() }
             }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+        addButton(root, "Experimental: OneUI feature port") { OneUiPortSettings.show(this) }
+        addButton(root, "72-hour PIN / pattern diagnostics") { PeriodicCredentialSettings.show(this) }
         section(root, "SYSTEM INTEGRATION")
         root.getChildAt(root.childCount - 1).tag = "root_shizuku"
         root.addView(LinearLayout(this).apply {
@@ -2685,7 +2688,7 @@ class MainActivity : Activity() {
                 setPadding(0, dp(5), 0, dp(4))
             })
             addView(TextView(this@MainActivity).apply {
-                text = "Behavior controls below are experimental unless individually verified. Safe diagnostics can remain enabled while testing boot timing."
+                text = "Experimental observers: Screen / wake adds sleep diagnostics; Immediate relock observes Samsung keyguard showing; Native lifecycle observes activity resume. Safe diagnostics only records these signals without relocking. Apply through LSPosed, then soft reboot. Existing boot/wake protection remains separate."
                 textSize = 11f
                 setTextColor(Appearance.secondary(this@MainActivity))
                 setPadding(0, dp(2), 0, dp(8))
@@ -2705,11 +2708,12 @@ class MainActivity : Activity() {
                         text = title; textSize = 11f; maxLines = 2; setTextColor(Appearance.text(this@MainActivity))
                     }, LinearLayout.LayoutParams(0, -2, 1f))
                     addView(guardianSwitch().apply {
-                        // These stored switches have no behavioral hook implementation yet.
-                        isChecked = false; isEnabled = false; contentDescription = "$title: not implemented"
+                        val implemented=title in setOf("Safe diagnostics only","Screen / wake","Immediate relock","Native lifecycle")
+                        isChecked = implemented && checked(); isEnabled = implemented
+                        contentDescription = if(implemented) "$title: experimental observer" else "$title: not implemented"
                         scaleX = .82f; scaleY = .82f
                         setPadding(0, 0, dp(4), 0)
-                        setOnCheckedChangeListener { _, value -> changed(value) }
+                        setOnCheckedChangeListener { _, value -> changed(value); OneUiPortSettings.syncFramework(this@MainActivity) }
                     }, LinearLayout.LayoutParams(dp(60), dp(48)))
                 }
             fun compactGrid(items: List<Triple<String, () -> Boolean, (Boolean) -> Unit>>) {
@@ -2727,7 +2731,7 @@ class MainActivity : Activity() {
                 }
             }
 
-            masterXposedToggle("Accept framework signals", { Prefs.xposedMaster(this@MainActivity) }) { Prefs.setXposedMaster(this@MainActivity, it) }
+            masterXposedToggle("Accept framework signals", { Prefs.xposedMaster(this@MainActivity) }) { Prefs.setXposedMaster(this@MainActivity, it); OneUiPortSettings.syncFramework(this@MainActivity) }
             addView(compactXposedToggle("Safe diagnostics only", { Prefs.xposedSafeDiagnostics(this@MainActivity) }) { Prefs.setXposedSafeDiagnostics(this@MainActivity, it) },
                 LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
 
@@ -2762,7 +2766,7 @@ class MainActivity : Activity() {
             ))
 
             addView(TextView(this@MainActivity).apply {
-                text = "In development: the additional framework and Galaxy Island controls shown above are placeholders and remain disabled until their individual hooks are implemented and tested. Development is deferred to a later update. Current boot/wake observers, D2 SRP and power-menu hooks run separately; these switches do not control them. The separate KernelSU bridge ZIP remains optional."
+                text = "Experimental sleep, keyguard and lifecycle observers are implemented for testing. Remaining Home/Recents, gesture, notification/media/call, QS, recovery and Galaxy Island controls are still planned and disabled. Galaxy Island and the KernelSU bridge ZIP are optional. Current boot/wake protection, D2 SRP and guarded power menu run separately."
                 textSize = 12f
                 setTextColor(Appearance.secondary(this@MainActivity))
                 setPadding(dp(4), dp(8), dp(4), 0)
@@ -2927,7 +2931,8 @@ class MainActivity : Activity() {
                 }
                 fun showLegal() { legalText.text = agreement }
                 fun showLicenses() {
-                    legalText.text = "THIRD-PARTY LICENSES & CREDITS\n\nWeather data and geocoding: Open-Meteo.\n\n$notice"
+                    val agpl = listOf("LICENSE-AGPL-3.0.txt", "LICENSE-APACHE-2.0.txt", "LICENSE-LGPL-3.0.txt", "LICENSE-GPL-3.0.txt").joinToString("\n\n") { name -> assets.open(name).bufferedReader().use { it.readText() } }
+                    legalText.text = "D2 LICENSE & CREDITS\n\nCopyright © 2026 D2 Project and contributors.\nD2 is licensed under AGPL-3.0-only, without warranty. You may modify and redistribute it under that license.\nCorresponding Source: https://github.com/SysopBP/SamsungLockD2-Public\n\n$agpl\n\nTHIRD-PARTY NOTICES\n\n$notice"
                 }
                 fun tab(title: String, action: () -> Unit) = TextView(this@MainActivity).apply {
                     text = title
@@ -2941,6 +2946,9 @@ class MainActivity : Activity() {
                 tabs.addView(tab("Agreement & Privacy") { showLegal() }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(6) })
                 tabs.addView(tab("Licenses & Credits") { showLicenses() }, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(6) })
                 addView(tabs, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+                addView(tab("View D2 source and build instructions") {
+                    startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/SysopBP/SamsungLockD2-Public/blob/main/docs/SOURCE-DISTRIBUTION.md")))
+                }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
 
                 val scroll = ScrollView(this@MainActivity).apply {
                     isVerticalScrollBarEnabled = true
