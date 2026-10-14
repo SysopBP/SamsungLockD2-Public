@@ -1,9 +1,14 @@
-Copyright (c) 2026 D2 Project. All rights reserved.
+Copyright (c) 2026 D2 Project and contributors.
+SPDX-License-Identifier: AGPL-3.0-only
 
-No open-source license is granted for D2's original source code, documentation,
-or artwork. Public availability does not grant permission to modify or
-redistribute those materials.
+D2 original software and accompanying project documentation are licensed under
+the GNU Affero General Public License, version 3 only. You may use, modify and
+redistribute covered materials under that license. See LICENSE and the bundled
+LICENSE-AGPL-3.0.txt for the complete terms, including the absence of warranty.
+Third-party materials retain their own copyright notices and licenses.
+No trademark rights or endorsement by third-party projects are granted.
 
-Third-party components and data remain subject to their respective licenses;
-see THIRD_PARTY_NOTICES.txt. This notice does not limit rights granted by those
-licenses, applicable law, or GitHub's terms of service.
+Corresponding Source: https://github.com/SysopBP/SamsungLockD2-Public
+Build and source-distribution instructions: docs/SOURCE-DISTRIBUTION.md
+License transition: October 14, 2026. This notice describes this revision and
+later covered releases; it does not relabel previously published binaries.
