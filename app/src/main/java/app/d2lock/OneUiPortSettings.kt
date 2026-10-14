@@ -88,7 +88,7 @@ object OneUiPortSettings {
         val categoryButtons=mutableListOf<Pair<Button,String>>()
         groups.forEach { (title,path) ->
             val b=Button(activity).apply { text=title; setOnClickListener { showGroup(activity,title,path,node(state,path)) } }
-            body.addView(b);categoryButtons.add(b to (title+" "+node(state,path).keys().asSequence().joinToString(" ")))
+            body.addView(b);categoryButtons.add(b to (title+" "+node(state,path).keys().asSequence().filter { path!="other" || it in otherKeys(title) }.joinToString(" ") { it+" "+label(it) }))
         }
         search.addTextChangedListener(object: android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?,start: Int,count: Int,after: Int) {}
@@ -119,10 +119,7 @@ object OneUiPortSettings {
             }
         };dialog.show()
     }
-    private fun showGroup(a: Activity,title: String,path: String,state: JSONObject) {
-        val body=LinearLayout(a).apply { orientation=LinearLayout.VERTICAL; setPadding(24,12,24,12) }
-        val excluded=setOf("disablePinVerifyPer72h","powerMenuActions","setThemeTrialNeverExpired")
-        val otherAllowed=when(title) {
+    private fun otherKeys(title: String): Set<String> = when(title) {
             "Browser and video" -> setOf("showMorePlaybackSpeeds","redirectCustomTab","spoofBrowserCountryCodeToUS")
             "Gallery and AI editing" -> setOf("supportAllGallerySettings","supportSharedAlbumsInHide","hideVideoEditorStudio","noAIWatermark")
             "Samsung Notes" -> setOf("supportAllNotesFeatures")
@@ -134,6 +131,10 @@ object OneUiPortSettings {
             "Calendar and weather" -> setOf("enableChineseHolidayDisplay","setWeatherProviderCN")
             else -> setOf("blockGalaxyStoreAds","useSPenGoogleTranslate")
         }
+    private fun showGroup(a: Activity,title: String,path: String,state: JSONObject) {
+        val body=LinearLayout(a).apply { orientation=LinearLayout.VERTICAL; setPadding(24,12,24,12) }
+        val excluded=setOf("disablePinVerifyPer72h","powerMenuActions","setThemeTrialNeverExpired")
+        val otherAllowed=otherKeys(title)
         state.keys().asSequence().toList().forEach { key ->
             if(key in excluded || (path=="other" && key !in otherAllowed)) return@forEach
             val v=state.get(key)
