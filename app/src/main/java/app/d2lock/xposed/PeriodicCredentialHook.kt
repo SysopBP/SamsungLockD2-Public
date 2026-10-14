@@ -35,6 +35,7 @@ internal object PeriodicCredentialHook {
     private var worker: Handler? = null
 
     fun install(module: XposedModule, loader: ClassLoader) {
+        io.github.soclear.oneuix.hook.Android.periodicCredentialObserver = { enqueue() }
         // Created at registration, never on a framework callback stack.
         worker = Handler(HandlerThread("D2StrongAuthDiagnostics").apply { start() }.looper)
         observe(module, loader, "rescheduleStrongAuthTimeoutAlarm",
@@ -125,6 +126,7 @@ internal object PeriodicCredentialHook {
             .put("version", 2).put("pid", Process.myPid())
             .put("boot", Settings.Global.getInt(app.contentResolver, Settings.Global.BOOT_COUNT, -1))
             .put("elapsed", SystemClock.elapsedRealtime())
+            .put("oneuiPeriodic", io.github.soclear.oneuix.hook.Android.periodicCredentialStatus())
             .put("scheduler", scheduler).put("schedulerDetail", schedulerDetail).put("reasonObserver", reasons)
             .put("scheduleCallbacks", schedules.get()).put("reasonCallbacks", requests.get())
             .put("lastRequest", lastRequest).put("flags", flags).put("credential", credential)

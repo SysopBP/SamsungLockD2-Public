@@ -133,12 +133,15 @@ object OneUiPortSettings {
         }
     private fun showGroup(a: Activity,title: String,path: String,state: JSONObject) {
         val body=LinearLayout(a).apply { orientation=LinearLayout.VERTICAL; setPadding(24,12,24,12) }
-        val excluded=setOf("disablePinVerifyPer72h","powerMenuActions","setThemeTrialNeverExpired")
+        val excluded=setOf("powerMenuActions","setThemeTrialNeverExpired")
+        if(path=="android") body.addView(TextView(a).apply {
+            text="72-hour option uses OneUIX's scheduler hook. Enable the OneUI feature port, enable this option, then tap Apply on the main panel. Soft reboot and unlock Samsung once with its PIN or pattern. This reduces periodic credential protection; first-unlock and other strong-auth requirements remain. Turning it off also requires a soft reboot. PIN and pattern require separate device validation."
+        })
         val otherAllowed=otherKeys(title)
         state.keys().asSequence().toList().forEach { key ->
             if(key in excluded || (path=="other" && key !in otherAllowed)) return@forEach
             val v=state.get(key)
-            if(v is Boolean) body.addView(Switch(a).apply { text=label(key); isChecked=v;
+            if(v is Boolean) body.addView(Switch(a).apply { text=if(key=="disablePinVerifyPer72h") "Disable periodic Samsung PIN / pattern check (72 hours)" else label(key); isChecked=v;
                 if(key=="turnOn5gQsTile" && android.os.Build.VERSION.SDK_INT!=34) { isEnabled=false; text="Native 5G tile: Android 14 only" }
                 setOnCheckedChangeListener { _,checked -> state.put(key,checked) } })
             else if(v is Number || v is String) {

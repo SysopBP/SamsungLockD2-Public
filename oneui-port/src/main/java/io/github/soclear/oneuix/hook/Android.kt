@@ -122,8 +122,42 @@ object Android {
         }
     }
 
-    // D2 modification 2026-10-14: upstream scheduler bypass removed.
-    // PeriodicCredentialHook supplies read-only strong-auth diagnostics.
+    // OneUIX scheduler opt-out restored 2026-10-14; D2 adds runtime telemetry.
+    @Volatile var periodicCredentialState: String = "disabled"
+        private set
+    @Volatile var periodicCredentialMethods: String = ""
+        private set
+    @Volatile var periodicCredentialObserver: (() -> Unit)? = null
+    private val periodicCredentialSkipped = java.util.concurrent.atomic.AtomicInteger()
+    fun periodicCredentialStatus(): org.json.JSONObject = org.json.JSONObject()
+        .put("state", periodicCredentialState).put("methods", periodicCredentialMethods)
+        .put("suppressedSchedules", periodicCredentialSkipped.get())
+
+    context(xposedModule: XposedModule, param: XposedModuleInterface.SystemServerStartingParam)
+    fun disablePinVerifyPer72h() {
+        try {
+            val methods = param.classLoader
+                .loadClass("com.android.server.locksettings.LockSettingsStrongAuth")
+                .declaredMethods.filter { it.name == "rescheduleStrongAuthTimeoutAlarm" }
+            periodicCredentialMethods = methods.joinToString { it.toGenericString() }
+            check(methods.isNotEmpty()) { "No rescheduleStrongAuthTimeoutAlarm method found" }
+            // Match upstream by name rather than assuming Samsung's argument layout.
+            check(methods.all { it.returnType == Void.TYPE && !java.lang.reflect.Modifier.isStatic(it.modifiers) })
+            methods.forEach { method ->
+                xposedModule.hook(method).intercept {
+                    val count = periodicCredentialSkipped.incrementAndGet()
+                    runCatching { periodicCredentialObserver?.invoke() }
+                    if (count <= 3) android.util.Log.i("D2PeriodicAuth", "D2_ONEUI_PERIODIC_SUPPRESSED count=$count")
+                    null
+                }
+            }
+            periodicCredentialState = "installed"
+            android.util.Log.i("D2PeriodicAuth", "D2_ONEUI_PERIODIC_INSTALLED methods=$periodicCredentialMethods")
+        } catch (t: Throwable) {
+            periodicCredentialState = "unavailable: ${t.javaClass.simpleName}: ${t.message}"
+            xlog(t)
+        }
+    }
 
     // 移除充电器时禁止亮屏
     // PowerManagerService.updateIsPoweredLocked 在插拔充电器时会调用 wakePowerGroupLocked 点亮屏幕，

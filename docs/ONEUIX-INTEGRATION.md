@@ -6,7 +6,7 @@ Baseline: successful GitHub Actions run 38598510630 (build 1090), commit db294a1
 
 | Requested category | Implementation | Device status |
 |---|---|---|
-| 72-hour PIN/pattern | Read-only PeriodicCredentialHook; all scheduler suppression removed | Separate PIN/pattern verification pending; unsupported signatures retain stock behavior |
+| 72-hour PIN/pattern | Opt-in OneUIX name-based scheduler suppression plus separate read-only PeriodicCredentialHook | Separate PIN/pattern verification pending; unsupported signatures retain stock behavior |
 | Calls | Recording, recording button, location, CHN log, call/text other devices | Ported; Samsung app method lookup needs device verification |
 | Samsung Settings | Refresh-rate option, outdoor mode, battery/package info, Wi-Fi speed, fonts, auto power, displayed Official status | Ported; not a Knox attestation change |
 | Framework | Keep-open count, blockable notification categories, app-jump block, rotations, FCM limit, unplug wake suppression, Writing Toolkit | Ported; firmware checks required |

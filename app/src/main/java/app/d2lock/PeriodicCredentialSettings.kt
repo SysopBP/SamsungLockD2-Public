@@ -22,7 +22,7 @@ object PeriodicCredentialSettings {
         }
         body.addView(TextView(activity).apply {
             textSize = 14f
-            text = "72-hour PIN / pattern compatibility diagnostics\n\nSamsung credential verification remains enabled. The previous experimental timeout opt-out is unavailable and its saved setting is ignored.\n\nThese observers record scheduler calls and strong-auth requests without changing them. Registration is not callback execution or proof of firmware compatibility. A request reason is separate from the last sampled current flags.\n\nPIN: device verification pending.\nPattern: device verification pending.\nD2's separate PIN and biometrics do not satisfy Samsung strong authentication.\n\nRequires D2's System Framework scope in LSPosed. No reboot or system_server restart is requested by this panel."
+            text = "72-hour PIN / pattern compatibility diagnostics\n\nThe OneUIX-compatible 72-hour scheduler option is in OneUI feature port → Framework. Enable the port and the option, tap Apply, then soft reboot and unlock Samsung once. The old Global opt-out setting is ignored.\n\nThese observers record scheduler calls and strong-auth requests without changing them. Registration is not callback execution or proof of firmware compatibility. A request reason is separate from the last sampled current flags.\n\nPIN: device verification pending.\nPattern: device verification pending.\nD2's separate PIN and biometrics do not satisfy Samsung strong authentication.\n\nRequires D2's System Framework scope in LSPosed. No reboot or system_server restart is requested by this panel."
         })
         val status = TextView(activity).apply { textSize = 13f; text = "Reading diagnostic status…" }
         body.addView(status)
@@ -39,11 +39,12 @@ object PeriodicCredentialSettings {
                     val lines = result.output.trim().lines()
                     val pid = lines.first().trim().toInt()
                     val marker = JSONObject(lines.drop(1).joinToString("\n"))
+                    val oneui = marker.optJSONObject("oneuiPeriodic") ?: JSONObject()
                     val now = SystemClock.elapsedRealtime()
                     val boot = Settings.Global.getInt(activity.contentResolver, Settings.Global.BOOT_COUNT, -1)
                     check(StrongAuthDiagnostics.current(marker.optInt("version"), marker.optInt("pid"), pid,
                         marker.optInt("boot", -1), boot, marker.optLong("elapsed", -1), now))
-                    "This boot — read-only\nScheduler: ${marker.optString("scheduler")} • callbacks: ${marker.optInt("scheduleCallbacks")}\nScheduler details: ${marker.optString("schedulerDetail", "Not supplied by this build")}\nReason observer: ${marker.optString("reasonObserver")} • callbacks: ${marker.optInt("reasonCallbacks")}\nCredential: ${StrongAuthDiagnostics.credential(marker.optInt("credential", -1))}\nLast sampled flags: ${StrongAuthDiagnostics.reasons(marker.optInt("flags", -1))}\nLast request (not current state): ${StrongAuthDiagnostics.reasons(marker.optInt("lastRequest", -1))}\nSample age: ${(now - marker.optLong("elapsed")) / 1000}s\nPIN and pattern behavior remain unverified."
+                    "This boot\nOneUI 72-hour option: ${oneui.optString("state", "Not supplied by this build")}\nSuppressed schedules: ${oneui.optInt("suppressedSchedules")}\nOneUI methods: ${oneui.optString("methods")}\nDiagnostic scheduler: ${marker.optString("scheduler")} • callbacks: ${marker.optInt("scheduleCallbacks")}\nScheduler details: ${marker.optString("schedulerDetail", "Not supplied by this build")}\nReason observer: ${marker.optString("reasonObserver")} • callbacks: ${marker.optInt("reasonCallbacks")}\nCredential: ${StrongAuthDiagnostics.credential(marker.optInt("credential", -1))}\nLast sampled flags: ${StrongAuthDiagnostics.reasons(marker.optInt("flags", -1))}\nLast request (not current state): ${StrongAuthDiagnostics.reasons(marker.optInt("lastRequest", -1))}\nSample age: ${(now - marker.optLong("elapsed")) / 1000}s\nPIN and pattern behavior remain unverified."
                 }.getOrDefault("Diagnostics unavailable or stale for this boot. Check root access and D2's System Framework scope. Samsung authentication remains enabled.")
                 activity.runOnUiThread { if (dialog.isShowing) status.text = text }
             }.start()

@@ -291,22 +291,25 @@ D2. The genuine biometric prompt and D2 credential fallback remain in use.
 Device validation pending: first reboot PIN, repeated lock/wake, D2 fingerprint
 and PIN fallback, incoming calls, and leaving D2.
 
-## Samsung strong-auth diagnostics
+## Samsung periodic credential option and diagnostics
 
-Tools → System Integration → **72-hour PIN / pattern diagnostics**.
-The previous experimental timeout opt-out is unavailable; saved opt-out values
-are ignored. Samsung's scheduler, strong-auth requirements and credential
-verification are preserved.
+Tools → OneUI feature port → enable the port → Framework →
+**Disable periodic Samsung PIN / pattern check (72 hours)**. Return to the main
+OneUI panel and tap **Apply**, then soft reboot and unlock Samsung once with the
+backup credential. Turn the option off and repeat those steps to restore scheduling.
 
-With root and D2's System Framework LSPosed scope, the panel reports supported
-signatures, hook registration, callback counts, last requested reasons and
-last sampled current flags. PIN and pattern have separate pending validation
-labels. A registered hook or saved configuration is not proof of a verified
-72-hour behavior. Refresh reads the stored sample and displays its age.
+This uses OneUIX's `rescheduleStrongAuthTimeoutAlarm` name-based hook, restored
+from SoClear/OneUIX revision b2466b689c358eed1389979f89e2958e21dd91cb.
+It reduces periodic credential protection and applies to scheduler calls across
+users, matching upstream. It does not clear an already-required credential or
+change credential verification, first-unlock, lockdown or lockout flags.
+Do not enable it on a policy-managed device. The legacy Global setting is ignored.
 
-See [validation priorities](docs/ONEUIX-PORT-VALIDATION.md) and the
-[issue #69 review](docs/ISSUE-69-REVIEW.md). No system_server kill or forced
-reauthentication bypass is part of the diagnostic workflow.
+The diagnostics panel reports OneUI registration, matched methods and suppressed
+schedule counts, separately from read-only strong-auth observations. Confirmed
+registration is not proof of successful 72-hour behavior: PIN and pattern need
+separate device tests. Avoid enabling the same option in both modules during D2
+validation, because one module can prevent the other's observer from executing.
 
 ### Experimental OneUI feature port
 
