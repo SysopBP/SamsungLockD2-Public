@@ -28,6 +28,7 @@ internal object PeriodicCredentialHook {
     @Volatile private var scheduler = "unavailable"
     @Volatile private var reasons = "unavailable"
     @Volatile private var lastRequest = -1
+    @Volatile private var schedulerDetail = "not_checked"
     private val schedules = AtomicInteger()
     private val requests = AtomicInteger()
     private val queued = AtomicBoolean()
@@ -49,13 +50,22 @@ internal object PeriodicCredentialHook {
             val candidates = owner.declaredMethods.filter { it.name == name }
             Log.i(TAG, "D2_STRONG_AUTH_CAPABILITY method=$name signatures=" +
                 candidates.joinToString { it.parameterTypes.joinToString(",", "(", ")") { type -> type.simpleName } })
-            val method = owner.getDeclaredMethod(name, *signature)
+            val method = if (scheduling) {
+                // OEM firmware can add a timeout argument. Never guess a user index.
+                val supported = candidates.filter {
+                    SchedulerSignature.supported(it.parameterTypes.map { type -> type.name }.toTypedArray()) &&
+                        it.returnType == Void.TYPE && !java.lang.reflect.Modifier.isStatic(it.modifiers)
+                }
+                schedulerDetail = "available=" + candidates.joinToString { it.toGenericString() }
+                check(supported.size == 1) { "Expected one supported scheduler, found ${supported.size}; $schedulerDetail" }
+                supported.single()
+            } else owner.getDeclaredMethod(name, *signature)
             check(method.returnType == Void.TYPE && !java.lang.reflect.Modifier.isStatic(method.modifiers))
             method.isAccessible = true
             module.hook(method).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
                 val result = chain.proceed() // Exactly once; Android exceptions and results are preserved.
                 runCatching {
-                    val user = chain.args.getOrNull(1) as? Int
+                    val user = chain.args.getOrNull(if (scheduling) method.parameterCount - 1 else 1) as? Int
                     // Requests for all users are relevant, but are NOT interpreted as current flags.
                     if (user == 0 || (!scheduling && user == -1)) {
                         if (scheduling) schedules.incrementAndGet() else {
@@ -67,9 +77,14 @@ internal object PeriodicCredentialHook {
                 }
                 result
             }
-            if (scheduling) scheduler = "installed" else reasons = "installed"
+            if (scheduling) {
+                scheduler = "installed"
+                schedulerDetail = method.toGenericString()
+            } else reasons = "installed"
             Log.i(TAG, "D2_STRONG_AUTH_REGISTERED method=$name stock_retained=true")
         } catch (error: Throwable) {
+            if (scheduling) schedulerDetail = "$schedulerDetail; error=${error.javaClass.simpleName}: ${error.message}"
+            enqueue()
             Log.w(TAG, "D2_STRONG_AUTH_UNAVAILABLE method=$name stock_retained=true", error)
         }
     }
@@ -110,7 +125,7 @@ internal object PeriodicCredentialHook {
             .put("version", 2).put("pid", Process.myPid())
             .put("boot", Settings.Global.getInt(app.contentResolver, Settings.Global.BOOT_COUNT, -1))
             .put("elapsed", SystemClock.elapsedRealtime())
-            .put("scheduler", scheduler).put("reasonObserver", reasons)
+            .put("scheduler", scheduler).put("schedulerDetail", schedulerDetail).put("reasonObserver", reasons)
             .put("scheduleCallbacks", schedules.get()).put("reasonCallbacks", requests.get())
             .put("lastRequest", lastRequest).put("flags", flags).put("credential", credential)
         Settings.Global.putString(app.contentResolver, STATUS, snapshot.toString())
