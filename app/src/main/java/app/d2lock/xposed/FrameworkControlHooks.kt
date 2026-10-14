@@ -17,17 +17,23 @@ object FrameworkControlHooks {
     @Volatile private var checkedAt=0L
     private val last=java.util.concurrent.ConcurrentHashMap<String,Long>()
     fun ready(c: Context) { context=c }
-    private fun enabled(module: XposedModule,key: String): Boolean = runCatching {
+    private val refreshing=java.util.concurrent.atomic.AtomicBoolean(false)
+    private fun enabled(module: XposedModule,key: String): Boolean {
         val now=SystemClock.elapsedRealtime()
-        if(now-checkedAt>5000) synchronized(this) {
-            if(now-checkedAt>5000) {
-                cached=android.os.ParcelFileDescriptor.AutoCloseInputStream(module.openRemoteFile("preference.json")).use {
-                    JSONObject(it.readBytes().toString(Charsets.UTF_8)).optJSONObject("d2Framework") ?: JSONObject()
-                };checkedAt=now
-            }
+        // Never perform remote-file IPC on a system_server observer callback.
+        if(now-checkedAt>5000 && refreshing.compareAndSet(false,true)) worker.execute {
+            try {
+                cached=runCatching {
+                    android.os.ParcelFileDescriptor.AutoCloseInputStream(module.openRemoteFile("preference.json")).use {
+                        JSONObject(it.readBytes().toString(Charsets.UTF_8)).optJSONObject("d2Framework") ?: JSONObject()
+                    }
+                }.getOrDefault(JSONObject())
+                checkedAt=SystemClock.elapsedRealtime()
+            } finally { refreshing.set(false) }
         }
-        cached.optBoolean("master") && cached.optBoolean(key)
-    }.getOrDefault(false)
+        val policy=cached
+        return policy.optBoolean("master") && policy.optBoolean(key)
+    }
     private fun emit(module: XposedModule,key: String,event: String,method: String) {
         if(!enabled(module,key)) return
         val c=context ?: return
