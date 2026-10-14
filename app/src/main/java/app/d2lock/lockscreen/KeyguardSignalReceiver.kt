@@ -126,7 +126,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                 }
             } else if (unlocked && intent.getBooleanExtra("experimental_control",false)) {
                 val safe=app.d2lock.Prefs.xposedSafeDiagnostics(context)
-                if(!safe && event=="KEYGUARD" && app.d2lock.Prefs.xposedImmediateRelock(context))
+                if(app.d2lock.xposed.FrameworkObserverPolicy.shouldRelock(unlocked,app.d2lock.Prefs.xposedMaster(context),safe,app.d2lock.Prefs.xposedImmediateRelock(context),event))
                     LockScreenService.frameworkSignal(context,event,source)
                 else recordDecision(context,"OBSERVED","optional_$event diagnostics=$safe")
             } else if (unlocked && (event == "BOOT_READY" || event == "WAKE" || event == "KEYGUARD" || event == "TASK_KEYGUARD")) {

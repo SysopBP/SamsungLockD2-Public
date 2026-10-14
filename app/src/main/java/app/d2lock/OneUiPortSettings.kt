@@ -48,6 +48,18 @@ object OneUiPortSettings {
         val read = ParcelFileDescriptor.AutoCloseInputStream(s.openRemoteFile(Preference.FILE_NAME)).use { it.readBytes().toString(Charsets.UTF_8) }
         check(JSONObject(read).toString() == JSONObject(text).toString()) { "Remote settings read-back failed" }
     }
+    private fun bounds(key: String): Pair<Double,Double> = when {
+        key=="maxNeverKilledAppNum" -> 1.0 to 20.0
+        key=="networkSpeedLayout" -> 0.0 to 3.0
+        key=="networkSpeedMarker" -> 0.0 to 8.0
+        key=="networkSpeedUnit" -> 0.0 to 3.0
+        key=="physicalEsimAdapterSimSlot" -> 0.0 to 1.0
+        key=="statusBarMaxNotificationIcons" -> 0.0 to 20.0
+        key.contains("Scale") -> 0.25 to 3.0
+        key.contains("TextSize") || key.contains("MarkerSize") -> 0.0 to 64.0
+        key.contains("Padding") || key.contains("Gap") || key.contains("Spacing") -> 0.0 to 100.0
+        else -> 0.0 to 10000.0
+    }
     private fun label(key: String): String = key.replace(Regex("([a-z])([A-Z])"), "$1 $2").replaceFirstChar { it.uppercase() }
     private val groups = linkedMapOf(
         "Framework" to "android", "Calls" to "call", "Samsung Settings" to "settings", "Camera" to "camera",
@@ -63,6 +75,7 @@ object OneUiPortSettings {
             text = "Experimental OneUI features • Android 17 testing required\nEnable D2 in LSPosed for the selected feature's app scope. Apply saves the configuration; soft reboot once after framework changes, or restart the affected Samsung app for app features. Saved does not mean the hook exists on this firmware.\n\nD2's SRP-guarded power menu and 72-hour PIN/pattern option remain separate. Galaxy Island is optional."
         }; body.addView(status)
         body.addView(Switch(activity).apply { text="Enable OneUI feature port"; isChecked=state.optBoolean("d2PortEnabled"); setOnCheckedChangeListener { _, v -> state.put("d2PortEnabled",v) } })
+        body.addView(TextView(activity).apply { text="Add D2 immersive mode through Samsung Quick Settings → Edit tiles. Root required; behavior depends on Samsung firmware." })
         body.addView(Button(activity).apply { text="72-hour PIN / pattern option"; setOnClickListener { PeriodicCredentialSettings.show(activity) } })
         groups.forEach { (title,path) ->
             body.addView(Button(activity).apply { text=title; setOnClickListener { showGroup(activity,title,path,node(state,path)) } })
@@ -95,7 +108,9 @@ object OneUiPortSettings {
         state.keys().asSequence().toList().forEach { key ->
             if(key in excluded || (path=="other" && key !in otherAllowed)) return@forEach
             val v=state.get(key)
-            if(v is Boolean) body.addView(Switch(a).apply { text=label(key); isChecked=v; setOnCheckedChangeListener { _,checked -> state.put(key,checked) } })
+            if(v is Boolean) body.addView(Switch(a).apply { text=label(key); isChecked=v;
+                if(key=="turnOn5gQsTile" && android.os.Build.VERSION.SDK_INT!=34) { isEnabled=false; text="Native 5G tile: Android 14 only" }
+                setOnCheckedChangeListener { _,checked -> state.put(key,checked) } })
             else if(v is Number || v is String) {
                 body.addView(TextView(a).apply { text=label(key) })
                 body.addView(EditText(a).apply {
@@ -106,7 +121,10 @@ object OneUiPortSettings {
                         override fun onTextChanged(s: CharSequence?,start: Int,before: Int,count: Int) {
                             if(v is String) state.put(key,s.toString()) else {
                                 val n=s.toString().toDoubleOrNull()
-                                if(n!=null && n.isFinite() && n>=0 && n<=10000) state.put(key,if(v is Int) n.toInt() else n)
+                                val (min,max)=bounds(key)
+                                if(n!=null && n.isFinite() && n>=min && n<=max && (v !is Int || n==n.toInt().toDouble())) {
+                                    error=null;state.put(key,if(v is Int) n.toInt() else n)
+                                } else error="Use $min–$max; previous valid value retained"
                             }
                         }
                         override fun afterTextChanged(s: android.text.Editable?) {}
