@@ -49,7 +49,7 @@ object DmcRecovery {
     private val busy = AtomicBoolean(false)
     @Volatile private var lastAttempt = -30_000L
     private const val PREFS = "d2_dmc_system_server_v2"
-    private const val TAG = "D2DmcRecovery"
+    private const val TAG = "D2SRP"
 
     private fun prefs(context: Context) = context.createDeviceProtectedStorageContext()
         .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -114,13 +114,13 @@ object DmcRecovery {
                     .putInt("download", stamped.downloadAllowed?.let { if(it) 1 else 0 } ?: -1)
                     .putBoolean("verified", stamped.verified).putString("detail", stamped.detail)
                     .putLong("checked", stamped.checkedAt).commit()
-                Log.i(TAG, "DMC_AUTO_CHECK source=$source retry=$retry targetsMet=$success detail=${stamped.detail}")
+                Log.i(TAG, "D2_SRP_AUTO_CHECK source=$source retry=$retry targetsMet=$success detail=${stamped.detail}")
             } catch (error: Exception) {
                 prefs(app).edit().putInt("boot", bootCount(app)).putBoolean("verified", false)
                     .putInt("system_server", -1).putInt("lock", -1).putInt("maint", -1).putInt("at", -1).putInt("download", -1)
                     .putString("detail", "System Server unavailable: ${error.message}")
                     .putLong("checked", System.currentTimeMillis()).commit()
-                Log.w(TAG, "DMC_AUTO_CHECK_FAILED source=$source", error)
+                Log.w(TAG, "D2_SRP_AUTO_CHECK_FAILED source=$source", error)
             } finally {
                 busy.set(false)
                 main.post { runCatching { D2Widget.updateAll(app) } }
