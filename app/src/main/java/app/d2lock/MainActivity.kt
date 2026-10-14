@@ -3219,6 +3219,36 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun showSamsungAuthenticationGuide() {
+        GuardianDialogs.showChoices(this, "D2 + Samsung authentication",
+            arrayOf("How the two-step unlock works", "Open Samsung security settings", "Open D2 lock screen for a test", "Record Samsung unlock result"), -1) { dialog, which ->
+            dialog.dismiss()
+            when (which) {
+                0 -> GuardianDialogs.showInfo(this, "D2 fingerprint + Samsung unlock",
+                    "1. Authenticate with D2 fingerprint (or your D2 PIN fallback).\n2. If Samsung still requires screen-lock authentication, use Samsung face recognition, PIN, pattern, or password.\n\nSamsung face recognition is the convenient option when Samsung allows it. Enroll your face in Samsung Settings and keep your Samsung PIN/pattern configured. D2 does not perform the face scan.\n\nAfter a restart, or when Samsung requires stronger authentication, enter your Samsung PIN/pattern/password first. Face recognition cannot replace that requirement.\n\nTo verify: turn the screen off, wake it, complete D2, and observe which Samsung method unlocks the phone. Return here and record the result. D2 can detect a configured Samsung screen lock, but cannot automatically verify face enrollment or which Samsung unlock method was used.")
+                1 -> runCatching { startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) }
+                    .onFailure { Toast.makeText(this, "Open Samsung Settings → Security and privacy manually", Toast.LENGTH_LONG).show() }
+                2 -> startActivity(Intent(this, LockScreenActivity::class.java))
+                3 -> recordSamsungAuthenticationResult()
+            }
+        }
+    }
+
+    private fun recordSamsungAuthenticationResult() {
+        GuardianDialogs.showChoices(this, "Observed Samsung unlock result",
+            arrayOf("Samsung face recognition worked", "Samsung PIN / pattern / password worked", "Samsung screen did not require another unlock", "Samsung unlock failed", "Not tested — clear result"), -1) { dialog, which ->
+            dialog.dismiss()
+            if (which == 4) guidedPrefs().edit().remove("samsung_auth").remove("samsung_auth_time").apply()
+            else recordGuidedResult("samsung_auth", when (which) {
+                0 -> "User confirmed Samsung face recognition"
+                1 -> "User confirmed Samsung PIN / pattern / password"
+                2 -> "User observed no additional Samsung unlock"
+                else -> "User reported Samsung unlock failure"
+            })
+            showReadiness()
+        }
+    }
+
     private fun showReadiness() {
         if(!authorized || appStopped) return
         readinessDialog?.dismiss()
@@ -3237,7 +3267,13 @@ class MainActivity : Activity() {
             pinDialog=PinUi.show(this, success={ recordGuidedResult("pin", "Verified D2 PIN"); showReadiness() })
         }
         val fp=KeyguardSignalReceiver.fingerprintHealth(this)
-        row("Fingerprint · ${biometricAvailability()}", "Selected: ${Prefs.unlockMethod(this)}. Last event: ${fp.event ?: "None this boot"}. Tap for sensor test.") { runGuardianBiometricTest() }
+        row("D2 fingerprint · ${biometricAvailability()}", "Selected: ${Prefs.unlockMethod(this)}. Last event: ${fp.event ?: "None this boot"}. D2 authentication is separate from Samsung screen lock. Tap for sensor test.") { runGuardianBiometricTest() }
+        val samsungSecure = getSystemService(android.app.KeyguardManager::class.java)?.isDeviceSecure == true
+        val samsungResult = guidedPrefs().getString("samsung_auth", null)
+        row("Samsung authentication · ${if (samsungSecure) "Screen lock configured" else "Screen lock not configured"}",
+            "After D2 fingerprint, complete Samsung unlock if requested. Samsung face recognition is the easier option when available; PIN / pattern / password remain alternatives.\n" +
+                (if (samsungResult == null) "Face recognition not yet user-tested." else "$samsungResult · ${checkTime(guidedPrefs().getLong("samsung_auth_time", 0L))}") +
+                "\nTap for setup, test steps, or to record your observed result.") { showSamsungAuthenticationGuide() }
         row("Shizuku · ${if(shizukuAuthorized()) "Authorized" else "Needs attention"}", "Tap to connect or authorize") { resolveShizuku() }
         row("Root · ${if(RootManager.isAvailable()) "Available" else "Unavailable"}", "Tap to refresh root availability; grant D2 in KernelSU if required") {
             RootManager.refreshAsync(); Toast.makeText(this,"Root check requested; tap Refresh shortly",Toast.LENGTH_LONG).show()
@@ -3256,7 +3292,7 @@ class MainActivity : Activity() {
                 }
             }
         }
-        row("Test D2 unlock", "Open the real D2 lock surface; verify fingerprint and PIN fallback. This does not enable kiosk.") {
+        row("Test D2 unlock", "Open the real D2 lock surface; verify D2 fingerprint/PIN, then Samsung face recognition or PIN/pattern if requested. This does not enable kiosk.") {
             startActivity(Intent(this,LockScreenActivity::class.java))
         }
         row("Wake / relock checklist", "Turn the screen off, wake it, unlock D2, and repeat. Record your observed outcome here after returning.") {
