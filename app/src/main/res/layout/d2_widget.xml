@@ -7,5 +7,5 @@
         android:textColor="#FFFFFFFF" android:textSize="15sp" android:maxLines="2" />
     <TextView android:id="@+id/d2_widget_srp" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:gravity="center" android:text="SRP: unknown"
-        android:textColor="#FFFFFFFF" android:textSize="11sp" android:maxLines="3" />
+        android:textColor="#FFFFFFFF" android:textSize="11sp" android:maxLines="7" android:ellipsize="end" android:includeFontPadding="false" />
 </LinearLayout>
