@@ -42,7 +42,7 @@ fun getCurrentPackageName(): String {
 
 fun getPackageVersionCode(name: String = getCurrentPackageName()): Long {
     if (name.isEmpty()) return -1L
-    return getSystemContext().packageManager.getPackageInfo(name, PackageManager.PackageInfoFlags.of(0)).longVersionCode
+    return getSystemContext().packageManager.getPackageInfo(name, 0).longVersionCode
 }
 
 val Context.longVersionCode get() = packageManager.getPackageInfo(packageName, 0).longVersionCode
