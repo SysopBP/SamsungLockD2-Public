@@ -2910,7 +2910,8 @@ class MainActivity : Activity() {
                 }
                 fun showLegal() { legalText.text = agreement }
                 fun showLicenses() {
-                    legalText.text = "THIRD-PARTY LICENSES & CREDITS\n\nWeather data and geocoding: Open-Meteo.\n\n$notice"
+                    val agpl = assets.open("LICENSE-AGPL-3.0.txt").bufferedReader().use { it.readText() }
+                    legalText.text = "D2 LICENSE & CREDITS\n\nCopyright © 2026 D2 Project and contributors.\nD2 is licensed under AGPL-3.0-only, without warranty. You may modify and redistribute it under that license.\nCorresponding Source: https://github.com/SysopBP/SamsungLockD2-Public\n\n$agpl\n\nTHIRD-PARTY NOTICES\n\n$notice"
                 }
                 fun tab(title: String, action: () -> Unit) = TextView(this@MainActivity).apply {
                     text = title
@@ -2924,6 +2925,9 @@ class MainActivity : Activity() {
                 tabs.addView(tab("Agreement & Privacy") { showLegal() }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(6) })
                 tabs.addView(tab("Licenses & Credits") { showLicenses() }, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(6) })
                 addView(tabs, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+                addView(tab("View D2 source and build instructions") {
+                    startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/SysopBP/SamsungLockD2-Public/blob/main/docs/SOURCE-DISTRIBUTION.md")))
+                }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
 
                 val scroll = ScrollView(this@MainActivity).apply {
                     isVerticalScrollBarEnabled = true

@@ -228,7 +228,11 @@ Notification content stays in memory. Wallpaper selection stores a persistent im
 
 **@diablOw** — original discovery of the DMC behavior used by D2’s recovery feature.
 
-Copyright (c) 2026 D2 Project. **All rights reserved.** D2's original code is publicly viewable but is not released under an open-source license. See [LICENSE](LICENSE). Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt) and **Licenses and credits** in the app.
+Copyright (c) 2026 D2 Project and contributors. D2's original software and accompanying project documentation in this revision are released under **AGPL-3.0-only**. See [LICENSE](LICENSE). Third-party components retain their own licenses and notices. The APK includes the full AGPL text, credits and source access under **Legal, privacy & licenses**.
+
+**OneUIX — SoClear and contributors:** [upstream project](https://github.com/SoClear/OneUIX), licensed under AGPL-3.0. The requested Samsung customization work will preserve its upstream notices and record adaptations. This licensing update does not add those features yet.
+
+See [source and build instructions](docs/SOURCE-DISTRIBUTION.md). Distribute a source archive matching each APK revision alongside that APK; source from a later branch head is not a substitute. The license transition applies to this revision and future covered releases, not a claim about older binaries.
 
 Weather data by [Open-Meteo](https://open-meteo.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). D2 truncates temperatures and maps weather codes to short labels. No affiliation with or endorsement by Samsung, KernelSU, or Open-Meteo is implied.
 ## Current source update (0.4.0)
