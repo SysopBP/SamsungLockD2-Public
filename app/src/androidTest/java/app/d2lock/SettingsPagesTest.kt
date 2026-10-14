@@ -32,7 +32,7 @@ class SettingsPagesTest {
             credential.delete()
             PinStore(context).create("246810".toCharArray())
             prefs.edit().clear().putString("unlock_method","fingerprint").putBoolean("setup_wizard_seen",true)
-                .putBoolean("setup_wizard_complete",true).putInt("intro_seen_version",29).commit()
+                .putBoolean("setup_wizard_complete",true).putInt("intro_seen_version",BuildConfig.VERSION_CODE).commit()
             ActivityScenario.launch<MainActivity>(Intent(context,MainActivity::class.java)).use { scenario ->
                 fun login() {
                     onView(withId(R.id.d2_pin_input)).inRoot(isDialog()).perform(typeText("246810"),closeSoftKeyboard())
