@@ -3249,6 +3249,44 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun showAccessibilityLab() {
+        if (!authorized || appStopped) return
+        val service = app.d2lock.accessibility.D2AccessibilityService
+        GuardianDialogs.showChoices(this, "Accessibility experiment · ${service.status(this)}",
+            arrayOf("Open Android Accessibility settings", "Test screen off now", if (service.testRouteEnabled(this)) "Turn OFF accessibility double-tap test" else "Turn ON accessibility double-tap test", "Record observed test result", "Disable D2 accessibility service"), -1) { dialog, which ->
+            dialog.dismiss()
+            when (which) {
+                0 -> GuardianDialogs.showInfo(this, "Enable the optional test service",
+                    "Open Installed apps / Downloaded apps in Android Accessibility settings, then select D2 screen-off experiment. Enable it only for this test.\n\nThe service requests a screen-lock action. It does not read screen contents, observe app changes, perform gestures, or unlock/authenticate D2 or Samsung.\n\nAfter enabling it, return to Readiness → Accessibility lab. First try Test screen off now, then wake the phone and check D2 fingerprint, Samsung face/PIN, and relock. Record what actually happened.",
+                    primary = "Open settings", onPrimary = {
+                        runCatching { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+                            .onFailure { Toast.makeText(this, "Open Android Accessibility settings manually", Toast.LENGTH_LONG).show() }
+                    }, secondary = "Cancel")
+                1 -> {
+                    if (!service.isConnected()) {
+                        GuardianDialogs.showInfo(this, "Service not connected", "Enable D2 screen-off experiment in Android Accessibility settings, return here, and refresh before testing.")
+                    } else {
+                        val accepted = service.requestScreenOff(this, manualTest = true)
+                        if (!accepted) GuardianDialogs.showInfo(this, "Screen-off request rejected", "Android did not accept the accessibility screen-lock action. The existing Root/Shizuku routes have not been changed.")
+                    }
+                }
+                2 -> {
+                    val enable = !service.testRouteEnabled(this)
+                    if (enable && !service.isConnected()) GuardianDialogs.showInfo(this, "Service not connected", "Enable the optional service in Android Accessibility settings before selecting the double-tap test route.")
+                    else {
+                        service.setTestRoute(this, enable)
+                        showReadiness()
+                    }
+                }
+                3 -> showObservedGuidedResult("accessibility")
+                4 -> {
+                    service.disable(this)
+                    GuardianDialogs.showInfo(this, "Accessibility test disabled", "The double-tap test route is off. If Android still lists the service as enabled, turn it off in Accessibility settings. D2 continues using its existing lock controls.")
+                }
+            }
+        }
+    }
+
     private fun showReadiness() {
         if(!authorized || appStopped) return
         readinessDialog?.dismiss()
@@ -3274,6 +3312,12 @@ class MainActivity : Activity() {
             "After D2 fingerprint, complete Samsung unlock if requested. Samsung face recognition is the easier option when available; PIN / pattern / password remain alternatives.\n" +
                 (if (samsungResult == null) "Face recognition not yet user-tested." else "$samsungResult · ${checkTime(guidedPrefs().getLong("samsung_auth_time", 0L))}") +
                 "\nTap for setup, test steps, or to record your observed result.") { showSamsungAuthenticationGuide() }
+        val accessibility = app.d2lock.accessibility.D2AccessibilityService
+        val accessibilityObserved = guidedPrefs().getString("accessibility", null)
+        row("Accessibility lab · ${accessibility.status(this)}",
+            "Optional experiment · Main baseline: Build 1070.\n${accessibility.lastRequest(this)}.\n" +
+                (if (accessibilityObserved == null) "Observed result: Not tested" else "$accessibilityObserved · ${checkTime(guidedPrefs().getLong("accessibility_time", 0L))}") +
+                "\nTap for setup, manual screen-off test, double-tap route, or disable.") { showAccessibilityLab() }
         row("Shizuku · ${if(shizukuAuthorized()) "Authorized" else "Needs attention"}", "Tap to connect or authorize") { resolveShizuku() }
         row("Root · ${if(RootManager.isAvailable()) "Available" else "Unavailable"}", "Tap to refresh root availability; grant D2 in KernelSU if required") {
             RootManager.refreshAsync(); Toast.makeText(this,"Root check requested; tap Refresh shortly",Toast.LENGTH_LONG).show()

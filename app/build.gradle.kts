@@ -11,7 +11,7 @@ android {
         minSdk = 31
         targetSdk = 37
         versionCode = 30
-        versionName = "0.6.4-core-launcher-bridge"
+        versionName = "0.6.4-accessibility-experiment"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
