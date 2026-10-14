@@ -30,17 +30,17 @@ class D2AccessibilityService : AccessibilityService() {
         @Volatile private var connected: D2AccessibilityService? = null
         private fun prefs(context: Context) = context.getSharedPreferences("d2_accessibility_lab", Context.MODE_PRIVATE)
         fun isConnected() = connected != null
-        fun testRouteEnabled(context: Context) = prefs(context).getBoolean("double_tap_test", false)
-        fun setTestRoute(context: Context, enabled: Boolean) {
-            prefs(context).edit().putBoolean("double_tap_test", enabled).apply()
+        fun fallbackEnabled(context: Context) = prefs(context).getBoolean("fallback_enabled", false)
+        fun setFallbackEnabled(context: Context, enabled: Boolean) {
+            prefs(context).edit().putBoolean("fallback_enabled", enabled).apply()
         }
         fun status(context: Context): String =
             (if (isConnected()) "Connected" else "Not connected") +
-                " · Double-tap test " + if (testRouteEnabled(context)) "ON" else "OFF"
+                " · Fallback " + if (fallbackEnabled(context)) "ON" else "OFF"
 
         /** A true result means Android accepted the action, not a verified screen-off outcome. */
         fun requestScreenOff(context: Context, manualTest: Boolean = false): Boolean {
-            if (!manualTest && !testRouteEnabled(context)) return false
+            if (!manualTest && !fallbackEnabled(context)) return false
             val service = connected
             val accepted = service != null && runCatching {
                 service.systemActions.any { it.id == GLOBAL_ACTION_LOCK_SCREEN } &&
@@ -60,7 +60,7 @@ class D2AccessibilityService : AccessibilityService() {
                 java.text.DateFormat.getDateTimeInstance().format(java.util.Date(time))
         }
         fun disable(context: Context) {
-            setTestRoute(context, false)
+            setFallbackEnabled(context, false)
             connected?.disableSelf()
         }
     }

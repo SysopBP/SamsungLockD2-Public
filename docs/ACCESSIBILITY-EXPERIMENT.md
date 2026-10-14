@@ -9,10 +9,12 @@ Its XML requests no screen-content access, no gesture capability and no
 accessibility event types. It does not authenticate or dismiss Samsung keyguard,
 launch D2 in response to other apps, or act as a kiosk enforcement service.
 
-The Android service must be enabled manually. The double-tap test option is
-separately disabled by default. When selected, D2 tries accessibility before its
-usual Root/Shizuku/device-admin routes for its existing double-tap gesture.
-Unavailable or rejected accessibility actions fall through to the existing paths.
+The Android service must be enabled manually. The accessibility fallback is
+separately disabled by default. The route order is Root (when Root Mode is on),
+then authorized Shizuku, then optional accessibility, then device admin. Shizuku
+can continue running as shell UID 2000; accessibility does not change its UID or
+permissions. An unavailable or failed Shizuku request reaches accessibility; an
+unavailable or rejected accessibility action reaches device admin.
 
 ## Test
 
@@ -24,8 +26,11 @@ Unavailable or rejected accessibility actions fall through to the existing paths
    Check D2 fingerprint/PIN, Samsung face/PIN/pattern when requested, and relock.
 4. Record observed result. An accepted global action is not proof of screen-off
    or successful biometrics. Samsung may require credentials; record that outcome.
-5. Turn ON accessibility double-tap test and repeat using D2's existing empty-space
-   double tap. Root may stay enabled because accessibility is tried first here.
+5. Turn ON accessibility fallback. With Root Mode off and Shizuku authorized,
+   double-tap an empty D2 area and verify the Shizuku route in logs. Stop Shizuku
+   temporarily and repeat to exercise accessibility fallback; restore Shizuku
+   afterward. Use the manual test to isolate accessibility without changing Root
+   or Shizuku. Route logs distinguish each accepted request.
 6. Disable the accessibility service and confirm the existing route still works.
 7. Test a reboot/reconnect and repeat the observations. Android/firmware may
    restrict enabling a sideloaded accessibility service; do not assume it is bound

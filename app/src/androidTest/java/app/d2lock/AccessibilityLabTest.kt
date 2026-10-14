@@ -30,17 +30,17 @@ class AccessibilityLabTest {
         assumeFalse(D2AccessibilityService.isConnected())
         val preferences = context.getSharedPreferences("d2_accessibility_lab", Context.MODE_PRIVATE)
         val before = Prefs.unlockMethod(context)
-        val previousRoute = D2AccessibilityService.testRouteEnabled(context)
+        val previousRoute = D2AccessibilityService.fallbackEnabled(context)
         val timestamp = preferences.getLong("request_time", 0L)
         try {
-            D2AccessibilityService.setTestRoute(context, false)
+            D2AccessibilityService.setFallbackEnabled(context, false)
             assertFalse(D2AccessibilityService.requestScreenOff(context))
             assertEquals(timestamp, preferences.getLong("request_time", 0L))
             assertFalse(D2AccessibilityService.requestScreenOff(context, manualTest = true))
             assertEquals(before, Prefs.unlockMethod(context))
-            assertFalse(D2AccessibilityService.testRouteEnabled(context))
+            assertFalse(D2AccessibilityService.fallbackEnabled(context))
         } finally {
-            D2AccessibilityService.setTestRoute(context, previousRoute)
+            D2AccessibilityService.setFallbackEnabled(context, previousRoute)
         }
     }
 }

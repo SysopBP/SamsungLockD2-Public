@@ -162,14 +162,6 @@ class LockScreenActivity : Activity() {
     private fun sleepDisplayFromDoubleTap(allowSetup: Boolean = true) {
         if (isFinishing || isDestroyed || unlocking || !sleepPending.compareAndSet(false, true)) return
         Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_REQUEST")
-        // Experimental opt-in route only. Failed/unbound actions retain existing fallbacks.
-        if (app.d2lock.accessibility.D2AccessibilityService.requestScreenOff(this)) {
-            sleepPending.set(false)
-            Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_ACCESSIBILITY")
-            return
-        }
-
-
         // 1) Root remains the fastest path on the verified Guardian configuration.
         if (Prefs.rootMode(this)) {
             Thread {
@@ -213,12 +205,22 @@ class LockScreenActivity : Activity() {
                     sleepPending.set(false)
                     Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_SHIZUKU")
                 } else {
-                    runOnUiThread { sleepViaDeviceAdmin(allowSetup) }
+                    runOnUiThread { sleepViaAccessibilityOrDeviceAdmin(allowSetup) }
                 }
             }.start()
         } else {
-            sleepViaDeviceAdmin(allowSetup)
+            sleepViaAccessibilityOrDeviceAdmin(allowSetup)
         }
+    }
+
+    private fun sleepViaAccessibilityOrDeviceAdmin(allowSetup: Boolean) {
+        if (isFinishing || isDestroyed || unlocking) { sleepPending.set(false); return }
+        if (app.d2lock.accessibility.D2AccessibilityService.requestScreenOff(this)) {
+            sleepPending.set(false)
+            Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_ACCESSIBILITY_FALLBACK")
+            return
+        }
+        sleepViaDeviceAdmin(allowSetup)
     }
 
     private fun sleepViaDeviceAdmin(allowSetup: Boolean) {
