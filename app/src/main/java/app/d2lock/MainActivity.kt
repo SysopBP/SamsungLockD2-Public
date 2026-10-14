@@ -3414,10 +3414,14 @@ class MainActivity : Activity() {
         }
         root.setPadding(dp(18), dp(48), dp(18), dp(20))
         val shortcuts=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
-        listOf("Security" to "security", "SRP" to "tools", "Guardian" to "guardian", "Appearance" to "appearance").forEach { (title,page) ->
+        listOf("Security" to "security", "SRP" to "tools", "D2 Hooks" to "tools", "Guardian" to "guardian", "Appearance" to "appearance").forEach { (title,page) ->
             shortcuts.addView(action(title) {
-                if(title=="SRP") pageNavigator?.invoke("tools|D2 SRP",null) else pageNavigator?.invoke(page,null)
-            },LinearLayout.LayoutParams(dp(if(title=="Appearance") 148 else 112),-2).apply { marginEnd=dp(8) })
+                when (title) {
+                    "SRP" -> pageNavigator?.invoke("tools|D2 SRP", null)
+                    "D2 Hooks" -> pageNavigator?.invoke("tools|System Integration Center", null)
+                    else -> pageNavigator?.invoke(page, null)
+                }
+            },LinearLayout.LayoutParams(dp(if(title=="Appearance") 148 else if(title=="D2 Hooks") 128 else 112),-2).apply { marginEnd=dp(8) })
         }
         root.addView(android.widget.HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled=false; addView(shortcuts) },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
         val status = card()
