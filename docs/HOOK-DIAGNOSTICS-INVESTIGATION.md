@@ -102,3 +102,31 @@ After installation and ordinary reboot, test Samsung-required PIN/pattern,
 D2 fingerprint, wake/reassert, incoming calls with screen off, SRP widget,
 OneUI Apply/read-back and settings retention. Firmware hooks and perceived boot
 latency require the physical S26 Ultra; emulator/CI cannot verify these claims.
+
+## Completed CI and artifact verification — Build 1108
+
+Code commit: f8155f3166d63e0f5f9de49290308e7ef08ac89a.
+Run: https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38634713363
+Unified deliverables: https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38634713363/artifacts/11928016856
+
+41 unit tests and 27 emulator tests passed with zero failures/errors/skips.
+Lint: 720 warnings, zero errors. Original signing verification passed.
+Downloaded artifact: 11,810,297-byte ZIP, 22,502,688-byte APK, 19 DEX;
+all required classes and all four DexKit ABIs retained. New numeric normalization
+class present; build-identity asset matches exact run and commit. All checksums
+and nested archive integrity checks pass. KernelSU scripts are byte-identical
+to the unified 1107 artifact.
+APK SHA-256: 8b5f28779381c926e71f735a6feacc1735b60d1c3f9a8625c29901c8e01f1225.
+
+Independently downloaded 1104 APK SHA-256:
+c2ab5be956ae7e3a14abc74d3b981183812dce9f0069901720493f166a591be2.
+It lacks PeriodicCredentialHook, CredentialObserver and OneUiPortSettings,
+confirming that supplied periodic runtime logs include code absent from 1104.
+This is not an exact identification of the installed APK; device hash comparison
+remains required. Independently downloaded 1107 passes every unified class/ABI
+baseline check. This documentation update does not trigger a competing build.
+
+Physical S26 Ultra behavior remains unverified by CI. Use the read-only commands
+above after installing and ordinarily rebooting; check that Samsung credential
+requirements, D2 fingerprint, OneUI settings, calls and boot/wake behavior remain
+correct. No credential-suppression feature is claimed.
