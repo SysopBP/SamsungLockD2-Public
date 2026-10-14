@@ -941,3 +941,11 @@ Kotlin kotlinx.serialization 1.9.0 — JetBrains and contributors, Apache-2.0.
 https://github.com/Kotlin/kotlinx.serialization/tree/v1.9.0
 libxposed API/service 102.0.0 — libxposed contributors, Apache-2.0.
 https://github.com/libxposed
+
+Full available-feature expansion, 2026-10-14: additional upstream hook files
+for Browser, Calendar, DualApp, Gallery, Launcher, PhotoRetouching, SketchBook,
+SMCN, GalaxyStore, Weather, Video, WatchPairing, SPen and DisableFlagSecure are
+adapted from SoClear/OneUIX b8f81448b2bcaa314c0cb8abec0c8ff527a14e27.
+ChargingLimitSettings adapts ChargingLimitItem; FiveGWorker NR-mode pairing
+adapts FiveGTileService. D2 retains its SRP-guarded power handling and excludes
+paid Theme Center trial-expiry bypass. Original credit and AGPL terms retained.

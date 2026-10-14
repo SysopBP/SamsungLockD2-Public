@@ -363,6 +363,20 @@ class GuardianXposedBridge : XposedModule() {
                     appUid -> "app.d2lock"
                     else -> return
                 }
+                if (intent.action == "app.d2lock.action.DMC_EXTENDED_POWER") {
+                    if(callerPackage!="com.android.systemui") return
+                    val action=intent.getStringExtra("mode") ?: return
+                    if(action !in setOf("recovery","download","systemui")) return
+                    DmcPowerGuard.intercept(app,"restart $action") {
+                        if(action=="systemui") {
+                            val am=app.getSystemService(android.app.ActivityManager::class.java)
+                            val target=am.runningAppProcesses?.firstOrNull { it.processName=="com.android.systemui" && it.uid==android.os.Process.myUid() && it.pid!=android.os.Process.myPid() }
+                                ?: error("No supported same-UID SystemUI process")
+                            android.os.Process.killProcess(target.pid)
+                        } else app.getSystemService(android.os.PowerManager::class.java).reboot(action)
+                    }
+                    return
+                }
                 if (intent.action == "app.d2lock.action.DMC_SOFT_RESTART") {
                     if (!softRestartGuardInstalled) {
                         Log.e(TAG, "DMC_SOFT_RESTART_CANCELLED reason=guard_unavailable")
@@ -383,6 +397,7 @@ class GuardianXposedBridge : XposedModule() {
             }
         }, android.content.IntentFilter("app.d2lock.action.DMC_REQUEST").apply {
             addAction("app.d2lock.action.DMC_SOFT_RESTART")
+            addAction("app.d2lock.action.DMC_EXTENDED_POWER")
         }, Context.RECEIVER_EXPORTED)
         Log.i(TAG, "DMC_SYSTEM_SERVER_RECEIVER_READY uid=${android.os.Process.myUid()} pid=${android.os.Process.myPid()}")
     }

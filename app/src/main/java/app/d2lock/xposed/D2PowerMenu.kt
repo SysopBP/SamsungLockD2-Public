@@ -222,6 +222,41 @@ internal object D2PowerMenu {
         call(presenter, "addAction", status)
         if (data != null) call(presenter, "addAction", data)
         call(presenter, "addAction", lock)
+        val configured=io.github.soclear.oneuix.hook.PowerMenuPreferences.actions
+        if(configured!=null) {
+            val prepared=io.github.soclear.oneuix.common.PowerMenuAction.normalize(configured).filter {
+                it.visible || it.name in setOf("emergency_call","medical_info")
+            }.mapNotNull { choice -> runCatching {
+                when(choice.name) {
+                    "power" -> power
+                    "restart" -> restart
+                    "data_mode" -> data
+                    "soft_reboot" -> soft
+                    "restart_systemui","restart_recovery","restart_download" -> {
+                        val mode=choice.name.removePrefix("restart_")
+                        action(choice.name, "D2 restart $mode", RESTART_ICON) { proxy ->
+                            if(call(presenter,"isActionConfirming")!=true) call(presenter,"confirmAction",proxy)
+                            else {
+                                call(presenter,"dismissDialog",false)
+                                val app=context()
+                                if(Build.VERSION.SDK_INT>=34) app.sendBroadcast(Intent("app.d2lock.action.DMC_EXTENDED_POWER").setPackage("android").putExtra("mode",mode),null,
+                                    BroadcastOptions.makeBasic().setShareIdentityEnabled(true).toBundle())
+                            }
+                        }
+                    }
+                    else -> call(factory,"createActionViewModel",presenter,choice.name)
+                }
+            }.onFailure { Log.w(TAG,"D2_CUSTOM_POWER_UNAVAILABLE action=${choice.name}",it) }.getOrNull() }
+            // Prepare first. Emergency defaults remain intact if reconstruction fails.
+            val emergenciesPresent=setOf("emergency_call","medical_info").all { name -> prepared.any {
+                runCatching { call(call(it,"getActionInfo")!!,"getName")==name }.getOrDefault(false)
+            } }
+            if(prepared.isNotEmpty() && emergenciesPresent) {
+                io.github.soclear.oneuix.common.PowerMenuAction.DEFAULT_ORDER.forEach { call(presenter,"clearActions",it) }
+                listOf("d2_soft_restart").forEach { call(presenter,"clearActions",it) }
+                prepared.forEach { call(presenter,"addAction",it) }
+            }
+        }
         Log.i(TAG, "D2_POWER_MENU_READY actions=d2_power_restart_soft_restart_and_status")
     }
 

@@ -1,5 +1,4 @@
-/* OneUIX adaptation for D2, 2026-10-14. SPDX-License-Identifier: AGPL-3.0-only
- * Upstream: SoClear/OneUIX @ 591d09c9cc69faf3c8faf258e39869b2df7981f4. */
+/* D2 adaptation 2026-10-14; AGPL-3.0-only. Upstream b8f81448b2bcaa314c0cb8abec0c8ff527a14e27. */
 package io.github.soclear.oneuix.hook
 
 import io.github.libxposed.api.XposedModule
@@ -13,6 +12,7 @@ import io.github.soclear.oneuix.hook.systemui.Notification
 import io.github.soclear.oneuix.hook.systemui.Other
 import io.github.soclear.oneuix.hook.systemui.QS
 import io.github.soclear.oneuix.hook.systemui.StatusBar
+import io.github.soclear.oneuix.hook.PowerMenuPreferences
 import io.github.soclear.oneuix.hook.util.PreferenceProvider
 
 object D2OneUiHooks {
@@ -29,9 +29,25 @@ object D2OneUiHooks {
         val preference = PreferenceProvider.loadPreference() ?: return@with
 
         when (packageName) {
+            Package.BROWSER -> {
+                if (preference.other.showMorePlaybackSpeeds) {
+                    Browser.showMorePlaybackSpeeds()
+                }
 
+                if (preference.other.spoofBrowserCountryCodeToUS) {
+                    Browser.setCountryIsoCode("US")
+                }
 
+                if (preference.other.redirectCustomTab) {
+                    Browser.redirectCustomTab()
+                }
+            }
 
+            Package.CALENDAR -> {
+                if (preference.other.enableChineseHolidayDisplay) {
+                    Calendar.enableChineseHolidayDisplay()
+                }
+            }
 
             Package.CAMERA -> {
                 Camera.setBooleanFeature(
@@ -56,9 +72,25 @@ object D2OneUiHooks {
                 }
             }
 
+            Package.DUAL_APP -> {
+                if (preference.other.makeAllUserAppsAvailable) {
+                    DualApp.makeAllUserAppsAvailable()
+                }
+            }
 
+            Package.GALLERY -> {
+                if (preference.other.supportAllGallerySettings) {
+                    Gallery.supportAllSettings()
+                }
 
+                if (preference.other.supportSharedAlbumsInHide) {
+                    Gallery.supportSharedAlbumsInHide()
+                }
 
+                if (preference.other.hideVideoEditorStudio) {
+                    Gallery.hideVideoEditorStudio()
+                }
+            }
 
             Package.HEALTH_MONITOR -> {
                 if (preference.other.bypassHealthMonitorCountryCheck) {
@@ -74,7 +106,27 @@ object D2OneUiHooks {
                 }
             }
 
+            Package.LAUNCHER -> {
+                if (preference.other.showMemoryUsageInRecents) {
+                    Launcher.showMemoryUsageInRecents()
+                }
 
+                if (preference.other.recentsGridThreeRows) {
+                    Launcher.enableThreeRowsRecentsGrid()
+                }
+
+                if (preference.other.hideRecentsCloseAllButton) {
+                    Launcher.hideRecentsCloseAllButton()
+                }
+
+                if (preference.other.hideAppsSearchBar) {
+                    Launcher.hideAppsSearchBar()
+                }
+
+                if (preference.other.removeShortcutBadge) {
+                    Launcher.removeShortcutBadge()
+                }
+            }
 
             Package.MDEC_SERVICE -> {
                 if (preference.call.supportCallAndTextOnOtherDevices) {
@@ -94,7 +146,11 @@ object D2OneUiHooks {
                 }
             }
 
-
+            Package.PHOTO_RETOUCHING -> {
+                if (preference.other.noAIWatermark) {
+                    PhotoRetouching.noAIWatermark()
+                }
+            }
 
             Package.SETTINGS -> {
                 if (preference.android.setBlockableNotificationChannel) {
@@ -142,11 +198,23 @@ object D2OneUiHooks {
                 }
             }
 
+            Package.SKETCH_BOOK -> {
+                if (preference.other.noAIWatermark) {
+                    SketchBook.noAIWatermark()
+                }
+            }
 
+            Package.SM_CN -> {
+                if (preference.settings.spoofPhoneStatusAsOfficial) {
+                    SMCN.spoofPhoneStatusAsOfficial()
+                }
+            }
 
-
-
-
+            Package.STORE -> {
+                if (preference.other.blockGalaxyStoreAds) {
+                    GalaxyStore.blockGalaxyStoreAds()
+                }
+            }
 
             Package.SYSTEMUI if (processName == Package.SYSTEMUI) -> {
                 if (preference.android.setBlockableNotificationChannel) {
@@ -332,13 +400,19 @@ object D2OneUiHooks {
                             .toSet()
                     )
                 }
+                if (preference.systemUI.other.customPowerMenu) {
+                    PowerMenuPreferences.actions = preference.systemUI.other.powerMenuActions
+                }
 
-
-
+                if (preference.android.disableFlagSecure) {
+                    DisableFlagSecure.hookSystemUI(classLoader)
+                }
             }
 
             Package.SYSTEMUI if (processName == "${Package.SYSTEMUI}:screenshot") -> {
-
+                if (preference.android.disableFlagSecure) {
+                    DisableFlagSecure.hookSystemUI(classLoader)
+                }
                 if (preference.systemUI.other.disableScreenshotCaptureSound) {
                     Other.disableScreenshotCaptureSound()
                 }
@@ -358,13 +432,35 @@ object D2OneUiHooks {
 
 
 
+            Package.WEATHER -> {
+                if (preference.other.setWeatherProviderCN) {
+                    Weather.setProviderCN()
+                }
+            }
 
+            Package.VIDEO -> {
+                if (preference.other.showMorePlaybackSpeeds) {
+                    Video.showMorePlaybackSpeeds()
+                }
+            }
 
+            Package.WATCH_MANAGER -> {
+                if (preference.other.bypassWatchPairingRegionCheck ||
+                    preference.other.watchPairingConnectionMode != WatchPairing.MODE_NONE
+                ) {
+                    WatchPairing.init(
+                        bypassRegionCheck = preference.other.bypassWatchPairingRegionCheck,
+                        connectionMode = preference.other.watchPairingConnectionMode,
+                        supplementChinaWearOsGms = preference.other.supplementChinaWearOsGms
+                    )
+                }
+            }
 
-
-
-
-
+            Package.TRANSLATION -> {
+                if (preference.other.useSPenGoogleTranslate) {
+                    SPen.switchTranslateSource(useGoogle = true)
+                }
+            }
         }
     }
 
@@ -404,6 +500,8 @@ object D2OneUiHooks {
             Android.disableScreenWakeOnPowerUnplugged()
         }
 
-
+        if (preference.android.disableFlagSecure) {
+            DisableFlagSecure.hookSystemServer(classLoader)
+        }
     }
 }

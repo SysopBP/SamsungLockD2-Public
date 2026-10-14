@@ -50,6 +50,7 @@ object OneUiPortSettings {
     }
     private fun bounds(key: String): Pair<Double,Double> = when {
         key=="maxNeverKilledAppNum" -> 1.0 to 20.0
+        key=="watchPairingConnectionMode" -> 0.0 to 2.0
         key=="networkSpeedLayout" -> 0.0 to 3.0
         key=="networkSpeedMarker" -> 0.0 to 8.0
         key=="networkSpeedUnit" -> 0.0 to 3.0
@@ -64,7 +65,9 @@ object OneUiPortSettings {
     private val groups = linkedMapOf(
         "Framework" to "android", "Calls" to "call", "Samsung Settings" to "settings", "Camera" to "camera",
         "Status bar" to "systemUI.statusBar", "Quick Settings" to "systemUI.qs", "Always On Display" to "systemUI.aod",
-        "Notifications" to "systemUI.notification", "Screenshot sound" to "systemUI.other", "Notes, messaging and health" to "other"
+        "Notifications" to "systemUI.notification", "Power menu and screenshots" to "systemUI.other", "Browser and video" to "other", "Gallery and AI editing" to "other", "Samsung Notes" to "other",
+        "Messaging" to "other", "Health Monitor" to "other", "Launcher" to "other", "Dual apps" to "other",
+        "Watch pairing" to "other", "Calendar and weather" to "other", "Galaxy Store and S Pen" to "other"
     )
     private fun node(root: JSONObject, path: String): JSONObject = path.split('.').fold(root) { value, key -> value.getJSONObject(key) }
     fun show(activity: Activity) {
@@ -74,16 +77,31 @@ object OneUiPortSettings {
         val status = TextView(activity).apply {
             text = "Experimental OneUI features • Android 17 testing required\nEnable D2 in LSPosed for the selected feature's app scope. Apply saves the configuration; soft reboot once after framework changes, or restart the affected Samsung app for app features. Saved does not mean the hook exists on this firmware.\n\nD2's SRP-guarded power menu and 72-hour PIN/pattern option remain separate. Galaxy Island is optional."
         }; body.addView(status)
+        val guide=status.text.toString()
+        status.text="Choose features below. Apply saves through LSPosed; soft reboot after framework changes. Samsung compatibility remains unverified until device testing."
+        body.addView(Button(activity).apply { text="Setup and compatibility guide"; setOnClickListener { FeatureGlass.help(activity,"OneUI setup",guide) } })
+        body.addView(Button(activity).apply { text="Custom charging limit"; setOnClickListener { ChargingLimitSettings.show(activity) } })
         body.addView(Switch(activity).apply { text="Enable OneUI feature port"; isChecked=state.optBoolean("d2PortEnabled"); setOnCheckedChangeListener { _, v -> state.put("d2PortEnabled",v) } })
-        body.addView(TextView(activity).apply { text="Add D2 immersive mode through Samsung Quick Settings → Edit tiles. Root required; behavior depends on Samsung firmware." })
+        body.addView(TextView(activity).apply { text="Add D2 5G and D2 immersive mode through Quick Settings → Edit tiles. The 5G tile uses the active data SIM and requires root. Both tiles report unavailable if their device APIs fail." })
         body.addView(Button(activity).apply { text="72-hour PIN / pattern option"; setOnClickListener { PeriodicCredentialSettings.show(activity) } })
+        val search=EditText(activity).apply { hint="Search features or categories";isSingleLine=true };body.addView(search)
+        val categoryButtons=mutableListOf<Pair<Button,String>>()
         groups.forEach { (title,path) ->
-            body.addView(Button(activity).apply { text=title; setOnClickListener { showGroup(activity,title,path,node(state,path)) } })
+            val b=Button(activity).apply { text=title; setOnClickListener { showGroup(activity,title,path,node(state,path)) } }
+            body.addView(b);categoryButtons.add(b to (title+" "+node(state,path).keys().asSequence().joinToString(" ")))
         }
+        search.addTextChangedListener(object: android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?,start: Int,count: Int,after: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {}
+            override fun onTextChanged(s: CharSequence?,start: Int,before: Int,count: Int) {
+                val q=s.toString().trim();categoryButtons.forEach { (b,terms) -> b.visibility=if(terms.contains(q,true)) android.view.View.VISIBLE else android.view.View.GONE }
+            }
+        })
         body.addView(TextView(activity).apply { text="Camera temperature-check removal reduces a thermal safeguard. Health Monitor country support and Notes AI menus do not guarantee server access or medical-device availability. Phone status spoofing changes displayed status only. Emergency actions remain in D2's power menu." })
         val dialog=AlertDialog.Builder(activity).setTitle("OneUI feature port").setView(ScrollView(activity).apply { addView(body) })
             .setPositiveButton("Apply",null).setNegativeButton("Close",null).create()
         dialog.setOnShowListener {
+            FeatureGlass.style(activity,dialog)
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val bound=service
                 if(bound==null) { status.text="LSPosed module service unavailable. Enable D2 as a module and reopen D2. Changes have not been applied."; return@setOnClickListener }
@@ -103,8 +121,19 @@ object OneUiPortSettings {
     }
     private fun showGroup(a: Activity,title: String,path: String,state: JSONObject) {
         val body=LinearLayout(a).apply { orientation=LinearLayout.VERTICAL; setPadding(24,12,24,12) }
-        val excluded=setOf("disablePinVerifyPer72h","disableFlagSecure","customPowerMenu","powerMenuActions")
-        val otherAllowed=setOf("supportAllNotesFeatures","supportBlockMessage","bypassHealthMonitorCountryCheck")
+        val excluded=setOf("disablePinVerifyPer72h","powerMenuActions","setThemeTrialNeverExpired")
+        val otherAllowed=when(title) {
+            "Browser and video" -> setOf("showMorePlaybackSpeeds","redirectCustomTab","spoofBrowserCountryCodeToUS")
+            "Gallery and AI editing" -> setOf("supportAllGallerySettings","supportSharedAlbumsInHide","hideVideoEditorStudio","noAIWatermark")
+            "Samsung Notes" -> setOf("supportAllNotesFeatures")
+            "Messaging" -> setOf("supportBlockMessage")
+            "Health Monitor" -> setOf("bypassHealthMonitorCountryCheck")
+            "Launcher" -> setOf("showMemoryUsageInRecents","recentsGridThreeRows","hideRecentsCloseAllButton","hideAppsSearchBar","removeShortcutBadge")
+            "Dual apps" -> setOf("makeAllUserAppsAvailable")
+            "Watch pairing" -> setOf("bypassWatchPairingRegionCheck","watchPairingConnectionMode","supplementChinaWearOsGms")
+            "Calendar and weather" -> setOf("enableChineseHolidayDisplay","setWeatherProviderCN")
+            else -> setOf("blockGalaxyStoreAds","useSPenGoogleTranslate")
+        }
         state.keys().asSequence().toList().forEach { key ->
             if(key in excluded || (path=="other" && key !in otherAllowed)) return@forEach
             val v=state.get(key)
@@ -132,7 +161,9 @@ object OneUiPortSettings {
                 })
             }
         }
-        body.addView(TextView(a).apply { text="Close this panel, then Apply in the feature port screen. Options whose Samsung classes are absent retain stock behavior. Network layout: 0 system, 1 horizontal, 2 vertical, 3 active direction; SIM slot: 0 or 1. Scale 1.0 = 100%." })
-        AlertDialog.Builder(a).setTitle(title).setView(ScrollView(a).apply { addView(body) }).setPositiveButton("Done",null).show()
+        body.addView(TextView(a).apply { text="Close this panel, then Apply in the feature port screen. Options whose Samsung classes are absent retain stock behavior. Network layout: 0 system, 1 horizontal, 2 vertical, 3 active direction; SIM slot: 0 or 1. Watch mode: 0 stock, 1 China Wear OS, 2 global Wear OS. Scale 1.0 = 100%." })
+        if(path=="systemUI.other") body.addView(Button(a).apply { text="Power-menu action order and visibility";setOnClickListener { PowerActionSettings.show(a,state) } })
+        val d=AlertDialog.Builder(a).setTitle(title).setView(ScrollView(a).apply { addView(body) }).setPositiveButton("Done",null).create()
+        d.setOnShowListener { FeatureGlass.style(a,d) };d.show()
     }
 }

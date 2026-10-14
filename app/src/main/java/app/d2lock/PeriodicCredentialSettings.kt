@@ -72,12 +72,13 @@ object PeriodicCredentialSettings {
                 .setMessage("This reduces Samsung’s periodic credential safeguard. It is not verified for PIN or pattern on your firmware yet. Keep your backup credential available.")
                 .setPositiveButton("Enable") { _, _ -> change(true) }
                 .setNegativeButton("Cancel") { _, _ -> toggle.setOnCheckedChangeListener(null); toggle.isChecked = false; bindToggle() }
-                .setOnCancelListener { toggle.setOnCheckedChangeListener(null); toggle.isChecked = false; bindToggle() }.show()
+                .setOnCancelListener { toggle.setOnCheckedChangeListener(null); toggle.isChecked = false; bindToggle() }.create().also { confirm -> confirm.setOnShowListener { FeatureGlass.style(activity,confirm) }; confirm.show() }
             else change(false)
         }
         bindToggle = { toggle.setOnCheckedChangeListener { _, checked -> listener(checked) } }
         bindToggle()
         dialog.show()
+        FeatureGlass.style(activity,dialog)
         refresh()
         dialog.setOnDismissListener { toggle.setOnCheckedChangeListener(null) }
     }

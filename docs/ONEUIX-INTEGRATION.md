@@ -1,6 +1,6 @@
 # OneUIX integration test build
 
-Baseline: successful D2 Build 1074, plus Build 1075 AGPL/source packaging and Build 1076 experimental periodic credential option. Upstream: SoClear/OneUIX revision 591d09c9cc69faf3c8faf258e39869b2df7981f4 (AGPL-3.0); author/contributor credits retained.
+Baseline: successful D2 Build 1074, plus Build 1075 AGPL/source packaging and Build 1076 experimental periodic credential option. Upstream: SoClear/OneUIX revision b8f81448b2bcaa314c0cb8abec0c8ff527a14e27 (AGPL-3.0); author/contributor credits retained.
 
 ## Scope and actual status
 
@@ -41,3 +41,13 @@ Baseline: successful D2 Build 1074, plus Build 1075 AGPL/source packaging and Bu
 6. Follow ONEUIX-PORT-VALIDATION.md for PIN and pattern separately, face ON/OFF, real timeout, managed-device guard, boot/lockdown and failed biometric requirements. No recommendation is made before these tests.
 
 CI can verify compilation, lint and generic emulator tests; it cannot verify Samsung firmware hooks. Record each item as unsupported, installed, behavior verified, or failed rather than treating a saved switch as success.
+
+## Complete upstream feature expansion
+
+The current upstream HEAD was checked at b8f81448b2bcaa314c0cb8abec0c8ff527a14e27 on October 14, 2026. The new ChargingLimitItem is adapted into D2's root-assisted 20–100% charging-limit panel with settings read-back. Additional hook routing covers Browser, Calendar, Dual App, Gallery, Samsung Home, Photo Retouching, SketchBook, Samsung Device Care CN, Galaxy Store, Weather, Video, Watch Manager, SPen translation and optional FLAG_SECURE screenshot controls. Feature defaults remain off.
+
+Paid Theme Center trial-expiry bypass is excluded. D2's narrow periodic credential control replaces the upstream blanket scheduler bypass. Power-menu order/visibility is exposed through D2's existing Samsung-hosted actions; SystemUI, recovery and download restart actions require confirmation and fresh SRP verification. Emergency call and medical information are always preserved; unsupported action reconstruction leaves the original menu intact. SystemUI restart is only available for the expected same-UID SystemUI process, never system_server.
+
+The root D2 5G QS tile supports the active data SIM through a separate UID-0 app_process worker. It changes only the user network-type NR bit, reads back that policy, and preserves other RAT flags. It is an experimental replacement for the upstream native 5G hook's Android-14-only path; carrier connection to 5G is not guaranteed. D2 immersive mode remains an explicit QS tile.
+
+Feature panels now use shared rounded glass surfaces, category search and separate help. Validate normal/large font and long labels on Samsung. Configuration/read-back and hook installation remain distinct from behavior verification. All additional Samsung app hooks require their matching LSPosed scopes and app/process restart.
