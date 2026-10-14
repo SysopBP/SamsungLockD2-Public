@@ -15,7 +15,7 @@ object HookDiagnostics {
         val edit = p.edit()
         if (p.getInt("boot", -2) != boot(c)) edit.clear()
         edit.putInt("boot", boot(c)).putLong("checked", System.currentTimeMillis())
-        numbers.filter { i.hasExtra(it) }.forEach { edit.putLong(it, i.getLongExtra(it, -1)) }
+        numbers.filter { i.hasExtra(it) }.forEach { edit.putLong(it, HookEvidenceNumbers.value(i.extras?.get(it))) }
         strings.filter { i.hasExtra(it) }.forEach { edit.putString(it, i.getStringExtra(it)) }
         if (i.getStringExtra("event") in listOf("BOOT_READY", "WAKE")) {
             edit.putString("last_event", i.getStringExtra("event")).putLong("last_event_time", System.currentTimeMillis())

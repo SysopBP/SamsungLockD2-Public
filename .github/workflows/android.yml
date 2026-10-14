@@ -52,6 +52,7 @@ jobs:
       - name: Build and lint
         run: |
           python3 scripts/verify_feature_baseline.py
+          printf 'commit=%s\nrun=%s\nrun_id=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_NUMBER" "$GITHUB_RUN_ID" > app/src/main/assets/D2-BUILD.txt
           ./gradlew :app:dependencies --configuration debugRuntimeClasspath > runtime-dependencies.txt
           ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug --stacktrace
       - name: Enable emulator acceleration

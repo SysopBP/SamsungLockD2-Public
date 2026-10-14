@@ -66,7 +66,7 @@ internal object PeriodicCredentialHook {
             module.hook(method).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
                 val result = chain.proceed() // Exactly once; Android exceptions and results are preserved.
                 runCatching {
-                    val user = chain.args.getOrNull(if (scheduling) method.parameterCount - 1 else 1) as? Int
+                    val user = chain.args.getOrNull(if (scheduling) SchedulerSignature.userIndex(method.parameterTypes.map { it.name }.toTypedArray()) else 1) as? Int
                     // Requests for all users are relevant, but are NOT interpreted as current flags.
                     if (user == 0 || (!scheduling && user == -1)) {
                         if (scheduling) schedules.incrementAndGet() else {
@@ -84,6 +84,8 @@ internal object PeriodicCredentialHook {
             } else reasons = "installed"
             Log.i(TAG, "D2_STRONG_AUTH_REGISTERED method=$name stock_retained=true")
         } catch (error: Throwable) {
+            if (scheduling) scheduler = if (error is ClassNotFoundException || error is IllegalStateException) "unavailable" else "failed"
+            else reasons = if (error is ClassNotFoundException || error is NoSuchMethodException) "unavailable" else "failed"
             if (scheduling) schedulerDetail = "$schedulerDetail; error=${error.javaClass.simpleName}: ${error.message}"
             enqueue()
             Log.w(TAG, "D2_STRONG_AUTH_UNAVAILABLE method=$name stock_retained=true", error)
@@ -123,11 +125,12 @@ internal object PeriodicCredentialHook {
             Log.w(TAG, "D2_STRONG_AUTH_QUERY_UNAVAILABLE stock_retained=true", error)
         } finally { Binder.restoreCallingIdentity(identity) }
         val snapshot = JSONObject()
-            .put("version", 2).put("pid", Process.myPid())
+            .put("version", 3).put("pid", Process.myPid())
             .put("boot", Settings.Global.getInt(app.contentResolver, Settings.Global.BOOT_COUNT, -1))
             .put("elapsed", SystemClock.elapsedRealtime())
             .put("oneuiPeriodic", io.github.soclear.oneuix.hook.Android.periodicCredentialStatus())
             .put("scheduler", scheduler).put("schedulerDetail", schedulerDetail).put("reasonObserver", reasons)
+            .put("scheduleCallbackScope", "user_0_completed_calls").put("featureVerified", false)
             .put("scheduleCallbacks", schedules.get()).put("reasonCallbacks", requests.get())
             .put("lastRequest", lastRequest).put("flags", flags).put("credential", credential)
         Settings.Global.putString(app.contentResolver, STATUS, snapshot.toString())
