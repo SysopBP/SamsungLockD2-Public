@@ -24,6 +24,10 @@ class LockScreenService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == Intent.ACTION_SCREEN_OFF && Prefs.enabled(context) && PinStore(context).configured() &&
+                !app.d2lock.notifications.CallNotificationStore.isCallActive(context)) {
+                app.d2lock.bridge.IslandBridge.setLocked(context, true)
+            }
             if (intent.action == Intent.ACTION_SCREEN_ON && Prefs.enabled(context) && PinStore(context).configured()) {
                 val callActive = app.d2lock.notifications.CallNotificationStore.isCallActive(this@LockScreenService)
                 Log.i(TAG, "GUARDIAN_SCREEN_ON callActive=$callActive")
@@ -47,7 +51,10 @@ class LockScreenService : Service() {
             .build()
         startForeground(ID, notification)
         app.d2lock.root.DmcRecovery.request(this, "guardian_service")
-        registerReceiver(screenReceiver, IntentFilter(Intent.ACTION_SCREEN_ON))
+        registerReceiver(screenReceiver, IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+        })
     }
 
     override fun onDestroy() {

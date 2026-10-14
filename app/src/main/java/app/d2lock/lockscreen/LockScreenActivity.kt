@@ -596,14 +596,24 @@ class LockScreenActivity : Activity() {
         // Keep the existing singleTask Activity during screen-on/reassert intents.
         // Recreating here races Samsung keyguard and can expose the Bouncer.
         Log.i("SamsungLockD2", "GUARDIAN_NEW_INTENT_REUSED")
+        window.decorView.post { if (!isDestroyed && !isFinishing) consumeLauncherSleep() }
         if (!preview && Prefs.kiosk(this) && hasWindowFocus() && RootKiosk.isEnforced()) {
             window.decorView.post { if (!isDestroyed && !isFinishing) RootKiosk.reassert(this) }
+        }
+    }
+
+    private fun consumeLauncherSleep() {
+        if (preview || unlocking || !hasWindowFocus() || !intent.getBooleanExtra("launcher_sleep", false)) return
+        intent.removeExtra("launcher_sleep")
+        if (!app.d2lock.notifications.CallNotificationStore.isCallActive(this)) {
+            sleepDisplayFromDoubleTap()
         }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
+            window.decorView.post { if (!isDestroyed && !isFinishing) consumeLauncherSleep() }
             resetIdleSleep()
             scheduleAutomaticFingerprint()
         } else {

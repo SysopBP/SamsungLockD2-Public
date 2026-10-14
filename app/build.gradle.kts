@@ -10,8 +10,8 @@ android {
         applicationId = "app.d2lock"
         minSdk = 31
         targetSdk = 37
-        versionCode = 29
-        versionName = "0.6.4-srp-fingerprint-login"
+        versionCode = 30
+        versionName = "0.6.4-core-launcher-bridge"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

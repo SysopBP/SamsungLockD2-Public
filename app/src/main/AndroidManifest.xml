@@ -18,6 +18,7 @@
 
     <permission android:name="app.d2lock.permission.ISLAND" android:protectionLevel="signature" />
     <queries>
+        <intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.HOME" /></intent>
         <package android:name="app.cutout.ringpreview" />
         <package android:name="com.samsung.android.incallui" />
         <intent><action android:name="android.telecom.InCallService" /></intent>
@@ -39,6 +40,8 @@
             android:multiprocess="false"
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
         <provider android:name=".bridge.IslandProvider" android:authorities="app.d2lock.island" android:exported="true" android:permission="app.d2lock.permission.ISLAND" />
+        <provider android:name=".bridge.LauncherProvider" android:authorities="app.d2lock.launcher" android:exported="true" />
+        <activity android:name=".bridge.LauncherLockActivity" android:exported="false" android:excludeFromRecents="true" android:noHistory="true" android:taskAffinity="app.d2lock.launcher" android:theme="@style/Theme.D2.WidgetTap" />
         <activity android:name=".bridge.IslandLockActivity" android:exported="false" android:excludeFromRecents="true" />
         <activity
             android:name=".lockscreen.LockScreenActivity"
