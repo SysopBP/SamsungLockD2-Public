@@ -27,6 +27,8 @@ internal object D2PowerMenu {
     private const val TAG = "D2PowerMenu"
     // Framework TYPE_VOLUME_OVERLAY is hidden from the public SDK.
     private const val POWER_MENU_WINDOW_TYPE = 2020
+    const val LOCK_ICON = 0x7ed20005
+    const val DATA_ICON = 0x7ed20006
     const val POWER_OFF_ICON = 0x7ed20003
     const val RESTART_ICON = 0x7ed20004
     const val SOFT_RESTART_ICON = 0x7ed20001
@@ -34,7 +36,7 @@ internal object D2PowerMenu {
 
     /** Draw directly in SystemUI: module resource IDs belong to a different APK. */
     fun icon(id: Int, density: Float): Drawable? {
-        if (id !in setOf(SOFT_RESTART_ICON, SRP_STATUS_ICON, POWER_OFF_ICON, RESTART_ICON)) return null
+        if (id !in setOf(SOFT_RESTART_ICON, SRP_STATUS_ICON, POWER_OFF_ICON, RESTART_ICON, LOCK_ICON, DATA_ICON)) return null
         return object : Drawable() {
             private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.WHITE
@@ -54,7 +56,16 @@ internal object D2PowerMenu {
                 paint.style = Paint.Style.STROKE
                 paint.strokeWidth = 1.3f
                 canvas.scale(0.72f, 0.72f, 12f, 12f)
-                if (id == POWER_OFF_ICON) {
+                if (id == LOCK_ICON) {
+                    canvas.drawRoundRect(5f, 10f, 19f, 21f, 2f, 2f, paint)
+                    canvas.drawArc(8f, 3f, 16f, 15f, 180f, 180f, false, paint)
+                    canvas.drawLine(12f, 14f, 12f, 17f, paint)
+                } else if (id == DATA_ICON) {
+                    canvas.drawLine(8f, 3f, 8f, 20f, paint)
+                    canvas.drawPath(Path().apply { moveTo(4f, 7f); lineTo(8f, 3f); lineTo(12f, 7f) }, paint)
+                    canvas.drawLine(16f, 4f, 16f, 21f, paint)
+                    canvas.drawPath(Path().apply { moveTo(12f, 17f); lineTo(16f, 21f); lineTo(20f, 17f) }, paint)
+                } else if (id == POWER_OFF_ICON) {
                     canvas.drawArc(4f, 4f, 20f, 20f, -55f, 290f, false, paint)
                     canvas.drawLine(12f, 2f, 12f, 11f, paint)
                 } else if (id == RESTART_ICON) {
@@ -106,7 +117,7 @@ internal object D2PowerMenu {
             val info = infoClass.getDeclaredConstructor().newInstance()
             call(info, "setName", name)
             call(info, "setLabel", title)
-            call(info, "setDescription", if (name == "d2_soft_restart") "D2 SRP verification required" else "Fresh System Server vault check")
+            call(info, "setDescription", when (name) { "d2_soft_restart" -> "D2 SRP verification required"; "d2_lock_now" -> "Return to D2 and turn the screen off"; else -> "Fresh System Server vault check" })
             call(info, "setIcon", icon)
             call(info, "setViewType", viewType)
             return Proxy.newProxyInstance(loader, arrayOf(actionInterface)) { proxy, method, args ->
@@ -171,6 +182,36 @@ internal object D2PowerMenu {
             call(presenter, "dismissDialog", false)
             Handler(Looper.getMainLooper()).postDelayed({ showStatus(context(), windowType) }, 350L)
         }
+        // Use Samsung's native model: it owns subscription selection, state and confirmation.
+        val data = runCatching {
+            val model = call(factory, "createActionViewModel", presenter, "data_mode")
+                ?: error("Samsung data action unavailable")
+            val info = call(model, "getActionInfo") ?: error("Missing data action info")
+            call(info, "setLabel", "Mobile data")
+            call(info, "setIcon", DATA_ICON)
+            model
+        }.onFailure { Log.w(TAG, "D2_DATA_ACTION_UNAVAILABLE", it) }.getOrNull()
+        val lock = action("d2_lock_now", "Lock D2", LOCK_ICON) {
+            call(presenter, "dismissDialog", false)
+            val app = context()
+            runCatching {
+                val state = app.contentResolver.call(android.net.Uri.parse("content://app.d2lock.launcher"), "state", null, null)
+                @Suppress("DEPRECATION")
+                val capability = state?.getParcelable<android.app.PendingIntent>("lock")
+                if (capability != null) {
+                    val options = android.app.ActivityOptions.makeBasic().apply {
+                        if (Build.VERSION.SDK_INT >= 34) {
+                            setPendingIntentBackgroundActivityStartMode(android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)
+                        }
+                    }
+                    capability.send(app, 0, null, null, null, null, options.toBundle())
+                } else {
+                    android.widget.Toast.makeText(app, "Enable D2 and configure its PIN to lock.", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }.onFailure { Log.e(TAG, "D2_LOCK_ACTION_FAILED", it) }
+        }
+        if (data != null) call(presenter, "clearActions", "data_mode")
+        call(presenter, "clearActions", "d2_lock_now")
         call(presenter, "clearActions", "power")
         call(presenter, "clearActions", "restart")
         call(presenter, "clearActions", "d2_soft_restart")
@@ -179,6 +220,8 @@ internal object D2PowerMenu {
         call(presenter, "addAction", restart)
         call(presenter, "addAction", soft)
         call(presenter, "addAction", status)
+        if (data != null) call(presenter, "addAction", data)
+        call(presenter, "addAction", lock)
         Log.i(TAG, "D2_POWER_MENU_READY actions=d2_power_restart_soft_restart_and_status")
     }
 

@@ -21,12 +21,18 @@ class LauncherProvider : ContentProvider() {
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle {
         val ctx = requireNotNull(context)
-        val callers = ctx.packageManager.getPackagesForUid(Binder.getCallingUid()).orEmpty()
+        val callerUid = Binder.getCallingUid()
+        val callers = ctx.packageManager.getPackagesForUid(callerUid).orEmpty()
+        val trustedSystemUi = runCatching {
+            callerUid == ctx.packageManager.getApplicationInfo("com.android.systemui", 0).uid &&
+                ctx.packageManager.checkSignatures("android", "com.android.systemui") ==
+                    android.content.pm.PackageManager.SIGNATURE_MATCH
+        }.getOrDefault(false)
         val home = ctx.packageManager.resolveActivity(
             Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME),
             android.content.pm.PackageManager.MATCH_DEFAULT_ONLY
         )?.activityInfo?.packageName
-        check(home != null && home in callers) { "Default Home app required" }
+        check(trustedSystemUi || (home != null && home in callers)) { "Default Home or platform SystemUI required" }
         require(method == "state") { "Unsupported operation" }
         val ready = Prefs.enabled(ctx) && PinStore(ctx).configured()
         val blocked = CallNotificationStore.isCallActive(ctx) || GuardianWatchdog.isTrustedAuthenticationActive()
