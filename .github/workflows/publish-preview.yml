@@ -1,7 +1,9 @@
+# Modified by SysopBP, 2026-10-14: pin workflow dependencies to verified commits.
 name: Publish Samsung Lock D2 Beta
 
 on:
   push:
+    branches: [main]
     paths:
       - .github/workflows/publish-preview.yml
   workflow_dispatch:
@@ -50,7 +52,7 @@ jobs:
           zip -j SamsungLockD2-v0.5.0-beta.1-hotfix.1-bundle.zip bundle/*
 
       - name: Upload beta bundle artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: SamsungLockD2-v0.5.0-beta.1-hotfix.1-bundle
           path: |
