@@ -469,7 +469,14 @@ object D2OneUiHooks {
 
     context(xposedModule: XposedModule)
     fun onSystemServerStarting(param: XposedModuleInterface.SystemServerStartingParam) = with(param) {
-        val preference = PreferenceProvider.loadPreference() ?: return@with
+        val preference = PreferenceProvider.loadPreference()
+        if (preference == null) {
+            android.util.Log.w(
+                "D2PeriodicAuth",
+                "D2_ONEUI_PREFERENCES_UNAVAILABLE system_server hooks skipped"
+            )
+            return@with
+        }
 
         if (preference.android.disablePinVerifyPer72h) {
             Android.disablePinVerifyPer72h()

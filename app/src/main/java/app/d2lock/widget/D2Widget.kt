@@ -164,14 +164,14 @@ class D2Widget : AppWidgetProvider() {
                 !valid -> "72h: unavailable · tap to refresh"
                 periodic.optString("state") == "disabled" -> "72h: off"
                 periodic.optString("state") != "installed" -> "72h: hook unavailable"
-                count == 0 -> "72h: ready · waiting for first event"
-                else -> "72h: $count observed this runtime"
+                count == 0 -> "72h: observer ready · awaiting event"
+                else -> "72h: $count scheduler events"
             }
             view.setTextViewText(R.id.d2_widget_periodic, periodicText)
             view.setViewVisibility(R.id.d2_widget_periodic, if (showPeriodic) View.VISIBLE else View.GONE)
             view.setViewVisibility(R.id.d2_widget_periodic_timer, if (showPeriodic && running) View.VISIBLE else View.GONE)
             view.setChronometer(R.id.d2_widget_periodic_timer, if (running) last else now,
-                "Since last: %s", showPeriodic && running)
+                "Last event: %s ago", showPeriodic && running)
             for (line in listOf(R.id.d2_widget_periodic, R.id.d2_widget_periodic_timer)) {
                 view.setTextViewTextSize(line, android.util.TypedValue.COMPLEX_UNIT_SP,
                     if (width < 110 || height < 80) 9f else 11f)
