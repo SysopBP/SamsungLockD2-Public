@@ -33,11 +33,11 @@ profile can trigger a check, but recovery still applies only to the primary
 user. Authentication attempts and template renames are not observed.
 
 Hook installation failures are isolated and logged as
-`DMC_SETUP_OBSERVER_*`/`DMC_SETUP_CLASS_UNAVAILABLE`; they never block Android
+`D2_SRP_SETUP_OBSERVER_*`/`D2_SRP_SETUP_CLASS_UNAVAILABLE`; they never block Android
 setup. Samsung firmware may use different methods, so on-device validation is
 required. Existing boot/app checks remain available if a setup hook is absent.
-`DMC_SECURITY_SETUP_CHANGED` records detection, and
-`DMC_SYSTEM_SERVER_RECOVERY_VERIFIED` records successful vault read-back.
+`D2_SRP_SECURITY_SETUP_CHANGED` records detection, and
+`D2_SRP_SYSTEM_SERVER_RECOVERY_VERIFIED` records successful vault read-back.
 
 Failed checks have three bounded retries after 5, 15, and 30 seconds while the app
 process remains alive. Subsequent startup events can try again. Installing a new
@@ -98,7 +98,7 @@ Verification is a point-in-time vault read, not a guarantee of firmware durabili
 
 ### On-device validation still required
 
-With System Framework scope enabled, confirm both `D2_SRP_POWER_HOOK_INSTALLED` entries. Test standard Restart and Power off first, then the exact soft-restart tool being used. Check `D2_SRP_POWER_VERIFIED` before each covered action and read DMC status again after boot. Test failure and timeout cancellation in a controlled test setup before calling the guard validated. Do not test by deliberately enabling unsafe DMC flags on the daily-use device.
+With System Framework scope enabled, confirm both `D2_SRP_POWER_HOOK_INSTALLED` entries. Test standard Restart and Power off first, then the exact soft-restart tool being used. Check `D2_SRP_POWER_VERIFIED` before each covered action and read D2 SRP status again after boot. Test failure and timeout cancellation in a controlled test setup before calling the guard validated. Do not test by deliberately enabling unsafe DMC flags on the daily-use device.
 
 Useful log tags: `D2XposedBridge`, `D2DmcPowerGuard`. Outcomes: `D2_SRP_POWER_VERIFIED`, `D2_SRP_POWER_CANCELLED`, `D2_SRP_POWER_DUPLICATE`, `D2_SRP_POWER_HOOK_UNAVAILABLE`, `D2_SRP_POWER_RESUME_FAILED`.
 

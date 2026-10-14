@@ -35,7 +35,11 @@ object HookDiagnostics {
         if (p.getInt("boot", -2) != boot(c)) return "not observed"
         val status = p.getString("credential_scheduler", "not observed")
         val calls = p.getLong("credential_schedules", 0)
-        return if (calls > 0) "observed $calls" else "$status · 0 calls"
+        return if (calls > 0) "observed $calls" else when (status) {
+            "installed" -> "registered / 0"
+            "partially installed / failed" -> "partial failure / 0"
+            else -> "$status / 0"
+        }
     }
     fun health(c: Context): String {
         val p = prefs(c)

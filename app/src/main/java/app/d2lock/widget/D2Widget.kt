@@ -100,8 +100,8 @@ class D2Widget : AppWidgetProvider() {
                     "Download: ${available(status.downloadAllowed)}",
                     "Hooks: $health",
                     "Wake $wakeCount · Boot $bootCount",
-                    "Guardian skipped: $guardianSuppressed",
-                    "PIN/pattern: $credential",
+                    "Guardian skip Σ$guardianSuppressed",
+                    "72h diag: $credential",
                     "SRP verified $verifiedTime"
                 )
                 height >= 190 && width >= 160 -> listOf(
@@ -110,7 +110,7 @@ class D2Widget : AppWidgetProvider() {
                     "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
                     "AT ${flag(status.atCommand)} · DL ${available(status.downloadAllowed)}",
                     "Wake $wakeCount · Boot $bootCount",
-                    "PIN/pattern: $credential",
+                    "72h diag: $credential",
                     "SRP verified $verifiedTime"
                 )
                 height >= 140 && width >= 140 -> listOf(
@@ -118,10 +118,10 @@ class D2Widget : AppWidgetProvider() {
                     "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
                     "AT ${flag(status.atCommand)} · DL ${available(status.downloadAllowed)}",
                     "Wake $wakeCount · Boot $bootCount",
-                    "PIN/pattern: $credential"
+                    "72h diag: $credential"
                 )
-                height >= 75 -> listOf(summary, "PIN/pattern: $credential", "Tap for SRP")
-                else -> listOf(summary, "PIN/pattern: ?")
+                height >= 75 -> listOf(summary, "72h diag: $credential", "Tap for SRP")
+                else -> listOf(summary, "72h diag: ?")
             }
             val stats = rows.joinToString("\n")
             view.setTextViewText(R.id.d2_widget_srp, stats)

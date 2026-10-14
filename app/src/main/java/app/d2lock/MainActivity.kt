@@ -3455,10 +3455,15 @@ class MainActivity : Activity() {
             root.addView(delegated("Fingerprint unavailable · Review method  ›", "Unlock method"),
                 LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         }
-        root.addView(action("D2 Hooks · Diagnostics  ›") {
+        val hooksCard = card()
+        hooksCard.addView(label("D2 Hooks", 20f))
+        hooksCard.addView(label("Hook health · ${app.d2lock.lockscreen.HookDiagnostics.health(this)}", 13f))
+        hooksCard.addView(label("Boot ${KeyguardSignalReceiver.diagnosticCount(this, "BOOT_READY")} · Wake ${KeyguardSignalReceiver.diagnosticCount(this, "WAKE")} received this boot", 13f))
+        hooksCard.addView(action("View hook diagnostics  ›") {
             GuardianDialogs.showInfo(this, "D2 Hooks", app.d2lock.lockscreen.HookDiagnostics.summary(this) +
-                "\n\nBoot delivery and launch timeline:\n" + KeyguardSignalReceiver.pipelineMetrics(this).timeline.joinToString("\n"))
-        }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+                "\n\nTargets: ActivityManagerService#systemReady; PowerManagerService BinderService#wakeUp / wakeUpWithDisplayId.\n\nBoot delivery and launch timeline:\n" + KeyguardSignalReceiver.pipelineMetrics(this).timeline.joinToString("\n"))
+        })
+        root.addView(hooksCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         val srpStatus = app.d2lock.root.DmcRecovery.status(this)
         if (Prefs.xposedMaster(this) && !srpStatus.targetsMet) root.addView(action("D2 SRP needs verification  ›") { showDmcStatus() },
             LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
