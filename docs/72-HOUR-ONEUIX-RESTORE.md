@@ -21,3 +21,18 @@ once. Read `d2_periodic_credential_hook_status` after locking/unlocking. Expecte
 `oneuiPeriodic.state=installed`, nonempty methods, and eventually a positive
 suppressedSchedules count. Pattern requires a separate test after configuring it
 normally. No claim of elapsed 72-hour verification is made by this source change.
+
+## Widget counter and timer
+
+Widget configuration offers “Show 72-hour suppression counter and timer” (on by
+default). The counter reports suppressed schedules in the current System Server
+runtime, not unlocks or elapsed 72-hour tests. “Since last” is a live elapsed
+Chronometer measured from the last actual suppressed scheduler callback; it is
+not a countdown to Samsung's next requirement. Before the first event it shows
+waiting; disabled, unavailable and previous-boot snapshots do not start a timer.
+The timestamp uses elapsedRealtime, so clock/timezone changes do not move it.
+
+Coalesced hook snapshots trigger explicit system-origin widget updates. The
+launcher advances the Chronometer without per-second polling or root commands.
+Compact widgets reserve space by reducing SRP detail rows. Counters reset on
+System Server restart; opt-out configuration persists independently.

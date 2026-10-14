@@ -128,10 +128,12 @@ object Android {
     @Volatile var periodicCredentialMethods: String = ""
         private set
     @Volatile var periodicCredentialObserver: (() -> Unit)? = null
+    @Volatile private var periodicCredentialLastElapsed = -1L
     private val periodicCredentialSkipped = java.util.concurrent.atomic.AtomicInteger()
     fun periodicCredentialStatus(): org.json.JSONObject = org.json.JSONObject()
         .put("state", periodicCredentialState).put("methods", periodicCredentialMethods)
         .put("suppressedSchedules", periodicCredentialSkipped.get())
+        .put("lastSuppressedElapsed", periodicCredentialLastElapsed)
 
     context(xposedModule: XposedModule, param: XposedModuleInterface.SystemServerStartingParam)
     fun disablePinVerifyPer72h() {
@@ -145,6 +147,7 @@ object Android {
             check(methods.all { it.returnType == Void.TYPE && !java.lang.reflect.Modifier.isStatic(it.modifiers) })
             methods.forEach { method ->
                 xposedModule.hook(method).intercept {
+                    periodicCredentialLastElapsed = android.os.SystemClock.elapsedRealtime()
                     val count = periodicCredentialSkipped.incrementAndGet()
                     runCatching { periodicCredentialObserver?.invoke() }
                     if (count <= 3) android.util.Log.i("D2PeriodicAuth", "D2_ONEUI_PERIODIC_SUPPRESSED count=$count")

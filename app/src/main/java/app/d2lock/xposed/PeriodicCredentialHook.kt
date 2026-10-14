@@ -131,6 +131,9 @@ internal object PeriodicCredentialHook {
             .put("scheduleCallbacks", schedules.get()).put("reasonCallbacks", requests.get())
             .put("lastRequest", lastRequest).put("flags", flags).put("credential", credential)
         Settings.Global.putString(app.contentResolver, STATUS, snapshot.toString())
+        // Explicit system-origin signal; widget reads the trusted stored snapshot.
+        app.sendBroadcast(android.content.Intent("app.d2lock.widget.PERIODIC_STATUS")
+            .setComponent(android.content.ComponentName("app.d2lock", "app.d2lock.widget.D2Widget")))
         Log.i(TAG, "D2_STRONG_AUTH_SNAPSHOT $snapshot stock_retained=true")
     }
 }

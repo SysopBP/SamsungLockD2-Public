@@ -8,4 +8,11 @@
     <TextView android:id="@+id/d2_widget_srp" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:gravity="center" android:text="SRP: unknown"
         android:textColor="#FFFFFFFF" android:textSize="11sp" android:maxLines="7" android:ellipsize="end" android:includeFontPadding="false" />
+    <TextView android:id="@+id/d2_widget_periodic" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:gravity="center" android:text="72h: unavailable"
+        android:textColor="#FFFFFFFF" android:textSize="10sp" android:maxLines="1"
+        android:ellipsize="end" android:includeFontPadding="false" />
+    <Chronometer android:id="@+id/d2_widget_periodic_timer" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:gravity="center" android:visibility="gone"
+        android:textColor="#FFFFFFFF" android:textSize="10sp" android:includeFontPadding="false" />
 </LinearLayout>
