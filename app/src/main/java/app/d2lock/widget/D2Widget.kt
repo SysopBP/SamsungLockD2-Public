@@ -77,6 +77,8 @@ class D2Widget : AppWidgetProvider() {
             val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 80)
             val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 140)
             fun available(value: Boolean?) = when (value) { true -> "OK"; false -> "No"; null -> "?" }
+            // SRP verification describes DMC recovery targets only; it is not proof
+            // that Android's periodic credential / strong-auth hook executed.
             val rows = if (height >= 120) listOf(
                 summary,
                 "Server: ${available(status.systemServer)}",
@@ -84,13 +86,15 @@ class D2Widget : AppWidgetProvider() {
                 "Maint: ${flag(status.maintenance)}",
                 "AT: ${flag(status.atCommand)}",
                 "Download: ${available(status.downloadAllowed)}",
+                "PIN timer: unverified",
                 "Checked $checked"
             ) else if (height >= 80) listOf(
                 summary,
                 "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
                 "AT ${flag(status.atCommand)} · DL ${available(status.downloadAllowed)}",
+                "PIN timer: unverified",
                 checked
-            ) else listOf(summary, checked)
+            ) else listOf(summary, "PIN timer: unverified", checked)
             val stats = rows.joinToString("\n")
             view.setTextViewText(R.id.d2_widget_srp, stats)
             view.setViewVisibility(R.id.d2_widget_srp, if (WidgetPrefs.srp(context, id)) View.VISIBLE else View.GONE)
