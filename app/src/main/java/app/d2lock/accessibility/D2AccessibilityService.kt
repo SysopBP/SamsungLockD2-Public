@@ -49,8 +49,19 @@ class D2AccessibilityService : AccessibilityService() {
             prefs(context).edit().putLong("request_time", System.currentTimeMillis())
                 .putString("request_result", if (accepted) "Android accepted screen-lock action" else "Action unavailable or rejected")
                 .apply()
+            if (accepted) recordRoute(context, if (manualTest) "Accessibility manual test" else "Accessibility fallback")
             Log.i(TAG, "ACCESSIBILITY_SCREEN_OFF accepted=$accepted manual=$manualTest")
             return accepted
+        }
+        fun recordRoute(context: Context, route: String) {
+            prefs(context).edit().putString("last_route", route)
+                .putLong("last_route_time", System.currentTimeMillis()).apply()
+        }
+        fun lastRoute(context: Context): String {
+            val stored = prefs(context)
+            val route = stored.getString("last_route", null) ?: return "No accepted screen-off request recorded"
+            val time = java.text.DateFormat.getDateTimeInstance().format(java.util.Date(stored.getLong("last_route_time", 0L)))
+            return "$route · $time (request accepted; verify observed result)"
         }
         fun lastRequest(context: Context): String {
             val stored = prefs(context)

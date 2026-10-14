@@ -170,6 +170,7 @@ class LockScreenActivity : Activity() {
                 }.getOrDefault(false)
                 if (ok) {
                     sleepPending.set(false)
+                    app.d2lock.accessibility.D2AccessibilityService.recordRoute(this@LockScreenActivity, "Root")
                     Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_ROOT")
                 } else {
                     runOnUiThread { sleepViaShizukuOrDeviceAdmin(allowSetup) }
@@ -203,6 +204,7 @@ class LockScreenActivity : Activity() {
                 }.getOrDefault(false)
                 if (ok) {
                     sleepPending.set(false)
+                    app.d2lock.accessibility.D2AccessibilityService.recordRoute(this@LockScreenActivity, "Shizuku")
                     Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_SHIZUKU")
                 } else {
                     runOnUiThread { sleepViaAccessibilityOrDeviceAdmin(allowSetup) }
@@ -231,6 +233,7 @@ class LockScreenActivity : Activity() {
         if (policy.isAdminActive(admin)) {
             runCatching {
                 policy.lockNow()
+                app.d2lock.accessibility.D2AccessibilityService.recordRoute(this@LockScreenActivity, "Device admin")
                 Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_DEVICE_ADMIN")
             }.onFailure {
                 Log.w("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_DEVICE_ADMIN_FAILED", it)

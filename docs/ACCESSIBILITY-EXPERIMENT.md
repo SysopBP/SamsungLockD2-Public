@@ -42,3 +42,21 @@ to enable itself automatically.
 
 Build verification runs the existing unit, lint, APK and emulator workflow.
 Physical Samsung accessibility/biometric behavior requires device testing.
+
+## Integration and safety controls
+
+System Integrations now has an **Accessibility screen-off fallback** switch tied
+to the working service preference. Enable the Android service from **Accessibility
+setup & tests** first. A disconnected, already-enabled fallback can still be
+switched off. The old unrelated framework-recovery placeholder remains planned;
+it is not the accessibility screen-off implementation.
+
+System Integration Center, Safety Center, System Health and copied diagnostics
+show accessibility connection/fallback state. Shizuku status reports the server
+UID when its API provides one, including UID 2000 Shell. Root and Shizuku retain
+their existing priority. Galaxy Island remains optional.
+
+Accepted screen-off requests now record the selected route and timestamp for
+Root, Shizuku, Accessibility and Device admin. This is request telemetry, separate
+from the user's observed wake, authentication and relock results. Earlier tests
+are not retroactively marked as verified.
