@@ -852,7 +852,7 @@ class LockScreenActivity : Activity() {
                 contentDescription=desc
                 setPadding(dp(3),dp(3),dp(3),dp(3))
             }
-            addView(statusIcon(app.d2lock.R.drawable.ic_lock_guardian,"Guardian active"),LinearLayout.LayoutParams(dp(24),dp(24)))
+            addView(statusIcon(app.d2lock.R.drawable.ic_d2_guardian,"Guardian active"),LinearLayout.LayoutParams(dp(24),dp(24)))
             val cm=getSystemService(ConnectivityManager::class.java)
             val caps=runCatching { cm?.getNetworkCapabilities(cm.activeNetwork) }.getOrNull()
             if(caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)==true) {

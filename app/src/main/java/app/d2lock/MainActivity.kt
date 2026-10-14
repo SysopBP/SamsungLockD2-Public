@@ -423,6 +423,7 @@ class MainActivity : Activity() {
         body.addView(label(12f, true).apply { text = "D2  •  SYSTEM SERVER RECOVERY" })
         body.addView(label(22f).apply {
             text = "Feature status"
+            D2Icons.applyTo(this, R.drawable.ic_d2_srp)
             setPadding(0, dp(6), 0, dp(12))
         })
         val summary = label(15f)
@@ -448,13 +449,17 @@ class MainActivity : Activity() {
         fun render(status: app.d2lock.root.DmcRecovery.Status) {
             summary.text = if (status.targetsMet) "✅ All four targets verified" else "⚠ Targets not yet verified"
             rows.removeAllViews()
-            fun row(icon: String, title: String, state: String, target: String, matches: Boolean) {
+            fun row(icon: Int, title: String, state: String, target: String, matches: Boolean) {
                 val card = LinearLayout(this@MainActivity).apply {
                     orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
                     setPadding(dp(12), dp(12), dp(12), dp(12))
                     background = Appearance.glass(this@MainActivity, 20f, 28, true)
                 }
-                card.addView(label(21f).apply { text = icon; gravity = Gravity.CENTER }, LinearLayout.LayoutParams(dp(38), -2))
+                card.addView(ImageView(this@MainActivity).apply {
+                    setImageResource(icon)
+                    imageTintList = android.content.res.ColorStateList.valueOf(Appearance.text(this@MainActivity))
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                }, LinearLayout.LayoutParams(dp(24), dp(24)).apply { rightMargin = dp(14) })
                 val info = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
                 info.addView(label(14f).apply { text = title })
                 info.addView(label(12f, true).apply { text = "$state  •  Target: $target" })
@@ -467,11 +472,11 @@ class MainActivity : Activity() {
                 rows.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
             }
             fun flag(value: Int?) = when (value) { 0 -> "Disabled"; 1 -> "Enabled"; else -> "Unknown" }
-            row("🧩", "D2 SRP vault read-back", if (status.verified) "Verified" else "Unknown", "Verified", status.verified)
-            row("🔒", "Screen lock (D2 SRP)", flag(status.screenLock), "Disabled", status.verified && status.screenLock == 0)
-            row("🛠", "Maintenance Mode (D2 SRP)", flag(status.maintenance), "Disabled", status.verified && status.maintenance == 0)
-            row("⌨", "Download Mode AT command", flag(status.atCommand), "Enabled", status.verified && status.atCommand == 1)
-            row("⬇", "Download Mode eligibility", when (status.downloadAllowed) { true -> "Allowed"; false -> "Blocked"; null -> "Unknown" }, "Allowed", status.verified && status.downloadAllowed == true)
+            row(R.drawable.ic_d2_srp, "D2 SRP vault read-back", if (status.verified) "Verified" else "Unknown", "Verified", status.verified)
+            row(R.drawable.ic_d2_screen_lock, "Screen lock (D2 SRP)", flag(status.screenLock), "Disabled", status.verified && status.screenLock == 0)
+            row(R.drawable.ic_d2_system_server, "Maintenance Mode (D2 SRP)", flag(status.maintenance), "Disabled", status.verified && status.maintenance == 0)
+            row(R.drawable.ic_d2_usb_lock, "Download Mode AT command", flag(status.atCommand), "Enabled", status.verified && status.atCommand == 1)
+            row(R.drawable.ic_d2_recovery, "Download Mode eligibility", when (status.downloadAllowed) { true -> "Allowed"; false -> "Blocked"; null -> "Unknown" }, "Allowed", status.verified && status.downloadAllowed == true)
             detail.text = buildString {
                 append(status.detail)
                 if (status.checkedAt > 0L) append("\nChecked: ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(status.checkedAt))}")
@@ -551,7 +556,7 @@ class MainActivity : Activity() {
         if (status != BiometricManager.BIOMETRIC_SUCCESS) {
             GuardianDialogs.showInfo(this, "Fingerprint test unavailable",
                 "Android reports that strong biometrics are unavailable (status $status).\n\nCheck your enrolled fingerprint and complete any required Samsung PIN unlock, then try again.",
-                icon = R.drawable.ic_guardian_fingerprint)
+                icon = R.drawable.ic_d2_fingerprint)
 
             return
         }
@@ -576,7 +581,7 @@ class MainActivity : Activity() {
                 if (!isFinishing && !isDestroyed) GuardianDialogs.showInfo(this@MainActivity,
                     "Fingerprint test passed",
                     "✓ Android accepted your enrolled strong biometric.\n\nThis sensor test does not change app authorization or dismiss the D2 lock screen. Use Login with fingerprint when opening the D2 app or unlocking its lock screen.",
-                    icon = R.drawable.ic_guardian_fingerprint)
+                    icon = R.drawable.ic_d2_fingerprint)
             }
 
             override fun onAuthenticationFailed() {
@@ -591,7 +596,7 @@ class MainActivity : Activity() {
                     errorCode == BiometricPrompt.BIOMETRIC_ERROR_CANCELED
                 if (!cancelled && !isFinishing && !isDestroyed) GuardianDialogs.showInfo(this@MainActivity,
                     "Fingerprint test unavailable", "${errString}\n\nError $errorCode. Your D2 unlock method has not changed.",
-                    icon = R.drawable.ic_guardian_fingerprint)
+                    icon = R.drawable.ic_d2_fingerprint)
             }
         })
     }
@@ -786,14 +791,14 @@ class MainActivity : Activity() {
                 }
                 addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.HORIZONTAL
-                    addView(statusChip("Kiosk",kioskReady,R.drawable.ic_guardian_shield),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
+                    addView(statusChip("Kiosk",kioskReady,R.drawable.ic_d2_guardian),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
                     addView(statusChip("Root",rootReady,R.drawable.ic_guardian_root),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3); rightMargin=dp(3) })
                     addView(statusChip("Shizuku",shizukuReady,R.drawable.ic_guardian_shizuku),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
                 },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(6) })
                 addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.HORIZONTAL
                     addView(statusChip("Signals enabled",xposedReady,R.drawable.ic_guardian_xposed),LinearLayout.LayoutParams(0,-2,1f).apply { rightMargin=dp(3) })
-                    addView(statusChip("Framework event",systemHealth.status=="CONNECTED",R.drawable.ic_system_health),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
+                    addView(statusChip("Framework event",systemHealth.status=="CONNECTED",R.drawable.ic_d2_system_server),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(3) })
                 },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
                 addView(LinearLayout(this@MainActivity).apply {
                     orientation=LinearLayout.VERTICAL
@@ -816,9 +821,9 @@ class MainActivity : Activity() {
                     }
                     val serverOk=systemHealth.status=="CONNECTED"
                     val uiOk=systemUiHealth.status=="CONNECTED"
-                    addView(bridgeRow(R.drawable.ic_system_health,"System Server",if(serverOk) "OBSERVED" else "WAITING",serverOk))
+                    addView(bridgeRow(R.drawable.ic_d2_system_server,"System Server",if(serverOk) "OBSERVED" else "WAITING",serverOk))
                     addView(bridgeRow(R.drawable.ic_guardian_device,"SystemUI telemetry",if(uiOk) "OBSERVED" else "NO EVENT THIS BOOT",uiOk))
-                    addView(bridgeRow(R.drawable.ic_guardian_fingerprint,"Fingerprint telemetry",fingerprintHealth.event ?: "NO EVENT THIS BOOT",fingerprintHealth.event != null))
+                    addView(bridgeRow(R.drawable.ic_d2_fingerprint,"Fingerprint telemetry",fingerprintHealth.event ?: "NO EVENT THIS BOOT",fingerprintHealth.event != null))
                     addView(TextView(this@MainActivity).apply {
                         val detail = systemHealth.event?.let { event -> "Last framework event: $event · ${systemHealth.method ?: "unknown"}" }
                             ?: "Waiting for first system_server event after reboot"
@@ -949,8 +954,8 @@ class MainActivity : Activity() {
                     orientation=LinearLayout.HORIZONTAL
                     gravity=Gravity.CENTER_VERTICAL
                     addView(ImageView(this@MainActivity).apply {
-                        setImageResource(R.drawable.ic_lock_security)
-                        imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                        setImageResource(R.drawable.ic_d2_screen_lock)
+                        imageTintList=android.content.res.ColorStateList.valueOf(Appearance.text(this@MainActivity))
                         contentDescription=null
                     },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
                     addView(TextView(this@MainActivity).apply {
@@ -987,14 +992,14 @@ class MainActivity : Activity() {
                                         GuardianDialogs.showInfo(this@MainActivity,
                                             title = "Login with fingerprint",
                                             message = "✓ Keep your fingerprint enrolled.\n\n1. Open Samsung Settings → Fingerprints.\n2. Turn Fingerprint unlock OFF.\n3. Use your enrolled fingerprint to unlock D2.\n\nIf Samsung asks for its PIN first, complete that screen before D2 fingerprint login.\n\nFingerprint login also opens the D2 app and protected settings. Your D2 PIN remains the fallback if biometrics are unavailable or you cancel.",
-                                            icon = R.drawable.ic_guardian_fingerprint,
+                                            icon = R.drawable.ic_d2_fingerprint,
                                             secondary = "Open settings",
                                             onSecondary = { startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) })
                                     } else {
                                         GuardianDialogs.showInfo(this@MainActivity,
                                             title = "Fingerprint unavailable",
                                             message = "Enroll a fingerprint in Samsung Settings and complete any required Samsung PIN unlock, then try again.\n\nYour existing D2 unlock method has been kept.",
-                                            icon = R.drawable.ic_guardian_fingerprint,
+                                            icon = R.drawable.ic_d2_fingerprint,
                                             primary = "Open settings",
                                             onPrimary = { startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) },
                                             secondary = "Cancel")
@@ -1191,6 +1196,7 @@ class MainActivity : Activity() {
             background = Appearance.glass(this@MainActivity, 28f, 36, true)
             addView(TextView(this@MainActivity).apply {
                 text = "D2 SRP  •  Samsung Recovery Protection"
+                D2Icons.applyTo(this, R.drawable.ic_d2_srp)
                 textSize = 18f
                 setTextColor(Appearance.text(this@MainActivity))
             })
@@ -1414,8 +1420,8 @@ class MainActivity : Activity() {
                 gravity=Gravity.CENTER_VERTICAL
                 val health=TextView(this@MainActivity).apply {
                     text="  System health"
-                    setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_system_health,0,0,0)
-                    compoundDrawableTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                    setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_d2_system_server,0,0,0)
+                    compoundDrawableTintList=android.content.res.ColorStateList.valueOf(Appearance.text(this@MainActivity))
                     compoundDrawablePadding=dp(6)
                     textSize=14f
                     setTextColor(Appearance.text(this@MainActivity))
@@ -1467,8 +1473,8 @@ class MainActivity : Activity() {
                     orientation=LinearLayout.HORIZONTAL
                     gravity=Gravity.CENTER_VERTICAL
                     addView(ImageView(this@MainActivity).apply {
-                        setImageResource(R.drawable.ic_guardian_shield)
-                        imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                        setImageResource(R.drawable.ic_d2_guardian)
+                        imageTintList=android.content.res.ColorStateList.valueOf(Appearance.text(this@MainActivity))
                         contentDescription=null
                     },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
                     addView(TextView(this@MainActivity).apply {
@@ -1478,6 +1484,7 @@ class MainActivity : Activity() {
                     })
                 })
             addView(TextView(this@MainActivity).apply {
+                D2Icons.applyTo(this, R.drawable.ic_d2_watchdog)
                 text=listOf(
                     if(Prefs.quickSettingsGuard(this@MainActivity)) "Quick Settings guarded" else "Quick Settings guard off",
                     if(Prefs.kiosk(this@MainActivity)) "Kiosk authentication on" else "Kiosk authentication off"
@@ -1523,8 +1530,8 @@ class MainActivity : Activity() {
                 orientation=LinearLayout.HORIZONTAL
                 gravity=Gravity.CENTER_VERTICAL
                 addView(ImageView(this@MainActivity).apply {
-                    setImageResource(R.drawable.ic_guardian_fingerprint)
-                    imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                    setImageResource(R.drawable.ic_d2_fingerprint)
+                    imageTintList=android.content.res.ColorStateList.valueOf(Appearance.text(this@MainActivity))
                     contentDescription=null
                 },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
                 addView(TextView(this@MainActivity).apply {
@@ -1569,8 +1576,8 @@ class MainActivity : Activity() {
                 orientation=LinearLayout.HORIZONTAL
                 val test=TextView(this@MainActivity).apply {
                     text="Test Fingerprint"
-                    setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_guardian_fingerprint,0,0,0)
-                    compoundDrawableTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                    setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_d2_fingerprint,0,0,0)
+                    compoundDrawableTintList=android.content.res.ColorStateList.valueOf(Appearance.text(this@MainActivity))
                     compoundDrawablePadding=dp(6)
                     textSize=14f
                     gravity=Gravity.CENTER
@@ -1615,8 +1622,8 @@ class MainActivity : Activity() {
                 orientation=LinearLayout.HORIZONTAL
                 gravity=Gravity.CENTER_VERTICAL
                 addView(ImageView(this@MainActivity).apply {
-                    setImageResource(R.drawable.ic_guardian_recovery)
-                    imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                    setImageResource(R.drawable.ic_d2_recovery)
+                    imageTintList=android.content.res.ColorStateList.valueOf(Appearance.text(this@MainActivity))
                     contentDescription=null
                 },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
                 addView(TextView(this@MainActivity).apply {
@@ -1689,8 +1696,8 @@ class MainActivity : Activity() {
                     orientation=LinearLayout.HORIZONTAL
                     gravity=Gravity.CENTER_VERTICAL
                     addView(ImageView(this@MainActivity).apply {
-                        setImageResource(R.drawable.ic_usb_recovery)
-                        imageTintList=android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                        setImageResource(R.drawable.ic_d2_usb_lock)
+                        imageTintList=android.content.res.ColorStateList.valueOf(Appearance.text(this@MainActivity))
                         contentDescription=null
                     },LinearLayout.LayoutParams(dp(22),dp(22)).apply { rightMargin=dp(10) })
                     addView(TextView(this@MainActivity).apply {
@@ -2228,6 +2235,13 @@ class MainActivity : Activity() {
         section(root, "NOTIFICATIONS")
         root.getChildAt(root.childCount - 1).tag = "notifications"
         val privacyCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(10), dp(7), dp(10), dp(7)); background = Appearance.glass(this@MainActivity, 24f, 28, true) }
+        privacyCard.addView(TextView(this).apply {
+            text = "Notification privacy"; textSize = 16f
+            setTextColor(Appearance.text(this@MainActivity))
+            D2Icons.applyTo(this, R.drawable.ic_d2_privacy)
+            setPadding(0, dp(4), 0, dp(10))
+            isAccessibilityHeading = true
+        })
         root.addView(privacyCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         privacyCard.addView(guardianSwitch().apply {
             text = "Live notification banners while D2 is locked"
@@ -2567,6 +2581,7 @@ class MainActivity : Activity() {
 
             addView(TextView(this@MainActivity).apply {
                 text = "Guardian Xposed Integration"
+                D2Icons.applyTo(this, R.drawable.ic_d2_boot_guard)
                 textSize = 18f
                 setTextColor(Appearance.text(this@MainActivity))
             })
@@ -3267,20 +3282,20 @@ class MainActivity : Activity() {
         }
         fun action(text: String, click: () -> Unit) = label(text).apply {
             val icon = when {
-                text.startsWith("Security") || text.startsWith("Manage security") -> R.drawable.ic_lock_security
-                text.startsWith("SRP") || text.startsWith("D2 SRP") || text.startsWith("Readiness") -> R.drawable.ic_guardian_shield
-                text.startsWith("Guardian") -> R.drawable.ic_guardian_shield
+                text.startsWith("Security") || text.startsWith("Manage security") -> R.drawable.ic_d2_screen_lock
+                text.startsWith("SRP") || text.startsWith("D2 SRP") || text.startsWith("Readiness") -> R.drawable.ic_d2_srp
+                text.startsWith("Guardian") -> R.drawable.ic_d2_guardian
                 text.startsWith("Appearance") -> R.drawable.ic_palette
-                text.startsWith("System bridge") || text.startsWith("System Server") -> R.drawable.ic_guardian_device
+                text.startsWith("System bridge") || text.startsWith("System Server") -> R.drawable.ic_d2_system_server
                 text.startsWith("Shizuku") -> R.drawable.ic_guardian_shizuku
                 text.startsWith("Root") -> R.drawable.ic_guardian_root
-                text.startsWith("Kiosk") -> R.drawable.ic_guardian_shield
-                text.startsWith("Change PIN") -> R.drawable.ic_lock_security
-                text.startsWith("Unlock") || text.startsWith("Fingerprint") -> R.drawable.ic_guardian_fingerprint
+                text.startsWith("Kiosk") -> R.drawable.ic_d2_guardian
+                text.startsWith("Change PIN") -> R.drawable.ic_d2_pin
+                text.startsWith("Unlock") || text.startsWith("Fingerprint") -> R.drawable.ic_d2_fingerprint
                 else -> R.drawable.ic_nav_settings
             }
             val drawable = getDrawable(icon)?.mutate()
-            drawable?.setTint(Appearance.accent(this@MainActivity)); drawable?.setBounds(0,0,dp(18),dp(18))
+            drawable?.setTint(Appearance.text(this@MainActivity)); drawable?.setBounds(0,0,dp(18),dp(18))
             setCompoundDrawables(drawable,null,null,null); compoundDrawablePadding=dp(6)
             setPadding(dp(12),dp(8),dp(12),dp(8))
             accessibilityDelegate=object: View.AccessibilityDelegate() {
@@ -3646,8 +3661,8 @@ class MainActivity : Activity() {
         }
         val destinations = listOf(
             Triple(R.drawable.ic_nav_home, "Home", "home"),
-            Triple(R.drawable.ic_lock_security, "Security", "security"),
-            Triple(R.drawable.ic_guardian_shield, "Guardian", "guardian"),
+            Triple(R.drawable.ic_d2_screen_lock, "Security", "security"),
+            Triple(R.drawable.ic_d2_guardian, "Guardian", "guardian"),
             Triple(R.drawable.ic_nav_settings, "Tools", "tools"),
             Triple(R.drawable.ic_palette, "Appearance", "appearance")
         )
@@ -3670,8 +3685,8 @@ class MainActivity : Activity() {
             background = Appearance.glass(this@MainActivity, 32f, 72, true)
             elevation = dp(30).toFloat()
             addView(ImageView(this@MainActivity).apply {
-                setImageResource(R.drawable.ic_core_search)
-                imageTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+                setImageResource(R.drawable.ic_d2_core_search)
+                imageTintList = android.content.res.ColorStateList.valueOf(Appearance.text(this@MainActivity))
                 contentDescription = null
             }, LinearLayout.LayoutParams(dp(24), dp(24)))
             addView(TextView(this@MainActivity).apply {
@@ -3710,7 +3725,7 @@ class MainActivity : Activity() {
             }
             item.background = Appearance.glass(this@MainActivity, 28f, 48, true)
             item.setPadding(dp(7), dp(2), dp(7), dp(2))
-            (item.getChildAt(0) as? ImageView)?.imageTintList = android.content.res.ColorStateList.valueOf(Appearance.accent(this@MainActivity))
+            (item.getChildAt(0) as? ImageView)?.imageTintList = android.content.res.ColorStateList.valueOf(Appearance.text(this@MainActivity))
             (item.getChildAt(1) as? TextView)?.apply {
                 textSize = 11f
                 setTextColor(Appearance.text(this@MainActivity))
@@ -3730,7 +3745,7 @@ class MainActivity : Activity() {
                 addView(ImageView(this@MainActivity).apply {
                     setImageResource(icon)
                     imageTintList = android.content.res.ColorStateList.valueOf(
-                        if (index == 0) Appearance.accent(this@MainActivity) else Appearance.secondary(this@MainActivity)
+                        if (index == 0) Appearance.text(this@MainActivity) else Appearance.secondary(this@MainActivity)
                     )
                     setPadding(dp(5), dp(5), dp(5), dp(5))
                     contentDescription = null

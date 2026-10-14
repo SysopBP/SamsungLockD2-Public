@@ -37,6 +37,7 @@ object PinUi {
         }
         form.addView(TextView(activity).apply {
             id = app.d2lock.R.id.d2_pin_prompt
+            app.d2lock.D2Icons.applyTo(this, app.d2lock.R.drawable.ic_d2_pin)
             text = when {
                 setup -> "Create a 6-digit PIN for D2"
                 change -> "Verify your current PIN, then choose a new one"

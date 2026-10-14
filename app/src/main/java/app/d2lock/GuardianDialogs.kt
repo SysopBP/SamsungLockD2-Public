@@ -67,7 +67,7 @@ object GuardianDialogs {
         dialog.window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
         dialog.window?.setDimAmount(.55f)
     }
-    fun showInfo(context: Context, title: String, message: String, icon: Int = R.drawable.ic_lock_security,
+    fun showInfo(context: Context, title: String, message: String, icon: Int = R.drawable.ic_d2_screen_lock,
         primary: String = "Got it", onPrimary: (() -> Unit)? = null,
         secondary: String? = null, onSecondary: (() -> Unit)? = null): Dialog {
         val (dialog, body) = shell(context, title, icon)
@@ -90,7 +90,7 @@ object GuardianDialogs {
     }
     fun showChoices(context: Context, title: String, options: Array<String>, selected: Int,
         onSelected: (Dialog, Int) -> Unit): Dialog {
-        val (dialog, body) = shell(context, title, R.drawable.ic_lock_security)
+        val (dialog, body) = shell(context, title, R.drawable.ic_d2_screen_lock)
         options.forEachIndexed { index, option ->
             body.addView(RadioButton(context).apply {
                 text = option; textSize = 16f; setTextColor(Color.WHITE)
