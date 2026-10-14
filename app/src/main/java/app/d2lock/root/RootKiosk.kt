@@ -150,13 +150,15 @@ object RootKiosk {
                 fail("D2 window closed; recovery released kiosk"); return
             }
             val callActive = activity?.let { app.d2lock.notifications.CallNotificationStore.isCallActive(it) } ?: false
-            if (active && activity != null && mode(activity) != ActivityManager.LOCK_TASK_MODE_LOCKED && callActive) {
-                // A real call surface is temporarily allowed to own focus/task state.
-                // Do not repair kiosk here: proximity wakes and voicemail transitions
-                // must not become an accidental D2 relock.
+            val trustedSurface = callActive || app.d2lock.lockscreen.GuardianWatchdog.isTrustedAuthenticationActive() ||
+                app.d2lock.lockscreen.LockScreenService.isKeyguardHandoffActive() ||
+                (activity != null && activity.getSystemService(android.os.PowerManager::class.java)?.isInteractive != true)
+            if (active && activity != null && mode(activity) != ActivityManager.LOCK_TASK_MODE_LOCKED && trustedSurface) {
+                // Calls, trusted authentication, Samsung keyguard and screen-off
+                // defer UI repair. Keep sending lease heartbeats below so the
+                // independent root recovery mechanism remains intact.
                 lockLostAt = 0L
                 lockRepairAttempts = 0
-                Log.i("SamsungLockD2", "GUARDIAN_LOCK_TASK_REPAIR_DEFERRED_CALL")
             } else if (active && activity != null && mode(activity) != ActivityManager.LOCK_TASK_MODE_LOCKED) {
                 if (lockLostAt == 0L) {
                     lockLostAt = now
@@ -186,6 +188,7 @@ object RootKiosk {
     }
     /** Call only from a verified D2 authentication callback. Recovery is a deliberately separate escape path. */
     fun unlock(activity: Activity, done: () -> Unit) {
+        app.d2lock.lockscreen.GuardianWatchdog.markReleased("verified_unlock")
         releasing = true
         if (active) {
             try { activity.stopLockTask() }

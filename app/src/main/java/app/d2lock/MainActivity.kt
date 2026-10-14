@@ -1355,6 +1355,7 @@ class MainActivity : Activity() {
                         appendLine("Shizuku runtime: ${shizukuRuntimeSummary()}")
                         appendLine("Accessibility: ${app.d2lock.accessibility.D2AccessibilityService.status(this@MainActivity)}")
                         appendLine("Last screen-off route: ${app.d2lock.accessibility.D2AccessibilityService.lastRoute(this@MainActivity)}")
+                        appendLine("Watchdog: ${app.d2lock.lockscreen.GuardianWatchdog.snapshot()}")
                         appendLine("Observed accessibility test: ${guidedPrefs().getString("accessibility", "Not recorded")}")
                         appendLine("Galaxy Island paired: ${app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)}")
                         appendLine("Galaxy Island Guardian sync: ${Prefs.xposedIslandGuardianSync(this@MainActivity)}")
@@ -3296,6 +3297,7 @@ class MainActivity : Activity() {
         detail("Device admin · ${if (adminReady) "Active" else "Not enabled (optional last route)"}")
         detail("Accessibility · ${service.status(this@MainActivity)}")
         detail("Last route: ${service.lastRoute(this@MainActivity)}")
+        detail("Watchdog: ${app.d2lock.lockscreen.GuardianWatchdog.snapshot()}")
         val observed = guidedPrefs().getString("accessibility", null)
         detail(if (observed == null) "Device test: Not recorded" else "$observed · ${checkTime(guidedPrefs().getLong("accessibility_time", 0L))}")
         detail("Fallback handles screen-off only. D2 fingerprint and Samsung face/PIN/pattern still perform authentication. Galaxy Island is optional.")
@@ -3377,6 +3379,7 @@ class MainActivity : Activity() {
             "Optional experiment · Main baseline: Build 1070.\n${accessibility.lastRequest(this)}.\n" +
                 (if (accessibilityObserved == null) "Observed result: Not tested" else "$accessibilityObserved · ${checkTime(guidedPrefs().getLong("accessibility_time", 0L))}") +
                 "\nRoot (if enabled) → Shizuku → Accessibility fallback → Device admin. Tap for setup, test, or disable.") { showAccessibilityLab() }
+        row("Guardian watchdog", app.d2lock.lockscreen.GuardianWatchdog.snapshot() + "\nService health: every 15s awake / 60s asleep. Kiosk repair: up to 3 requests per minute. Tap to refresh.") { showReadiness() }
         row("Shizuku · ${if(shizukuAuthorized()) "Authorized" else "Needs attention"}", "Tap to connect or authorize") { resolveShizuku() }
         row("Root · ${if(RootManager.isAvailable()) "Available" else "Unavailable"}", "Tap to refresh root availability; grant D2 in KernelSU if required") {
             RootManager.refreshAsync(); Toast.makeText(this,"Root check requested; tap Refresh shortly",Toast.LENGTH_LONG).show()
