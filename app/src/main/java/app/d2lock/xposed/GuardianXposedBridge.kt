@@ -35,6 +35,7 @@ class GuardianXposedBridge : XposedModule() {
     }
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
+        io.github.soclear.oneuix.hook.D2OneUiHooks.onModuleLoaded(param)
         log(
             Log.INFO,
             TAG,
@@ -43,6 +44,8 @@ class GuardianXposedBridge : XposedModule() {
     }
 
     override fun onPackageReady(param: io.github.libxposed.api.XposedModuleInterface.PackageReadyParam) {
+        runCatching { with(this) { io.github.soclear.oneuix.hook.D2OneUiHooks.onPackageReady(param) } }
+            .onFailure { Log.w(TAG, "D2_ONEUI_PACKAGE_UNAVAILABLE", it) }
         if (param.packageName != "com.android.systemui" || !param.isFirstPackage) return
         installKeyguardPresentation(param.classLoader)
         runCatching {
@@ -97,7 +100,10 @@ class GuardianXposedBridge : XposedModule() {
             TAG,
             "GUARDIAN_MINIMAL_SYSTEM_SERVER_START uid=${android.os.Process.myUid()}"
         )
+        runCatching { with(this) { io.github.soclear.oneuix.hook.D2OneUiHooks.onSystemServerStarting(param) } }
+            .onFailure { Log.w(TAG, "D2_ONEUI_SYSTEM_UNAVAILABLE", it) }
         PeriodicCredentialHook.install(this, param.classLoader)
+        FrameworkControlHooks.install(this, param.classLoader)
         installBootReadyHook(param.classLoader)
         installWakeObserver(param.classLoader)
         installSecuritySetupObservers(param.classLoader)
@@ -383,6 +389,7 @@ class GuardianXposedBridge : XposedModule() {
 
     /** One guarded recovery attempt in system_server; validate before writing and verify read-back. */
     private fun scheduleDmcRecovery(systemContext: Context, reply: String? = null, delay: Long = 10_000L, replyPackage: String = "app.d2lock") {
+        FrameworkControlHooks.ready(systemContext)
         PeriodicCredentialHook.ready(systemContext)
         runCatching {
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({

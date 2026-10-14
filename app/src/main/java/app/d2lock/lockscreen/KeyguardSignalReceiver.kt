@@ -124,6 +124,11 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                     recordPipeline(context, "BOOT_FALLBACK_SKIPPED_ALREADY_ACTIVE", "$event:elapsed=$elapsed")
                     Log.i(TAG, "GUARDIAN_EARLY_BOOT_DEDUPED event=$event elapsed=$elapsed")
                 }
+            } else if (unlocked && intent.getBooleanExtra("experimental_control",false)) {
+                val safe=app.d2lock.Prefs.xposedSafeDiagnostics(context)
+                if(!safe && event=="KEYGUARD" && app.d2lock.Prefs.xposedImmediateRelock(context))
+                    LockScreenService.frameworkSignal(context,event,source)
+                else recordDecision(context,"OBSERVED","optional_$event diagnostics=$safe")
             } else if (unlocked && (event == "BOOT_READY" || event == "WAKE" || event == "KEYGUARD" || event == "TASK_KEYGUARD")) {
                 LockScreenService.frameworkSignal(context, event, source)
             }

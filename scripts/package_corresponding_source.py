@@ -14,7 +14,7 @@ root = pathlib.Path(subprocess.check_output(['git', 'rev-parse', '--show-topleve
 revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
 # Fail if tracked source/build changes would make this archive differ from the build.
 subprocess.run(['git', 'diff', '--exit-code', 'HEAD', '--', 'app/src', 'app/build.gradle.kts',
-                'build.gradle.kts', 'settings.gradle.kts', 'gradle.properties'], cwd=root, check=True)
+                'build.gradle.kts', 'settings.gradle.kts', 'gradle.properties', 'oneui-port', 'oneui-stub'], cwd=root, check=True)
 out = pathlib.Path(args.output).resolve()
 out.mkdir(parents=True, exist_ok=True)
 archive = out / 'Kiosk-D2-Guardian-source.zip'

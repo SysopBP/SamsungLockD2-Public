@@ -14,7 +14,12 @@ OneUIX is the reference for the requested Samsung customization integration.
 PeriodicCredentialHook.kt adapts the OneUIX periodic strong-auth scheduler
 control on October 14, 2026. D2 adds explicit opt-in, primary-user and
 device-policy guards, exact-signature probing, fail-open behavior and telemetry.
-Other requested OneUIX features are not imported by this change.
+The oneui-port/ module adapts the requested framework, call, Settings, camera,
+Notes, messaging, Health Monitor and SystemUI hooks plus supporting common/util
+code. oneui-stub/ contains compile-only platform stubs. Adapted on 2026-10-14;
+see docs/ONEUIX-INTEGRATION.md for scope and changes. D2 does not import the
+upstream custom power-menu or broad PIN bypass; its existing guarded power menu
+and narrow periodic credential hook remain authoritative.
 For subsequent adaptations, retain upstream notices and document changed files,
 source revision, and modification date. Credit does not imply endorsement.
 

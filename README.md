@@ -230,7 +230,7 @@ Notification content stays in memory. Wallpaper selection stores a persistent im
 
 Copyright (c) 2026 D2 Project and contributors. D2's original software and accompanying project documentation in this revision are released under **AGPL-3.0-only**. See [LICENSE](LICENSE). Third-party components retain their own licenses and notices. The APK includes the full AGPL text, credits and source access under **Legal, privacy & licenses**.
 
-**OneUIX — SoClear and contributors:** [upstream project](https://github.com/SoClear/OneUIX), licensed under AGPL-3.0. The requested Samsung customization work will preserve its upstream notices and record adaptations. The experimental periodic PIN/pattern timeout scheduler control is the first adaptation. Other requested features remain unported.
+**OneUIX — SoClear and contributors:** [upstream project](https://github.com/SoClear/OneUIX), licensed under AGPL-3.0. The requested Samsung customization work will preserve its upstream notices and record adaptations. The experimental periodic PIN/pattern timeout scheduler control and the requested OneUI feature categories are adapted. See [integration status](docs/ONEUIX-INTEGRATION.md) for scope, unsupported firmware paths and testing requirements.
 
 See [source and build instructions](docs/SOURCE-DISTRIBUTION.md). Distribute a source archive matching each APK revision alongside that APK; source from a later branch head is not a substitute. The license transition applies to this revision and future covered releases, not a claim about older binaries.
 
@@ -305,3 +305,7 @@ once. Already active timeout requirements are not cleared. Reboot/first-unlock,
 lockdown, failure and administrator requirements retain their normal paths.
 See [validation priorities](docs/ONEUIX-PORT-VALIDATION.md). This is experimental
 and is not yet a recommended alternative to Samsung face recognition.
+
+### Experimental OneUI feature port
+
+Tools → Experimental: OneUI feature port provides categorized configuration for the requested OneUIX hooks. All imported feature switches default off; Apply publishes through LSPosed's private remote-file service and verifies read-back. Select each affected app in D2's LSPosed scope and soft reboot after framework changes. Configuration is distinct from hook installation or device verification. D2 retains the 1074 accessibility and watchdog behavior. See [integration and test matrix](docs/ONEUIX-INTEGRATION.md).

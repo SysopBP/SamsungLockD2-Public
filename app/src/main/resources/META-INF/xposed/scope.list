@@ -1,3 +1,12 @@
 com.android.systemui
 com.samsung.android.biometrics.app.setting
 system
+com.android.settings
+com.sec.android.app.camera
+com.samsung.android.dialer
+com.samsung.android.incallui
+com.samsung.android.app.telephonyui
+com.samsung.android.mdecservice
+com.samsung.android.messaging
+com.samsung.android.app.notes
+com.samsung.android.shealthmonitor

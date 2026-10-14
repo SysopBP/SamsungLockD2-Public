@@ -91,6 +91,7 @@ class MainActivity : Activity() {
         }
         Appearance.apply(this)
         PinUi.protect(this)
+        OneUiPortSettings.init(this)
         Prefs.syncBootPolicy(this)
         RootManager.refreshAsync()
         app.d2lock.root.DmcRecovery.request(this, "app_open")
@@ -1274,6 +1275,7 @@ class MainActivity : Activity() {
                 setOnClickListener { showDmcStatus() }
             }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+        addButton(root, "Experimental: OneUI feature port") { OneUiPortSettings.show(this) }
         addButton(root, "Experimental: periodic PIN / pattern check") { PeriodicCredentialSettings.show(this) }
         section(root, "SYSTEM INTEGRATION")
         root.getChildAt(root.childCount - 1).tag = "root_shizuku"
@@ -2686,7 +2688,7 @@ class MainActivity : Activity() {
                 setPadding(0, dp(5), 0, dp(4))
             })
             addView(TextView(this@MainActivity).apply {
-                text = "Behavior controls below are experimental unless individually verified. Safe diagnostics can remain enabled while testing boot timing."
+                text = "Experimental observers: Screen / wake adds sleep diagnostics; Immediate relock observes Samsung keyguard showing; Native lifecycle observes activity resume. Safe diagnostics only records these signals without relocking. Apply through LSPosed, then soft reboot. Existing boot/wake protection remains separate."
                 textSize = 11f
                 setTextColor(Appearance.secondary(this@MainActivity))
                 setPadding(0, dp(2), 0, dp(8))
@@ -2706,11 +2708,12 @@ class MainActivity : Activity() {
                         text = title; textSize = 11f; maxLines = 2; setTextColor(Appearance.text(this@MainActivity))
                     }, LinearLayout.LayoutParams(0, -2, 1f))
                     addView(guardianSwitch().apply {
-                        // These stored switches have no behavioral hook implementation yet.
-                        isChecked = false; isEnabled = false; contentDescription = "$title: not implemented"
+                        val implemented=title in setOf("Safe diagnostics only","Screen / wake","Immediate relock","Native lifecycle")
+                        isChecked = implemented && checked(); isEnabled = implemented
+                        contentDescription = if(implemented) "$title: experimental observer" else "$title: not implemented"
                         scaleX = .82f; scaleY = .82f
                         setPadding(0, 0, dp(4), 0)
-                        setOnCheckedChangeListener { _, value -> changed(value) }
+                        setOnCheckedChangeListener { _, value -> changed(value); OneUiPortSettings.syncFramework(this@MainActivity) }
                     }, LinearLayout.LayoutParams(dp(60), dp(48)))
                 }
             fun compactGrid(items: List<Triple<String, () -> Boolean, (Boolean) -> Unit>>) {
@@ -2728,7 +2731,7 @@ class MainActivity : Activity() {
                 }
             }
 
-            masterXposedToggle("Accept framework signals", { Prefs.xposedMaster(this@MainActivity) }) { Prefs.setXposedMaster(this@MainActivity, it) }
+            masterXposedToggle("Accept framework signals", { Prefs.xposedMaster(this@MainActivity) }) { Prefs.setXposedMaster(this@MainActivity, it); OneUiPortSettings.syncFramework(this@MainActivity) }
             addView(compactXposedToggle("Safe diagnostics only", { Prefs.xposedSafeDiagnostics(this@MainActivity) }) { Prefs.setXposedSafeDiagnostics(this@MainActivity, it) },
                 LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
 
@@ -2763,7 +2766,7 @@ class MainActivity : Activity() {
             ))
 
             addView(TextView(this@MainActivity).apply {
-                text = "In development: the additional framework and Galaxy Island controls shown above are placeholders and remain disabled until their individual hooks are implemented and tested. Development is deferred to a later update. Current boot/wake observers, D2 SRP and power-menu hooks run separately; these switches do not control them. The separate KernelSU bridge ZIP remains optional."
+                text = "Experimental sleep, keyguard and lifecycle observers are implemented for testing. Remaining Home/Recents, gesture, notification/media/call, QS, recovery and Galaxy Island controls are still planned and disabled. Galaxy Island and the KernelSU bridge ZIP are optional. Current boot/wake protection, D2 SRP and guarded power menu run separately."
                 textSize = 12f
                 setTextColor(Appearance.secondary(this@MainActivity))
                 setPadding(dp(4), dp(8), dp(4), 0)
