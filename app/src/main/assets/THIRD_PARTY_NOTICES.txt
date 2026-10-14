@@ -956,3 +956,8 @@ before configuration reads; Call.kt safely declines unsupported constructors
 and contains discovery failures; Android.kt removes the unused scheduler bypass.
 Strong-auth UI and diagnostics distinguish metadata observations from verified
 PIN/pattern behavior. SoClear and OneUIX contributor attribution is retained.
+
+D2 update 2026-10-14: restores OneUIX Android.disablePinVerifyPer72h and its
+system_server startup configuration route, compared with upstream revision
+b2466b689c358eed1389979f89e2958e21dd91cb. D2 adds registration/method/callback
+telemetry; this supersedes the earlier removal described above. AGPL-3.0-only.

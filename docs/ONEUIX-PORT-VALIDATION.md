@@ -1,3 +1,7 @@
+> Updated October 14: the opt-in upstream scheduler option is restored. See
+> [restoration and device test](72-HOUR-ONEUIX-RESTORE.md). Earlier read-only-only
+> descriptions below document the preceding build, not the restored option.
+
 # Samsung strong-auth validation
 
 Baseline: Actions 38598510630 (build 1090), db294a12d035827ce625fdfc79809f9ac4320df4.

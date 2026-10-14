@@ -471,6 +471,10 @@ object D2OneUiHooks {
     fun onSystemServerStarting(param: XposedModuleInterface.SystemServerStartingParam) = with(param) {
         val preference = PreferenceProvider.loadPreference() ?: return@with
 
+        if (preference.android.disablePinVerifyPer72h) {
+            Android.disablePinVerifyPer72h()
+        }
+
         if (preference.android.disableWritingToolkitGlobally) {
             Android.disableWritingToolkitGlobally()
         }

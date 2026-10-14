@@ -46,7 +46,7 @@ object OneUiPortSettings {
             out.channel.truncate(0); out.write(text.toByteArray(Charsets.UTF_8)); out.channel.force(true)
         }
         val read = ParcelFileDescriptor.AutoCloseInputStream(s.openRemoteFile(Preference.FILE_NAME)).use { it.readBytes().toString(Charsets.UTF_8) }
-        check(JSONObject(read).toString() == JSONObject(text).toString()) { "Remote settings read-back failed" }
+        check(json.parseToJsonElement(read) == json.parseToJsonElement(text)) { "Remote settings read-back failed" }
     }
     private fun bounds(key: String): Pair<Double,Double> = when {
         key=="maxNeverKilledAppNum" -> 1.0 to 20.0
@@ -104,16 +104,43 @@ object OneUiPortSettings {
             FeatureGlass.style(activity,dialog)
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val bound=service
-                if(bound==null) { status.text="LSPosed module service unavailable. Enable D2 as a module and reopen D2. Changes have not been applied."; return@setOnClickListener }
                 val text=state.toString()
                 // Validate against the upstream schema before publishing any bytes.
-                runCatching { json.decodeFromString(Preference.serializer(),text) }.getOrElse { status.text="Invalid configuration: ${it.message}"; return@setOnClickListener }
+                runCatching { json.decodeFromString(Preference.serializer(),text) }.getOrElse {
+                    val message="Invalid configuration: ${it.message}. Changes have not been saved."
+                    status.text=message
+                    FeatureGlass.help(activity,"Could not save",message)
+                    return@setOnClickListener
+                }
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled=false
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).isEnabled=false
+                val app=activity.applicationContext
                 worker.execute {
-                    val result=runCatching { publish(bound,export(activity,text)); check(prefs(activity).edit().putString("config",text).commit()) }
+                    // Preserve the user's selection before attempting the remote service.
+                    // A missing service or failed read-back must never discard it.
+                    val saved=runCatching {
+                        check(prefs(app).edit().putString("config",text).commit()) { "Local settings write failed" }
+                        check(json.parseToJsonElement(prefs(app).getString("config", "")!!) == json.parseToJsonElement(text)) { "Local settings read-back failed" }
+                    }
+                    val applied=if(saved.isSuccess) runCatching {
+                        val active=checkNotNull(bound) { "LSPosed module service unavailable" }
+                        publish(active,export(app,text))
+                    } else null
                     activity.runOnUiThread { if(dialog.isShowing) {
                         dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled=true
-                        status.text=if(result.isSuccess) "Saved and read back through LSPosed. Soft reboot after framework changes; restart affected Samsung apps. Hooks remain unverified until device testing." else "Could not apply: ${result.exceptionOrNull()?.message}. Retry with LSPosed connected."
+                        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).isEnabled=true
+                        val title=when {
+                            saved.isFailure -> "Could not save"
+                            applied?.isSuccess==true -> "Settings applied"
+                            else -> "Settings saved — pending LSPosed"
+                        }
+                        val message=when {
+                            saved.isFailure -> "${saved.exceptionOrNull()?.message}. Changes have not been applied."
+                            applied?.isSuccess==true -> "Saved locally and verified through LSPosed. Soft reboot after framework changes, then unlock Samsung once. Hook compatibility still requires device verification."
+                            else -> "Your selections are saved and will remain after reopening D2 or rebooting. ${applied?.exceptionOrNull()?.message}. Enable D2 in LSPosed and reopen D2, then tap Apply again. Wait for Settings applied before soft rebooting."
+                        }
+                        status.text=message
+                        FeatureGlass.help(activity,title,message)
                     } }
                 }
             }
@@ -133,12 +160,15 @@ object OneUiPortSettings {
         }
     private fun showGroup(a: Activity,title: String,path: String,state: JSONObject) {
         val body=LinearLayout(a).apply { orientation=LinearLayout.VERTICAL; setPadding(24,12,24,12) }
-        val excluded=setOf("disablePinVerifyPer72h","powerMenuActions","setThemeTrialNeverExpired")
+        val excluded=setOf("powerMenuActions","setThemeTrialNeverExpired")
+        if(path=="android") body.addView(TextView(a).apply {
+            text="72-hour option uses OneUIX's scheduler hook. Enable the OneUI feature port, enable this option, then tap Apply on the main panel. Soft reboot and unlock Samsung once with its PIN or pattern. This reduces periodic credential protection; first-unlock and other strong-auth requirements remain. Turning it off also requires a soft reboot. PIN and pattern require separate device validation."
+        })
         val otherAllowed=otherKeys(title)
         state.keys().asSequence().toList().forEach { key ->
             if(key in excluded || (path=="other" && key !in otherAllowed)) return@forEach
             val v=state.get(key)
-            if(v is Boolean) body.addView(Switch(a).apply { text=label(key); isChecked=v;
+            if(v is Boolean) body.addView(Switch(a).apply { text=if(key=="disablePinVerifyPer72h") "Disable periodic Samsung PIN / pattern check (72 hours)" else label(key); isChecked=v;
                 if(key=="turnOn5gQsTile" && android.os.Build.VERSION.SDK_INT!=34) { isEnabled=false; text="Native 5G tile: Android 14 only" }
                 setOnCheckedChangeListener { _,checked -> state.put(key,checked) } })
             else if(v is Number || v is String) {
