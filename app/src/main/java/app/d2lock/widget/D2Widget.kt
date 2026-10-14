@@ -74,11 +74,29 @@ class D2Widget : AppWidgetProvider() {
             val checked = if (status.checkedAt > 0) java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT)
                 .format(java.util.Date(status.checkedAt)) else "never"
             fun flag(value: Int?) = when(value) { 0 -> "off"; 1 -> "on"; else -> "?" }
-            val stats = if (compact) "$summary · $checked" else
-                "$summary · checked $checked\nLock ${flag(status.screenLock)} · Maintenance ${flag(status.maintenance)} · AT ${flag(status.atCommand)}"
+            val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 80)
+            val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 140)
+            fun available(value: Boolean?) = when (value) { true -> "OK"; false -> "No"; null -> "?" }
+            val rows = if (height >= 120) listOf(
+                summary,
+                "Server: ${available(status.systemServer)}",
+                "SRP lock: ${flag(status.screenLock)}",
+                "Maint: ${flag(status.maintenance)}",
+                "AT: ${flag(status.atCommand)}",
+                "Download: ${available(status.downloadAllowed)}",
+                "Checked $checked"
+            ) else if (height >= 80) listOf(
+                summary,
+                "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
+                "AT ${flag(status.atCommand)} · DL ${available(status.downloadAllowed)}",
+                checked
+            ) else listOf(summary, checked)
+            val stats = rows.joinToString("\n")
             view.setTextViewText(R.id.d2_widget_srp, stats)
             view.setViewVisibility(R.id.d2_widget_srp, if (WidgetPrefs.srp(context, id)) View.VISIBLE else View.GONE)
-            view.setTextViewTextSize(R.id.d2_widget_srp, android.util.TypedValue.COMPLEX_UNIT_SP, if (compact) 10f else 11f)
+            view.setInt(R.id.d2_widget_srp, "setMaxLines", rows.size)
+            view.setTextViewTextSize(R.id.d2_widget_srp, android.util.TypedValue.COMPLEX_UNIT_SP,
+                if (width < 110 || height < 80) 9f else 11f)
             val light = WidgetPrefs.style(context,id) == "light"
             val background = when (WidgetPrefs.style(context,id)) {
                 "galaxy" -> 0xB8141820.toInt()
