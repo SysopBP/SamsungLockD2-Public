@@ -9,6 +9,7 @@ public final class FiveGWorker {
  public static void main(String[] args) {
   try {
    if(android.os.Process.myUid()!=0) throw new SecurityException("Root worker required");
+   if(android.os.Looper.myLooper()==null) android.os.Looper.prepareMainLooper();
    Class<?> at=Class.forName("android.app.ActivityThread");
    Object thread=at.getMethod("systemMain").invoke(null);
    Context c=(Context)at.getMethod("getSystemContext").invoke(thread);
