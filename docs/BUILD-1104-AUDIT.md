@@ -28,7 +28,13 @@ Outer ZIP reduction: **2,512,398 bytes**. Contributions to compressed payload re
 APK 1,465,144; source ZIP 150,411; KernelSU ZIP 13,109;
 omitted DexKit source ZIP 882,454; omitted source metadata 482;
 checksums 62; dependency report 162. Remaining 574 bytes are ZIP directory/header overhead.
-The four native libraries in 1095 are DexKit; 1104 has no native dependency.
+The four native libraries in 1095 are `libdexkit.so` for arm64-v8a,
+armeabi-v7a, x86 and x86_64; 1104 has no native dependency. Parsed DEX class
+definitions: 10,419 classes in 1095 versus 9,190 in 1104; 1,243 classes appear
+only in 1095 and 14 only in 1104. Missing experiment classes include OneUiPortSettings,
+PeriodicCredentialHook/Settings, D2AccessibilityService, WatchdogRecoveryBudget,
+CallStatePolicy, FiveGTileService/Worker and FrameworkControlHooks. Their source
+history confirms they belong to the separate experiment branch.
 The experiment branch also contains OneUI-port, serialization JSON and libxposed
 service dependencies, wider Xposed scope, accessibility, periodic credential,
 call-policy and watchdog enhancements that never landed on the selected branch.
@@ -117,12 +123,14 @@ need separate integration and device validation, including license preservation.
 
 ```sh
 su -c '
+{
 date
 dumpsys package app.d2lock | grep -E "versionCode=|versionName="
 cat /data/user_de/0/app.d2lock/shared_prefs/d2_hook_evidence.xml
 cat /data/user_de/0/app.d2lock/shared_prefs/guardian_xposed_health.xml
 logcat -b all -d -v threadtime -s D2XposedBridge:V KeyguardSignalReceiver:V SamsungLockD2:V D2SRP:V
-' > /storage/emulated/0/Download/D2_1104_Continuation_Test.txt 2>&1
+} > /storage/emulated/0/Download/D2_1104_Continuation_Test.txt 2>&1
+'
 ```
 
 CI compiles, runs unit/instrumentation runtime checks and lint, verifies the
@@ -130,3 +138,28 @@ original signing certificate and inventories APK/module contents. Emulator CI
 cannot validate Samsung private APIs, KernelSU, LSPosed callbacks, Direct Boot
 on this firmware, real calls, 72-hour expiry or System Server stability under
 physical-device use. No main merge or release publication is authorized.
+
+## Completed validation — Build 1106
+
+- Code commit: 2fd96a9384f4d0131fbc5f95c5c4fe49a87d6a97.
+- Successful run: https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38629193811
+- Deliverables: https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38629193811/artifacts/11925122984
+- 27 unit tests and 25 Android 16 emulator instrumentation tests passed, zero failures.
+- Lint completed with **655 warnings and no errors**. It is not a warning-free build.
+  The new observer findings include reflective PrivateApi, singleton application
+  Context/Handler lifetime and UseKtx warnings. Firmware reflection is guarded;
+  workers retain process/application state, not Activity instances. These warnings
+  are disclosed rather than hidden with new suppressions.
+- Original signing certificate verified by CI; APK/module entry-point and inventory
+  checks passed. Outer artifact is 9,290,741 bytes; APK is 18,896,670 bytes.
+- Downloaded final artifact and verified every nested ZIP/APK and all SHA256SUMS.
+  KernelSU scripts remain byte-identical to 1104; only the discovery-credit wording
+  changed in its notices. No APK was added to the optional bridge.
+- DEX comparison preserves every non-synthetic class in 1104. Three generated
+  lambda names changed with compilation; replacement lambda classes are present.
+  CredentialObserver, HookDiagnostics and actual draw observer are included.
+- Physical S26 Ultra validation is still required. This build does not claim to
+  fix the entire perceived startup delay or to have completed a 72-hour expiry test.
+
+A subsequent documentation-only commit updates this audit and remaining prose
+names; the successful APK is built from the code commit linked above.

@@ -20,7 +20,7 @@ The current boot/wake observers, security-setup refresh, D2 SRP checks and power
 
 ## Feature naming
 
-**D2 SRP** is the short name for **Samsung Recovery Protection**. Compact buttons and messages use D2 SRP; setup instructions and explanations spell out the full name. SRP is D2's feature name, not a guarantee of successful firmware recovery. The underlying Samsung vault remains named `DMC`; code identifiers, broadcast actions retain that technical name for compatibility; diagnostic logs use D2_SRP. Credit to **@diablOw** remains for the original D2 SRP discovery.
+**D2 SRP** is the short name for **Samsung Recovery Protection**. Compact buttons and messages use D2 SRP; setup instructions and explanations spell out the full name. SRP is D2's feature name, not a guarantee of successful firmware recovery. The underlying Samsung vault remains named `DMC`; code identifiers and broadcast actions retain that technical name for compatibility; diagnostic logs use D2_SRP. Credit to **@diablOw** remains for the original D2 SRP discovery.
 
 ## D2 power-menu integration (experimental)
 
@@ -44,7 +44,7 @@ Check `D2_SRP_POWER_HOOK_INSTALLED` logs before relying on coverage. Firmware-sp
 
 ### When protection does not pass
 
-For an active, supported guard, failed or unknown DMC verification cancels the requested power off, restart, or supported soft restart. The phone stays on and shows a message directing you to D2 SRP status. A five-second timeout also cancels the request; a late successful result cannot restart the phone. Fix the reported issue and explicitly retry the action.
+For an active, supported guard, failed or unknown D2 SRP verification cancels the requested power off, restart, or supported soft restart. The phone stays on and shows a message directing you to D2 SRP status. A five-second timeout also cancels the request; a late successful result cannot restart the phone. Fix the reported issue and explicitly retry the action.
 
 Opening **D2 SRP status** performs the recovery/check and displays its result; it never requests shutdown or restart by itself. A failed status dialog does not globally disable every reboot route.
 
@@ -63,12 +63,12 @@ trigger a refresh after 2 seconds, followed by a check at 12 seconds for delayed
 Samsung updates. Setup detection needs validation on the target firmware.
 The live glass status dialog shows target checks, System Server identity, and
 last-check time. Successful vault read-back is required to report verification.
-DMC flags are separate from Android credentials and biometric enrollment.
+D2 SRP vault flags are separate from Android credentials and biometric enrollment.
 
 **D2 SRP discovery credit: @diablOw**, for originally discovering the Samsung recovery behavior
 behind this recovery feature.
 
-See [automatic DMC recovery behavior and limits](docs/AUTOMATIC-DMC-RECOVERY.md).
+See [D2 SRP behavior and limits](docs/AUTOMATIC-DMC-RECOVERY.md).
 
 > **September 29, 2026 development status:** Physical-device testing now confirms the token-integrated fast-boot path as the new known-good reference. `ActivityManagerService.systemReady()` delivers `BOOT_READY`, D2 performs the early root launch, confirms the boot token when `LockScreenActivity` is created, and reaches `GUARDIAN_FIRST_DRAW` about **305 ms after BOOT_READY** in the captured successful boot. When the normal Android boot receiver arrives later, it recognizes the claimed token and skips the duplicate launch. Preserve this ordering as the boot baseline. See [the verified baseline and measured boot timeline](.github/KIOSK_D2_BASELINE.md).
 
