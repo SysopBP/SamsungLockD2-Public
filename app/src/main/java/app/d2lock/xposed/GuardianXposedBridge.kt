@@ -97,6 +97,7 @@ class GuardianXposedBridge : XposedModule() {
             TAG,
             "GUARDIAN_MINIMAL_SYSTEM_SERVER_START uid=${android.os.Process.myUid()}"
         )
+        PeriodicCredentialHook.install(this, param.classLoader)
         installBootReadyHook(param.classLoader)
         installWakeObserver(param.classLoader)
         installSecuritySetupObservers(param.classLoader)
@@ -382,6 +383,7 @@ class GuardianXposedBridge : XposedModule() {
 
     /** One guarded recovery attempt in system_server; validate before writing and verify read-back. */
     private fun scheduleDmcRecovery(systemContext: Context, reply: String? = null, delay: Long = 10_000L, replyPackage: String = "app.d2lock") {
+        PeriodicCredentialHook.ready(systemContext)
         runCatching {
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 runCatching {

@@ -61,5 +61,7 @@ contributors: https://github.com/SoClear/OneUIX. Its repository supplies the ful
 GNU AGPL version 3 license. Reference commit:
 `591d09c9cc69faf3c8faf258e39869b2df7981f4`.
 
-No new OneUIX hooks are imported by this licensing transition. Any later port
-must retain attribution, include source, and carry a dated modification notice.
+PeriodicCredentialHook.kt adapts the periodic timeout scheduler hook and carries
+a dated provenance notice. Other requested OneUIX features remain unported.
+Every further port must retain attribution, include source, and carry a dated
+modification notice.

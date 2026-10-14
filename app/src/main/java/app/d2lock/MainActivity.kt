@@ -1271,6 +1271,7 @@ class MainActivity : Activity() {
                 setOnClickListener { showDmcStatus() }
             }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+        addButton(root, "Experimental: periodic PIN / pattern check") { PeriodicCredentialSettings.show(this) }
         section(root, "SYSTEM INTEGRATION")
         root.getChildAt(root.childCount - 1).tag = "root_shizuku"
         root.addView(LinearLayout(this).apply {
