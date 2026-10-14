@@ -220,7 +220,7 @@ class MainActivity : Activity() {
                 append(if (RootManager.isAvailable()) "✓ KernelSU Superuser granted to D2" else "○ KernelSU Superuser required")
                 append("\n")
                 append(if (Prefs.adbRecovery(this@MainActivity)) "✓ ADB / USB recovery configured" else "○ ADB / USB recovery is optional and currently off")
-                append("\n\nD2's tested rooted configuration requires KernelSU Superuser. Grant Kiosk D2 Boot Guardian root access in KernelSU before continuing to full kiosk protection.")
+                append("\n\n1. Open KernelSU → Superuser.\n2. Find Kiosk D2 Boot Guardian and allow Superuser access.\n3. Return here and tap Request / recheck root. Approve the prompt if shown.\n\nRoot must already be installed on this device. D2 cannot grant itself access. ADB / USB recovery is optional.")
             },
             buildString {
                 val shizukuRunning = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
@@ -229,7 +229,9 @@ class MainActivity : Activity() {
                 append("\n")
                 append(if (hasNotificationAccess()) "✓ Notification Access enabled — media + lock notifications ready" else "○ Notification Access required — media player and lock notifications need it")
                 append("\n")
-                append(if (Prefs.xposedMaster(this@MainActivity)) "✓ LSPosed/Xposed integration configured" else "○ Xposed integration optional")
+                val srp = app.d2lock.root.DmcRecovery.status(this@MainActivity)
+                append(if (srp.targetsMet) "✓ System Server SRP verified" else "○ System Server SRP not verified")
+                append("\n\nXposed setup:\n1. Open LSPosed → Modules → D2.\n2. Enable the module and select System Framework (android) plus System UI (com.android.systemui).\n3. Enable D2's LSPosed integration in System Integrations.\n4. Reboot using your usual tested method, return here and verify SRP.\nA switch being on does not prove the hook is connected.")
                 append("\n")
                 append(if (app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)) "✓ Galaxy Island paired" else "○ Galaxy Island pairing optional")
                 append("\n\nRequired for full D2 operation: KernelSU Superuser + Shizuku authorized + Notification Access. Fingerprint login requires an enrolled strong biometric; keep your D2 PIN available for recovery.")
@@ -274,12 +276,56 @@ class MainActivity : Activity() {
                 background=Appearance.glass(this@MainActivity,22f,30,true); setPadding(dp(12),dp(11),dp(12),dp(11))
                 setOnClickListener { PinUi.show(this@MainActivity,setup=true,success={ showSetupWizard(2) }) }
             },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
-            if(step==3 && !RootManager.isAvailable()) addView(TextView(this@MainActivity).apply {
-                text="Recheck KernelSU Superuser"; textSize=15f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
+            if(step==3) {
+                addView(TextView(this@MainActivity).apply {
+                    text="Open KernelSU"; textSize=15f; gravity=Gravity.CENTER
+                    setTextColor(Appearance.accent(this@MainActivity)); setPadding(dp(12),dp(10),dp(12),dp(10))
+                    setOnClickListener {
+                        val launch = packageManager.getLaunchIntentForPackage("me.weishu.kernelsu")
+                        if (launch != null) startActivity(launch)
+                        else showD2Message("Open your KernelSU manager manually → Superuser → allow Kiosk D2 Boot Guardian. Manager forks may use another package name.")
+                    }
+                })
+            }
+            if(step==3) addView(TextView(this@MainActivity).apply {
+                text="Request / recheck root"; textSize=15f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
                 background=Appearance.glass(this@MainActivity,22f,30,true); setPadding(dp(12),dp(11),dp(12),dp(11))
-                setOnClickListener { showSetupWizard(3) }
+                setOnClickListener {
+                    text="Checking root…"; isEnabled=false
+                    Thread {
+                        val granted = runCatching { RootManager.probe() }.getOrDefault(false)
+                        runOnUiThread {
+                            if (!isFinishing && !isDestroyed) {
+                                showD2Message(if (granted) "Root UID 0 verified" else "Root not granted. Allow D2 in KernelSU, then retry.")
+                                showSetupWizard(3)
+                            }
+                        }
+                    }.start()
+                }
             },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
             if(step==4) {
+                addView(TextView(this@MainActivity).apply {
+                    text="Open LSPosed"; textSize=15f; gravity=Gravity.CENTER
+                    setTextColor(Appearance.accent(this@MainActivity)); setPadding(dp(12),dp(10),dp(12),dp(10))
+                    setOnClickListener {
+                        val launch = packageManager.getLaunchIntentForPackage("org.lsposed.manager")
+                        if (launch != null) startActivity(launch)
+                        else showD2Message("Open LSPosed using its manager shortcut or notification → Modules → D2. Enable System Framework and System UI scopes.")
+                    }
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text="Verify System Server / SRP"; textSize=15f; gravity=Gravity.CENTER
+                    setTextColor(Appearance.accent(this@MainActivity)); setPadding(dp(12),dp(10),dp(12),dp(10))
+                    setOnClickListener {
+                        text="Verifying…"; isEnabled=false
+                        app.d2lock.root.DmcRecovery.verifyForAction(this@MainActivity) { status ->
+                            if (!isFinishing && !isDestroyed) {
+                                showD2Message(if (status.targetsMet) "System Server connected · SRP verified" else status.detail)
+                                showSetupWizard(4)
+                            }
+                        }
+                    }
+                })
                 val shizukuRunning = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
                 val shizukuGranted = shizukuRunning && runCatching { Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED }.getOrDefault(false)
                 if(!shizukuGranted) addView(TextView(this@MainActivity).apply {
@@ -297,25 +343,25 @@ class MainActivity : Activity() {
                     }
                 },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
             }
-            if(step==3 && !hasNotificationAccess()) addView(TextView(this@MainActivity).apply {
+            if(step==4 && !hasNotificationAccess()) addView(TextView(this@MainActivity).apply {
                 text="Enable Notification Access"; textSize=15f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
                 background=Appearance.glass(this@MainActivity,22f,30,true); setPadding(dp(12),dp(11),dp(12),dp(11))
                 setOnClickListener { openNotificationAccessSettings() }
             },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
-            if(step==4) addView(guardianSwitch().apply {
+            if(step==5) addView(guardianSwitch().apply {
                 text="Show D2 when the screen wakes"; setTextColor(Appearance.text(this@MainActivity)); isChecked=Prefs.enabled(this@MainActivity)
                 setOnCheckedChangeListener { _,checked ->
                     Prefs.setEnabled(this@MainActivity,checked)
                     if(checked) LockScreenService.start(this@MainActivity) else LockScreenService.stop(this@MainActivity)
                 }
             },rowParams())
-            if(step==5) addView(TextView(this@MainActivity).apply {
+            if(step==6) addView(TextView(this@MainActivity).apply {
                 text="Test Guardian"; textSize=15f; gravity=Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
                 background=Appearance.glass(this@MainActivity,22f,30,true); setPadding(dp(12),dp(11),dp(12),dp(11))
                 setOnClickListener { startActivity(Intent(this@MainActivity,LockScreenActivity::class.java)) }
             },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
         }
-        val builder=AlertDialog.Builder(this).setView(body)
+        val builder=AlertDialog.Builder(this).setView(ScrollView(this).apply { addView(body) })
         if(step>0) builder.setNegativeButton("Back") { _,_ -> showSetupWizard(step-1) } else builder.setNegativeButton("Later",null)
         if(step<titles.lastIndex) builder.setPositiveButton("Next") { _,_ ->
             if(step==1 && !PinStore(this).configured()) {
