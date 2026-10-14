@@ -1,3 +1,5 @@
+> Historical 1104/1106 audit. The subsequent [consolidation](CONSOLIDATED-DEVELOPMENT.md) restores the experiment feature set into this same development branch; earlier pending-port statements below describe the pre-consolidation state.
+
 # D2 Guardian Build 1104 continuation
 
 ## Exact artifact comparison

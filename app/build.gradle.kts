@@ -11,7 +11,7 @@ android {
         minSdk = 31
         targetSdk = 37
         versionCode = 30
-        versionName = "0.6.4-core-launcher-bridge"
+        versionName = "0.6.4-oneui-hooks-experiment"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -46,6 +46,9 @@ configurations.configureEach {
 }
 
 dependencies {
+    implementation(project(":oneui-port"))
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+    implementation("io.github.libxposed:service:102.0.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
     // SESL9 preview only. Keep production Guardian/auth surfaces untouched.
@@ -64,3 +67,5 @@ dependencies {
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
 }
+
+kotlin { compilerOptions { freeCompilerArgs.add("-Xcontext-parameters") } }

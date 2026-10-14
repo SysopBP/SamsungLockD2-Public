@@ -1,0 +1,31 @@
+/* OneUIX adaptation for D2, 2026-10-14. SPDX-License-Identifier: AGPL-3.0-only
+ * Upstream: SoClear/OneUIX @ 591d09c9cc69faf3c8faf258e39869b2df7981f4. */
+package io.github.soclear.oneuix.common
+
+object Package {
+    const val ANDROID = "android"
+    const val BROWSER = "com.sec.android.app.sbrowser"
+    const val CALENDAR = "com.samsung.android.calendar"
+    const val CAMERA = "com.sec.android.app.camera"
+    const val DIALER = "com.samsung.android.dialer"
+    const val DUAL_APP = "com.samsung.android.da.daagent"
+    const val GALLERY = "com.sec.android.gallery3d"
+    const val HEALTH_MONITOR = "com.samsung.android.shealthmonitor"
+    const val INCALLUI = "com.samsung.android.incallui"
+    const val LAUNCHER = "com.sec.android.app.launcher"
+    const val MDEC_SERVICE = "com.samsung.android.mdecservice"
+    const val MESSAGING = "com.samsung.android.messaging"
+    const val NOTES = "com.samsung.android.app.notes"
+    const val PHOTO_RETOUCHING = "com.sec.android.mimage.photoretouching"
+    const val SETTINGS = "com.android.settings"
+    const val SKETCH_BOOK = "com.samsung.android.app.sketchbook"
+    const val SM_CN = "com.samsung.android.sm_cn"
+    const val STORE = "com.sec.android.app.samsungapps"
+    const val SYSTEMUI = "com.android.systemui"
+    const val TELEPHONYUI = "com.samsung.android.app.telephonyui"
+    const val THEME_CENTER = "com.samsung.android.themecenter"
+    const val TRANSLATION = "com.samsung.android.service.airviewdictionary"
+    const val WATCH_MANAGER = "com.samsung.android.app.watchmanager"
+    const val WEATHER = "com.sec.android.daemonapp"
+    const val VIDEO = "com.samsung.android.video"
+}

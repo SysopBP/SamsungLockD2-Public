@@ -30,3 +30,5 @@ dependencyResolutionManagement {
 }
 rootProject.name = "SamsungLock37"
 include(":app")
+
+include(":oneui-port", ":oneui-stub")

@@ -16,6 +16,12 @@ with zipfile.ZipFile(apk) as z:
     assert 'META-INF/xposed/java_init.list' in z.namelist()
     assert 'app.d2lock.xposed.GuardianXposedBridge' in z.read('META-INF/xposed/java_init.list').decode()
     assert any(b'CredentialObserver' in z.read(n) for n in z.namelist() if n.endswith('.dex'))
+    baseline = json.loads(pathlib.Path('D2_FEATURE_BASELINE.json').read_text())
+    dex = b''.join(z.read(n) for n in z.namelist() if n.endswith('.dex'))
+    for name in baseline['required_apk_classes']:
+        assert name.encode() in dex, 'Missing feature class: ' + name
+    for abi in baseline['required_native_abis']:
+        assert 'lib/' + abi + '/libdexkit.so' in z.namelist(), 'Missing DexKit ABI: ' + abi
     apk_entries = [{'name': i.filename, 'bytes': i.file_size, 'compressed': i.compress_size} for i in z.infolist()]
 with zipfile.ZipFile(module) as z:
     assert z.testzip() is None

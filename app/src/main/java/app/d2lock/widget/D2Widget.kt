@@ -27,7 +27,8 @@ private object WidgetPrefs {
     fun density(c: Context, id: Int) = p(c).getString("density_$id", "comfortable") ?: "comfortable"
     fun save(c: Context, id: Int, style: String, action: String, label: Boolean) = p(c).edit().putString("style_$id", style).putString("action_$id", action).putBoolean("label_$id", label).apply()
     fun srp(c: Context, id: Int) = p(c).getBoolean("srp_$id", true)
-    fun remove(c: Context, id: Int) = p(c).edit().remove("style_$id").remove("action_$id").remove("label_$id").remove("density_$id").remove("srp_$id").apply()
+    fun periodic(c: Context, id: Int) = p(c).getBoolean("periodic_$id", true)
+    fun remove(c: Context, id: Int) = p(c).edit().remove("style_$id").remove("action_$id").remove("label_$id").remove("density_$id").remove("srp_$id").remove("periodic_$id").apply()
 }
 
 class D2Widget : AppWidgetProvider() {
@@ -38,6 +39,7 @@ class D2Widget : AppWidgetProvider() {
     }
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
+        if (intent.action == PERIODIC_STATUS) updateAll(context)
         if (intent.action == REFRESH) {
             val pending = goAsync()
             DmcRecovery.request(context, "widget_refresh", retry = 3, force = true, done = {
@@ -46,6 +48,7 @@ class D2Widget : AppWidgetProvider() {
         }
     }
     companion object {
+        private const val PERIODIC_STATUS = "app.d2lock.widget.PERIODIC_STATUS"
         private const val REFRESH = "app.d2lock.widget.REFRESH_SRP"
         fun updateAll(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
@@ -123,10 +126,13 @@ class D2Widget : AppWidgetProvider() {
                 height >= 75 -> listOf(summary, "72h diag: $credential", "Tap for SRP")
                 else -> listOf(summary, "72h diag: ?")
             }
-            val stats = rows.joinToString("\n")
+            val showPeriodic = WidgetPrefs.periodic(context, id) && height >= 140 && width >= 140
+            // Separate observation age from SRP; reserve space for optional diagnostic rows.
+            val displayedRows = rows
+            val stats = displayedRows.joinToString("\n")
             view.setTextViewText(R.id.d2_widget_srp, stats)
             view.setViewVisibility(R.id.d2_widget_srp, if (WidgetPrefs.srp(context, id)) View.VISIBLE else View.GONE)
-            view.setInt(R.id.d2_widget_srp, "setMaxLines", rows.size)
+            view.setInt(R.id.d2_widget_srp, "setMaxLines", displayedRows.size)
             view.setTextViewTextSize(R.id.d2_widget_srp, android.util.TypedValue.COMPLEX_UNIT_SP,
                 when { width < 110 || height < 100 -> 9f; height < 145 -> 10f; else -> 11f })
             val light = WidgetPrefs.style(context,id) == "light"
@@ -140,6 +146,36 @@ class D2Widget : AppWidgetProvider() {
             val color = if (light) 0xFF15171C.toInt() else android.graphics.Color.WHITE
             view.setTextColor(R.id.d2_widget_title, color)
             view.setTextColor(R.id.d2_widget_srp, color)
+            view.setTextColor(R.id.d2_widget_periodic, color)
+            view.setTextColor(R.id.d2_widget_periodic_timer, color)
+            val now = SystemClock.elapsedRealtime()
+            val snapshot = runCatching { org.json.JSONObject(android.provider.Settings.Global.getString(
+                context.contentResolver, "d2_periodic_credential_hook_status") ?: "{}") }.getOrDefault(org.json.JSONObject())
+            val boot = runCatching { android.provider.Settings.Global.getInt(context.contentResolver,
+                android.provider.Settings.Global.BOOT_COUNT, -1) }.getOrDefault(-1)
+            val periodic = snapshot.optJSONObject("oneuiPeriodic") ?: org.json.JSONObject()
+            val valid = SuppressionWidgetPolicy.current(snapshot.optInt("version", -1),
+                snapshot.optInt("boot", -1), boot, snapshot.optLong("elapsed", -1), now)
+            val count = periodic.optInt("observedSchedules", 0)
+            val last = periodic.optLong("lastObservedElapsed", -1)
+            val running = valid && periodic.optString("state") == "installed" &&
+                SuppressionWidgetPolicy.timer(count, last, now)
+            val periodicText = when {
+                !valid -> "72h: unavailable · tap to refresh"
+                periodic.optString("state") == "disabled" -> "72h: off"
+                periodic.optString("state") != "installed" -> "72h: hook unavailable"
+                count == 0 -> "72h: ready · waiting for first event"
+                else -> "72h: $count observed this runtime"
+            }
+            view.setTextViewText(R.id.d2_widget_periodic, periodicText)
+            view.setViewVisibility(R.id.d2_widget_periodic, if (showPeriodic) View.VISIBLE else View.GONE)
+            view.setViewVisibility(R.id.d2_widget_periodic_timer, if (showPeriodic && running) View.VISIBLE else View.GONE)
+            view.setChronometer(R.id.d2_widget_periodic_timer, if (running) last else now,
+                "Since last: %s", showPeriodic && running)
+            for (line in listOf(R.id.d2_widget_periodic, R.id.d2_widget_periodic_timer)) {
+                view.setTextViewTextSize(line, android.util.TypedValue.COMPLEX_UNIT_SP,
+                    if (width < 110 || height < 80) 9f else 11f)
+            }
             val padding = ((if (compact) 4 else 8) * context.resources.displayMetrics.density).toInt()
             view.setViewPadding(R.id.d2_widget, padding, padding, padding, padding)
             view.setOnClickPendingIntent(R.id.d2_widget, pending)
@@ -148,6 +184,10 @@ class D2Widget : AppWidgetProvider() {
                 Intent(context, D2Widget::class.java).setAction(REFRESH),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             view.setOnClickPendingIntent(R.id.d2_widget_srp, refresh)
+            view.setOnClickPendingIntent(R.id.d2_widget_periodic, refresh)
+            view.setOnClickPendingIntent(R.id.d2_widget_periodic_timer, refresh)
+            view.setContentDescription(R.id.d2_widget_periodic, "$periodicText. Counter resets when System Server restarts. Tap to refresh.")
+            view.setContentDescription(R.id.d2_widget_periodic_timer, "Elapsed time since the last observed schedule. Tap to refresh.")
             view.setContentDescription(R.id.d2_widget_srp, "$stats. Tap to refresh SRP status.")
             manager.updateAppWidget(id, view)
         }

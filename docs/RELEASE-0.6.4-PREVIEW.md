@@ -189,7 +189,7 @@ Release assets include the D2 APK, optional KernelSU bridge ZIP, source ZIP, ins
 - **Open-Meteo** — weather data, CC BY 4.0. https://open-meteo.com/ and https://creativecommons.org/licenses/by/4.0/
 - **JetBrains, AndroidX, Material and SESL contributors** — libraries/UI dependencies used by the project. Preserve the applicable notices and licenses with the release.
 
-D2 original code: Copyright (c) 2026 D2 Project. All rights reserved. Third-party components retain their own licenses. Retain LICENSE, THIRD_PARTY_NOTICES.txt and in-app Licenses and credits. Acknowledgment does not imply endorsement.
+D2 original code: Copyright (c) 2026 D2 Project and contributors. Current covered revisions are AGPL-3.0-only; see LICENSE. Third-party components retain their own licenses. Retain LICENSE, THIRD_PARTY_NOTICES.txt and in-app Licenses and credits. Acknowledgment does not imply endorsement.
 
 ## Evidence
 

@@ -1,10 +1,30 @@
+D2 SRP discovery credit: @diablOw - originally discovered the Samsung recovery behavior
+behind D2's recovery feature.
+
 THIRD-PARTY NOTICES
 
-D2 SRP discovery credit: @diablOw — originally discovered the Samsung recovery behavior
-behind D2’s recovery feature.
+D2 original code: Copyright (c) 2026 D2 Project and contributors.
+SPDX-License-Identifier: AGPL-3.0-only. See LICENSE / LICENSE-AGPL-3.0.txt.
+Third-party components retain their original licenses and notices.
 
-D2 original code: Copyright (c) 2026 D2 Project. All rights reserved.
-The licenses below apply only to their respective third-party components.
+OneUIX: SoClear and contributors, https://github.com/SoClear/OneUIX
+License: GNU Affero General Public License version 3 (AGPL-3.0).
+Reference revision: 591d09c9cc69faf3c8faf258e39869b2df7981f4.
+OneUIX is the reference for the requested Samsung customization integration.
+PeriodicCredentialHook.kt references the OneUIX periodic strong-auth scheduler
+implementation. D2 modification on October 14, 2026 replaces its prior
+experimental scheduling suppression with read-only signature, registration,
+callback and reason diagnostics. Samsung authentication remains authoritative.
+The oneui-port/ module adapts the requested framework, call, Settings, camera,
+Notes, messaging, Health Monitor and SystemUI hooks plus supporting common/util
+code. oneui-stub/ contains compile-only platform stubs. Adapted on 2026-10-14;
+see docs/ONEUIX-INTEGRATION.md for scope and changes. D2 does not import the
+upstream custom power-menu or broad PIN bypass; its existing guarded power menu
+and Samsung credential scheduling remain authoritative.
+D2 consolidation 2026-10-14: the legacy OneUI scheduler option now observes
+completed calls and retains required authentication; suppression is removed.
+For subsequent adaptations, retain upstream notices and document changed files,
+source revision, and modification date. Credit does not imply endorsement.
 
 Weather data: Open-Meteo, https://open-meteo.com/
 License: Creative Commons Attribution 4.0 International (CC BY 4.0)
@@ -912,3 +932,34 @@ Source: https://raw.githubusercontent.com/JetBrains/java-annotations/master/LICE
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+Imported port dependencies:
+DexKit 2.2.0 — Copyright (C) 2022 LuckyPray and contributors.
+https://github.com/LuckyPray/DexKit/tree/ffa6c51c38fe3ecfddb18d8949c30c48dbfbfd6a
+DexKit outside Core uses Apache-2.0; Core uses LGPL-3.0. The library is
+used unmodified. Full Apache-2.0, LGPL-3.0 and GPL-3.0 license texts are
+bundled. The deliverables include pinned DexKit source with submodules;
+see docs/SOURCE-DISTRIBUTION.md for replacement/rebuild instructions.
+Kotlin kotlinx.serialization 1.9.0 — JetBrains and contributors, Apache-2.0.
+https://github.com/Kotlin/kotlinx.serialization/tree/v1.9.0
+libxposed API/service 102.0.0 — libxposed contributors, Apache-2.0.
+https://github.com/libxposed
+
+Full available-feature expansion, 2026-10-14: additional upstream hook files
+for Browser, Calendar, DualApp, Gallery, Launcher, PhotoRetouching, SketchBook,
+SMCN, GalaxyStore, Weather, Video, WatchPairing, SPen and DisableFlagSecure are
+adapted from SoClear/OneUIX b8f81448b2bcaa314c0cb8abec0c8ff527a14e27.
+ChargingLimitSettings adapts ChargingLimitItem; FiveGWorker NR-mode pairing
+adapts FiveGTileService. D2 retains its SRP-guarded power handling and excludes
+paid Theme Center trial-expiry bypass. Original credit and AGPL terms retained.
+
+Issue #69 adaptations, 2026-10-14: D2OneUiHooks.kt filters unsupported scopes
+before configuration reads; Call.kt safely declines unsupported constructors
+and contains discovery failures; Android.kt removes the unused scheduler bypass.
+Strong-auth UI and diagnostics distinguish metadata observations from verified
+PIN/pattern behavior. SoClear and OneUIX contributor attribution is retained.
+
+D2 update 2026-10-14: restores OneUIX Android.disablePinVerifyPer72h and its
+system_server startup configuration route, compared with upstream revision
+b2466b689c358eed1389979f89e2958e21dd91cb. D2 adds registration/method/callback
+telemetry; this supersedes the earlier removal described above. AGPL-3.0-only.

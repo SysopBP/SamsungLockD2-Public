@@ -25,7 +25,7 @@ object GuardianWatchdog {
         // Phone/InCallUI is a trusted temporary foreground surface. Never turn a
         // proximity wake, voicemail transition, or call UI focus change into a
         // fresh D2 lock while Android still reports an active call notification.
-        if (callActive) {
+        if (callActive || app.d2lock.notifications.CallNotificationStore.isCallActive(context)) {
             transition(State.TRUSTED_UI, "call_active")
             Log.i(TAG, "GUARDIAN_REASSERT_DEFERRED_CALL reason=$reason")
             return false
@@ -104,7 +104,20 @@ object GuardianWatchdog {
     @Synchronized fun markProtected(reason: String) = transition(State.PROTECTED, reason)
     @Synchronized fun markTrustedUi(reason: String) = transition(State.TRUSTED_UI, reason)
     @Synchronized fun markReleased(reason: String) = transition(State.TEMPORARILY_RELEASED, reason)
-    fun snapshot(): String = "state=$state lastReason=$lastReason lastReassertAt=$lastReassertAt"
+    @Volatile private var monitorAt = 0L
+    @Volatile private var monitorHealth = "Not started"
+    @Volatile private var monitorRunning = false
+    fun recordMonitor(health: String) {
+        monitorRunning = true
+        monitorAt = SystemClock.elapsedRealtime()
+        if (monitorHealth != health) Log.i(TAG, "GUARDIAN_HEALTH_CHANGE $health")
+        monitorHealth = health
+    }
+    fun monitorStopped() { monitorRunning = false; monitorHealth = "Service stopped" }
+    fun snapshot(): String {
+        val age = if (monitorAt == 0L) "never" else "${(SystemClock.elapsedRealtime() - monitorAt) / 1000}s ago"
+        return "state=$state lastReason=$lastReason\nService monitor: ${if (monitorRunning) "Started" else "Stopped"}; last check $age\n$monitorHealth\n${app.d2lock.root.KioskD2Guardian.snapshot()}"
+    }
 
     private fun transition(next: State, reason: String) {
         val previous = state
