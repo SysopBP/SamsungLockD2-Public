@@ -929,3 +929,15 @@ Source: https://raw.githubusercontent.com/JetBrains/java-annotations/master/LICE
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+Imported port dependencies:
+DexKit 2.2.0 — Copyright (C) 2022 LuckyPray and contributors.
+https://github.com/LuckyPray/DexKit/tree/ffa6c51c38fe3ecfddb18d8949c30c48dbfbfd6a
+DexKit outside Core uses Apache-2.0; Core uses LGPL-3.0. The library is
+used unmodified. Full Apache-2.0, LGPL-3.0 and GPL-3.0 license texts are
+bundled. The deliverables include pinned DexKit source with submodules;
+see docs/SOURCE-DISTRIBUTION.md for replacement/rebuild instructions.
+Kotlin kotlinx.serialization 1.9.0 — JetBrains and contributors, Apache-2.0.
+https://github.com/Kotlin/kotlinx.serialization/tree/v1.9.0
+libxposed API/service 102.0.0 — libxposed contributors, Apache-2.0.
+https://github.com/libxposed

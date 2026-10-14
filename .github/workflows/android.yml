@@ -105,6 +105,7 @@ jobs:
           (cd module && zip -r ../dist/Kiosk-D2-Guardian-KernelSU-OPTIONAL.zip .)
           unzip -t dist/Kiosk-D2-Guardian-KernelSU-OPTIONAL.zip
           python3 scripts/package_corresponding_source.py --output dist
+          python3 scripts/package_dependency_source.py --output dist
           cp runtime-dependencies.txt dist/
           sha256sum dist/*.apk dist/*.zip > dist/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4

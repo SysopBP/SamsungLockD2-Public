@@ -2931,7 +2931,7 @@ class MainActivity : Activity() {
                 }
                 fun showLegal() { legalText.text = agreement }
                 fun showLicenses() {
-                    val agpl = assets.open("LICENSE-AGPL-3.0.txt").bufferedReader().use { it.readText() }
+                    val agpl = listOf("LICENSE-AGPL-3.0.txt", "LICENSE-APACHE-2.0.txt", "LICENSE-LGPL-3.0.txt", "LICENSE-GPL-3.0.txt").joinToString("\n\n") { name -> assets.open(name).bufferedReader().use { it.readText() } }
                     legalText.text = "D2 LICENSE & CREDITS\n\nCopyright © 2026 D2 Project and contributors.\nD2 is licensed under AGPL-3.0-only, without warranty. You may modify and redistribute it under that license.\nCorresponding Source: https://github.com/SysopBP/SamsungLockD2-Public\n\n$agpl\n\nTHIRD-PARTY NOTICES\n\n$notice"
                 }
                 fun tab(title: String, action: () -> Unit) = TextView(this@MainActivity).apply {

@@ -14,7 +14,7 @@ object PreferenceProvider {
     // （宿主进程对 remote file 只读，由模块 App 通过 libxposed service 推送到共享目录）
     @OptIn(ExperimentalSerializationApi::class)
     context(xposedModule: XposedModule)
-    fun loadPreference(): Preference? = try {
+    fun loadPreference(): Preference? { return try {
         val parcelFileDescriptor = xposedModule.openRemoteFile(Preference.FILE_NAME)
         if (parcelFileDescriptor.statSize <= 0L) {
             parcelFileDescriptor.close()
@@ -30,5 +30,6 @@ object PreferenceProvider {
     } catch (t: Throwable) {
         xlog(t)
         null
+    }
     }
 }

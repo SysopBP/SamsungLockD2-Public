@@ -65,3 +65,11 @@ PeriodicCredentialHook.kt adapts the periodic timeout scheduler hook and carries
 a dated provenance notice. Selected screenshot categories are now adapted in oneui-port/ with supporting compile-only stubs in oneui-stub/. See ONEUIX-INTEGRATION.md for the complete scope and changed-file provenance.
 Every further port must retain attribution, include source, and carry a dated
 modification notice.
+
+## DexKit core and replacing the library
+
+The APK uses unmodified DexKit 2.2.0. Its Core is LGPL-3.0; the remaining code is Apache-2.0. CI distributes DexKit-2.2.0-corresponding-source.zip with recursive submodule contents pinned at ffa6c51c38fe3ecfddb18d8949c30c48dbfbfd6a, plus its source manifest. This accompanies D2's own source ZIP in the same deliverables bundle. License texts and library copyright notices are accessible in D2 Legal → Licenses & Credits.
+
+To replace or debug the library, extract that source, follow its included Gradle/CMake build instructions, and build a replacement Android AAR. Replace `implementation("org.luckypray:dexkit:2.2.0")` in oneui-port/build.gradle.kts with `implementation(files("libs/dexkit-custom.aar"))` and place your rebuilt AAR at oneui-port/libs/dexkit-custom.aar. Rebuild D2 from the included application source. Preserve the upstream API expected by the hooks. D2 does not prohibit reverse engineering for debugging modifications to the library.
+
+Use your own signing key for the modified APK. The original private signing key is not distributed. Android will require uninstalling a differently signed installed APK before installing your modified APK; export any wanted user settings first. D2 is installed as a normal APK and has no firmware signature requirement, locked hardware installation key, or installer intended to prevent replacement of its library. Disable its kiosk/root integration before replacing it.
