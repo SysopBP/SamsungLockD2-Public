@@ -21,6 +21,8 @@ public class StrongAuthDiagnosticsTest {
     }
     @Test public void rejectsStalePidBootSchemaAndClockMarkers() {
         assertTrue(StrongAuthDiagnostics.current(2, 123, 123, 5, 5, 100, 200));
+        assertTrue(StrongAuthDiagnostics.current(3, 123, 123, 5, 5, 100, 200));
+        assertFalse(StrongAuthDiagnostics.current(4, 123, 123, 5, 5, 100, 200));
         assertFalse(StrongAuthDiagnostics.current(1, 123, 123, 5, 5, 100, 200));
         assertFalse(StrongAuthDiagnostics.current(2, 122, 123, 5, 5, 100, 200));
         assertFalse(StrongAuthDiagnostics.current(2, 123, 123, 4, 5, 100, 200));
