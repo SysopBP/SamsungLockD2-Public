@@ -28,7 +28,7 @@ public final class StrongAuthDiagnostics {
     }
     public static boolean current(int version, int pid, int livePid, int boot, int liveBoot,
                                   long elapsed, long now) {
-        return version == 2 && pid > 0 && pid == livePid && boot >= 0 && boot == liveBoot
+        return (version == 2 || version == 3) && pid > 0 && pid == livePid && boot >= 0 && boot == liveBoot
                 && elapsed >= 0 && elapsed <= now;
     }
 }
