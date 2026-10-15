@@ -1,0 +1,55 @@
+name: Prepare D2 Preview 3 Draft
+on:
+  push:
+    branches: ['fix/d2-widget-srp-diagnostics-20261014']
+    paths: ['.github/workflows/d2-preview-3-draft.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: d2-preview-3-draft
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SOURCE_SHA: b1edbb9fdf1b6734c3398db05683e4b51f59f59f
+      RELEASE_TAG: v0.6.4-preview.3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify and package exact successful Build 1131
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api repos/$GH_REPO/actions/runs/38727163183 > run.json
+          jq -e --arg sha "$SOURCE_SHA" '.head_sha == $sha and .status == "completed" and .conclusion == "success"' run.json
+          gh run download 38727163183 -n Kiosk-D2-Guardian-deliverables -D dist
+          sha256sum --check dist/SHA256SUMS.txt
+          test -s dist/Kiosk-D2-Guardian-debug.apk
+          test -s dist/Kiosk-D2-Guardian-KernelSU-OPTIONAL.zip
+          unzip -t dist/Kiosk-D2-Guardian-KernelSU-OPTIONAL.zip
+          if unzip -Z1 dist/Kiosk-D2-Guardian-KernelSU-OPTIONAL.zip | grep -E '(\.apk$|^system/)'; then
+            echo "::error::Unexpected injected or bundled module APK"
+            exit 1
+          fi
+          git archive "$SOURCE_SHA" | tar -x -C "$RUNNER_TEMP"
+          (cd "$RUNNER_TEMP" && python3 scripts/verify_feature_baseline.py)
+          (cd "$RUNNER_TEMP" && python3 scripts/verify_deliverables.py "$GITHUB_WORKSPACE/dist")
+          cp docs/releases/d2-preview-3.md dist/D2-Preview-3-Guide.md
+          cp docs/releases/d2-preview-3-home.jpg dist/D2-Preview-3-Home.jpg
+          cp docs/releases/d2-preview-3-setup.mp4 dist/D2-Preview-3-Setup-Guide.mp4
+          printf 'source=%s\nbuild=1131\nrun_id=38727163183\npackage=app.d2lock\nversion=0.6.4-d2-guardian\nversionCode=30\n' "$SOURCE_SHA" > dist/BUILD-INFO.txt
+          (cd dist && find . -maxdepth 1 -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+      - name: Create draft only
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "::error::Release already exists; refusing replacement"
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" dist/* --target "$SOURCE_SHA" --title "D2 Guardian 0.6.4 Preview 3 — Guardian UI, SRP & Setup Refresh" --notes-file docs/releases/d2-preview-3.md --prerelease --draft
+          gh release view "$RELEASE_TAG" --json url,isDraft,isPrerelease,assets
