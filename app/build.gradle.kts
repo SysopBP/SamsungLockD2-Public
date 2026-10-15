@@ -11,7 +11,7 @@ android {
         minSdk = 31
         targetSdk = 37
         versionCode = 30
-        versionName = "0.6.4-oneui-hooks-experiment"
+        versionName = "0.6.4-d2-guardian"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -46,7 +46,6 @@ configurations.configureEach {
 }
 
 dependencies {
-    implementation(project(":oneui-port"))
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     implementation("io.github.libxposed:service:102.0.0")
     testImplementation("junit:junit:4.13.2")

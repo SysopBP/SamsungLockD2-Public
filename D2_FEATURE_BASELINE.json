@@ -4,60 +4,6 @@
     "2fd96a9384f4d0131fbc5f95c5c4fe49a87d6a97"
   ],
   "required_source_files": [
-    "oneui-port/build.gradle.kts",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/common/NetworkSpeedOption.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/common/Package.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/common/PowerMenuAction.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/common/Preference.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/common/Utils.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/Android.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/Browser.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/Calendar.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/Call.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/Camera.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/CoreRune.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/D2OneUiHooks.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/DisableFlagSecure.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/DualApp.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/GalaxyStore.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/Gallery.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/HealthMonitor.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/Launcher.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/MdecService.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/Messaging.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/Network.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/Notes.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/PhotoRetouching.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/PowerMenuPreferences.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/SMCN.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/SPen.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/Settings.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/SketchBook.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/Video.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/WatchPairing.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/Weather.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/systemui/AOD.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/systemui/ESIM.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/systemui/HideBatteryIcon.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/systemui/Notification.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/systemui/Other.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/systemui/QS.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/systemui/StatusBar.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/util/HookConfig.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/util/PreferenceProvider.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/util/Reflect.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/util/TraditionalChineseCalendar.kt",
-    "oneui-port/src/main/java/io/github/soclear/oneuix/hook/util/Util.kt",
-    "oneui-stub/build.gradle.kts",
-    "oneui-stub/src/main/java/android/os/SystemProperties.java",
-    "oneui-stub/src/main/java/com/samsung/android/globalactions/presentation/SamsungGlobalActions.java",
-    "oneui-stub/src/main/java/com/samsung/android/globalactions/presentation/SamsungGlobalActionsPresenter.java",
-    "oneui-stub/src/main/java/com/samsung/android/globalactions/presentation/strategies/WindowDecorationStrategy.java",
-    "oneui-stub/src/main/java/com/samsung/android/globalactions/presentation/view/ExtendableGlobalActionsView.java",
-    "oneui-stub/src/main/java/com/samsung/android/globalactions/presentation/viewmodel/ActionInfo.java",
-    "oneui-stub/src/main/java/com/samsung/android/globalactions/presentation/viewmodel/ActionViewModel.java",
-    "oneui-stub/src/main/java/com/samsung/android/globalactions/presentation/viewmodel/ViewType.java",
-    "app/src/main/java/app/d2lock/OneUiPortSettings.kt",
     "app/src/main/java/app/d2lock/PeriodicCredentialSettings.kt",
     "app/src/main/java/app/d2lock/accessibility/D2AccessibilityService.kt",
     "app/src/main/java/app/d2lock/xposed/PeriodicCredentialHook.kt",
@@ -69,7 +15,6 @@
     "app/src/main/java/app/d2lock/xposed/CredentialObserver.kt"
   ],
   "required_apk_classes": [
-    "Lapp/d2lock/OneUiPortSettings;",
     "Lapp/d2lock/PeriodicCredentialSettings;",
     "Lapp/d2lock/accessibility/D2AccessibilityService;",
     "Lapp/d2lock/xposed/PeriodicCredentialHook;",
@@ -81,41 +26,16 @@
     "Lapp/d2lock/xposed/CredentialObserver;",
     "Lapp/d2lock/xposed/GuardianXposedBridge;",
     "Lapp/d2lock/lockscreen/LockScreenActivity;",
-    "Lapp/d2lock/root/DmcRecovery;",
-    "Lio/github/soclear/oneuix/hook/D2OneUiHooks;",
-    "Lio/github/soclear/oneuix/hook/Android;",
-    "Lio/github/soclear/oneuix/hook/Call;",
-    "Lio/github/soclear/oneuix/hook/Camera;",
-    "Lio/github/soclear/oneuix/hook/Settings;",
-    "Lio/github/soclear/oneuix/hook/Notes;",
-    "Lio/github/soclear/oneuix/hook/Messaging;",
-    "Lio/github/soclear/oneuix/hook/HealthMonitor;",
-    "Lio/github/soclear/oneuix/hook/systemui/StatusBar;",
-    "Lio/github/soclear/oneuix/hook/systemui/QS;"
+    "Lapp/d2lock/root/DmcRecovery;"
   ],
-  "required_native_abis": [
-    "arm64-v8a",
-    "armeabi-v7a",
-    "x86",
-    "x86_64"
-  ],
+  "required_native_abis": [],
   "required_wiring": {
-    "settings.gradle.kts": [
-      ":oneui-port",
-      ":oneui-stub"
-    ],
-    "app/build.gradle.kts": [
-      "implementation(project(\":oneui-port\"))"
-    ],
     "app/src/main/java/app/d2lock/xposed/GuardianXposedBridge.kt": [
-      "D2OneUiHooks.onPackageReady",
-      "D2OneUiHooks.onSystemServerStarting",
       "CredentialObserver.install",
       "installBootReadyHook",
       "installWakeObserver"
     ],
     "app/src/main/java/app/d2lock/MainActivity.kt": [
-      "OneUiPortSettings.show",
       "D2 Hooks"
     ]
   }

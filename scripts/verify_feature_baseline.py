@@ -10,4 +10,4 @@ for name, tokens in baseline['required_wiring'].items():
     text = (root / name).read_text()
     for token in tokens:
         assert token in text, 'Missing feature wiring: ' + name + ' → ' + token
-print('Consolidated OneUIX + Guardian feature baseline verified')
+print('D2 Guardian independent feature baseline verified')
