@@ -63,12 +63,22 @@ object Call {
 
                 xposedModule.hook(methodInstance).setExceptionMode(io.github.libxposed.api.XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
                     val result = chain.proceed()
-                    val baseCallLog = chain.args[0]
-                    val callLogViewItem = chain.args[1]
-                    val geocodedLocation = geoCodedLocationField.get(baseCallLog)
-                    val subText = subTextField.get(callLogViewItem)
-                    val subTextWithLocation = "$subText $geocodedLocation".trim()
-                    subTextField.set(callLogViewItem, subTextWithLocation)
+                    // Samsung Dialer may change this call signature between builds.
+                    // Preserve the stock row when the expected model objects are absent.
+                    val baseCallLog = chain.args.getOrNull(0)
+                    val callLogViewItem = chain.args.getOrNull(1)
+                    if (baseCallLog != null && callLogViewItem != null &&
+                        geoCodedLocationField.declaringClass.isInstance(baseCallLog) &&
+                        subTextField.declaringClass.isInstance(callLogViewItem)) {
+                        runCatching {
+                            val location = (geoCodedLocationField.get(baseCallLog) as? String)
+                                ?.trim()?.takeIf { it.isNotEmpty() }
+                            val existing = (subTextField.get(callLogViewItem) as? String).orEmpty()
+                            if (location != null && !existing.contains(location)) {
+                                subTextField.set(callLogViewItem, "$existing $location".trim())
+                            }
+                        }.onFailure { xlog(it) }
+                    }
                     result
                 }
             } catch (t: Throwable) {
