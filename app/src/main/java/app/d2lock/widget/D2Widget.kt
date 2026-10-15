@@ -165,19 +165,18 @@ class WidgetTapActivity : Activity() {
     companion object { private val taps = mutableMapOf<Int, DoubleTap>() }
     override fun onCreate(state: Bundle?) {
         val srp = intent.action == "app.d2lock.widget.REFRESH_SRP"
-        if (srp) setTheme(if (app.d2lock.Appearance.dark(this)) R.style.Theme_D2_Dark else R.style.Theme_SamsungLock)
         super.onCreate(state)
         if (srp) {
-            val dialog = android.app.AlertDialog.Builder(this)
-                .setTitle("D2 SRP")
-                .setMessage("Checking System Server / SRP…")
-                .setPositiveButton("Close") { _, _ -> finish() }
-                .create()
-            dialog.setOnCancelListener { finish() }
-            dialog.show()
+            lateinit var message: android.widget.TextView
+            val dialog = app.d2lock.GuardianDialogs.showInfo(
+                this, "D2 SRP", "Samsung Recovery Protection\n\nChecking System Server / SRP…",
+                primary = "Close", onMessageReady = { message = it })
+            // Keep the translucent widget host; every dismissal returns to the launcher.
+            dialog.setOnDismissListener { finish() }
             DmcRecovery.request(this, "widget_status", retry = 3, force = true, actionResult = { status ->
-                if (!isFinishing && !isDestroyed) dialog.setMessage(
-                    (if (status.targetsMet) "SRP targets verified" else "SRP not verified") + "\n\n" + status.detail)
+                if (!isFinishing && !isDestroyed && dialog.isShowing) {
+                    message.text = status.report()
+                }
             })
             return
         }
