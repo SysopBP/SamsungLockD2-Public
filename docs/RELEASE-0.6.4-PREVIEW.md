@@ -200,3 +200,9 @@ D2 original code: Copyright (c) 2026 D2 Project and contributors. Current covere
 - Version metadata: https://github.com/SysopBP/SamsungLockD2-Public/blob/main/app/build.gradle.kts
 - Third-party notices: https://github.com/SysopBP/SamsungLockD2-Public/blob/main/THIRD_PARTY_NOTICES.txt
 - Saved October 12 reboot checkpoint and user's October 13 device-test findings.
+
+## October 14, 2026 device observation — native Samsung unlock options
+
+The tester confirmed Samsung's **native face recognition** and **Extend Unlock / Trusted Places** work on the Galaxy S26 Ultra (SM-S948U1, Android 17 / One UI 9) alongside the current D2 setup. These are observations of Samsung functionality, **not new D2 features**. **D2 face recognition is not implemented.** D2 fingerprint and configured PIN/pattern remain the D2 authentication methods; Samsung authentication remains independent and may still require a device credential. Trusted Places does not bypass first unlock or D2 authentication.
+
+The existing D2 readiness text describing Samsung face recognition as not user-tested needs a future UI update; this documentation correction does not modify the APK. The post-OneUIX-removal build remains subject to CI, APK inspection, and device validation. Reference pre-removal Actions run: https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38672204822.
