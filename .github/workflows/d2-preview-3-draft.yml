@@ -52,8 +52,10 @@ jobs:
         run: |
           set -euo pipefail
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "::error::Release already exists; refusing replacement"
-            exit 1
+            gh release view "$RELEASE_TAG" --json isDraft | jq -e '.isDraft == true'
+            gh release upload "$RELEASE_TAG" dist/* --clobber
+            gh release edit "$RELEASE_TAG" --notes-file docs/releases/d2-preview-3.md
+            exit 0
           fi
           gh release create "$RELEASE_TAG" dist/* --target "$SOURCE_SHA" --title "D2 Guardian 0.6.4 Preview 3 — Guardian UI, SRP & Setup Refresh" --notes-file docs/releases/d2-preview-3.md --prerelease --draft
           gh release view "$RELEASE_TAG" --json url,isDraft,isPrerelease,assets
