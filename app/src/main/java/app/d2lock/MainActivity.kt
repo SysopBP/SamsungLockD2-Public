@@ -3529,14 +3529,6 @@ class MainActivity : Activity() {
             textSize = 13f; setPadding(0, dp(4), 0, dp(12))
         }
         root.setPadding(dp(18), dp(48), dp(18), dp(20))
-        val shortcuts=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
-        listOf("Security" to "security", "SRP" to "tools", "Guardian" to "guardian", "Appearance" to "appearance").forEach { (title,page) ->
-            shortcuts.addView(action(title) {
-                if(title=="SRP") pageNavigator?.invoke("tools|D2 SRP",null) else pageNavigator?.invoke(page,null)
-            },LinearLayout.LayoutParams(dp(if(title=="Appearance") 148 else 112),-2).apply { marginEnd=dp(8) })
-        }
-        root.addView(android.widget.HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled=false; addView(shortcuts) },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
-        val status = card()
         fun pair(parent: LinearLayout, first: View, second: View) {
             if (resources.configuration.fontScale >= 1.25f || resources.configuration.screenWidthDp < 360) {
                 parent.addView(first, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
@@ -3549,21 +3541,31 @@ class MainActivity : Activity() {
                 addView(second, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dp(4) })
             }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
         }
+        val shortcuts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val destinations = listOf("Security" to "security", "SRP" to "tools", "Guardian" to "guardian", "Appearance" to "appearance")
+        val shortcutViews = destinations.map { (title, page) ->
+            action(title) {
+                if (title == "SRP") pageNavigator?.invoke("tools|D2 SRP", null)
+                else pageNavigator?.invoke(page, null)
+            }
+        }
+        pair(shortcuts, shortcutViews[0], shortcutViews[1])
+        pair(shortcuts, shortcutViews[2], shortcutViews[3])
+        root.addView(shortcuts, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(4) })
+        val status = card()
         val rootOk = RootManager.isAvailable()
         val shizukuOk = Prefs.shizukuEnabled(this) && runCatching {
             Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
         }.getOrDefault(false)
         val serverOk = KeyguardSignalReceiver.systemHealth(this).status == "CONNECTED"
-        status.addView(label("Protection status",18f))
+        status.addView(label("Protection & connections",18f))
         fun statusRow(text:String, click:()->Unit) = action(text,click).apply {
             gravity=Gravity.START or Gravity.CENTER_VERTICAL
             background=null
         }
-        status.addView(statusRow("Kiosk · ${if(Prefs.kiosk(this)) "Enabled" else "Off"}") { showReadiness() })
         status.addView(statusRow("Root · ${if(rootOk) "Available" else "Unavailable"}") { showReadiness() })
         status.addView(statusRow("Shizuku · ${if(!Prefs.shizukuEnabled(this)) "Off" else if(shizukuOk) "Authorized" else "Needs attention"}") { resolveShizuku() })
         status.addView(statusRow("System Server · ${if(serverOk) "Observed this boot" else "No event this boot"}") { showSystemServerDashboard() })
-        root.addView(status, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         if (Prefs.shizukuEnabled(this) && !shizukuOk) root.addView(action("Shizuku needs attention  ›") { resolveShizuku() },
             LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         if (Prefs.unlockMethod(this) == "fingerprint" && getSystemService(BiometricManager::class.java)
@@ -3579,21 +3581,19 @@ class MainActivity : Activity() {
             GuardianDialogs.showInfo(this, "D2 Hooks", app.d2lock.lockscreen.HookDiagnostics.summary(this) +
                 "\n\nTargets: ActivityManagerService#systemReady; PowerManagerService BinderService#wakeUp / wakeUpWithDisplayId.\n\nBoot delivery and launch timeline:\n" + KeyguardSignalReceiver.pipelineMetrics(this).timeline.joinToString("\n"))
         })
-        root.addView(hooksCard, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         val srpStatus = app.d2lock.root.DmcRecovery.status(this)
         if (Prefs.xposedMaster(this) && !srpStatus.targetsMet) root.addView(action("D2 SRP needs verification  ›") { showDmcStatus() },
-            LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
-        root.addView(action("Readiness check  ›") { showReadiness() },
             LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         val security = card()
         security.addView(label("Security", 20f))
         val method = Prefs.unlockMethod(this).replaceFirstChar { it.uppercase() }
-        security.addView(label("$method selected  ·  PIN recovery configured", 13f))
+        security.addView(label("$method selected  ·  PIN recovery ${if (PinStore(this).configured()) "configured" else "not configured"}", 13f))
         security.addView(action("Manage security  ›") { pageNavigator?.invoke("security|SECURITY CENTER",null) })
-        root.addView(security, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+        security.addView(label("Samsung may require its PIN after reboot. Keep your fingerprint enrolled.", 12f))
         fun quickSwitch(title: String, original: String): View {
             val source = control(original) as? Switch
-            return card().apply {
+            return LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
                 addView(guardianSwitch().apply {
                     text = title; textSize = 14f; minimumHeight = dp(48)
                     setTextColor(Appearance.text(this@MainActivity)); isChecked = source?.isChecked == true
@@ -3609,33 +3609,36 @@ class MainActivity : Activity() {
         val quick = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         pair(quick, quickSwitch("Guardian", "Show D2 when the screen wakes"),
             quickSwitch("Kiosk", "Require D2 authentication to leave"))
-        root.addView(quick)
+        status.addView(quick, 1)
+        status.addView(action("Readiness check  ›") { showReadiness() })
+        root.addView(status, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+        root.addView(security, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         val bridge = card()
         val bridgeBody = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             visibility = if (Prefs.compactBridge(this@MainActivity)) View.VISIBLE else View.GONE
+            addView(hooksCard)
             val fp = KeyguardSignalReceiver.fingerprintHealth(this@MainActivity)
             val ui = KeyguardSignalReceiver.bridgeHealth(this@MainActivity)
             addView(label("SystemUI telemetry: ${if (ui.status == "CONNECTED") "Observed" else "No event this boot"}", 13f))
             addView(label("Fingerprint: ${fp.event ?: "No event this boot"}", 13f))
             addView(action("Open diagnostics  ›") { showSystemServerDashboard() })
         }
-        val bridgeToggle = action("System bridge · ${if (serverOk) "Observed" else "Waiting"}") {
+        val bridgeToggle = action("Diagnostics · ${if (serverOk) "Observed" else "Waiting"}") {
 
             val open = bridgeBody.visibility != View.VISIBLE
             bridgeBody.visibility = if (open) View.VISIBLE else View.GONE
             Prefs.setCompactBridge(this, open)
             (bridge.getChildAt(0) as? TextView)?.apply {
-                text="System bridge · ${if (serverOk) "Observed" else "Waiting"}  ${if(open) "⌃" else "⌄"}"
-                contentDescription="System bridge, ${if(open) "expanded" else "collapsed"}"
+                text="Diagnostics · ${if (serverOk) "Observed" else "Waiting"}  ${if(open) "⌃" else "⌄"}"
+                contentDescription="Diagnostics, ${if(open) "expanded" else "collapsed"}"
             }
         }
-        bridgeToggle.contentDescription="System bridge, ${if(bridgeBody.visibility == View.VISIBLE) "expanded" else "collapsed"}"
-        bridgeToggle.text="System bridge · ${if (serverOk) "Observed" else "Waiting"}  ${if(bridgeBody.visibility == View.VISIBLE) "⌃" else "⌄"}"
+        bridgeToggle.contentDescription="Diagnostics, ${if(bridgeBody.visibility == View.VISIBLE) "expanded" else "collapsed"}"
+        bridgeToggle.text="Diagnostics · ${if (serverOk) "Observed" else "Waiting"}  ${if(bridgeBody.visibility == View.VISIBLE) "⌃" else "⌄"}"
         bridge.addView(bridgeToggle)
         bridge.addView(bridgeBody)
         root.addView(bridge, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
-        root.addView(label("Samsung may require its PIN after reboot. Keep your fingerprint enrolled.", 12f))
         root.addView(action("Tools & settings  ›") {
             pageNavigator?.invoke("tools", null)
             return@action
