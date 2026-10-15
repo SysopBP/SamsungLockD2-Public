@@ -1,5 +1,7 @@
 # D2 Guardian 0.6.4 Preview — Installation and fingerprint setup
 
+> **Current development note:** The OneUIX feature port is removed from the post-38672204822 D2 branch. No OneUIX setup or switches are needed. Preserve D2's SRP-guarded Samsung power menu. This historical preview guide is not proof that the new removal build passed hardware testing.
+
 This guide covers the Samsung Recovery Protection (D2 SRP) and fingerprint-login preview.
 
 **Enroll first:** configure a Samsung screen-lock PIN and enroll a fingerprint in Samsung biometrics before disabling Samsung's **Fingerprint unlock** switch. Keep both the Samsung PIN and fingerprint enrollment.
@@ -86,4 +88,10 @@ For diagnostics, use /storage/emulated/0/Download by default. Check hook install
 
 ## Credits
 
-**@diablOw** originally discovered the DMC behavior behind D2 SRP. **SoClear / OneUIX** inspired the independent Samsung power-menu action integration. See [release notes and acknowledgments](RELEASE-0.6.4-PREVIEW.md), [third-party notices](../THIRD_PARTY_NOTICES.txt), and [license](../LICENSE).
+**@diablOw** originally discovered the Samsung recovery behavior behind D2 SRP. **SoClear / OneUIX** inspired the independent Samsung power-menu action integration. See [release notes and acknowledgments](RELEASE-0.6.4-PREVIEW.md), [third-party notices](../THIRD_PARTY_NOTICES.txt), and [license](../LICENSE).
+
+## Samsung native face recognition and Extend Unlock
+
+On the October 14, 2026 SM-S948U1 / Android 17 / One UI 9 test device, Samsung **face recognition** and **Extend Unlock with Trusted Places** were user-confirmed working. Configure these through Samsung device settings; they are **not provided or controlled by D2**. Samsung face recognition can simplify Samsung lockscreen unlock, but **D2 face recognition has not been implemented**. Continue to use D2 fingerprint and D2 PIN/pattern recovery for D2 authentication, and satisfy Samsung credential prompts when required. Trusted Places can maintain the Samsung unlocked state after an initial secure unlock, subject to Samsung's conditions and time limits; it does not bypass initial unlock or authenticate D2.
+
+If the readiness screen says Samsung face recognition was not user-tested, that text is stale relative to this device observation; an app UI update is still pending. Do not interpret the Samsung test as verification of a D2 face-recognition capability.

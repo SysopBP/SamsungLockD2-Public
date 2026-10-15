@@ -1,3 +1,5 @@
+> Development baseline: OneUIX feature-port code was intentionally removed after successful build [38672204822](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38672204822). D2 retains its own SRP-guarded power menu and lockscreen integrations. The removal build requires CI and device verification. See [current development baseline](docs/CONSOLIDATED-DEVELOPMENT.md).
+
 # Samsung Lock D2
 
 ## 0.6.4 prerelease preparation
@@ -20,7 +22,7 @@ The current boot/wake observers, security-setup refresh, D2 SRP checks and power
 
 ## Feature naming
 
-**D2 SRP** is the short name for **Samsung Recovery Protection**. Compact buttons and messages use D2 SRP; setup instructions and explanations spell out the full name. SRP is D2's feature name, not a guarantee of successful firmware recovery. The underlying Samsung vault remains named `DMC`; code identifiers, broadcast actions and diagnostic log tags retain that technical name. Credit to **@diablOw** remains for the original DMC discovery.
+**D2 SRP** is the short name for **Samsung Recovery Protection**. Compact buttons and messages use D2 SRP; setup instructions and explanations spell out the full name. SRP is D2's feature name, not a guarantee of successful firmware recovery. The underlying Samsung vault remains named `DMC`; code identifiers and broadcast actions retain that technical name for compatibility; diagnostic logs use D2_SRP. Credit to **@diablOw** remains for the original D2 SRP discovery.
 
 ## D2 power-menu integration (experimental)
 
@@ -28,23 +30,23 @@ Enable D2 in **both SystemUI and System Framework** LSPosed scopes. Reload those
 
 Samsung's power menu presents **D2 power off** and **D2 restart** using the original Samsung action models, with native confirmation and long-press behavior. Emergency, lockdown and unrelated actions are retained. D2 adds **D2 soft restart** (with Samsung confirmation) and **D2 SRP status** (a rounded dark live-status dialog). Power off and Restart use the System Server guard described below; soft restart requests are accepted only from the trusted primary-user SystemUI or D2 app UID and refused if the soft-restart guard is unavailable. The live dialog checks System Server's sender identity and times out after six seconds.
 
-This is an action-list integration inspired by [OneUIX](https://github.com/SoClear/OneUIX), implemented independently using reflection and libxposed. It keeps Samsung's menu presentation; a complete replacement of the menu's visual layout is not included. It requires Samsung's `SamsungGlobalActionsPresenter#createActions` API. Missing APIs leave the standard menu available and are logged as `D2_POWER_MENU_HOOK_UNAVAILABLE` or `D2_POWER_MENU_ACTIONS_UNAVAILABLE`. Test interaction with other power-menu modules, including OneUIX, before relying on combined behavior.
+This is an action-list integration inspired by [OneUIX](https://github.com/SoClear/OneUIX), implemented independently using reflection and libxposed. It keeps Samsung's menu presentation; a complete replacement of the menu's visual layout is not included. It requires Samsung's `SamsungGlobalActionsPresenter#createActions` API. Missing APIs leave the standard menu available and are logged as `D2_POWER_MENU_HOOK_UNAVAILABLE` or `D2_POWER_MENU_ACTIONS_UNAVAILABLE`. Test other installed power-menu modules for hook conflicts; D2 does not require OneUIX.
 
 ## D2 SRP checks before power actions (0.6.4 preview)
 
 With D2 enabled in LSPosed's **System Framework** scope, the new guard checks the actual DMC vault before the confirmed normal restart or power-off sequence. Safe-mode, recovery and download restarts are covered only when they enter the same framework path. Android's orderly `ActivityManagerService.restart()` soft restart has a separate guard.
 
 - Fresh vault validation, existing target enforcement, and a second read before continuing.
-- Five-second timeout; verification failure cancels the requested action. The phone stays on; open D2's DMC status and retry. A late result cannot initiate a delayed reboot.
+- Five-second timeout; verification failure cancels the requested action. The phone stays on; open D2 SRP status and retry. A late result cannot initiate a delayed reboot.
 - Duplicate requests are suppressed; a late result cannot cause a delayed reboot.
 - Battery/thermal emergency shutdown remains immediate.
 - Direct root process kills, init/property restarts, forced hardware resets and power loss are outside these hooks.
 
-Check `DMC_POWER_HOOK_INSTALLED` logs before relying on coverage. Firmware-specific missing hooks are reported and cannot provide protection. A verified read is not a guarantee that no Samsung service writes the settings later or that firmware has persisted them durably. Local policy/request tests and targeted hook compilation pass; full APK build and device reboot/power-off tests remain pending. See [validation and limits](docs/AUTOMATIC-DMC-RECOVERY.md#power-action-guard-experimental).
+Check `D2_SRP_POWER_HOOK_INSTALLED` logs before relying on coverage. Firmware-specific missing hooks are reported and cannot provide protection. A verified read is not a guarantee that no Samsung service writes the settings later or that firmware has persisted them durably. Local policy/request tests and targeted hook compilation pass; full APK build and device reboot/power-off tests remain pending. See [validation and limits](docs/AUTOMATIC-DMC-RECOVERY.md#power-action-guard-experimental).
 
 ### When protection does not pass
 
-For an active, supported guard, failed or unknown DMC verification cancels the requested power off, restart, or supported soft restart. The phone stays on and shows a message directing you to D2's DMC status. A five-second timeout also cancels the request; a late successful result cannot restart the phone. Fix the reported issue and explicitly retry the action.
+For an active, supported guard, failed or unknown D2 SRP verification cancels the requested power off, restart, or supported soft restart. The phone stays on and shows a message directing you to D2 SRP status. A five-second timeout also cancels the request; a late successful result cannot restart the phone. Fix the reported issue and explicitly retry the action.
 
 Opening **D2 SRP status** performs the recovery/check and displays its result; it never requests shutdown or restart by itself. A failed status dialog does not globally disable every reboot route.
 
@@ -63,12 +65,12 @@ trigger a refresh after 2 seconds, followed by a check at 12 seconds for delayed
 Samsung updates. Setup detection needs validation on the target firmware.
 The live glass status dialog shows target checks, System Server identity, and
 last-check time. Successful vault read-back is required to report verification.
-DMC flags are separate from Android credentials and biometric enrollment.
+D2 SRP vault flags are separate from Android credentials and biometric enrollment.
 
-**DMC discovery credit: @diablOw**, for originally discovering the DMC behavior
+**D2 SRP discovery credit: @diablOw**, for originally discovering the Samsung recovery behavior
 behind this recovery feature.
 
-See [automatic DMC recovery behavior and limits](docs/AUTOMATIC-DMC-RECOVERY.md).
+See [D2 SRP behavior and limits](docs/AUTOMATIC-DMC-RECOVERY.md).
 
 > **September 29, 2026 development status:** Physical-device testing now confirms the token-integrated fast-boot path as the new known-good reference. `ActivityManagerService.systemReady()` delivers `BOOT_READY`, D2 performs the early root launch, confirms the boot token when `LockScreenActivity` is created, and reaches `GUARDIAN_FIRST_DRAW` about **305 ms after BOOT_READY** in the captured successful boot. When the normal Android boot receiver arrives later, it recognizes the claimed token and skips the duplicate launch. Preserve this ordering as the boot baseline. See [the verified baseline and measured boot timeline](.github/KIOSK_D2_BASELINE.md).
 
@@ -226,9 +228,13 @@ Notification content stays in memory. Wallpaper selection stores a persistent im
 
 ## Rights and credits
 
-**@diablOw** — original discovery of the DMC behavior used by D2’s recovery feature.
+**@diablOw** — original discovery of the Samsung recovery behavior used by D2’s recovery feature.
 
-Copyright (c) 2026 D2 Project. **All rights reserved.** D2's original code is publicly viewable but is not released under an open-source license. See [LICENSE](LICENSE). Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt) and **Licenses and credits** in the app.
+Copyright (c) 2026 D2 Project and contributors. D2's original software and accompanying project documentation in this revision are released under **AGPL-3.0-only**. See [LICENSE](LICENSE). Third-party components retain their own licenses and notices. The APK includes the full AGPL text, credits and source access under **Legal, privacy & licenses**.
+
+**OneUIX — SoClear and contributors:** [upstream project](https://github.com/SoClear/OneUIX). Historical port work and its provenance remain recorded, but the OneUIX feature port and its runtime modules have been removed from the current D2 branch. D2's independently implemented power menu remains. See [historical integration record](docs/ONEUIX-INTEGRATION.md).
+
+See [source and build instructions](docs/SOURCE-DISTRIBUTION.md). Distribute a source archive matching each APK revision alongside that APK; source from a later branch head is not a substitute. The license transition applies to this revision and future covered releases, not a claim about older binaries.
 
 Weather data by [Open-Meteo](https://open-meteo.com/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). D2 truncates temperatures and maps weather codes to short labels. No affiliation with or endorsement by Samsung, KernelSU, or Open-Meteo is implied.
 ## Current source update (0.4.0)
@@ -286,3 +292,15 @@ D2. The genuine biometric prompt and D2 credential fallback remain in use.
 
 Device validation pending: first reboot PIN, repeated lock/wake, D2 fingerprint
 and PIN fallback, incoming calls, and leaving D2.
+
+## Samsung periodic credential diagnostics
+
+Tools → **72-hour PIN / pattern diagnostics** opens D2's read-only StrongAuth observer. D2 records hook registration, completed scheduler callbacks, requests and sampled flags. Samsung's credential requirements remain unchanged. Callback age is **not** a 72-hour countdown. The OneUIX feature port and its configuration switches are no longer part of D2.
+
+The D2 SRP-guarded power menu remains independent of OneUIX. D2 power off, restart, soft restart, SRP status, mobile data (when supported) and Lock D2 remain in the source, with Samsung emergency actions retained. Physical-device verification is still required after rebuilding.
+
+## Samsung face recognition and Extend Unlock (device observations, October 14, 2026)
+
+On the test Galaxy S26 Ultra (SM-S948U1, Android 17 / One UI 9), the user confirmed **Samsung's native face recognition works for convenient Samsung screen unlock** and **Samsung Extend Unlock / Trusted Places works** with a configured trusted place. These are Samsung-managed features, **not D2 authentication implementations**. In particular, **D2 face recognition is not implemented or verified**. D2 currently offers its own fingerprint and configured PIN/pattern recovery; Samsung may separately request its own PIN, pattern, or password.
+
+Extend Unlock may keep the Samsung device unlocked after a successful secure unlock while trusted conditions apply; it does not replace the initial authentication or grant D2 authentication. D2 must not bypass Samsung StrongAuth, keyguard, or credential requirements. D2's readiness UI may describe these native options and offer user-guided checks, but must not label D2 face recognition as supported or automatically mark it verified. Any future D2 face-recognition implementation requires separate development, review, and testing.

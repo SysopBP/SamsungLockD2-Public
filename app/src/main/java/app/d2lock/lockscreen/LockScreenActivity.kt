@@ -162,7 +162,6 @@ class LockScreenActivity : Activity() {
     private fun sleepDisplayFromDoubleTap(allowSetup: Boolean = true) {
         if (isFinishing || isDestroyed || unlocking || !sleepPending.compareAndSet(false, true)) return
         Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_REQUEST")
-
         // 1) Root remains the fastest path on the verified Guardian configuration.
         if (Prefs.rootMode(this)) {
             Thread {
@@ -171,6 +170,7 @@ class LockScreenActivity : Activity() {
                 }.getOrDefault(false)
                 if (ok) {
                     sleepPending.set(false)
+                    app.d2lock.accessibility.D2AccessibilityService.recordRoute(this@LockScreenActivity, "Root")
                     Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_ROOT")
                 } else {
                     runOnUiThread { sleepViaShizukuOrDeviceAdmin(allowSetup) }
@@ -204,14 +204,25 @@ class LockScreenActivity : Activity() {
                 }.getOrDefault(false)
                 if (ok) {
                     sleepPending.set(false)
+                    app.d2lock.accessibility.D2AccessibilityService.recordRoute(this@LockScreenActivity, "Shizuku")
                     Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_SHIZUKU")
                 } else {
-                    runOnUiThread { sleepViaDeviceAdmin(allowSetup) }
+                    runOnUiThread { sleepViaAccessibilityOrDeviceAdmin(allowSetup) }
                 }
             }.start()
         } else {
-            sleepViaDeviceAdmin(allowSetup)
+            sleepViaAccessibilityOrDeviceAdmin(allowSetup)
         }
+    }
+
+    private fun sleepViaAccessibilityOrDeviceAdmin(allowSetup: Boolean) {
+        if (isFinishing || isDestroyed || unlocking) { sleepPending.set(false); return }
+        if (app.d2lock.accessibility.D2AccessibilityService.requestScreenOff(this)) {
+            sleepPending.set(false)
+            Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_ACCESSIBILITY_FALLBACK")
+            return
+        }
+        sleepViaDeviceAdmin(allowSetup)
     }
 
     private fun sleepViaDeviceAdmin(allowSetup: Boolean) {
@@ -222,6 +233,7 @@ class LockScreenActivity : Activity() {
         if (policy.isAdminActive(admin)) {
             runCatching {
                 policy.lockNow()
+                app.d2lock.accessibility.D2AccessibilityService.recordRoute(this@LockScreenActivity, "Device admin")
                 Log.i("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_DEVICE_ADMIN")
             }.onFailure {
                 Log.w("SamsungLockD2", "GUARDIAN_DOUBLE_TAP_SLEEP_DEVICE_ADMIN_FAILED", it)
@@ -454,12 +466,22 @@ class LockScreenActivity : Activity() {
         })
         if (!preview) {
             KeyguardSignalReceiver.recordGuardianStage(this, "D2_ACTIVITY_CREATED", "lock_surface")
-            guardianUi.post {
-                if (!isDestroyed && !isFinishing) {
-                    KeyguardSignalReceiver.recordGuardianStage(this, "D2_FIRST_DRAW", "decor_posted")
-                    Log.i("SamsungLockD2", "GUARDIAN_FIRST_DRAW")
+            val drawObserver = object : android.view.ViewTreeObserver.OnDrawListener {
+                private var recorded = false
+                override fun onDraw() {
+                    if (recorded) return
+                    recorded = true
+                    val drawnAt = android.os.SystemClock.elapsedRealtime()
+                    guardianUi.post {
+                        if (guardianUi.viewTreeObserver.isAlive) guardianUi.viewTreeObserver.removeOnDrawListener(this)
+                        if (!isDestroyed && !isFinishing) {
+                            KeyguardSignalReceiver.recordGuardianStage(this@LockScreenActivity, "D2_FIRST_DRAW", "onDraw:elapsed=$drawnAt")
+                            Log.i("SamsungLockD2", "GUARDIAN_FIRST_DRAW elapsedMs=$drawnAt")
+                        }
+                    }
                 }
             }
+            guardianUi.viewTreeObserver.addOnDrawListener(drawObserver)
         }
         if (Prefs.experimentalLockMotion(this)) {
             guardianUi.alpha = 0f

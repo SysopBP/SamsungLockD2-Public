@@ -1,0 +1,42 @@
+{
+  "baseline_commits": [
+    "fa86939e901f29ec918df1a5d566e1d1aec98c6d",
+    "2fd96a9384f4d0131fbc5f95c5c4fe49a87d6a97"
+  ],
+  "required_source_files": [
+    "app/src/main/java/app/d2lock/PeriodicCredentialSettings.kt",
+    "app/src/main/java/app/d2lock/accessibility/D2AccessibilityService.kt",
+    "app/src/main/java/app/d2lock/xposed/PeriodicCredentialHook.kt",
+    "app/src/main/java/app/d2lock/security/WatchdogRecoveryBudget.java",
+    "app/src/main/java/app/d2lock/notifications/CallStatePolicy.java",
+    "app/src/main/java/app/d2lock/widget/SuppressionWidgetPolicy.java",
+    "app/src/main/java/app/d2lock/xposed/FrameworkControlHooks.kt",
+    "app/src/main/java/app/d2lock/lockscreen/HookDiagnostics.kt",
+    "app/src/main/java/app/d2lock/xposed/CredentialObserver.kt"
+  ],
+  "required_apk_classes": [
+    "Lapp/d2lock/PeriodicCredentialSettings;",
+    "Lapp/d2lock/accessibility/D2AccessibilityService;",
+    "Lapp/d2lock/xposed/PeriodicCredentialHook;",
+    "Lapp/d2lock/security/WatchdogRecoveryBudget;",
+    "Lapp/d2lock/notifications/CallStatePolicy;",
+    "Lapp/d2lock/widget/SuppressionWidgetPolicy;",
+    "Lapp/d2lock/xposed/FrameworkControlHooks;",
+    "Lapp/d2lock/lockscreen/HookDiagnostics;",
+    "Lapp/d2lock/xposed/CredentialObserver;",
+    "Lapp/d2lock/xposed/GuardianXposedBridge;",
+    "Lapp/d2lock/lockscreen/LockScreenActivity;",
+    "Lapp/d2lock/root/DmcRecovery;"
+  ],
+  "required_native_abis": [],
+  "required_wiring": {
+    "app/src/main/java/app/d2lock/xposed/GuardianXposedBridge.kt": [
+      "CredentialObserver.install",
+      "installBootReadyHook",
+      "installWakeObserver"
+    ],
+    "app/src/main/java/app/d2lock/MainActivity.kt": [
+      "D2 Hooks"
+    ]
+  }
+}

@@ -10,7 +10,9 @@ import android.text.InputType
 import android.view.Gravity
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.ImageView
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -26,7 +28,7 @@ object PinUi {
     }
 
     fun show(activity: Activity, setup: Boolean = false, change: Boolean = false,
-             success: () -> Unit, cancel: () -> Unit = {}): AlertDialog {
+             success: () -> Unit, cancel: () -> Unit = {}, fingerprint: (() -> Unit)? = null): AlertDialog {
         val store = PinStore(activity)
         val density = activity.resources.displayMetrics.density
         fun dp(value: Int) = (value * density).toInt()
@@ -88,6 +90,46 @@ object PinUi {
             .setOnCancelListener { cancel() }
             .create()
 
+        var fingerprintAction: View? = null
+        if (!setup && !change && fingerprint != null) {
+            form.addView(LinearLayout(activity).apply {
+                fingerprintAction = this
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+                background = Appearance.glass(activity, 24f, 42, true)
+                // Set padding after the drawable: assigning a background can reset it.
+                setPadding(dp(18), dp(12), dp(18), dp(12))
+                minimumHeight = dp(56)
+                isFocusable = true
+                contentDescription = "Login with fingerprint"
+                accessibilityDelegate = object : View.AccessibilityDelegate() {
+                    override fun onInitializeAccessibilityNodeInfo(
+                        host: View, info: android.view.accessibility.AccessibilityNodeInfo
+                    ) {
+                        super.onInitializeAccessibilityNodeInfo(host, info)
+                        info.className = "android.widget.Button"
+                    }
+                }
+                addView(ImageView(activity).apply {
+                    setImageResource(app.d2lock.R.drawable.ic_d2_fingerprint)
+                    imageTintList = android.content.res.ColorStateList.valueOf(Appearance.text(activity))
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                }, LinearLayout.LayoutParams(dp(24), dp(24)).apply { marginEnd = dp(10) })
+                addView(TextView(activity).apply {
+                    text = "Login with fingerprint"
+                    textSize = 17f
+                    gravity = Gravity.CENTER
+                    setTextColor(Appearance.text(activity))
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                }, LinearLayout.LayoutParams(0, -2, 1f))
+                filterTouchesWhenObscured = true
+                setOnClickListener {
+                    // Only the caller's BiometricPrompt success may authorize access.
+                    dialog.dismiss()
+                    fingerprint()
+                }
+            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+        }
         dialog.setOnDismissListener { pin.text.clear(); old?.text?.clear(); confirm?.text?.clear() }
         dialog.setOnShowListener {
             dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -99,6 +141,12 @@ object PinUi {
             val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             val negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
             listOf(button, negative).forEach { action ->
+                (action.layoutParams as? ViewGroup.MarginLayoutParams)?.let { params ->
+                    params.marginStart = dp(4)
+                    params.marginEnd = dp(4)
+                    action.layoutParams = params
+                }
+                action.minimumHeight = dp(48)
                 action.isAllCaps = false
                 action.setPadding(dp(18), 0, dp(18), 0)
                 action.setTextColor(Appearance.text(activity))
@@ -134,6 +182,7 @@ object PinUi {
                 }
 
                 button.isEnabled = false
+                fingerprintAction?.isEnabled = false
                 error.setTextColor(Appearance.secondary(activity))
                 error.text = "Checking PIN…"
                 dialog.getButton(AlertDialog.BUTTON_NEGATIVE).isEnabled = false
@@ -169,6 +218,7 @@ object PinUi {
                             error.setTextColor(Color.rgb(220, 70, 70))
                             error.text = message
                             button.isEnabled = true
+                            fingerprintAction?.isEnabled = true
                             dialog.getButton(AlertDialog.BUTTON_NEGATIVE).isEnabled = true
                             dialog.setCancelable(true)
                             Log.i("SamsungLockD2", "GUARDIAN_PIN_REJECTED showing=${dialog.isShowing} errorVisible=${error.isShown} message=${error.text}")

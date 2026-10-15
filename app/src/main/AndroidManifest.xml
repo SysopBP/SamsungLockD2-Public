@@ -34,6 +34,15 @@
         android:enableOnBackInvokedCallback="true"
         android:label="Kiosk D2 Boot Guardian"
         android:theme="@style/Theme.SamsungLock">
+        <service
+            android:name=".accessibility.D2AccessibilityService"
+            android:exported="true"
+            android:directBootAware="false"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:label="@string/d2_accessibility_lab_label">
+            <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/d2_accessibility_service" />
+        </service>
         <!-- Shizuku server delivers its Binder through this exported provider. Keep this explicit: on Android 17/Samsung builds relying only on the dependency manifest can leave Shizuku.pingBinder() permanently false. -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
@@ -169,6 +178,14 @@
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
+        </service>
+        <service android:name=".ImmersiveTileService" android:label="D2 immersive mode"
+            android:icon="@drawable/ic_lock_security" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE" android:exported="true">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
+        <service android:name=".FiveGTileService" android:label="D2 5G" android:icon="@drawable/ic_lock_security"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE" android:exported="true">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
     </application>
 </manifest>
