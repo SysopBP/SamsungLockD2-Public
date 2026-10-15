@@ -162,13 +162,13 @@ object OneUiPortSettings {
         val body=LinearLayout(a).apply { orientation=LinearLayout.VERTICAL; setPadding(24,12,24,12) }
         val excluded=setOf("powerMenuActions","setThemeTrialNeverExpired")
         if(path=="android") body.addView(TextView(a).apply {
-            text="72-hour diagnostics observe Samsung's scheduler without changing it. Enable the OneUI feature port and this option, tap Apply, then reboot normally. Required Samsung PIN/pattern checks remain intact. Installation does not prove execution; PIN and pattern require separate device validation."
+            text="EXPERIMENTAL: This OneUIX 1.9.0 option suppresses periodic StrongAuth timeout rescheduling. It weakens periodic PIN/pattern reauthentication and may not affect existing alarms or other Samsung authentication requirements. Leave disabled unless intentionally testing. Tap Apply and reboot to test; do not assume success without device validation."
         })
         val otherAllowed=otherKeys(title)
         state.keys().asSequence().toList().forEach { key ->
             if(key in excluded || (path=="other" && key !in otherAllowed)) return@forEach
             val v=state.get(key)
-            if(v is Boolean) body.addView(Switch(a).apply { text=if(key=="disablePinVerifyPer72h") "Observe periodic Samsung PIN / pattern scheduling (72h diagnostics)" else label(key); isChecked=v;
+            if(v is Boolean) body.addView(Switch(a).apply { text=if(key=="disablePinVerifyPer72h") "OneUIX 72-hour PIN / pattern suppression (experimental)" else label(key); isChecked=v;
                 if(key=="turnOn5gQsTile" && android.os.Build.VERSION.SDK_INT!=34) { isEnabled=false; text="Native 5G tile: Android 14 only" }
                 setOnCheckedChangeListener { _,checked -> state.put(key,checked) } })
             else if(v is Number || v is String) {
