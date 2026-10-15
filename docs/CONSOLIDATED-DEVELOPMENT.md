@@ -26,3 +26,11 @@ Do not merge into `main`, publish a release, or label a build stable without exp
 ## Samsung native unlock compatibility observation (October 14, 2026)
 
 On the SM-S948U1 test device, Samsung face recognition and Extend Unlock / Trusted Places were user-confirmed working. They remain **Samsung-native capabilities**, not D2-owned authentication. **D2 face recognition is not implemented**; do not advertise or implement it in this cleanup. D2 fingerprint and configured PIN/pattern recovery remain separate. Future readiness UI may document the observed Samsung result and guided checks without mislabeling it as D2 face recognition. Documentation-only change; no APK behavior or CI success implied.
+
+## Device Administrator source audit (October 14, 2026)
+
+Reviewed `D2DeviceAdminReceiver.kt`, `AndroidManifest.xml`, `res/xml/d2_device_admin.xml`, and `LockScreenActivity.kt` on the active branch. The receiver is declared with `android.permission.BIND_DEVICE_ADMIN`, the XML requests **only** `force-lock`, and the double-tap-to-sleep path uses `DevicePolicyManager.isAdminActive()` and `lockNow()`. The fallback order is Root → Shizuku → Accessibility → Device Admin. When Device Admin is inactive, setup is requested only following a user-invoked gesture (subject to `allowSetup`).
+
+**Scope:** This provides a screen-off/lock fallback, not D2 facial recognition, Samsung keyguard unlocking, Device Owner privileges, or automatic authentication. Do not add reset-password, wipe-data, disable-keyguard, or other expansive policies. Samsung face recognition and Extend Unlock must remain Samsung-managed.
+
+**Proposed follow-up (not yet implemented):** expose read-only Device Admin activation and fallback availability in readiness/diagnostics; verify behavior with admin enabled and disabled on-device. No app code changed in this audit.
