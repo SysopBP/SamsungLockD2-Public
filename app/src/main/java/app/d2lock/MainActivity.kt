@@ -91,7 +91,6 @@ class MainActivity : Activity() {
         }
         Appearance.apply(this)
         PinUi.protect(this)
-        OneUiPortSettings.init(this)
         Prefs.syncBootPolicy(this)
         RootManager.refreshAsync()
         app.d2lock.root.DmcRecovery.request(this, "app_open")
@@ -1275,7 +1274,6 @@ class MainActivity : Activity() {
                 setOnClickListener { showDmcStatus() }
             }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
-        addButton(root, "Experimental: OneUI feature port") { OneUiPortSettings.show(this) }
         addButton(root, "72-hour PIN / pattern diagnostics") { PeriodicCredentialSettings.show(this) }
         section(root, "SYSTEM INTEGRATION")
         root.getChildAt(root.childCount - 1).tag = "root_shizuku"
@@ -2713,7 +2711,7 @@ class MainActivity : Activity() {
                         contentDescription = if(implemented) "$title: experimental observer" else "$title: not implemented"
                         scaleX = .82f; scaleY = .82f
                         setPadding(0, 0, dp(4), 0)
-                        setOnCheckedChangeListener { _, value -> changed(value); OneUiPortSettings.syncFramework(this@MainActivity) }
+                        setOnCheckedChangeListener { _, value -> changed(value); }
                     }, LinearLayout.LayoutParams(dp(60), dp(48)))
                 }
             fun compactGrid(items: List<Triple<String, () -> Boolean, (Boolean) -> Unit>>) {
@@ -2731,7 +2729,7 @@ class MainActivity : Activity() {
                 }
             }
 
-            masterXposedToggle("Accept framework signals", { Prefs.xposedMaster(this@MainActivity) }) { Prefs.setXposedMaster(this@MainActivity, it); OneUiPortSettings.syncFramework(this@MainActivity) }
+            masterXposedToggle("Accept framework signals", { Prefs.xposedMaster(this@MainActivity) }) { Prefs.setXposedMaster(this@MainActivity, it); }
             addView(compactXposedToggle("Safe diagnostics only", { Prefs.xposedSafeDiagnostics(this@MainActivity) }) { Prefs.setXposedSafeDiagnostics(this@MainActivity, it) },
                 LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
 
