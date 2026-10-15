@@ -1,0 +1,50 @@
+name: Update D2 Preview 3 S26 Ultra media
+on:
+  push:
+    branches: ['fix/d2-widget-srp-diagnostics-20261014']
+    paths: ['.github/workflows/d2-preview-3-media.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: d2-preview-3-draft
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: v0.6.4-preview.3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate baseline and draft
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_feature_baseline.py
+          gh release view "$RELEASE_TAG" --json isDraft | jq -e '.isDraft == true'
+          gh release download "$RELEASE_TAG" --dir dist
+          (cd dist && sha256sum --check SHA256SUMS.txt)
+          printf '%s  %s\n' 8358d29cb8dfde2952a310977f90d9227243122da86b7d6391b5c54ea5641d8e docs/releases/d2-preview-3-setup.mp4 | sha256sum --check
+      - name: Render showcase opening and preserve complete guide
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          base64 --decode docs/releases/d2-preview-3-s26-showcase.jpg.b64 > dist/D2-Preview-3-S26-Ultra-Showcase.jpg
+          base64 --decode docs/releases/d2-preview-3-s26-intro.mp4.b64 > intro.mp4
+          printf '%s  %s\n' f371a4417df8bc08370053096aa63555ddc9100ea77d97ceb2c7c19b45820feb dist/D2-Preview-3-S26-Ultra-Showcase.jpg | sha256sum --check
+          ffmpeg -hide_banner -loglevel error -i intro.mp4 -i docs/releases/d2-preview-3-setup.mp4 -filter_complex '[0:v]fps=24,setsar=1,setpts=PTS-STARTPTS[a];[1:v]fps=24,setsar=1,setpts=PTS-STARTPTS[b];[a][b]concat=n=2:v=1:a=0[v]' -map '[v]' -c:v libx264 -preset ultrafast -crf 22 -pix_fmt yuv420p -movflags +faststart -y dist/D2-Preview-3-Setup-Guide.mp4
+          ffmpeg -v error -i dist/D2-Preview-3-Setup-Guide.mp4 -f null -
+          ffprobe -v error -show_entries format=duration -of json dist/D2-Preview-3-Setup-Guide.mp4 > probe.json
+          python3 -c 'import json; d=float(json.load(open("probe.json"))["format"]["duration"]); assert abs(d-332)<0.1, d'
+          cp docs/releases/d2-preview-3.md dist/D2-Preview-3-Guide.md
+          (cd dist && find . -maxdepth 1 -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+          (cd dist && sha256sum --check SHA256SUMS.txt)
+      - name: Update existing draft media only
+        run: |
+          set -euo pipefail
+          gh release view "$RELEASE_TAG" --json isDraft | jq -e '.isDraft == true'
+          gh release upload "$RELEASE_TAG" dist/D2-Preview-3-S26-Ultra-Showcase.jpg dist/D2-Preview-3-Setup-Guide.mp4 dist/D2-Preview-3-Guide.md dist/SHA256SUMS.txt --clobber
+          gh release edit "$RELEASE_TAG" --notes-file docs/releases/d2-preview-3.md
+          gh release view "$RELEASE_TAG" --json url,isDraft,assets
