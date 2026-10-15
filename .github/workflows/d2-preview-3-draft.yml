@@ -20,6 +20,8 @@ jobs:
       RELEASE_TAG: v0.6.4-preview.3
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - name: Verify and package exact successful Build 1131
         shell: bash
         run: |
@@ -35,8 +37,9 @@ jobs:
             echo "::error::Unexpected injected or bundled module APK"
             exit 1
           fi
-          git archive "$SOURCE_SHA" | tar -x -C "$RUNNER_TEMP"
-          (cd "$RUNNER_TEMP" && python3 scripts/verify_feature_baseline.py)
+          mkdir -p "$RUNNER_TEMP/d2-source"
+          git archive "$SOURCE_SHA" | tar -x -C "$RUNNER_TEMP/d2-source"
+          (cd "$RUNNER_TEMP/d2-source" && python3 scripts/verify_feature_baseline.py)
           (cd "$RUNNER_TEMP" && python3 scripts/verify_deliverables.py "$GITHUB_WORKSPACE/dist")
           cp docs/releases/d2-preview-3.md dist/D2-Preview-3-Guide.md
           cp docs/releases/d2-preview-3-home.jpg dist/D2-Preview-3-Home.jpg
