@@ -77,22 +77,25 @@ class LockScreenActivity : Activity() {
         @Volatile private var fingerprintSessionActive = false
     }
     private val handler = Handler(Looper.getMainLooper())
+    private val keyguardSession = java.util.UUID.randomUUID().toString()
+    private var keyguardHandoffPending = false
+    private var samsungAuthenticationPending = false
     private val keyguardPresentationPulse = object : Runnable {
         override fun run() {
-            val visible = !preview && !unlocking && !biometricRunning && !isFinishing && !isDestroyed &&
+            val visible = !samsungAuthenticationPending && !preview && !isFinishing && !isDestroyed &&
                 Prefs.enabled(this@LockScreenActivity) && Prefs.kiosk(this@LockScreenActivity) &&
-                hasWindowFocus() && window.decorView.isShown &&
+                (hasWindowFocus() || biometricRunning || unlocking || keyguardHandoffPending) && window.decorView.isShown &&
                 getSystemService(android.os.UserManager::class.java)?.isUserUnlocked == true
             reportKeyguardPresentation(visible)
             if (!isFinishing && !isDestroyed) handler.postDelayed(this, 1_000L)
         }
     }
-    // Occlude stock keyguard visually; never dismiss it or satisfy its credentials.
+    // Occlude stock keyguard; authenticated handoff is restricted to the verified SystemUI hook.
     // Keep Samsung authoritative until credential storage has unlocked this boot.
     private fun updateKeyguardOcclusion() {
         val unlocked = getSystemService(android.os.UserManager::class.java)?.isUserUnlocked == true
-        val cover = !preview && !unlocking && unlocked &&
-            Prefs.enabled(this) && Prefs.kiosk(this)
+        val cover = samsungAuthenticationPending || (!preview && !unlocking && unlocked &&
+            Prefs.enabled(this) && Prefs.kiosk(this))
         setShowWhenLocked(cover)
     }
 
@@ -100,7 +103,8 @@ class LockScreenActivity : Activity() {
         if (android.os.Build.VERSION.SDK_INT < 34) return
         runCatching {
             sendBroadcast(Intent("app.d2lock.action.KEYGUARD_PRESENTATION")
-                .setPackage("com.android.systemui").putExtra("visible", visible), null,
+                .setPackage("com.android.systemui").putExtra("visible", visible)
+                .putExtra("session", keyguardSession), null,
                 android.app.BroadcastOptions.makeBasic().setShareIdentityEnabled(true).toBundle())
         }.onFailure { Log.w("SamsungLockD2", "D2_KEYGUARD_PRESENTATION_SIGNAL_FAILED", it) }
     }
@@ -108,7 +112,7 @@ class LockScreenActivity : Activity() {
     private val sleepPending = java.util.concurrent.atomic.AtomicBoolean(false)
     private val stoppedAuthCleanup = object : Runnable {
         override fun run() {
-            if (isDestroyed || isFinishing || hasWindowFocus()) return
+            if (isDestroyed || isFinishing || hasWindowFocus() || samsungAuthenticationPending) return
             val interactive = getSystemService(PowerManager::class.java).isInteractive
             val callActive = app.d2lock.notifications.CallNotificationStore.isCallActive(this@LockScreenActivity)
             if (!interactive || callActive) { handler.postDelayed(this, 60000); return }
@@ -1566,10 +1570,7 @@ class LockScreenActivity : Activity() {
                 GuardianWatchdog.endTrustedAuthentication("auth_success")
                 Log.i("SamsungLockD2", "GUARDIAN_BIOMETRIC_HANDOFF_END reason=success")
                 playUnlockHaptic()
-                RootKiosk.unlock(this@LockScreenActivity) {
-                    app.d2lock.bridge.IslandBridge.setLocked(this@LockScreenActivity, false)
-                    finish()
-                }
+                completeAuthenticatedUnlock()
             }
 
             override fun onAuthenticationFailed() {
@@ -1665,11 +1666,7 @@ class LockScreenActivity : Activity() {
         val unlocked = {
             GuardianWatchdog.endTrustedAuthentication("auth_success")
             playUnlockHaptic()
-            RootKiosk.unlock(this) {
-                app.d2lock.bridge.IslandBridge.setLocked(this, false)
-                afterUnlock?.invoke()
-                finish()
-            }
+            completeAuthenticatedUnlock(afterUnlock)
         }
         val pinUnlocked = {
             getSharedPreferences("d2_guided_tests", MODE_PRIVATE).edit()
@@ -1684,6 +1681,104 @@ class LockScreenActivity : Activity() {
             }, cancel = cancelled)
         } else {
             pinDialog = PinUi.show(this, success = pinUnlocked, cancel = cancelled)
+        }
+    }
+
+    /** Both PIN/pattern and fingerprint arrive here only after successful D2 verification. */
+    private fun completeAuthenticatedUnlock(afterUnlock: (() -> Unit)? = null) {
+        if (keyguardHandoffPending) return
+        val keyguard = getSystemService(android.app.KeyguardManager::class.java)
+        if (preview || keyguard?.isKeyguardLocked != true) {
+            releaseAuthenticatedKiosk(afterUnlock)
+            return
+        }
+        keyguardHandoffPending = true
+        GuardianWatchdog.beginTrustedAuthentication()
+        reportKeyguardPresentation(true)
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            sendBroadcast(Intent("app.d2lock.action.KEYGUARD_AUTHENTICATED")
+                .setPackage("com.android.systemui").putExtra("session", keyguardSession), null,
+                android.app.BroadcastOptions.makeBasic().setShareIdentityEnabled(true).toBundle())
+        }
+        val deadline = android.os.SystemClock.elapsedRealtime() + 5_000L
+        fun confirmDismissal() {
+            if (isDestroyed || isFinishing) return
+            if (keyguard?.isKeyguardLocked == false && keyguard.isDeviceLocked == false) {
+                keyguardHandoffPending = false
+                Log.i("SamsungLockD2", "D2_KEYGUARD_HANDOFF_CONFIRMED")
+                releaseAuthenticatedKiosk(afterUnlock)
+            } else if (android.os.SystemClock.elapsedRealtime() < deadline) {
+                handler.postDelayed({ confirmDismissal() }, 100L)
+            } else {
+                // Keep the verified D2 result and watchdog grace while handing
+                // directly to Samsung. Resetting unlocking here can reopen D2
+                // authentication before Samsung's credential surface is ready.
+                Log.w("SamsungLockD2", "D2_KEYGUARD_HANDOFF_TIMEOUT stock_locked=true")
+                beginSamsungAuthentication(afterUnlock)
+            }
+        }
+        confirmDismissal()
+    }
+
+    /** Preserve the verified D2 result while Samsung owns its credential UI. */
+    private fun beginSamsungAuthentication(afterUnlock: (() -> Unit)?) {
+        if (samsungAuthenticationPending || isDestroyed || isFinishing) return
+        samsungAuthenticationPending = true
+        keyguardHandoffPending = true
+        unlocking = true
+        GuardianWatchdog.beginTrustedAuthentication()
+        handler.removeCallbacks(quickSettingsGuard)
+        handler.removeCallbacks(keyguardPresentationPulse)
+        handler.removeCallbacks(stoppedAuthCleanup)
+        reportKeyguardPresentation(false)
+        Log.i("SamsungLockD2", "D2_SAMSUNG_AUTH_BEGIN")
+        // Samsung's credential surface must be allowed outside our lock task.
+        RootKiosk.unlock(this) {
+            if (isDestroyed || isFinishing) return@unlock
+            // requestDismissKeyguard requires a visible Activity above keyguard.
+            // Releasing lock task lets Samsung show its credential UI; removing
+            // showWhenLocked first makes the request ineligible on some firmware.
+            setShowWhenLocked(true)
+            val keyguard = getSystemService(android.app.KeyguardManager::class.java)
+            fun restoreD2(reason: String) {
+                if (isDestroyed || isFinishing || !samsungAuthenticationPending) return
+                samsungAuthenticationPending = false
+                keyguardHandoffPending = false
+                unlocking = false
+                GuardianWatchdog.endTrustedAuthentication(reason)
+                updateKeyguardOcclusion()
+                handler.post(keyguardPresentationPulse)
+                if (Prefs.quickSettingsGuard(this)) handler.post(quickSettingsGuard)
+                if (Prefs.kiosk(this)) RootKiosk.attach(this) { kioskStatus.text = it }
+                GuardianWatchdog.reassert(this, reason)
+            }
+            runCatching {
+                requireNotNull(keyguard).requestDismissKeyguard(this,
+                    object : android.app.KeyguardManager.KeyguardDismissCallback() {
+                        override fun onDismissSucceeded() {
+                            if (isDestroyed || isFinishing || !samsungAuthenticationPending) return
+                            if (keyguard.isKeyguardLocked || keyguard.isDeviceLocked) {
+                                restoreD2("samsung_auth_still_locked")
+                                return
+                            }
+                            samsungAuthenticationPending = false
+                            keyguardHandoffPending = false
+                            Log.i("SamsungLockD2", "D2_SAMSUNG_AUTH_CONFIRMED")
+                            releaseAuthenticatedKiosk(afterUnlock)
+                        }
+                        override fun onDismissCancelled() = restoreD2("samsung_auth_cancelled")
+                        override fun onDismissError() = restoreD2("samsung_auth_error")
+                    })
+            }.onFailure { restoreD2("samsung_auth_request_failed") }
+        }
+    }
+
+    private fun releaseAuthenticatedKiosk(afterUnlock: (() -> Unit)?) {
+        GuardianWatchdog.endTrustedAuthentication("auth_success")
+        RootKiosk.unlock(this) {
+            app.d2lock.bridge.IslandBridge.setLocked(this, false)
+            afterUnlock?.invoke()
+            finish()
         }
     }
 
