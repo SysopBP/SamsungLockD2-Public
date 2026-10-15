@@ -122,7 +122,7 @@ object Android {
         }
     }
 
-    // D2 2026-10-14: read-only scheduler observations; legacy option/method names retained.
+    // D2 OneUIX 1.9.0 experimental opt-in periodic scheduler suppression.
     @Volatile var periodicCredentialState: String = "disabled"
         private set
     @Volatile var periodicCredentialMethods: String = ""
@@ -132,9 +132,9 @@ object Android {
     private val periodicCredentialObserved = java.util.concurrent.atomic.AtomicInteger()
     fun periodicCredentialStatus(): org.json.JSONObject = org.json.JSONObject()
         .put("state", periodicCredentialState).put("methods", periodicCredentialMethods)
-        .put("suppressedSchedules", 0) // No credential schedules are suppressed.
+        .put("suppressedSchedules", periodicCredentialObserved.get())
         .put("observedSchedules", periodicCredentialObserved.get())
-        .put("lastSuppressedElapsed", -1L)
+        .put("lastSuppressedElapsed", periodicCredentialLastElapsed)
         .put("lastObservedElapsed", periodicCredentialLastElapsed)
 
     context(xposedModule: XposedModule, param: XposedModuleInterface.SystemServerStartingParam)
@@ -149,14 +149,16 @@ object Android {
             check(methods.all { it.returnType == Void.TYPE && !java.lang.reflect.Modifier.isStatic(it.modifiers) })
             methods.forEach { method ->
                 xposedModule.hook(method).setExceptionMode(io.github.libxposed.api.XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
-                    val result = chain.proceed()
+                    // OneUIX 1.9.0 behavior: intercept the periodic scheduler without
+                    // invoking the original method. This does NOT bypass other
+                    // StrongAuth reasons (boot, lockdown, policy, lockout).
                     runCatching {
                         periodicCredentialLastElapsed = android.os.SystemClock.elapsedRealtime()
                         val count = periodicCredentialObserved.incrementAndGet()
                         periodicCredentialObserver?.invoke()
-                        if (count <= 3) android.util.Log.i("D2PeriodicAuth", "D2_ONEUI_PERIODIC_OBSERVED count=$count stock_retained=true")
+                        if (count <= 3) android.util.Log.w("D2PeriodicAuth", "D2_ONEUI_PERIODIC_SUPPRESSED count=$count stock_retained=false")
                     }
-                    result
+                    null
                 }
             }
             periodicCredentialState = "installed"
