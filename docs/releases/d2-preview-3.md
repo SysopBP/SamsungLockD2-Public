@@ -2,6 +2,8 @@
 
 Prepared from successful [Build 1131](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38727163183), source `b1edbb9fdf1b6734c3398db05683e4b51f59f59f`, on the existing development branch and PR #71. APK: `app.d2lock`, version `0.6.4-d2-guardian`, versionCode 30. This is a draft preview, not a stable release.
 
+![D2 Guardian S26 Ultra showcase](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.6.4-preview.3/D2-Preview-3-S26-Ultra-Showcase.jpg)
+
 ![D2 Guardian Home](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.6.4-preview.3/D2-Preview-3-Home.jpg)
 
 ## Changes since Preview 2
@@ -45,7 +47,7 @@ Accessibility screen-off and Device Admin are optional fallbacks. Device Admin r
 - Signed debug APK from Build 1131, retaining the original signing certificate.
 - Optional KernelSU bridge and exact corresponding-source/dependency archives from that build.
 - Runtime dependency report and checksums.
-- This release/setup guide, the supplied Guardian Home screenshot, and the 5:26 setup video.
+- This release/setup guide, the supplied Guardian Home screenshot, the S26 Ultra showcase with the moon-in-a-glass theme, and the 5:32 setup video with a six-second showcase opening.
 - Video admin-app content is blurred except the D2 entry. The release video corrects historical Xposed scope/integration instructions and includes Samsung face-unlock handoff guidance.
 
 ## Validation
