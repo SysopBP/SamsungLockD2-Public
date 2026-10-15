@@ -1277,7 +1277,7 @@ class MainActivity : Activity() {
                 setOnClickListener { showDmcStatus() }
             }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
-        addButton(root, "72-hour PIN / pattern diagnostics") { PeriodicCredentialSettings.show(this) }
+        // Keep legacy StrongAuth observation internal; no user-facing 72-hour feature.
         section(root, "SYSTEM INTEGRATION")
         root.getChildAt(root.childCount - 1).tag = "root_shizuku"
         root.addView(LinearLayout(this).apply {
@@ -3428,7 +3428,29 @@ class MainActivity : Activity() {
             orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(16)); background=Appearance.glass(this@MainActivity,32f,64,true)
             addView(TextView(this@MainActivity).apply { text=if(healthy) "◆  GUARDIAN CONFIGURED" else "◆  GUARDIAN ATTENTION"; textSize=13f; setTextColor(if(healthy) Color.rgb(102,220,132) else Appearance.accent(this@MainActivity)) })
             addView(TextView(this@MainActivity).apply { text="Guardian Core"; textSize=24f; setTextColor(Appearance.text(this@MainActivity)); setPadding(0,dp(3),0,dp(12)) })
-            fun status(title:String,detail:String,ok:Boolean) { addView(TextView(this@MainActivity).apply { text=(if(ok) "●  " else "○  ")+title+"\n    "+detail; textSize=14f; setTextColor(if(ok) Appearance.text(this@MainActivity) else Appearance.accent(this@MainActivity)); setPadding(dp(13),dp(9),dp(13),dp(9)); background=Appearance.glass(this@MainActivity,24f,28,true) },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(6) }) }
+            fun status(title: String, detail: String, ok: Boolean) {
+                val color = if (ok) Appearance.text(this@MainActivity) else Appearance.accent(this@MainActivity)
+                addView(LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.TOP
+                    setPadding(dp(13), dp(10), dp(13), dp(10))
+                    background = Appearance.glass(this@MainActivity, 24f, 28, true)
+                    addView(TextView(this@MainActivity).apply {
+                        text = if (ok) "●" else "○"; textSize = 14f; setTextColor(color)
+                        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                    }, LinearLayout.LayoutParams(dp(22), -2))
+                    addView(LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(TextView(this@MainActivity).apply {
+                            text = title; textSize = 14f; setTextColor(color)
+                        })
+                        addView(TextView(this@MainActivity).apply {
+                            text = detail; textSize = 13f; setTextColor(Appearance.secondary(this@MainActivity))
+                            setPadding(0, dp(2), 0, 0)
+                        })
+                    }, LinearLayout.LayoutParams(0, -2, 1f))
+                }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(6) })
+            }
             status("D2 authentication",if(authReady) "Credential configured" else "Create a D2 PIN",authReady)
             status("Lock & wake",if(wakeReady) "Guardian armed for screen wake" else "Show D2 on wake is off",wakeReady)
             status("Root / KernelSU",if(rootAvailable) "Root shell available" else "Root unavailable",!Prefs.rootMode(this@MainActivity)||rootAvailable)
@@ -3462,7 +3484,18 @@ class MainActivity : Activity() {
                 addView(quick("System Server") { showSystemServerDashboard() },LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(4) })
             },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(2) })
         }
-        AlertDialog.Builder(this).setView(body).setNegativeButton("Close",null).create().also { d -> d.setOnShowListener { d.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 34f, 84, true)); d.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Appearance.accent(this@MainActivity)) }; d.show() }
+        val scroll = ScrollView(this).apply { addView(body) }
+        AlertDialog.Builder(this).setView(scroll).setNegativeButton("Close", null).create().also { d ->
+            d.setOnShowListener {
+                d.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 34f, 84, true))
+                d.window?.setDimAmount(0.82f)
+                d.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                d.window?.setLayout((resources.displayMetrics.widthPixels * .94f).toInt(),
+                    (resources.displayMetrics.heightPixels * .84f).toInt())
+                d.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Appearance.accent(this@MainActivity))
+            }
+            d.show()
+        }
     }
 
     /** Home presentation delegates all security actions to the original controls. */
@@ -3596,6 +3629,9 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
                 addView(guardianSwitch().apply {
                     text = title; textSize = 14f; minimumHeight = dp(48)
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(4), dp(4), dp(4), dp(4))
+                    switchPadding = dp(12)
                     setTextColor(Appearance.text(this@MainActivity)); isChecked = source?.isChecked == true
                     isEnabled = source != null && source.isEnabled
                     setOnCheckedChangeListener { _, checked ->
@@ -3603,12 +3639,12 @@ class MainActivity : Activity() {
                         refreshSettingsPreservingPosition()
                         Toast.makeText(this@MainActivity, "$title updated", Toast.LENGTH_SHORT).show()
                     }
-                })
+                }, LinearLayout.LayoutParams(-1, -2))
             }
         }
         val quick = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        pair(quick, quickSwitch("Guardian", "Show D2 when the screen wakes"),
-            quickSwitch("Kiosk", "Require D2 authentication to leave"))
+        quick.addView(quickSwitch("Guardian", "Show D2 when the screen wakes"))
+        quick.addView(quickSwitch("Kiosk", "Require D2 authentication to leave"))
         status.addView(quick, 1)
         status.addView(action("Readiness check  ›") { showReadiness() })
         root.addView(status, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })

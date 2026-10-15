@@ -34,3 +34,7 @@ Reviewed `D2DeviceAdminReceiver.kt`, `AndroidManifest.xml`, `res/xml/d2_device_a
 **Scope:** This provides a screen-off/lock fallback, not D2 facial recognition, Samsung keyguard unlocking, Device Owner privileges, or automatic authentication. Do not add reset-password, wipe-data, disable-keyguard, or other expansive policies. Samsung face recognition and Extend Unlock must remain Samsung-managed.
 
 **Proposed follow-up (not yet implemented):** expose read-only Device Admin activation and fallback availability in readiness/diagnostics; verify behavior with admin enabled and disabled on-device. No app code changed in this audit.
+
+## October 15 UI cleanup
+
+The 72-hour observer screen and its summary row are hidden from navigation. Internal read-only observation is retained; no credential policy changed. Guardian Core uses separate marker/text columns and a bounded scrolling dialog. Home Guardian and Kiosk switches use full-width rows to accommodate wider fonts. Device layout validation is pending.
