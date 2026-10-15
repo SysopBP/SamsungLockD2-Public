@@ -22,3 +22,7 @@ Keep D2-owned Samsung power-menu actions (power off, restart, soft restart, SRP 
 7. Update README, installation instructions, release notes and notices with verified behavior only.
 
 Do not merge into `main`, publish a release, or label a build stable without explicit approval and verification. Keep all remediation on the existing branch and PR #71.
+
+## Samsung native unlock compatibility observation (October 14, 2026)
+
+On the SM-S948U1 test device, Samsung face recognition and Extend Unlock / Trusted Places were user-confirmed working. They remain **Samsung-native capabilities**, not D2-owned authentication. **D2 face recognition is not implemented**; do not advertise or implement it in this cleanup. D2 fingerprint and configured PIN/pattern recovery remain separate. Future readiness UI may document the observed Samsung result and guided checks without mislabeling it as D2 face recognition. Documentation-only change; no APK behavior or CI success implied.
