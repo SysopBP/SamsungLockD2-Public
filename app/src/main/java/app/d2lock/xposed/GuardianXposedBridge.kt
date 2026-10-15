@@ -43,7 +43,6 @@ class GuardianXposedBridge : XposedModule() {
     }
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
-        io.github.soclear.oneuix.hook.D2OneUiHooks.onModuleLoaded(param)
         if (param.processName != "system_server" && param.processName != "com.android.systemui") return
         log(
             Log.INFO,
@@ -53,10 +52,9 @@ class GuardianXposedBridge : XposedModule() {
     }
 
     override fun onPackageReady(param: io.github.libxposed.api.XposedModuleInterface.PackageReadyParam) {
-        if (!param.isFirstPackage || !io.github.soclear.oneuix.hook.D2OneUiHooks.supportsPackage(param.packageName)) return
-        runCatching { with(this) { io.github.soclear.oneuix.hook.D2OneUiHooks.onPackageReady(param) } }
-            .onFailure { Log.w(TAG, "D2_ONEUI_PACKAGE_UNAVAILABLE", it) }
-        if (param.packageName != "com.android.systemui" || android.app.Application.getProcessName() != "com.android.systemui") return
+        // D2's working power menu is registered independently of the OneUIX port.
+        if (!param.isFirstPackage || param.packageName != "com.android.systemui" ||
+            android.app.Application.getProcessName() != "com.android.systemui") return
         installKeyguardPresentation(param.classLoader)
         runCatching {
             // Resolve only D2's two synthetic IDs; all Samsung resources keep their normal path.
@@ -114,8 +112,6 @@ class GuardianXposedBridge : XposedModule() {
         diagnosticHandler = android.os.Handler(diagnosticThread!!.looper)
         runCatching { CredentialObserver.install(this, param.classLoader) }
             .onFailure { log(Log.WARN, TAG, "D2_CREDENTIAL_OBSERVER_FAILED stock_retained=true", it) }
-        runCatching { with(this) { io.github.soclear.oneuix.hook.D2OneUiHooks.onSystemServerStarting(param) } }
-            .onFailure { Log.w(TAG, "D2_ONEUI_SYSTEM_UNAVAILABLE", it) }
         Log.i(TAG, "D2_STRONG_AUTH_INSTALL_ATTEMPT pid=${android.os.Process.myPid()}")
         runCatching { PeriodicCredentialHook.install(this, param.classLoader) }
             .onSuccess { Log.i(TAG, "D2_STRONG_AUTH_INSTALL_RETURNED check_per_method_registration=true") }
