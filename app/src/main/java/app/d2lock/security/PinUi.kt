@@ -12,6 +12,7 @@ import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.ImageView
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -89,19 +90,38 @@ object PinUi {
             .setOnCancelListener { cancel() }
             .create()
 
-        var fingerprintAction: TextView? = null
+        var fingerprintAction: View? = null
         if (!setup && !change && fingerprint != null) {
-            form.addView(TextView(activity).apply {
+            form.addView(LinearLayout(activity).apply {
                 fingerprintAction = this
-                text = "Login with fingerprint"
-                textSize = 17f
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(18), dp(10), dp(18), dp(10))
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+                background = Appearance.glass(activity, 24f, 42, true)
+                // Set padding after the drawable: assigning a background can reset it.
+                setPadding(dp(18), dp(12), dp(18), dp(12))
                 minimumHeight = dp(56)
                 isFocusable = true
-                setTextColor(Appearance.text(activity))
-                app.d2lock.D2Icons.applyTo(this, app.d2lock.R.drawable.ic_d2_fingerprint)
-                background = Appearance.glass(activity, 24f, 42, true)
+                contentDescription = "Login with fingerprint"
+                accessibilityDelegate = object : View.AccessibilityDelegate() {
+                    override fun onInitializeAccessibilityNodeInfo(
+                        host: View, info: android.view.accessibility.AccessibilityNodeInfo
+                    ) {
+                        super.onInitializeAccessibilityNodeInfo(host, info)
+                        info.className = "android.widget.Button"
+                    }
+                }
+                addView(ImageView(activity).apply {
+                    setImageResource(app.d2lock.R.drawable.ic_d2_fingerprint)
+                    imageTintList = android.content.res.ColorStateList.valueOf(Appearance.text(activity))
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                }, LinearLayout.LayoutParams(dp(24), dp(24)).apply { marginEnd = dp(10) })
+                addView(TextView(activity).apply {
+                    text = "Login with fingerprint"
+                    textSize = 17f
+                    gravity = Gravity.CENTER
+                    setTextColor(Appearance.text(activity))
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                }, LinearLayout.LayoutParams(0, -2, 1f))
                 filterTouchesWhenObscured = true
                 setOnClickListener {
                     // Only the caller's BiometricPrompt success may authorize access.
