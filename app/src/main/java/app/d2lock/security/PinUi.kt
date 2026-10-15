@@ -10,6 +10,7 @@ import android.text.InputType
 import android.view.Gravity
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -94,7 +95,10 @@ object PinUi {
                 fingerprintAction = this
                 text = "Login with fingerprint"
                 textSize = 17f
-                gravity = Gravity.CENTER
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(18), dp(10), dp(18), dp(10))
+                minimumHeight = dp(56)
+                isFocusable = true
                 setTextColor(Appearance.text(activity))
                 app.d2lock.D2Icons.applyTo(this, app.d2lock.R.drawable.ic_d2_fingerprint)
                 background = Appearance.glass(activity, 24f, 42, true)
@@ -104,7 +108,7 @@ object PinUi {
                     dialog.dismiss()
                     fingerprint()
                 }
-            }, LinearLayout.LayoutParams(-1, dp(56)).apply { topMargin = dp(8) })
+            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
         }
         dialog.setOnDismissListener { pin.text.clear(); old?.text?.clear(); confirm?.text?.clear() }
         dialog.setOnShowListener {
@@ -117,6 +121,12 @@ object PinUi {
             val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             val negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
             listOf(button, negative).forEach { action ->
+                (action.layoutParams as? ViewGroup.MarginLayoutParams)?.let { params ->
+                    params.marginStart = dp(4)
+                    params.marginEnd = dp(4)
+                    action.layoutParams = params
+                }
+                action.minimumHeight = dp(48)
                 action.isAllCaps = false
                 action.setPadding(dp(18), 0, dp(18), 0)
                 action.setTextColor(Appearance.text(activity))
