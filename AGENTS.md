@@ -1,25 +1,11 @@
 # D2 Guardian development continuity
 
-Use `fix/d2-widget-srp-diagnostics-20261014` as the canonical development branch
-and update existing draft PR #71. Do not replace it with an older baseline or
-another branch merely because that branch has a higher Actions run number.
+Use branch `fix/d2-widget-srp-diagnostics-20261014` and existing draft PR #71. Do not merge main or publish a release without approval.
 
-The consolidated history includes both Build 1095 (`fa86939`) and Build 1106
-(`2fd96a9`). Preserve the combined OneUIX settings/hooks, accessibility,
-watchdog/call fixes, D2 Hooks diagnostics, SRP checks, widget and boot telemetry.
-Read `docs/CONSOLIDATED-DEVELOPMENT.md` and `D2_FEATURE_BASELINE.json` before
-changing feature wiring or packaging. When comparing builds, verify branch and
-commit ancestry as well as artifact contents. Never infer feature inclusion
-from a successful build or a larger APK alone.
+## Baseline and intentional removal
 
-Run `python3 scripts/verify_feature_baseline.py`; the normal APK workflow also
-checks required classes/native ABIs in the actual deliverable. Do not weaken
-these checks to make an accidentally incomplete build pass. Preserve imported
-licenses/notices and complete corresponding-source packaging.
+Successful pre-removal baseline: GitHub Actions run 38672204822, commit `19319698392672336ebd075158e3f445e961538c`. OneUIX feature-port source, compile stubs, settings and hook routing were intentionally removed after that baseline. Preserve D2's independent Samsung power-menu actions, SRP protection, AMOLED icons, lockscreen, accessibility, watchdog/call policy, widgets, boot/wake hooks and diagnostics. Never restore OneUIX to fix an unrelated regression.
 
-The legacy OneUI `disablePinVerifyPer72h` identifier is compatibility-only:
-its implementation observes scheduler calls and must preserve required Samsung
-strong authentication. Distinguish installation, execution, failure, unavailable
-and not observed. SRP verification never establishes credential authentication.
+Read `docs/CONSOLIDATED-DEVELOPMENT.md` and `D2_FEATURE_BASELINE.json` before changing source or packaging. Run `python3 scripts/verify_feature_baseline.py`, the APK workflow, signing and deliverable verification. A passing build is not evidence of Samsung power-menu functionality on hardware. Do not reduce checks for features that remain; adjust checks only for deliberately removed OneUIX code.
 
-Do not merge into main or publish a release without the owner's approval.
+D2's periodic credential hook is read-only and must preserve mandatory Samsung StrongAuth. SRP status is separate from credential authentication. Preserve applicable third-party attribution and notices for historical adaptations. Do not full-reboot a root-dependent test device merely to validate a UI change; coordinate a safe test plan.

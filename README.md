@@ -1,4 +1,4 @@
-> Development baseline: the current PR #71 branch consolidates Build 1095 OneUIX features and Build 1106 Guardian diagnostics. See [combined feature inventory and preservation checks](docs/CONSOLIDATED-DEVELOPMENT.md).
+> Development baseline: OneUIX feature-port code was intentionally removed after successful build [38672204822](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38672204822). D2 retains its own SRP-guarded power menu and lockscreen integrations. The removal build requires CI and device verification. See [current development baseline](docs/CONSOLIDATED-DEVELOPMENT.md).
 
 # Samsung Lock D2
 
@@ -30,7 +30,7 @@ Enable D2 in **both SystemUI and System Framework** LSPosed scopes. Reload those
 
 Samsung's power menu presents **D2 power off** and **D2 restart** using the original Samsung action models, with native confirmation and long-press behavior. Emergency, lockdown and unrelated actions are retained. D2 adds **D2 soft restart** (with Samsung confirmation) and **D2 SRP status** (a rounded dark live-status dialog). Power off and Restart use the System Server guard described below; soft restart requests are accepted only from the trusted primary-user SystemUI or D2 app UID and refused if the soft-restart guard is unavailable. The live dialog checks System Server's sender identity and times out after six seconds.
 
-This is an action-list integration inspired by [OneUIX](https://github.com/SoClear/OneUIX), implemented independently using reflection and libxposed. It keeps Samsung's menu presentation; a complete replacement of the menu's visual layout is not included. It requires Samsung's `SamsungGlobalActionsPresenter#createActions` API. Missing APIs leave the standard menu available and are logged as `D2_POWER_MENU_HOOK_UNAVAILABLE` or `D2_POWER_MENU_ACTIONS_UNAVAILABLE`. Test interaction with other power-menu modules, including OneUIX, before relying on combined behavior.
+This is an action-list integration inspired by [OneUIX](https://github.com/SoClear/OneUIX), implemented independently using reflection and libxposed. It keeps Samsung's menu presentation; a complete replacement of the menu's visual layout is not included. It requires Samsung's `SamsungGlobalActionsPresenter#createActions` API. Missing APIs leave the standard menu available and are logged as `D2_POWER_MENU_HOOK_UNAVAILABLE` or `D2_POWER_MENU_ACTIONS_UNAVAILABLE`. Test other installed power-menu modules for hook conflicts; D2 does not require OneUIX.
 
 ## D2 SRP checks before power actions (0.6.4 preview)
 
@@ -232,7 +232,7 @@ Notification content stays in memory. Wallpaper selection stores a persistent im
 
 Copyright (c) 2026 D2 Project and contributors. D2's original software and accompanying project documentation in this revision are released under **AGPL-3.0-only**. See [LICENSE](LICENSE). Third-party components retain their own licenses and notices. The APK includes the full AGPL text, credits and source access under **Legal, privacy & licenses**.
 
-**OneUIX — SoClear and contributors:** [upstream project](https://github.com/SoClear/OneUIX), licensed under AGPL-3.0. The requested Samsung customization work will preserve its upstream notices and record adaptations. Read-only periodic PIN/pattern strong-auth diagnostics and the requested OneUI feature categories are adapted. See [integration status](docs/ONEUIX-INTEGRATION.md) for scope, unsupported firmware paths and testing requirements.
+**OneUIX — SoClear and contributors:** [upstream project](https://github.com/SoClear/OneUIX). Historical port work and its provenance remain recorded, but the OneUIX feature port and its runtime modules have been removed from the current D2 branch. D2's independently implemented power menu remains. See [historical integration record](docs/ONEUIX-INTEGRATION.md).
 
 See [source and build instructions](docs/SOURCE-DISTRIBUTION.md). Distribute a source archive matching each APK revision alongside that APK; source from a later branch head is not a substitute. The license transition applies to this revision and future covered releases, not a claim about older binaries.
 
@@ -295,10 +295,6 @@ and PIN fallback, incoming calls, and leaving D2.
 
 ## Samsung periodic credential diagnostics
 
-Tools → OneUI feature port → Framework → **Observe periodic Samsung PIN / pattern scheduling (72h diagnostics)**. Enable the port and the observation option, tap Apply and reboot normally. Required Samsung authentication remains intact. The legacy option key is retained for configuration compatibility, but it no longer suppresses scheduling.
+Tools → **72-hour PIN / pattern diagnostics** opens D2's read-only StrongAuth observer. D2 records hook registration, completed scheduler callbacks, requests and sampled flags. Samsung's credential requirements remain unchanged. Callback age is **not** a 72-hour countdown. The OneUIX feature port and its configuration switches are no longer part of D2.
 
-The diagnostics panel reports registration, observed calls, current sampled flags and metadata. Registration alone does not establish execution or PIN/pattern compatibility. The widget's optional age timer measures time since an observed callback; it is not a 72-hour countdown or credential verification.
-
-### Experimental OneUI feature port
-
-Tools → Experimental: OneUI feature port provides categorized configuration for the requested OneUIX hooks. All imported feature switches default off; Apply publishes through LSPosed's private remote-file service and verifies read-back. Select each affected app in D2's LSPosed scope and soft reboot after framework changes. Configuration is distinct from hook installation or device verification. This development branch consolidates the Build 1095 feature set with Build 1106 diagnostics, authentication, launcher and UI improvements. See [integration and test matrix](docs/ONEUIX-INTEGRATION.md).
+The D2 SRP-guarded power menu remains independent of OneUIX. D2 power off, restart, soft restart, SRP status, mobile data (when supported) and Lock D2 remain in the source, with Samsung emergency actions retained. Physical-device verification is still required after rebuilding.

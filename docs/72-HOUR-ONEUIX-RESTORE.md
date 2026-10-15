@@ -1,15 +1,5 @@
-# Consolidated OneUIX periodic credential diagnostics
+# Archived: OneUIX 72-hour investigation
 
-The prior experimental scheduler bypass is replaced with read-only observation.
-The legacy `disablePinVerifyPer72h` key/method is retained only for compatibility.
-Every original scheduler invocation runs exactly once; results and exceptions,
-credential verification and strong-auth requirements remain authoritative.
+OneUIX-specific periodic authentication options were removed from D2 Guardian. The current D2 StrongAuth observer is read-only: it observes scheduling and request callbacks without changing Samsung's required PIN/pattern verification. The previous OneUIX port setup steps are obsolete.
 
-Enable the OneUI feature port and Framework observation option, tap Apply and
-reboot normally. Installed means registration; a positive `observedSchedules`
-count means a completed scheduler callback. `suppressedSchedules` stays zero.
-PIN and pattern compatibility require separate physical-device testing.
-
-The widget can display observation count and elapsed time since the last
-observed callback. It is not a 72-hour deadline, successful authentication,
-or proof that periodic authentication enforcement was disabled.
+Open D2's **72-hour PIN / pattern diagnostics** screen to inspect available registration, callbacks and sampled state. A callback count or event age is not a 72-hour deadline or proof of suppression. Historical OneUIX investigation notes are retained in Git history.

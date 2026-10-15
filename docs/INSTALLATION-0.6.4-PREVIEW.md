@@ -1,5 +1,7 @@
 # D2 Guardian 0.6.4 Preview — Installation and fingerprint setup
 
+> **Current development note:** The OneUIX feature port is removed from the post-38672204822 D2 branch. No OneUIX setup or switches are needed. Preserve D2's SRP-guarded Samsung power menu. This historical preview guide is not proof that the new removal build passed hardware testing.
+
 This guide covers the Samsung Recovery Protection (D2 SRP) and fingerprint-login preview.
 
 **Enroll first:** configure a Samsung screen-lock PIN and enroll a fingerprint in Samsung biometrics before disabling Samsung's **Fingerprint unlock** switch. Keep both the Samsung PIN and fingerprint enrollment.

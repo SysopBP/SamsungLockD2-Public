@@ -1,5 +1,7 @@
 # D2 Guardian 0.6.4 Preview 2 — Call Hotfix & New UI
 
+> **Development status:** This preview document describes earlier functionality. The current branch intentionally removes the OneUIX port after Actions run 38672204822 while retaining D2's independent power menu. The post-removal build is not declared release-ready until CI and device checks pass.
+
 Published as a preview from successful [Build 1057](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38462517827), source commit `54ad8616b9b6f1ecd90feeaed5d3cec40a78abdd`. APK version: `0.6.4-srp-fingerprint-login`, versionCode 29. Original signing certificate preserved by the build workflow.
 
 ![D2 Guardian preview and fingerprint setup](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.6.4-preview.2/D2-0.6.4-Preview-Setup-Collage.png)
