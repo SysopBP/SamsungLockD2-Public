@@ -35,7 +35,6 @@ internal object PeriodicCredentialHook {
     private var worker: Handler? = null
 
     fun install(module: XposedModule, loader: ClassLoader) {
-        io.github.soclear.oneuix.hook.Android.periodicCredentialObserver = { enqueue() }
         // Created at registration, never on a framework callback stack.
         worker = Handler(HandlerThread("D2StrongAuthDiagnostics").apply { start() }.looper)
         observe(module, loader, "rescheduleStrongAuthTimeoutAlarm",
@@ -124,24 +123,12 @@ internal object PeriodicCredentialHook {
         } catch (error: Throwable) {
             Log.w(TAG, "D2_STRONG_AUTH_QUERY_UNAVAILABLE stock_retained=true", error)
         } finally { Binder.restoreCallingIdentity(identity) }
-        val oneuiStatus = io.github.soclear.oneuix.hook.Android.periodicCredentialStatus()
-        val oneuiInstalled = oneuiStatus.optString("state") == "installed"
-        val d2Installed = scheduler == "installed"
-        val oneuiCount = oneuiStatus.optInt("observedSchedules", 0)
-        val d2Count = schedules.get()
-        val observerComparison = when {
-            !oneuiInstalled || !d2Installed -> "unavailable"
-            oneuiCount == 0 && d2Count == 0 -> "waiting"
-            oneuiCount > 0 && d2Count > 0 -> "both_observed"
-            oneuiCount > 0 -> "oneui_only"
-            else -> "d2_only"
-        }
+        val observerComparison = "d2_only"
         val snapshot = JSONObject()
             .put("version", 3)
             .put("observerComparison", observerComparison).put("pid", Process.myPid())
             .put("boot", Settings.Global.getInt(app.contentResolver, Settings.Global.BOOT_COUNT, -1))
             .put("elapsed", SystemClock.elapsedRealtime())
-            .put("oneuiPeriodic", oneuiStatus)
             .put("scheduler", scheduler).put("schedulerDetail", schedulerDetail).put("reasonObserver", reasons)
             .put("scheduleCallbackScope", "user_0_completed_calls").put("featureVerified", false)
             .put("scheduleCallbacks", schedules.get()).put("reasonCallbacks", requests.get())
