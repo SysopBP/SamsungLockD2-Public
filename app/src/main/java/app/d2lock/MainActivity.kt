@@ -141,7 +141,10 @@ class MainActivity : Activity() {
 
     private fun showAppPinLogin() {
         if (appStopped || authorized || isFinishing || isDestroyed || pinDialog?.isShowing == true) return
-        pinDialog = PinUi.show(this, success = { completeAppLogin() }, cancel = { finish() })
+        val fingerprintAvailable = getSystemService(BiometricManager::class.java)
+            ?.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
+        pinDialog = PinUi.show(this, success = { completeAppLogin() }, cancel = { finish() },
+            fingerprint = if (fingerprintAvailable) ({ authenticateAppWithFingerprint() }) else null)
     }
 
     private fun authenticateAppWithFingerprint() {
