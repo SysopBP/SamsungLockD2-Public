@@ -298,3 +298,9 @@ and PIN fallback, incoming calls, and leaving D2.
 Tools → **72-hour PIN / pattern diagnostics** opens D2's read-only StrongAuth observer. D2 records hook registration, completed scheduler callbacks, requests and sampled flags. Samsung's credential requirements remain unchanged. Callback age is **not** a 72-hour countdown. The OneUIX feature port and its configuration switches are no longer part of D2.
 
 The D2 SRP-guarded power menu remains independent of OneUIX. D2 power off, restart, soft restart, SRP status, mobile data (when supported) and Lock D2 remain in the source, with Samsung emergency actions retained. Physical-device verification is still required after rebuilding.
+
+## Samsung face recognition and Extend Unlock (device observations, October 14, 2026)
+
+On the test Galaxy S26 Ultra (SM-S948U1, Android 17 / One UI 9), the user confirmed **Samsung's native face recognition works for convenient Samsung screen unlock** and **Samsung Extend Unlock / Trusted Places works** with a configured trusted place. These are Samsung-managed features, **not D2 authentication implementations**. In particular, **D2 face recognition is not implemented or verified**. D2 currently offers its own fingerprint and configured PIN/pattern recovery; Samsung may separately request its own PIN, pattern, or password.
+
+Extend Unlock may keep the Samsung device unlocked after a successful secure unlock while trusted conditions apply; it does not replace the initial authentication or grant D2 authentication. D2 must not bypass Samsung StrongAuth, keyguard, or credential requirements. D2's readiness UI may describe these native options and offer user-guided checks, but must not label D2 face recognition as supported or automatically mark it verified. Any future D2 face-recognition implementation requires separate development, review, and testing.
