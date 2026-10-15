@@ -116,7 +116,10 @@ class GuardianXposedBridge : XposedModule() {
             .onFailure { log(Log.WARN, TAG, "D2_CREDENTIAL_OBSERVER_FAILED stock_retained=true", it) }
         runCatching { with(this) { io.github.soclear.oneuix.hook.D2OneUiHooks.onSystemServerStarting(param) } }
             .onFailure { Log.w(TAG, "D2_ONEUI_SYSTEM_UNAVAILABLE", it) }
-        PeriodicCredentialHook.install(this, param.classLoader)
+        Log.i(TAG, "D2_STRONG_AUTH_INSTALL_ATTEMPT pid=${android.os.Process.myPid()}")
+        runCatching { PeriodicCredentialHook.install(this, param.classLoader) }
+            .onSuccess { Log.i(TAG, "D2_STRONG_AUTH_INSTALL_RETURNED check_per_method_registration=true") }
+            .onFailure { Log.e(TAG, "D2_STRONG_AUTH_INSTALL_FAILED stock_retained=true", it) }
         FrameworkControlHooks.install(this, param.classLoader)
         installBootReadyHook(param.classLoader)
         installWakeObserver(param.classLoader)
