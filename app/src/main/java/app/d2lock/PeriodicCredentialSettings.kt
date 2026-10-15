@@ -22,7 +22,7 @@ object PeriodicCredentialSettings {
         }
         body.addView(TextView(activity).apply {
             textSize = 14f
-            text = "72-hour PIN / pattern diagnostics (read-only)\\n\\nD2 observes framework StrongAuth scheduler and request callbacks. Samsung credential requirements are unchanged. Registration alone does not prove callback execution.\\n\\nRequires D2's System Framework scope in LSPosed. A soft reboot may be needed after changing hook scope."
+            text = "72-hour PIN / pattern diagnostics (read-only)\n\nD2 observes framework StrongAuth scheduler and request callbacks. Samsung credential requirements are unchanged. Registration alone does not prove callback execution.\n\nRequires D2's System Framework scope in LSPosed. A soft reboot may be needed after changing hook scope."
 
         })
         val status = TextView(activity).apply { textSize = 13f; text = "Reading diagnostic status…" }
@@ -44,7 +44,7 @@ object PeriodicCredentialSettings {
                     val boot = Settings.Global.getInt(activity.contentResolver, Settings.Global.BOOT_COUNT, -1)
                     check(StrongAuthDiagnostics.current(marker.optInt("version"), marker.optInt("pid"), pid,
                         marker.optInt("boot", -1), boot, marker.optLong("elapsed", -1), now))
-                    "This boot\\nD2 StrongAuth observer\\nDiagnostic scheduler: ${marker.optString("scheduler")} • callbacks: ${marker.optInt("scheduleCallbacks")}\nScheduler details: ${marker.optString("schedulerDetail", "Not supplied by this build")}\nReason observer: ${marker.optString("reasonObserver")} • callbacks: ${marker.optInt("reasonCallbacks")}\nCredential: ${StrongAuthDiagnostics.credential(marker.optInt("credential", -1))}\nLast sampled flags: ${StrongAuthDiagnostics.reasons(marker.optInt("flags", -1))}\nLast request (not current state): ${StrongAuthDiagnostics.reasons(marker.optInt("lastRequest", -1))}\nSample age: ${(now - marker.optLong("elapsed")) / 1000}s\nPIN and pattern behavior remain unverified."
+                    "This boot\nD2 StrongAuth observer\nDiagnostic scheduler: ${marker.optString("scheduler")} • callbacks: ${marker.optInt("scheduleCallbacks")}\nScheduler details: ${marker.optString("schedulerDetail", "Not supplied by this build")}\nReason observer: ${marker.optString("reasonObserver")} • callbacks: ${marker.optInt("reasonCallbacks")}\nCredential: ${StrongAuthDiagnostics.credential(marker.optInt("credential", -1))}\nLast sampled flags: ${StrongAuthDiagnostics.reasons(marker.optInt("flags", -1))}\nLast request (not current state): ${StrongAuthDiagnostics.reasons(marker.optInt("lastRequest", -1))}\nSample age: ${(now - marker.optLong("elapsed")) / 1000}s\nPIN and pattern behavior remain unverified."
                 }.getOrDefault("Diagnostics unavailable or stale for this boot. Check root access and D2's System Framework scope. Samsung authentication remains enabled.")
                 activity.runOnUiThread { if (dialog.isShowing) status.text = text }
             }.start()
