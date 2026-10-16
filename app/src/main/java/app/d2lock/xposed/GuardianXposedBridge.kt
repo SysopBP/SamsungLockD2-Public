@@ -419,6 +419,10 @@ class GuardianXposedBridge : XposedModule() {
                     appUid -> "app.d2lock"
                     else -> return
                 }
+                if (intent.action == "app.d2lock.action.STRONG_AUTH_REFRESH") {
+                    PeriodicCredentialHook.refresh(app)
+                    return
+                }
                 if (intent.action == "app.d2lock.action.DMC_EXTENDED_POWER") {
                     if(callerPackage!="com.android.systemui") return
                     val action=intent.getStringExtra("mode") ?: return
@@ -459,6 +463,7 @@ class GuardianXposedBridge : XposedModule() {
         }, android.content.IntentFilter("app.d2lock.action.DMC_REQUEST").apply {
             addAction("app.d2lock.action.DMC_SOFT_RESTART")
             addAction("app.d2lock.action.DMC_EXTENDED_POWER")
+            addAction("app.d2lock.action.STRONG_AUTH_REFRESH")
         }, Context.RECEIVER_EXPORTED)
         Log.i(TAG, "D2_SRP_SYSTEM_SERVER_RECEIVER_READY uid=${android.os.Process.myUid()} pid=${android.os.Process.myPid()}")
     }

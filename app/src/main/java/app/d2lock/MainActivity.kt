@@ -92,6 +92,7 @@ class MainActivity : Activity() {
         Appearance.apply(this)
         PinUi.protect(this)
         Prefs.syncBootPolicy(this)
+        PeriodicCredentialControl.sync(this)
         RootManager.refreshAsync()
         app.d2lock.root.DmcRecovery.request(this, "app_open")
         window.statusBarColor = Color.TRANSPARENT
@@ -1073,6 +1074,16 @@ class MainActivity : Activity() {
                                 }
                             }
                     }
+                },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
+
+                addView(TextView(this@MainActivity).apply {
+                    text="Require PIN again  \u2022  ${PeriodicCredentialControl.label(this@MainActivity)}  \u203a"
+                    textSize=15f
+                    setTextColor(Appearance.text(this@MainActivity))
+                    gravity=Gravity.CENTER
+                    background=Appearance.glass(this@MainActivity,22f,26,true)
+                    setPadding(dp(14),dp(10),dp(14),dp(10))
+                    setOnClickListener { PeriodicCredentialSettings.show(this@MainActivity) }
                 },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
 
                 addView(TextView(this@MainActivity).apply {
@@ -3574,16 +3585,20 @@ class MainActivity : Activity() {
                 addView(second, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dp(4) })
             }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
         }
-        val shortcuts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        // One chip row instead of a 2x2 grid: same four destinations, half the vertical space.
+        val shortcuts = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         val destinations = listOf("Security" to "security", "SRP" to "tools", "Guardian" to "guardian", "Appearance" to "appearance")
-        val shortcutViews = destinations.map { (title, page) ->
-            action(title) {
+        destinations.forEachIndexed { index, (title, page) ->
+            val chip = action(title) {
                 if (title == "SRP") pageNavigator?.invoke("tools|D2 SRP", null)
                 else pageNavigator?.invoke(page, null)
             }
+            chip.textSize = 13f
+            chip.setPadding(dp(6), dp(9), dp(6), dp(9))
+            shortcuts.addView(chip, LinearLayout.LayoutParams(0, -2, 1f).apply {
+                if (index > 0) marginStart = dp(6)
+            })
         }
-        pair(shortcuts, shortcutViews[0], shortcutViews[1])
-        pair(shortcuts, shortcutViews[2], shortcutViews[3])
         root.addView(shortcuts, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(4) })
         val status = card()
         val rootOk = RootManager.isAvailable()
@@ -3621,7 +3636,8 @@ class MainActivity : Activity() {
         security.addView(label("Security", 20f))
         val method = Prefs.unlockMethod(this).replaceFirstChar { it.uppercase() }
         security.addView(label("$method selected  ·  PIN recovery ${if (PinStore(this).configured()) "configured" else "not configured"}", 13f))
-        security.addView(action("Manage security  ›") { pageNavigator?.invoke("security|SECURITY CENTER",null) })
+        security.addView(action("Manage security  \u203a") { pageNavigator?.invoke("security|SECURITY CENTER",null) })
+        security.addView(action("PIN re-verification \u00b7 ${PeriodicCredentialControl.label(this)}  \u203a") { PeriodicCredentialSettings.show(this) })
         security.addView(label("Samsung may require its PIN after reboot. Keep your fingerprint enrolled.", 12f))
         fun quickSwitch(title: String, original: String): View {
             val source = control(original) as? Switch

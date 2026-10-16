@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2026 D2 Project and contributors. SPDX-License-Identifier: AGPL-3.0-only
  * Reference: SoClear/OneUIX Android.kt @ 591d09c9cc69faf3c8faf258e39869b2df7981f4.
- * D2 modification 2026-10-14: replace scheduler suppression with read-only diagnostics.
+ * D2 modification 2026-10-16: rewrite the scheduler timeout argument, keep read-only diagnostics.
  */
 package app.d2lock.xposed
 
@@ -19,18 +19,32 @@ import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
-/** Never changes scheduling, credentials, arguments, results or strong-auth flags. */
+/**
+ * Makes Android's periodic strong-auth re-verification (stock: every 72 hours) selectable.
+ *
+ * Android stays authoritative: only the timeout argument is rewritten before chain.proceed(),
+ * so the framework's own field, alarm and bookkeeping remain consistent. A "now" argument is
+ * told apart from the timeout by distance from elapsedRealtime(), because SchedulerSignature
+ * proves two or three long arguments in no fixed order. Stock leaves the argument untouched.
+ */
 internal object PeriodicCredentialHook {
+    const val POLICY = "d2_strong_auth_timeout_hours"
+    const val REFRESH = "app.d2lock.action.STRONG_AUTH_REFRESH"
     const val ENABLED = "d2_periodic_credential_timeout_optout" // Legacy setting is ignored.
     const val STATUS = "d2_periodic_credential_hook_status"
     private const val TAG = "D2PeriodicAuth"
+    /** A "now" argument sits within this window of elapsedRealtime(); a timeout never does. */
+    private const val NOW_TOLERANCE_MS = 300_000L
     @Volatile private var context: Context? = null
     @Volatile private var scheduler = "unavailable"
     @Volatile private var reasons = "unavailable"
     @Volatile private var lastRequest = -1
     @Volatile private var schedulerDetail = "not_checked"
+    @Volatile private var policyHours = 0
+    @Volatile private var policyRead = "not_read"
     private val schedules = AtomicInteger()
     private val requests = AtomicInteger()
+    private val rewrites = AtomicInteger()
     private val queued = AtomicBoolean()
     private var worker: Handler? = null
 
@@ -63,9 +77,11 @@ internal object PeriodicCredentialHook {
             check(method.returnType == Void.TYPE && !java.lang.reflect.Modifier.isStatic(method.modifiers))
             method.isAccessible = true
             module.hook(method).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
-                val result = chain.proceed() // Exactly once; Android exceptions and results are preserved.
+                // Rewrite before Android runs so its own field, alarm and bookkeeping stay consistent.
+                val rewritten = if (scheduling) rewriteTimeout(chain.args.toList()) else null
+                val result = if (rewritten != null) chain.proceed(rewritten) else chain.proceed()
                 runCatching {
-                    val user = chain.args.getOrNull(if (scheduling) SchedulerSignature.userIndex(method.parameterTypes.map { it.name }.toTypedArray()) else 1) as? Int
+                    val user = chain.args.getOrNull(if (scheduling) SchedulerSignature.userIndex(method.parameterTypes.map { type -> type.name }.toTypedArray()) else 1) as? Int
                     // Requests for all users are relevant, but are NOT interpreted as current flags.
                     if (user == 0 || (!scheduling && user == -1)) {
                         if (scheduling) schedules.incrementAndGet() else {
@@ -91,16 +107,52 @@ internal object PeriodicCredentialHook {
         }
     }
 
+    /**
+     * Replace every long argument that is not "now" with the configured timeout.
+     * Returns null when stock behaviour must be preserved.
+     */
+    private fun rewriteTimeout(args: List<Any?>?): Array<Any?>? {
+        val timeout = PeriodicCredentialPolicy.timeoutMs(policyHours)
+        if (timeout <= 0L || args == null) return null
+        val now = SystemClock.elapsedRealtime()
+        val copy = args.toMutableList()
+        var changed = false
+        for (index in copy.indices) {
+            val value = copy[index] as? Long ?: continue
+            if (kotlin.math.abs(value - now) > NOW_TOLERANCE_MS) {
+                copy[index] = timeout
+                changed = true
+            }
+        }
+        if (changed) rewrites.incrementAndGet()
+        return if (changed) copy.toTypedArray() else null
+    }
+
     fun ready(app: Context) {
         context = app
+        // Boot handoff runs off the framework callback stack, so an IPC read is safe here.
+        readPolicy()
         enqueue()
+    }
+
+    /** Called from the System Server receiver when the app changes the interval. */
+    fun refresh(app: Context) {
+        context = app
+        enqueue()
+    }
+
+    private fun readPolicy() {
+        val app = context ?: return
+        policyHours = runCatching { Settings.Global.getInt(app.contentResolver, POLICY, 0) }
+            .getOrDefault(policyHours)
+        policyRead = PeriodicCredentialPolicy.label(policyHours)
     }
 
     private fun enqueue() {
         if (context == null || !queued.compareAndSet(false, true)) return
         if (worker?.postDelayed({
             queued.set(false)
-            runCatching { record() }.onFailure { Log.w(TAG, "D2_STRONG_AUTH_SNAPSHOT_FAILED", it) }
+            runCatching { readPolicy(); record() }.onFailure { Log.w(TAG, "D2_STRONG_AUTH_SNAPSHOT_FAILED", it) }
         }, 1_500L) != true) queued.set(false)
     }
 
@@ -130,9 +182,12 @@ internal object PeriodicCredentialHook {
             .put("boot", Settings.Global.getInt(app.contentResolver, Settings.Global.BOOT_COUNT, -1))
             .put("elapsed", SystemClock.elapsedRealtime())
             .put("scheduler", scheduler).put("schedulerDetail", schedulerDetail).put("reasonObserver", reasons)
-            .put("scheduleCallbackScope", "user_0_completed_calls").put("featureVerified", false)
+            .put("scheduleCallbackScope", "user_0_completed_calls").put("featureVerified", rewrites.get() > 0)
             .put("scheduleCallbacks", schedules.get()).put("reasonCallbacks", requests.get())
             .put("lastRequest", lastRequest).put("flags", flags).put("credential", credential)
+            .put("policyHours", policyHours).put("policyLabel", policyRead)
+            .put("policyTimeoutMs", PeriodicCredentialPolicy.timeoutMs(policyHours))
+            .put("timeoutRewrites", rewrites.get())
         Settings.Global.putString(app.contentResolver, STATUS, snapshot.toString())
         // Explicit system-origin signal; widget reads the trusted stored snapshot.
         app.sendBroadcast(android.content.Intent("app.d2lock.widget.PERIODIC_STATUS")

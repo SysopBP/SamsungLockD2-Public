@@ -49,6 +49,7 @@ object SettingsSchema {
         "show_media" to "Boolean",
         "show_weather" to "Boolean",
         "skipped_update_tag" to "String",
+        "strong_auth_timeout_hours" to "Int",
         "top_info_size" to "Int",
         "unlock_haptics" to "String",
         "unlock_method" to "String",

@@ -12,26 +12,46 @@ import app.d2lock.xposed.PeriodicCredentialHook
 import app.d2lock.xposed.StrongAuthDiagnostics
 import org.json.JSONObject
 
-/** Read-only status UI; the former timeout opt-out setting is ignored. */
+/** PIN re-verification control plus read-only StrongAuth diagnostics. */
 object PeriodicCredentialSettings {
     fun show(activity: Activity) {
+        val pad = (20 * activity.resources.displayMetrics.density).toInt()
+        val gap = (12 * activity.resources.displayMetrics.density).toInt()
         val body = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            val p = (20 * resources.displayMetrics.density).toInt()
-            setPadding(p, p, p, p)
+            setPadding(pad, pad, pad, pad)
         }
         body.addView(TextView(activity).apply {
             textSize = 14f
-            text = "72-hour PIN / pattern diagnostics (read-only)\n\nD2 observes framework StrongAuth scheduler and request callbacks. Samsung credential requirements are unchanged. Registration alone does not prove callback execution.\n\nRequires D2's System Framework scope in LSPosed. A soft reboot may be needed after changing hook scope."
-
+            text = "PIN re-verification\n\nAndroid normally asks for your PIN (not your fingerprint) every 72 hours. D2 rewrites that interval inside System Server. Your Samsung credential is never changed.\n\nNeeds D2's System Framework scope in LSPosed, and root for the mirror. Applies from the next credential use."
         })
-        val status = TextView(activity).apply { textSize = 13f; text = "Reading diagnostic status…" }
+        val choice = TextView(activity).apply {
+            textSize = 15f
+            text = "Require PIN again  \u2022  " + PeriodicCredentialControl.label(activity) + "  \u203a"
+            setPadding(gap, gap, gap, gap)
+            setOnClickListener {
+                GuardianDialogs.showChoices(activity, "Require PIN again",
+                    PeriodicCredentialControl.choices.toTypedArray(),
+                    PeriodicCredentialControl.selected(activity)) { dialog, which ->
+                    dialog.dismiss()
+                    Thread {
+                        val result = PeriodicCredentialControl.apply(activity, PeriodicCredentialControl.values[which])
+                        activity.runOnUiThread {
+                            choice.text = "Require PIN again  \u2022  " + PeriodicCredentialControl.label(activity) + "  \u203a"
+                            android.widget.Toast.makeText(activity, result.second, android.widget.Toast.LENGTH_LONG).show()
+                        }
+                    }.start()
+                }
+            }
+        }
+        body.addView(choice)
+        val status = TextView(activity).apply { textSize = 13f; text = "Reading diagnostic status\u2026" }
         body.addView(status)
-        val dialog = AlertDialog.Builder(activity).setTitle("Strong-auth diagnostics")
+        val dialog = AlertDialog.Builder(activity).setTitle("PIN re-verification")
             .setView(android.widget.ScrollView(activity).apply { addView(body) })
             .setPositiveButton("Done", null).setNeutralButton("Refresh", null).create()
         fun refresh() {
-            status.text = "Reading diagnostic status…"
+            status.text = "Reading diagnostic status\u2026"
             Thread {
                 val text = runCatching {
                     val result = ShellRunner.run(listOf("su", "-c",
@@ -44,7 +64,7 @@ object PeriodicCredentialSettings {
                     val boot = Settings.Global.getInt(activity.contentResolver, Settings.Global.BOOT_COUNT, -1)
                     check(StrongAuthDiagnostics.current(marker.optInt("version"), marker.optInt("pid"), pid,
                         marker.optInt("boot", -1), boot, marker.optLong("elapsed", -1), now))
-                    "This boot\nD2 StrongAuth observer\nDiagnostic scheduler: ${marker.optString("scheduler")} • callbacks: ${marker.optInt("scheduleCallbacks")}\nScheduler details: ${marker.optString("schedulerDetail", "Not supplied by this build")}\nReason observer: ${marker.optString("reasonObserver")} • callbacks: ${marker.optInt("reasonCallbacks")}\nCredential: ${StrongAuthDiagnostics.credential(marker.optInt("credential", -1))}\nLast sampled flags: ${StrongAuthDiagnostics.reasons(marker.optInt("flags", -1))}\nLast request (not current state): ${StrongAuthDiagnostics.reasons(marker.optInt("lastRequest", -1))}\nSample age: ${(now - marker.optLong("elapsed")) / 1000}s\nPIN and pattern behavior remain unverified."
+                    "This boot\nD2 StrongAuth hook\nInterval: ${marker.optString("policyLabel", "not read")}\nScheduler: ${marker.optString("scheduler")}  \u2022  timeouts rewritten: ${marker.optInt("timeoutRewrites")}\nScheduler details: ${marker.optString("schedulerDetail", "Not supplied by this build")}\nReason observer: ${marker.optString("reasonObserver")}  \u2022  callbacks: ${marker.optInt("reasonCallbacks")}\nCredential: ${StrongAuthDiagnostics.credential(marker.optInt("credential", -1))}\nLast sampled flags: ${StrongAuthDiagnostics.reasons(marker.optInt("flags", -1))}\nSample age: ${(now - marker.optLong("elapsed")) / 1000}s\n\n\"Timeouts rewritten\" only counts callbacks after the hook installed. Pick an interval, unlock once, then refresh."
                 }.getOrDefault("Diagnostics unavailable or stale for this boot. Check root access and D2's System Framework scope. Samsung authentication remains enabled.")
                 activity.runOnUiThread { if (dialog.isShowing) status.text = text }
             }.start()
