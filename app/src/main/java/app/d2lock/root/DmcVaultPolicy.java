@@ -2,7 +2,7 @@ package app.d2lock.root;
 
 import java.util.Arrays;
 
-/** DMC slot 1 layout observed in the supplied JBCompanion APK. */
+/** D2 SRP slot 1 layout observed in the supplied JBCompanion APK. */
 public final class DmcVaultPolicy {
     public interface Vault {
         byte[] read() throws Exception;
@@ -11,12 +11,12 @@ public final class DmcVaultPolicy {
 
     public static void validate(byte[] data) {
         if (data == null)
-            throw new IllegalStateException("DMC read returned no record; vault access or initialization must be checked");
+            throw new IllegalStateException("D2 SRP read returned no record; vault access or initialization must be checked");
         if (data.length != 32)
-            throw new IllegalStateException("Unsupported DMC record length: " + data.length + " bytes (expected 32)");
+            throw new IllegalStateException("Unsupported D2 SRP record length: " + data.length + " bytes (expected 32)");
         for (int i = 0; i < 3; i++) {
             if (data[i] != 0 && data[i] != 1)
-                throw new IllegalStateException("Unsupported DMC flag value");
+                throw new IllegalStateException("Unsupported D2 SRP flag value");
         }
     }
 
@@ -39,11 +39,11 @@ public final class DmcVaultPolicy {
         target[1] = 0;
         target[2] = 1;
         int rc = vault.write(target);
-        if (rc != 0) throw new IllegalStateException("DMC write rejected (" + rc + ")");
+        if (rc != 0) throw new IllegalStateException("D2 SRP write rejected (" + rc + ")");
         byte[] after = vault.read();
         validate(after);
         if (!matchesTarget(after) || !Arrays.equals(target, after))
-            throw new IllegalStateException("DMC read-back verification failed");
+            throw new IllegalStateException("D2 SRP read-back verification failed");
         return after;
     }
 

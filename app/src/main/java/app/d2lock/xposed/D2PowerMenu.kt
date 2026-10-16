@@ -222,6 +222,7 @@ internal object D2PowerMenu {
         call(presenter, "addAction", status)
         if (data != null) call(presenter, "addAction", data)
         call(presenter, "addAction", lock)
+        // Preserve D2's native actions; OneUIX custom ordering is intentionally removed.
         Log.i(TAG, "D2_POWER_MENU_READY actions=d2_power_restart_soft_restart_and_status")
     }
 

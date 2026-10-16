@@ -23,15 +23,24 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
         signalWorker.execute {
             try { receiveSignal(context.applicationContext, intent) }
             catch (error: Exception) { Log.w(TAG, "GUARDIAN_SIGNAL_FAILED", error) }
-            finally { pending.finish() }
+            finally {
+                if (intent.action == SYSTEM_ACTION) runCatching { app.d2lock.widget.D2Widget.updateAll(context) }
+                pending.finish()
+            }
         }
     }
 
     private fun receiveSignal(context: Context, intent: Intent) {
+        if (intent.action == SYSTEM_ACTION) {
+            HookDiagnostics.record(context, intent)
+            if (intent.getStringExtra("event") == "CREDENTIAL_DIAGNOSTIC") {
+                return
+            }
+        }
         if (intent.action == SYSTEM_ACTION && intent.getStringExtra("event") == "SECURITY_SETUP_CHANGED") {
             recordDiagnosticObservation(context, "SECURITY_SETUP_CHANGED", intent.getStringExtra("source") ?: "unknown")
             app.d2lock.root.DmcRecovery.request(context, "security_setup_changed", force = true)
-            recordGuardianStage(context, "DMC_SECURITY_SETUP_CHANGED", "refresh_requested")
+            recordGuardianStage(context, "D2_SRP_SECURITY_SETUP_CHANGED", "refresh_requested")
             return
         }
         if (intent.action == SYSTEM_ACTION && intent.getStringExtra("event") == "BOOT_READY") {
@@ -124,6 +133,11 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                     recordPipeline(context, "BOOT_FALLBACK_SKIPPED_ALREADY_ACTIVE", "$event:elapsed=$elapsed")
                     Log.i(TAG, "GUARDIAN_EARLY_BOOT_DEDUPED event=$event elapsed=$elapsed")
                 }
+            } else if (unlocked && intent.getBooleanExtra("experimental_control",false)) {
+                val safe=app.d2lock.Prefs.xposedSafeDiagnostics(context)
+                if(app.d2lock.xposed.FrameworkObserverPolicy.shouldRelock(unlocked,app.d2lock.Prefs.xposedMaster(context),safe,app.d2lock.Prefs.xposedImmediateRelock(context),event))
+                    LockScreenService.frameworkSignal(context,event,source)
+                else recordDecision(context,"OBSERVED","optional_$event diagnostics=$safe")
             } else if (unlocked && (event == "BOOT_READY" || event == "WAKE" || event == "KEYGUARD" || event == "TASK_KEYGUARD")) {
                 LockScreenService.frameworkSignal(context, event, source)
             }
@@ -284,7 +298,7 @@ class KeyguardSignalReceiver : BroadcastReceiver() {
                 val launchWallMs = prefs.getLong(KEY_EARLY_BOOT_LAUNCH_MS, 0L)
                 val now = System.currentTimeMillis()
                 val bootWallMs = now - SystemClock.elapsedRealtime()
-                if (earlyBootLaunchClaimedThisBoot(context)) {
+                if (earlyBootLaunchClaimedThisBoot(context) && prefs.getLong(KEY_EARLY_BOOT_CONFIRMED_MS, 0L) == 0L) {
                     prefs.edit().putLong(KEY_EARLY_BOOT_CONFIRMED_MS, now).apply()
                     Log.i(TAG, "GUARDIAN_BOOT_TOKEN_CONFIRMED stage=$stage")
                 }
