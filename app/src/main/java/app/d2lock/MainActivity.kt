@@ -3593,8 +3593,11 @@ class MainActivity : Activity() {
                 if (title == "SRP") pageNavigator?.invoke("tools|D2 SRP", null)
                 else pageNavigator?.invoke(page, null)
             }
-            chip.textSize = 13f
-            chip.setPadding(dp(6), dp(9), dp(6), dp(9))
+            chip.textSize = 12f
+            chip.setSingleLine(true)
+            chip.ellipsize = android.text.TextUtils.TruncateAt.END
+            chip.gravity = Gravity.CENTER
+            chip.setPadding(dp(3), dp(9), dp(3), dp(9))
             shortcuts.addView(chip, LinearLayout.LayoutParams(0, -2, 1f).apply {
                 if (index > 0) marginStart = dp(6)
             })
