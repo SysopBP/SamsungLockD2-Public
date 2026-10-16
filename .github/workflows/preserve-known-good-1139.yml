@@ -1,0 +1,34 @@
+name: Preserve known-good Build 1139
+on:
+  push:
+    branches: ['ops/preserve-known-good-1139']
+    paths: ['.github/workflows/preserve-known-good-1139.yml']
+permissions:
+  contents: write
+jobs:
+  preserve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify build and preserve tag without overwriting
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          target=b2f288340173f57a2a37a28dda24e98dcc6fcb8b
+          test "$(gh api repos/SysopBP/SamsungLockD2-Public/actions/runs/38785414206 --jq '.head_sha')" = "$target"
+          test "$(gh api repos/SysopBP/SamsungLockD2-Public/actions/runs/38785414206 --jq '.conclusion')" = success
+          git fetch origin --tags
+          if git show-ref --verify --quiet refs/tags/known-good-1139; then
+            test "$(git rev-parse 'known-good-1139^{commit}')" = "$target"
+            test "$(git cat-file -t known-good-1139)" = tag
+            echo 'Existing annotated tag verified; unchanged.'
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git tag -a known-good-1139 "$target" -m "Build 1139, run 38785414206, green 2026-10-15"
+            git push origin refs/tags/known-good-1139
+          fi
