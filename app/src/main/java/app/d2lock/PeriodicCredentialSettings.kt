@@ -25,7 +25,8 @@ object PeriodicCredentialSettings {
             textSize = 14f
             text = "PIN re-verification\n\nAndroid normally asks for your PIN (not your fingerprint) every 72 hours. D2 rewrites that interval inside System Server. Your Samsung credential is never changed.\n\nNeeds D2's System Framework scope in LSPosed, and root for the mirror. Applies from the next credential use."
         })
-        val choice = TextView(activity).apply {
+        lateinit var choice: TextView
+        choice = TextView(activity).apply {
             textSize = 15f
             text = "Require PIN again  \u2022  " + PeriodicCredentialControl.label(activity) + "  \u203a"
             setPadding(gap, gap, gap, gap)
