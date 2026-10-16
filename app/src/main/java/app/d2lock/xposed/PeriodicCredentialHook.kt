@@ -47,6 +47,12 @@ internal object PeriodicCredentialHook {
     private val rewrites = AtomicInteger()
     private val queued = AtomicBoolean()
     private var worker: Handler? = null
+    /** 0x10 = STRONG_AUTH_REASON_TIMEOUT, the periodic 72-hour rule. */
+    private const val REASON_TIMEOUT = 0x10
+    private val reasonDowngrades = AtomicInteger()
+    @Volatile private var timeoutMechanism = "none"
+    private var timeoutField: java.lang.reflect.Field? = null
+    private var timeoutSetter: java.lang.reflect.Method? = null
 
     fun install(module: XposedModule, loader: ClassLoader) {
         // Created at registration, never on a framework callback stack.
@@ -77,9 +83,14 @@ internal object PeriodicCredentialHook {
             check(method.returnType == Void.TYPE && !java.lang.reflect.Modifier.isStatic(method.modifiers))
             method.isAccessible = true
             module.hook(method).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
-                // Rewrite before Android runs so its own field, alarm and bookkeeping stay consistent.
-                val rewritten = if (scheduling) rewriteTimeout(chain.args.toList()) else null
-                val result = if (rewritten != null) chain.proceed(rewritten) else chain.proceed()
+                // Stock changes nothing; otherwise push the interval or drop the timeout reason.
+                val rewritten = if (scheduling) prepareTimeout(chain.thisObject, chain.args.toList()) else null
+                val downgraded = if (!scheduling && periodicNever()) stripTimeoutReason(chain.args.toList()) else null
+                val result = when {
+                    rewritten != null -> chain.proceed(rewritten)
+                    downgraded != null -> chain.proceed(downgraded)
+                    else -> chain.proceed()
+                }
                 runCatching {
                     val user = chain.args.getOrNull(if (scheduling) SchedulerSignature.userIndex(method.parameterTypes.map { type -> type.name }.toTypedArray()) else 1) as? Int
                     // Requests for all users are relevant, but are NOT interpreted as current flags.
@@ -108,12 +119,17 @@ internal object PeriodicCredentialHook {
     }
 
     /**
-     * Replace every long argument that is not "now" with the configured timeout.
-     * Returns null when stock behaviour must be preserved.
+     * Push the configured interval into the framework before it runs.
+     *
+     * The live signature is rescheduleStrongAuthTimeoutAlarm(int, long) - one int and one long,
+     * and that long is "now" here, so the timeout comes from the framework's own field. Write
+     * the field first, then only rewrite a long that is clearly not "now".
      */
-    private fun rewriteTimeout(args: List<Any?>?): Array<Any?>? {
+    private fun prepareTimeout(target: Any?, args: List<Any?>?): Array<Any?>? {
         val timeout = PeriodicCredentialPolicy.timeoutMs(policyHours)
-        if (timeout <= 0L || args == null) return null
+        if (timeout <= 0L) return null
+        if (target != null) applyTimeout(target, timeout)
+        if (args == null) return null
         val now = SystemClock.elapsedRealtime()
         val copy = args.toMutableList()
         var changed = false
@@ -126,6 +142,45 @@ internal object PeriodicCredentialHook {
         }
         if (changed) rewrites.incrementAndGet()
         return if (changed) copy.toTypedArray() else null
+    }
+
+    /** Writes mStrongAuthTimeoutMs, or calls setTimeoutMs, whichever this build exposes. */
+    private fun applyTimeout(target: Any, ms: Long) {
+        runCatching {
+            if (timeoutSetter == null) {
+                timeoutSetter = target.javaClass
+                    .getDeclaredMethod("setTimeoutMs", Long::class.javaPrimitiveType)
+                    .apply { isAccessible = true }
+            }
+            timeoutSetter!!.invoke(target, ms)
+            timeoutMechanism = "setTimeoutMs"
+        }.onFailure {
+            runCatching {
+                if (timeoutField == null) {
+                    timeoutField = target.javaClass.getDeclaredField("mStrongAuthTimeoutMs")
+                        .apply { isAccessible = true }
+                }
+                timeoutField!!.setLong(target, ms)
+                timeoutMechanism = "mStrongAuthTimeoutMs"
+            }.onFailure { timeoutMechanism = "unavailable:" + it.javaClass.simpleName }
+        }
+    }
+
+    private fun periodicNever() =
+        PeriodicCredentialPolicy.normalise(policyHours) == PeriodicCredentialPolicy.NEVER_HOURS
+
+    /**
+     * "Never" is enforced on the reason call, not on the alarm: even if the alarm fires we
+     * refuse to record STRONG_AUTH_REASON_TIMEOUT, so the keyguard never demands the credential
+     * for it. Independent of the alarm maths, and this hook already fires (callbacks: 2).
+     */
+    private fun stripTimeoutReason(args: List<Any?>?): Array<Any?>? {
+        val reason = args?.getOrNull(0) as? Int ?: return null
+        if (reason and REASON_TIMEOUT == 0) return null
+        val copy = args.toMutableList()
+        copy[0] = reason and REASON_TIMEOUT.inv()
+        reasonDowngrades.incrementAndGet()
+        return copy.toTypedArray()
     }
 
     fun ready(app: Context) {
@@ -188,6 +243,8 @@ internal object PeriodicCredentialHook {
             .put("policyHours", policyHours).put("policyLabel", policyRead)
             .put("policyTimeoutMs", PeriodicCredentialPolicy.timeoutMs(policyHours))
             .put("timeoutRewrites", rewrites.get())
+            .put("timeoutMechanism", timeoutMechanism)
+            .put("reasonDowngrades", reasonDowngrades.get())
         Settings.Global.putString(app.contentResolver, STATUS, snapshot.toString())
         // Explicit system-origin signal; widget reads the trusted stored snapshot.
         app.sendBroadcast(android.content.Intent("app.d2lock.widget.PERIODIC_STATUS")
