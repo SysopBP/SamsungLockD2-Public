@@ -413,13 +413,22 @@ class GuardianXposedBridge : XposedModule() {
                 val appUid = runCatching { app.packageManager.getPackageUid("app.d2lock", 0) }.getOrNull()
                 val systemUiUid = runCatching { app.packageManager.getPackageUid("com.android.systemui", 0) }.getOrNull()
                 val sender = sentFromUid
-                if (sender < 0 || sender / 100000 != 0) return
+                if (sender < 0 || sender / 100000 != 0) {
+                    if (intent.action == PeriodicCredentialHook.REFRESH)
+                        Log.w(TAG, "D2_STRONG_AUTH_REFRESH_REJECTED senderUid=$sender reason=invalid_user")
+                    return
+                }
                 val callerPackage = when (sender) {
                     systemUiUid -> "com.android.systemui"
                     appUid -> "app.d2lock"
-                    else -> return
+                    else -> {
+                        if (intent.action == PeriodicCredentialHook.REFRESH)
+                            Log.w(TAG, "D2_STRONG_AUTH_REFRESH_REJECTED senderUid=$sender reason=unauthorized_sender")
+                        return
+                    }
                 }
-                if (intent.action == "app.d2lock.action.STRONG_AUTH_REFRESH") {
+                if (intent.action == PeriodicCredentialHook.REFRESH) {
+                    Log.i(TAG, "D2_STRONG_AUTH_REFRESH_RECEIVED caller=$callerPackage senderUid=$sender")
                     PeriodicCredentialHook.refresh(app)
                     return
                 }
