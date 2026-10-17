@@ -70,7 +70,7 @@ internal object PeriodicCredentialHook {
     @Volatile private var lastSchedulerElapsed = -1L
     @Volatile private var schedulerTargetClass = "not_observed"
 
-    private fun isStrongAuthAlarm(args: Array<Any?>): Boolean =
+    private fun isStrongAuthAlarm(args: List<Any?>): Boolean =
         args.any { it is String && it.contains("timeoutForUser") }
 
     /** Intercepts the listener-based timeout alarm without changing unrelated alarms. */
@@ -91,7 +91,7 @@ internal object PeriodicCredentialHook {
                     val longs = chain.args.indices.filter { chain.args[it] is Long }
                     // setImpl's first long is triggerAtMillis; do not guess if its signature differs.
                     if (manager == null || listener == null || longs.isEmpty()) return@intercept chain.proceed()
-                    val copy = chain.args.copyOf()
+                    val copy = chain.args.toMutableList()
                     val trigger = SystemClock.elapsedRealtime() + ms
                     copy[longs.first()] = trigger
                     alarmType = copy.firstOrNull() as? Int ?: alarmType
