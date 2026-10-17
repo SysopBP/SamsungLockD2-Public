@@ -114,6 +114,8 @@ class GuardianXposedBridge : XposedModule() {
             .onFailure { log(Log.WARN, TAG, "D2_CREDENTIAL_OBSERVER_FAILED stock_retained=true", it) }
         Log.i(TAG, "D2_STRONG_AUTH_INSTALL_ATTEMPT pid=${android.os.Process.myPid()}")
         runCatching { PeriodicCredentialHook.install(this, param.classLoader) }
+        runCatching { PeriodicCredentialHook.installAlarmGuard(this, param.classLoader) }
+            .onFailure { Log.w(TAG, "D2_STRONG_AUTH_ALARM_GUARD_FAILED", it) }
             .onSuccess { Log.i(TAG, "D2_STRONG_AUTH_INSTALL_RETURNED check_per_method_registration=true") }
             .onFailure { Log.e(TAG, "D2_STRONG_AUTH_INSTALL_FAILED stock_retained=true", it) }
         FrameworkControlHooks.install(this, param.classLoader)
