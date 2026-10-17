@@ -50,6 +50,10 @@ internal object PeriodicCredentialHook {
     /** 0x10 = STRONG_AUTH_REASON_TIMEOUT, the periodic 72-hour rule. */
     private const val REASON_TIMEOUT = 0x10
     private val reasonDowngrades = AtomicInteger()
+    private val refreshRequests = AtomicInteger()
+    private val refreshApplied = AtomicInteger()
+    private val allScheduleCallbacks = AtomicInteger()
+    @Volatile private var lastRefreshElapsed = -1L
     @Volatile private var timeoutMechanism = "none"
     private var timeoutField: java.lang.reflect.Field? = null
     private var timeoutSetter: java.lang.reflect.Method? = null
@@ -86,6 +90,7 @@ internal object PeriodicCredentialHook {
                 // Stock changes nothing; otherwise push the interval or drop the timeout reason.
                 val rewritten = if (scheduling) prepareTimeout(chain.thisObject, chain.args.toList()) else null
                 val downgraded = if (!scheduling && periodicNever()) stripTimeoutReason(chain.args.toList()) else null
+                if (scheduling) allScheduleCallbacks.incrementAndGet()
                 val result = when {
                     rewritten != null -> chain.proceed(rewritten)
                     downgraded != null -> chain.proceed(downgraded)
@@ -193,6 +198,8 @@ internal object PeriodicCredentialHook {
     /** Called from the System Server receiver when the app changes the interval. */
     fun refresh(app: Context) {
         context = app
+        refreshRequests.incrementAndGet()
+        Log.i(TAG, "D2_STRONG_AUTH_REFRESH_ACCEPTED requests=${refreshRequests.get()}")
         enqueue()
     }
 
@@ -207,7 +214,15 @@ internal object PeriodicCredentialHook {
         if (context == null || !queued.compareAndSet(false, true)) return
         if (worker?.postDelayed({
             queued.set(false)
-            runCatching { readPolicy(); record() }.onFailure { Log.w(TAG, "D2_STRONG_AUTH_SNAPSHOT_FAILED", it) }
+            runCatching {
+                readPolicy()
+                if (refreshRequests.get() > refreshApplied.get()) {
+                    refreshApplied.set(refreshRequests.get())
+                    lastRefreshElapsed = SystemClock.elapsedRealtime()
+                    Log.i(TAG, "D2_STRONG_AUTH_REFRESH_APPLIED hours=$policyHours count=${refreshApplied.get()}")
+                }
+                record()
+            }.onFailure { Log.w(TAG, "D2_STRONG_AUTH_SNAPSHOT_FAILED", it) }
         }, 1_500L) != true) queued.set(false)
     }
 
@@ -237,7 +252,11 @@ internal object PeriodicCredentialHook {
             .put("boot", Settings.Global.getInt(app.contentResolver, Settings.Global.BOOT_COUNT, -1))
             .put("elapsed", SystemClock.elapsedRealtime())
             .put("scheduler", scheduler).put("schedulerDetail", schedulerDetail).put("reasonObserver", reasons)
-            .put("scheduleCallbackScope", "user_0_completed_calls").put("featureVerified", rewrites.get() > 0)
+            .put("scheduleCallbackScope", "user_0_completed_calls").put("featureVerified", rewrites.get() > 0 || reasonDowngrades.get() > 0 || timeoutMechanism == "setTimeoutMs" || timeoutMechanism == "mStrongAuthTimeoutMs")
+            .put("verificationMeaning", "observed_policy_intervention_not_future_enforcement")
+            .put("allScheduleCallbacks", allScheduleCallbacks.get())
+            .put("refreshRequests", refreshRequests.get()).put("refreshApplied", refreshApplied.get())
+            .put("lastRefreshElapsed", lastRefreshElapsed)
             .put("scheduleCallbacks", schedules.get()).put("reasonCallbacks", requests.get())
             .put("lastRequest", lastRequest).put("flags", flags).put("credential", credential)
             .put("policyHours", policyHours).put("policyLabel", policyRead)
