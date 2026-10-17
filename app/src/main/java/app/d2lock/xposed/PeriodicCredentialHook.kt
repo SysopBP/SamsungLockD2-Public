@@ -57,6 +57,10 @@ internal object PeriodicCredentialHook {
     @Volatile private var timeoutMechanism = "none"
     private var timeoutField: java.lang.reflect.Field? = null
     private var timeoutSetter: java.lang.reflect.Method? = null
+    private val reflectionFailures = AtomicInteger()
+    @Volatile private var reflectionDiagnostic = "pending"
+    @Volatile private var lastSchedulerElapsed = -1L
+    @Volatile private var schedulerTargetClass = "not_observed"
 
     fun install(module: XposedModule, loader: ClassLoader) {
         // Created at registration, never on a framework callback stack.
@@ -90,7 +94,11 @@ internal object PeriodicCredentialHook {
                 // Stock changes nothing; otherwise push the interval or drop the timeout reason.
                 val rewritten = if (scheduling) prepareTimeout(chain.thisObject, chain.args.toList()) else null
                 val downgraded = if (!scheduling && periodicNever()) stripTimeoutReason(chain.args.toList()) else null
-                if (scheduling) allScheduleCallbacks.incrementAndGet()
+                if (scheduling) {
+                    allScheduleCallbacks.incrementAndGet()
+                    lastSchedulerElapsed = SystemClock.elapsedRealtime()
+                    schedulerTargetClass = chain.thisObject?.javaClass?.name ?: "null"
+                }
                 val result = when {
                     rewritten != null -> chain.proceed(rewritten)
                     downgraded != null -> chain.proceed(downgraded)
@@ -169,6 +177,7 @@ internal object PeriodicCredentialHook {
                 timeoutMechanism = "mStrongAuthTimeoutMs"
             }.onFailure { fieldError ->
                 timeoutMechanism = "unavailable:" + fieldError.javaClass.simpleName
+                reflectionFailures.incrementAndGet()
                 // Read-only metadata for diagnosing OEM implementation differences.
                 runCatching {
                     val hierarchy = generateSequence(target.javaClass) { it.superclass }.take(5).toList()
@@ -184,11 +193,13 @@ internal object PeriodicCredentialHook {
                         }.map { method -> cls.simpleName + "." + method.name + "(" +
                             method.parameterTypes.joinToString { type -> type.simpleName } + ")" }
                     }
-                    Log.w(TAG, "D2_STRONG_AUTH_REFLECTION_DIAGNOSTIC target=" +
-                        target.javaClass.name + " fields=" + fields.joinToString(";") +
-                        " methods=" + methods.joinToString(";") +
-                        " fieldError=" + fieldError.javaClass.simpleName)
-                }.onFailure { Log.w(TAG, "D2_STRONG_AUTH_DIAGNOSTIC_FAILED", it) }
+                    reflectionDiagnostic = ("target=" + target.javaClass.name + " fields=" + fields.joinToString(";") +
+                        " methods=" + methods.joinToString(";") + " fieldError=" + fieldError.javaClass.simpleName).take(3500)
+                    Log.w(TAG, "D2_STRONG_AUTH_REFLECTION_DIAGNOSTIC " + reflectionDiagnostic)
+                }.onFailure {
+                    reflectionDiagnostic = "diagnostic_failed:" + it.javaClass.simpleName
+                    Log.w(TAG, "D2_STRONG_AUTH_DIAGNOSTIC_FAILED", it)
+                }
             }
         }
     }
@@ -269,7 +280,7 @@ internal object PeriodicCredentialHook {
         } finally { Binder.restoreCallingIdentity(identity) }
         val observerComparison = "d2_only"
         val snapshot = JSONObject()
-            .put("version", 3)
+            .put("version", 4)
             .put("observerComparison", observerComparison).put("pid", Process.myPid())
             .put("boot", Settings.Global.getInt(app.contentResolver, Settings.Global.BOOT_COUNT, -1))
             .put("elapsed", SystemClock.elapsedRealtime())
@@ -285,6 +296,10 @@ internal object PeriodicCredentialHook {
             .put("policyTimeoutMs", PeriodicCredentialPolicy.timeoutMs(policyHours))
             .put("timeoutRewrites", rewrites.get())
             .put("timeoutMechanism", timeoutMechanism)
+            .put("reflectionFailures", reflectionFailures.get())
+            .put("reflectionDiagnostic", reflectionDiagnostic)
+            .put("lastSchedulerElapsed", lastSchedulerElapsed)
+            .put("schedulerTargetClass", schedulerTargetClass)
             .put("reasonDowngrades", reasonDowngrades.get())
         Settings.Global.putString(app.contentResolver, STATUS, snapshot.toString())
         // Explicit system-origin signal; widget reads the trusted stored snapshot.
