@@ -167,7 +167,29 @@ internal object PeriodicCredentialHook {
                 }
                 timeoutField!!.setLong(target, ms)
                 timeoutMechanism = "mStrongAuthTimeoutMs"
-            }.onFailure { timeoutMechanism = "unavailable:" + it.javaClass.simpleName }
+            }.onFailure { fieldError ->
+                timeoutMechanism = "unavailable:" + fieldError.javaClass.simpleName
+                // Read-only metadata for diagnosing OEM implementation differences.
+                runCatching {
+                    val hierarchy = generateSequence(target.javaClass) { it.superclass }.take(5).toList()
+                    val fields = hierarchy.flatMap { cls ->
+                        cls.declaredFields.filter { field ->
+                            field.name.contains("timeout", true) || field.name.contains("alarm", true) ||
+                                field.name.contains("strongAuth", true)
+                        }.map { field -> cls.simpleName + "." + field.name + ":" + field.type.simpleName }
+                    }
+                    val methods = hierarchy.flatMap { cls ->
+                        cls.declaredMethods.filter { method ->
+                            method.name.contains("timeout", true) || method.name.contains("alarm", true)
+                        }.map { method -> cls.simpleName + "." + method.name + "(" +
+                            method.parameterTypes.joinToString { type -> type.simpleName } + ")" }
+                    }
+                    Log.w(TAG, "D2_STRONG_AUTH_REFLECTION_DIAGNOSTIC target=" +
+                        target.javaClass.name + " fields=" + fields.joinToString(";") +
+                        " methods=" + methods.joinToString(";") +
+                        " fieldError=" + fieldError.javaClass.simpleName)
+                }.onFailure { Log.w(TAG, "D2_STRONG_AUTH_DIAGNOSTIC_FAILED", it) }
+            }
         }
     }
 
