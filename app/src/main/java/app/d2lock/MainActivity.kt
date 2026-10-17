@@ -3638,7 +3638,8 @@ class MainActivity : Activity() {
         val security = card()
         security.addView(label("Security", 20f))
         val method = Prefs.unlockMethod(this).replaceFirstChar { it.uppercase() }
-        security.addView(label("$method selected  ·  PIN recovery ${if (PinStore(this).configured()) "configured" else "not configured"}", 13f))
+        security.addView(label("$method selected  ·  PIN recovery ${if (PinStore(this).configured()) "configured" else "not configured"}", 13f),
+            LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         security.addView(action("Manage security  \u203a") { pageNavigator?.invoke("security|SECURITY CENTER",null) })
         security.addView(action("PIN re-verification \u00b7 ${PeriodicCredentialControl.label(this)}  \u203a") { PeriodicCredentialSettings.show(this) })
         security.addView(label("Samsung may require its PIN after reboot. Keep your fingerprint enrolled.", 12f))
