@@ -30,3 +30,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "SamsungLock37"
 include(":app")
+

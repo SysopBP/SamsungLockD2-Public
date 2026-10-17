@@ -69,7 +69,8 @@ object GuardianDialogs {
     }
     fun showInfo(context: Context, title: String, message: String, icon: Int = R.drawable.ic_d2_screen_lock,
         primary: String = "Got it", onPrimary: (() -> Unit)? = null,
-        secondary: String? = null, onSecondary: (() -> Unit)? = null): Dialog {
+        secondary: String? = null, onMessageReady: ((TextView) -> Unit)? = null,
+        onSecondary: (() -> Unit)? = null): Dialog {
         val (dialog, body) = shell(context, title, icon)
         val scroll = object : ScrollView(context) {
             override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -77,7 +78,9 @@ object GuardianDialogs {
                 super.onMeasure(widthMeasureSpec, View.MeasureSpec.makeMeasureSpec(limit, View.MeasureSpec.AT_MOST))
             }
         }
-        scroll.addView(text(context, message, 15f).apply { setLineSpacing(dp(context, 3).toFloat(), 1f) })
+        val messageView = text(context, message, 15f).apply { setLineSpacing(dp(context, 3).toFloat(), 1f) }
+        scroll.addView(messageView)
+        onMessageReady?.invoke(messageView)
         body.addView(scroll, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(context, 18) })
         val actions = LinearLayout(context)
         if (secondary != null) actions.addView(button(context, secondary, false) {

@@ -22,6 +22,29 @@ import app.d2lock.security.PinStore
 
 class LockScreenService : Service() {
     private val handler = Handler(Looper.getMainLooper())
+    private val healthMonitor = object : Runnable {
+        override fun run() {
+            var interval = 60_000L
+            try {
+                val awake = getSystemService(android.os.PowerManager::class.java)?.isInteractive == true
+                interval = if (awake) 15_000L else 60_000L
+                val shizuku = if (!Prefs.shizukuEnabled(this@LockScreenService)) "off" else runCatching {
+                    if (!rikka.shizuku.Shizuku.pingBinder()) "disconnected"
+                    else if (rikka.shizuku.Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED) "authorized"
+                    else "permission_required"
+                }.getOrDefault("unavailable")
+                val root = if (!Prefs.rootMode(this@LockScreenService)) "off" else if (RootManager.isAvailable()) "available" else "unavailable"
+                val accessibility = app.d2lock.accessibility.D2AccessibilityService.status(this@LockScreenService)
+                val system = KeyguardSignalReceiver.systemHealth(this@LockScreenService)
+                GuardianWatchdog.recordMonitor("awake=$awake armed=${Prefs.enabled(this@LockScreenService)} pinConfigured=${PinStore(this@LockScreenService).configured()}\nroot=$root shizuku=$shizuku\naccessibility=$accessibility keyguardHandoff=$keyguardHandoffActive\nSystem Server: ${system.status} (observed signal; not a permission grant)")
+            } catch (error: Exception) {
+                GuardianWatchdog.recordMonitor("Health check failed: ${error.javaClass.simpleName}; retry scheduled")
+                Log.w(TAG, "GUARDIAN_HEALTH_CHECK_FAILED", error)
+            } finally {
+                handler.postDelayed(this, interval)
+            }
+        }
+    }
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == Intent.ACTION_SCREEN_OFF && Prefs.enabled(context) && PinStore(context).configured() &&
@@ -55,9 +78,11 @@ class LockScreenService : Service() {
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_SCREEN_OFF)
         })
+        handler.post(healthMonitor)
     }
 
     override fun onDestroy() {
+        GuardianWatchdog.monitorStopped()
         handler.removeCallbacksAndMessages(null)
         runCatching { unregisterReceiver(screenReceiver) }
         super.onDestroy()
@@ -198,6 +223,7 @@ class LockScreenService : Service() {
         private const val KEYGUARD_CLEAR_SETTLE_MS = 180L
         @Volatile private var keyguardHandoffActive = false
         private val SURFACE_RECOVERY_TOKEN = Any()
+        fun isKeyguardHandoffActive(): Boolean = keyguardHandoffActive
         fun start(context: Context, postBoot: Boolean = false) = context.startForegroundService(Intent(context, LockScreenService::class.java).putExtra(EXTRA_POST_BOOT, postBoot))
         fun markHealthy(context: Context) = context.startService(Intent(context, LockScreenService::class.java).setAction(ACTION_LOCK_SURFACE_HEALTHY))
         fun surfaceLost(context: Context, reason: String) = context.startService(Intent(context, LockScreenService::class.java).setAction(ACTION_LOCK_SURFACE_LOST).putExtra(EXTRA_REASON, reason))

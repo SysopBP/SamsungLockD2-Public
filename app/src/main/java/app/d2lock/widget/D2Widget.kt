@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.widget.RemoteViews
 import app.d2lock.root.DmcRecovery
+import app.d2lock.lockscreen.KeyguardSignalReceiver
 import android.content.ComponentName
 import android.view.View
 import app.d2lock.MainActivity
@@ -26,7 +27,7 @@ private object WidgetPrefs {
     fun density(c: Context, id: Int) = p(c).getString("density_$id", "comfortable") ?: "comfortable"
     fun save(c: Context, id: Int, style: String, action: String, label: Boolean) = p(c).edit().putString("style_$id", style).putString("action_$id", action).putBoolean("label_$id", label).apply()
     fun srp(c: Context, id: Int) = p(c).getBoolean("srp_$id", true)
-    fun remove(c: Context, id: Int) = p(c).edit().remove("style_$id").remove("action_$id").remove("label_$id").remove("density_$id").remove("srp_$id").apply()
+    fun remove(c: Context, id: Int) = p(c).edit().remove("style_$id").remove("action_$id").remove("label_$id").remove("density_$id").remove("srp_$id").remove("periodic_$id").apply()
 }
 
 class D2Widget : AppWidgetProvider() {
@@ -37,6 +38,7 @@ class D2Widget : AppWidgetProvider() {
     }
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
+        if (intent.action == PERIODIC_STATUS) updateAll(context)
         if (intent.action == REFRESH) {
             val pending = goAsync()
             DmcRecovery.request(context, "widget_refresh", retry = 3, force = true, done = {
@@ -45,6 +47,7 @@ class D2Widget : AppWidgetProvider() {
         }
     }
     companion object {
+        private const val PERIODIC_STATUS = "app.d2lock.widget.PERIODIC_STATUS"
         private const val REFRESH = "app.d2lock.widget.REFRESH_SRP"
         fun updateAll(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
@@ -55,11 +58,17 @@ class D2Widget : AppWidgetProvider() {
             val pending = PendingIntent.getActivity(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             val view = RemoteViews(context.packageName, R.layout.d2_widget)
             val options = manager.getAppWidgetOptions(id)
+            // Legacy launcher bounds pair minWidth/maxHeight in portrait and
+            // maxWidth/minHeight in landscape; minHeight alone is not our height.
+            val portrait = context.resources.configuration.orientation != android.content.res.Configuration.ORIENTATION_LANDSCAPE
+            val width = options.getInt(if (portrait) AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH else AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 140)
+            val height = options.getInt(if (portrait) AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT else AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 80)
             val compact = WidgetPrefs.density(context, id) == "compact" ||
-                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 140) < 110 ||
-                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 80) < 65
+                width < 110 ||
+                height < 65
             val label = if (compact) "D2" else if (WidgetPrefs.action(context,id) == "single") "Lock D2" else "Lock D2 · Double-tap"
-            view.setTextViewText(R.id.d2_widget_title, if (WidgetPrefs.label(context,id)) label else "D2")
+            view.setTextViewText(R.id.d2_widget_title, label)
+            view.setViewVisibility(R.id.d2_widget_title, if (WidgetPrefs.label(context, id)) View.VISIBLE else View.GONE)
             val textSize = if (compact) 12f else when (WidgetPrefs.density(context,id)) { "large" -> 20f; else -> 16f }
             view.setTextViewTextSize(R.id.d2_widget_title, android.util.TypedValue.COMPLEX_UNIT_SP, textSize)
             val status = DmcRecovery.status(context)
@@ -74,29 +83,58 @@ class D2Widget : AppWidgetProvider() {
             val checked = if (status.checkedAt > 0) java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT)
                 .format(java.util.Date(status.checkedAt)) else "never"
             fun flag(value: Int?) = when(value) { 0 -> "off"; 1 -> "on"; else -> "?" }
-            val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 80)
-            val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 140)
             fun available(value: Boolean?) = when (value) { true -> "OK"; false -> "No"; null -> "?" }
-            val rows = if (height >= 120) listOf(
-                summary,
-                "Server: ${available(status.systemServer)}",
-                "SRP lock: ${flag(status.screenLock)}",
-                "Maint: ${flag(status.maintenance)}",
-                "AT: ${flag(status.atCommand)}",
-                "Download: ${available(status.downloadAllowed)}",
-                "Checked $checked"
-            ) else if (height >= 80) listOf(
-                summary,
-                "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
-                "AT ${flag(status.atCommand)} · DL ${available(status.downloadAllowed)}",
-                checked
-            ) else listOf(summary, checked)
-            val stats = rows.joinToString("\n")
+            val wakeCount = KeyguardSignalReceiver.diagnosticCount(context, "WAKE")
+            val bootCount = KeyguardSignalReceiver.diagnosticCount(context, "BOOT_READY")
+            val lastSuccess = DmcRecovery.lastSuccessfulVerification(context)
+            val verifiedTime = if (lastSuccess > 0) java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(lastSuccess)) else "not observed"
+            val health = app.d2lock.lockscreen.HookDiagnostics.health(context)
+            val guardianSuppressed = KeyguardSignalReceiver.decisionMetrics(context).suppressed
+            // SRP verification describes recovery targets only; it is not proof
+            // that Android's periodic credential / strong-auth hook executed.
+            // App-widget heights are dp and differ across launchers. Never render
+            // eight lines into a small widget: RemoteViews otherwise clips them.
+            val rows = when {
+                height >= 280 && width >= 160 -> listOf(
+                    summary,
+                    "Server: ${available(status.systemServer)}",
+                    "SRP lock: ${flag(status.screenLock)}",
+                    "Maintenance: ${flag(status.maintenance)}",
+                    "AT command: ${flag(status.atCommand)}",
+                    "Download: ${available(status.downloadAllowed)}",
+                    "Hooks: $health",
+                    "Wake $wakeCount · Boot $bootCount",
+                    "Guardian skip Σ$guardianSuppressed",
+                    "Checked $checked",
+                    "SRP verified $verifiedTime"
+                )
+                height >= 190 && width >= 160 -> listOf(
+                    summary,
+                    "Server: ${available(status.systemServer)}",
+                    "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
+                    "AT ${flag(status.atCommand)} · DL ${available(status.downloadAllowed)}",
+                    "Wake $wakeCount · Boot $bootCount",
+                    "Checked $checked",
+                    "SRP verified $verifiedTime"
+                )
+                height >= 140 && width >= 140 -> listOf(
+                    summary,
+                    "Lock ${flag(status.screenLock)} · Maint ${flag(status.maintenance)}",
+                    "AT ${flag(status.atCommand)} · DL ${available(status.downloadAllowed)}",
+                    "Wake $wakeCount · Boot $bootCount",
+                    "Checked $checked"
+                )
+                height >= 75 -> listOf(summary, "Checked $checked", "Tap for SRP")
+                else -> listOf(summary)
+            }
+            // Match detail to the actual launcher allocation.
+            val displayedRows = rows
+            val stats = displayedRows.joinToString("\n")
             view.setTextViewText(R.id.d2_widget_srp, stats)
             view.setViewVisibility(R.id.d2_widget_srp, if (WidgetPrefs.srp(context, id)) View.VISIBLE else View.GONE)
-            view.setInt(R.id.d2_widget_srp, "setMaxLines", rows.size)
+            view.setInt(R.id.d2_widget_srp, "setMaxLines", displayedRows.size)
             view.setTextViewTextSize(R.id.d2_widget_srp, android.util.TypedValue.COMPLEX_UNIT_SP,
-                if (width < 110 || height < 80) 9f else 11f)
+                when { width < 110 || height < 100 -> 9f; height < 145 -> 10f; else -> 11f })
             val light = WidgetPrefs.style(context,id) == "light"
             val background = when (WidgetPrefs.style(context,id)) {
                 "galaxy" -> 0xB8141820.toInt()
@@ -112,11 +150,11 @@ class D2Widget : AppWidgetProvider() {
             view.setViewPadding(R.id.d2_widget, padding, padding, padding, padding)
             view.setOnClickPendingIntent(R.id.d2_widget, pending)
             view.setOnClickPendingIntent(R.id.d2_widget_title, pending)
-            val refresh = PendingIntent.getBroadcast(context, id,
-                Intent(context, D2Widget::class.java).setAction(REFRESH),
+            val refresh = PendingIntent.getActivity(context, id,
+                Intent(context, WidgetTapActivity::class.java).setAction(REFRESH),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             view.setOnClickPendingIntent(R.id.d2_widget_srp, refresh)
-            view.setContentDescription(R.id.d2_widget_srp, "$stats. Tap to refresh SRP status.")
+            view.setContentDescription(R.id.d2_widget_srp, "$stats. Tap to open SRP status and check again.")
             manager.updateAppWidget(id, view)
         }
     }
@@ -126,7 +164,22 @@ class D2Widget : AppWidgetProvider() {
 class WidgetTapActivity : Activity() {
     companion object { private val taps = mutableMapOf<Int, DoubleTap>() }
     override fun onCreate(state: Bundle?) {
+        val srp = intent.action == "app.d2lock.widget.REFRESH_SRP"
         super.onCreate(state)
+        if (srp) {
+            lateinit var message: android.widget.TextView
+            val dialog = app.d2lock.GuardianDialogs.showInfo(
+                this, "D2 SRP", "Samsung Recovery Protection\n\nChecking System Server / SRP…",
+                primary = "Close", onMessageReady = { message = it })
+            // Keep the translucent widget host; every dismissal returns to the launcher.
+            dialog.setOnDismissListener { finish() }
+            DmcRecovery.request(this, "widget_status", retry = 3, force = true, actionResult = { status ->
+                if (!isFinishing && !isDestroyed && dialog.isShowing) {
+                    message.text = status.report()
+                }
+            })
+            return
+        }
         val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1)
         if (WidgetPrefs.action(this, id) == "single" || taps.getOrPut(id) { DoubleTap() }.tap(SystemClock.elapsedRealtime())) {
             val target = if (PinStore(this).configured()) LockScreenActivity::class.java else MainActivity::class.java

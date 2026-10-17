@@ -61,6 +61,7 @@ class MainActivity : Activity() {
     private var pageNavigator: ((String, View?) -> Unit)? = null
     private val sectionTitles = java.util.IdentityHashMap<View, String>()
     private var readinessDialog: AlertDialog? = null
+    private var integrationDialog: AlertDialog? = null
     private var settingsScrollY = 0
     private var authorized = false
     private var appStopped = true
@@ -91,6 +92,7 @@ class MainActivity : Activity() {
         Appearance.apply(this)
         PinUi.protect(this)
         Prefs.syncBootPolicy(this)
+        PeriodicCredentialControl.sync(this)
         RootManager.refreshAsync()
         app.d2lock.root.DmcRecovery.request(this, "app_open")
         window.statusBarColor = Color.TRANSPARENT
@@ -140,7 +142,10 @@ class MainActivity : Activity() {
 
     private fun showAppPinLogin() {
         if (appStopped || authorized || isFinishing || isDestroyed || pinDialog?.isShowing == true) return
-        pinDialog = PinUi.show(this, success = { completeAppLogin() }, cancel = { finish() })
+        val fingerprintAvailable = getSystemService(BiometricManager::class.java)
+            ?.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
+        pinDialog = PinUi.show(this, success = { completeAppLogin() }, cancel = { finish() },
+            fingerprint = if (fingerprintAvailable) ({ authenticateAppWithFingerprint() }) else null)
     }
 
     private fun authenticateAppWithFingerprint() {
@@ -236,7 +241,7 @@ class MainActivity : Activity() {
                 append(if (app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)) "✓ Galaxy Island paired" else "○ Galaxy Island pairing optional")
                 append("\n\nRequired for full D2 operation: KernelSU Superuser + Shizuku authorized + Notification Access. Fingerprint login requires an enrolled strong biometric; keep your D2 PIN available for recovery.")
             },
-            "Recommended starting point: enable Show D2 when the screen wakes, keep Automatic fallback on, and verify call/relock behavior before enabling kiosk authentication.",
+            "Recommended starting point: enable Show D2 when the screen wakes, optionally enable Accessibility screen-off fallback after its service is connected, and verify call/relock behavior before enabling kiosk authentication.",
             "Use Test Guardian to open the lock surface and successfully return with your D2 credential. Full kiosk protection stays unchanged until you explicitly enable it after this test.",
             "Setup review is complete. Guardian will not silently enable kiosk mode. When your authentication and recovery tests pass, enable full kiosk protection from Guardian & Kiosk."
         )
@@ -419,7 +424,7 @@ class MainActivity : Activity() {
             setPadding(dp(16), dp(14), dp(16), dp(18)); background = Appearance.glass(this@MainActivity, 26f, 28, true)
         }
         fun whatsNew() {
-            content.text = "WHAT'S NEW  •  OCTOBER 12, 2026  •  D2 ${versionName ?: "current"}\n\n🔓 FINGERPRINT APP LOGIN\n• Login with fingerprint now opens the D2 app and protected settings through Samsung’s secure biometric prompt\n• Use D2 PIN remains available; unavailable/error results fall back to PIN\n• Backgrounding revokes the session and rejects late biometric callbacks\n\n🧊 STANDARD GLASS DIALOGS\n• Rounded shared information and unlock-choice dialogs replace square platform panels\n• Fingerprint guidance now has numbered steps, an icon and Open settings / Got it buttons\n\n🧊 D2 POWER MENU\n• Adds confirmed soft restart and a rounded live D2 SRP status dialog to Samsung power controls\n• Requires LSPosed SystemUI plus System Framework scopes; preserves emergency and normal confirmation actions\n\n🛡 D2 SRP POWER-ACTION GUARD\n• Verifies fresh vault read-back before normal restart, power off and supported orderly soft restart\n• Cancels on failure or a 5-second timeout; late checks never trigger a delayed restart\n• Failed/unknown checks keep the phone on: open D2 SRP status, resolve the issue and retry\n• Status checks alone never shut down the phone; missing shutdown hooks may allow normal Samsung power actions without verification\n• Direct root zygote restarts can restart Android without an SRP check; other root apps, terminals and modules remain bypass paths\n• Recovery Center Soft restart uses the guarded System Server route; Restart SystemUI requires a fresh SRP check\n• Battery/thermal emergencies and direct root/hardware resets remain outside this guard\n\n🧩 D2 SRP — SAMSUNG RECOVERY PROTECTION\n• Runs inside Xposed System Server (UID 1000)\n• Targets: D2 SRP screen-lock and Maintenance Mode flags disabled; Download Mode AT-command flag enabled; derived Download Mode eligibility allowed\n• Validates the vault record and verifies read-back; unknown or failed checks stay unverified\n\n🔄 SECURITY SETUP DETECTION\n• Watches completed PIN/password/pattern changes and fingerprint/face additions or removals\n• Refreshes 2 seconds after setup changes and checks again at 12 seconds for delayed Samsung updates\n• Firmware detection still needs device testing; Android credentials and biometric enrollment stay separate from D2 SRP flags\n\n✅ LIVE FEATURE STATUS\n• Glass status dialog with icons, target checks, System Server identity and last-check time\n\n🚧 IN DEVELOPMENT\n• Additional framework controls and Galaxy Island Xposed integration remain disabled placeholders\n• Diagnostics, relock, Home/Recents, gestures, notification/media/call integration and related controls are planned for a later update\n• These switches do not control the current boot/wake observers, D2 SRP or power-menu hooks\n\n\n💤 RECENT HOTFIXES\n• Voicemail/call-state relock fix\n• Double-tap screen-off from empty space, with notification and call controls protected\n• Floating Bar visibility modes and coordinated dock/CORE/CHECK behavior\n\n🙏 D2 SRP DISCOVERY CREDIT\n• @diablOw — originally discovered the recovery behavior behind D2 SRP"
+            content.text = "WHAT'S NEW  •  OCTOBER 12, 2026  •  D2 ${versionName ?: "current"}\n\n🔓 FINGERPRINT APP LOGIN\n• Login with fingerprint now opens the D2 app and protected settings through Samsung’s secure biometric prompt\n• Use D2 PIN remains available; unavailable/error results fall back to PIN\n• Backgrounding revokes the session and rejects late biometric callbacks\n\n🧊 STANDARD GLASS DIALOGS\n• Rounded shared information and unlock-choice dialogs replace square platform panels\n• Fingerprint guidance now has numbered steps, an icon and Open settings / Got it buttons\n\n🧊 D2 POWER MENU\n• Adds confirmed soft restart and a rounded live D2 SRP status dialog to Samsung power controls\n• Requires LSPosed SystemUI plus System Framework scopes; preserves emergency and normal confirmation actions\n\n🛡 D2 SRP POWER-ACTION GUARD\n• Verifies fresh vault read-back before normal restart, power off and supported orderly soft restart\n• Cancels on failure or a 5-second timeout; late checks never trigger a delayed restart\n• Failed/unknown checks keep the phone on: open D2 SRP status, resolve the issue and retry\n• Status checks alone never shut down the phone; missing shutdown hooks may allow normal Samsung power actions without verification\n• Direct root zygote restarts can restart Android without an SRP check; other root apps, terminals and modules remain bypass paths\n• Recovery Center Soft restart uses the guarded System Server route; Restart SystemUI requires a fresh SRP check\n• Battery/thermal emergencies and direct root/hardware resets remain outside this guard\n\n🧩 D2 SRP — SAMSUNG RECOVERY PROTECTION\n• Runs inside Xposed System Server (UID 1000)\n• Targets: D2 SRP screen-lock and Maintenance Mode flags disabled; Download Mode AT-command flag enabled; derived Download Mode eligibility allowed\n• Validates the vault record and verifies read-back; unknown or failed checks stay unverified\n\n🔄 SECURITY SETUP DETECTION\n• Watches completed PIN/password/pattern changes and fingerprint/face additions or removals\n• Refreshes 2 seconds after setup changes and checks again at 12 seconds for delayed Samsung updates\n• Firmware detection still needs device testing; Android credentials and biometric enrollment stay separate from D2 SRP flags\n\n✅ LIVE FEATURE STATUS\n• Glass status dialog with icons, target checks, System Server identity and last-check time\n\n🚧 IN DEVELOPMENT\n• Optional sleep, keyguard and lifecycle observers are available for testing; remaining framework and Galaxy Island controls are planned\n• Use Safe diagnostics only for the new observers. Home/Recents, gestures and native notification/media/call integration remain planned\n• These switches do not control the current boot/wake observers, D2 SRP or power-menu hooks\n\n\n💤 RECENT HOTFIXES\n• Voicemail/call-state relock fix\n• Double-tap screen-off from empty space, with notification and call controls protected\n• Floating Bar visibility modes and coordinated dock/CORE/CHECK behavior\n\n🙏 D2 SRP DISCOVERY CREDIT\n• @diablOw — originally discovered the recovery behavior behind D2 SRP"
         }
         fun whatsNext() {
             val lock = if (PinStore(this@MainActivity).configured()) "✓" else "○"
@@ -570,6 +575,7 @@ class MainActivity : Activity() {
             gestureBackCallback = null
         }
         readinessDialog?.dismiss(); readinessDialog=null
+        integrationDialog?.dismiss(); integrationDialog=null
         appBiometricSession.cancel()
         appBiometricCancel?.cancel()
         appBiometricCancel = null
@@ -586,6 +592,7 @@ class MainActivity : Activity() {
         if (authorized) appFingerprintAttempted = false
         authorized = false
         readinessDialog?.dismiss(); readinessDialog=null
+        integrationDialog?.dismiss(); integrationDialog=null
         appBiometricSession.cancel()
         appBiometricCancel?.cancel()
         appBiometricCancel = null
@@ -1070,6 +1077,16 @@ class MainActivity : Activity() {
                 },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
 
                 addView(TextView(this@MainActivity).apply {
+                    text="Require PIN again  \u2022  ${PeriodicCredentialControl.label(this@MainActivity)}  \u203a"
+                    textSize=15f
+                    setTextColor(Appearance.text(this@MainActivity))
+                    gravity=Gravity.CENTER
+                    background=Appearance.glass(this@MainActivity,22f,26,true)
+                    setPadding(dp(14),dp(10),dp(14),dp(10))
+                    setOnClickListener { PeriodicCredentialSettings.show(this@MainActivity) }
+                },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
+
+                addView(TextView(this@MainActivity).apply {
                     text="Change PIN"
                     textSize=15f
                     setTextColor(Appearance.text(this@MainActivity))
@@ -1271,6 +1288,7 @@ class MainActivity : Activity() {
                 setOnClickListener { showDmcStatus() }
             }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+        // Keep legacy StrongAuth observation internal; no user-facing 72-hour feature.
         section(root, "SYSTEM INTEGRATION")
         root.getChildAt(root.childCount - 1).tag = "root_shizuku"
         root.addView(LinearLayout(this).apply {
@@ -1288,7 +1306,7 @@ class MainActivity : Activity() {
                 })
             })
             addView(TextView(this@MainActivity).apply {
-                val shizuku=if(Prefs.shizukuEnabled(this@MainActivity)) "Shizuku ON" else "Shizuku OFF"
+                val shizuku=shizukuRuntimeSummary()
                 val rootState=if(Prefs.rootMode(this@MainActivity) && RootManager.isAvailable()) "Root ON" else "Root OFF"
                 val xposed=if(Prefs.xposedMaster(this@MainActivity)) "Xposed ON" else "Xposed OFF"
                 text="$shizuku  •  $rootState  •  $xposed"
@@ -1296,12 +1314,13 @@ class MainActivity : Activity() {
             })
             addView(TextView(this@MainActivity).apply {
                 val rootOk = !Prefs.rootMode(this@MainActivity) || RootManager.isAvailable()
-                val shizukuOk = !Prefs.shizukuEnabled(this@MainActivity) || runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+                val shizukuOk = !Prefs.shizukuEnabled(this@MainActivity) || shizukuAuthorized()
                 val islandOk = !app.d2lock.bridge.IslandBridge.enabled(this@MainActivity) || Prefs.xposedGalaxyIsland(this@MainActivity)
                 val attention = buildList {
                     if (!rootOk) add("Root unavailable")
                     if (!shizukuOk) add("Shizuku unavailable")
-                    if (!islandOk) add("Galaxy Island bridge needs attention")
+                    if (!islandOk) add("Optional Galaxy Island bridge needs attention")
+                    if (app.d2lock.accessibility.D2AccessibilityService.fallbackEnabled(this@MainActivity) && !app.d2lock.accessibility.D2AccessibilityService.isConnected()) add("Accessibility fallback disconnected")
                 }
                 text = if (attention.isEmpty()) "Guardian Health  •  integrations ready" else "Guardian Health  •  " + attention.joinToString("  •  ")
                 textSize=12f
@@ -1323,14 +1342,14 @@ class MainActivity : Activity() {
                         "Lock on wake" to Prefs.enabled(this@MainActivity),
                         "Kiosk protection" to Prefs.kiosk(this@MainActivity),
                         "Root integration" to (!Prefs.rootMode(this@MainActivity) || RootManager.isAvailable()),
-                        "Shizuku" to (!Prefs.shizukuEnabled(this@MainActivity) || runCatching { Shizuku.pingBinder() }.getOrDefault(false)),
+                        "Shizuku" to (!Prefs.shizukuEnabled(this@MainActivity) || shizukuAuthorized()),
                         "Xposed configuration" to Prefs.xposedMaster(this@MainActivity),
-                        "Automatic fallback" to Prefs.xposedAutomaticFallback(this@MainActivity),
+                        "Accessibility fallback (optional; off or connected)" to (!app.d2lock.accessibility.D2AccessibilityService.fallbackEnabled(this@MainActivity) || app.d2lock.accessibility.D2AccessibilityService.isConnected()),
                         "Galaxy Island sync" to (!app.d2lock.bridge.IslandBridge.enabled(this@MainActivity) || Prefs.xposedIslandGuardianSync(this@MainActivity))
                     )
                     val report = checks.joinToString("\n") { (name, ok) -> (if(ok) "✓ " else "○ ") + name }
                     AlertDialog.Builder(this@MainActivity).setTitle("Guardian setup test")
-                        .setMessage(report + "\n\nFingerprint unlock remains experimental until the authenticated SystemUI callback is verified.")
+                        .setMessage(report + "\n\nConfiguration checks do not prove an unlock worked. Use Readiness & guided tests to verify D2 fingerprint/PIN, Samsung authentication and screen-off fallback on this device.")
                         .setPositiveButton("Done",null).create().also {
                             it.setOnShowListener { _ -> it.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,30f,76,true)) }
                             it.show()
@@ -1348,10 +1367,15 @@ class MainActivity : Activity() {
                         appendLine("Root configured/available: ${Prefs.rootMode(this@MainActivity)}/${RootManager.isAvailable()}")
                         appendLine("Shizuku configured/available: ${Prefs.shizukuEnabled(this@MainActivity)}/${runCatching { Shizuku.pingBinder() }.getOrDefault(false)}")
                         appendLine("Xposed configured: ${Prefs.xposedMaster(this@MainActivity)}")
-                        appendLine("Automatic fallback: ${Prefs.xposedAutomaticFallback(this@MainActivity)}")
+                        appendLine("Shizuku runtime: ${shizukuRuntimeSummary()}")
+                        appendLine("Accessibility: ${app.d2lock.accessibility.D2AccessibilityService.status(this@MainActivity)}")
+                        appendLine("Last screen-off route: ${app.d2lock.accessibility.D2AccessibilityService.lastRoute(this@MainActivity)}")
+                        appendLine("Watchdog: ${app.d2lock.lockscreen.GuardianWatchdog.snapshot()}")
+                        appendLine("Observed accessibility test: ${guidedPrefs().getString("accessibility", "Not recorded")}")
                         appendLine("Galaxy Island paired: ${app.d2lock.bridge.IslandBridge.enabled(this@MainActivity)}")
                         appendLine("Galaxy Island Guardian sync: ${Prefs.xposedIslandGuardianSync(this@MainActivity)}")
-                        appendLine("Fingerprint unlock: experimental/not enabled")
+                        appendLine("D2 unlock method: ${Prefs.unlockMethod(this@MainActivity)}; biometrics: ${biometricAvailability()}")
+                        appendLine("Samsung authentication: ${guidedPrefs().getString("samsung_auth", "Not user-tested")}")
                     }
                     val clipboard=getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                     clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Kiosk D2 Boot Guardian diagnostics",report))
@@ -1371,7 +1395,7 @@ class MainActivity : Activity() {
             },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
 
             addView(TextView(this@MainActivity).apply {
-                text="Open integrations"; textSize=15f; gravity=Gravity.CENTER
+                text="Manage integrations & fallback"; textSize=15f; gravity=Gravity.CENTER
                 setTextColor(Appearance.text(this@MainActivity)); background=Appearance.glass(this@MainActivity,22f,28,true)
                 setPadding(dp(14),dp(10),dp(14),dp(10))
                 setOnClickListener {
@@ -1382,8 +1406,8 @@ class MainActivity : Activity() {
                             orientation=LinearLayout.VERTICAL
                             addView(guardianSwitch().apply {
                                 text=label; isChecked=checked
-                                if (label == "Automatic fallback") {
-                                    text = "Automatic fallback (not implemented)"; isEnabled = false; isChecked = false
+                                if (label == "Accessibility screen-off fallback") {
+                                    isEnabled = checked || app.d2lock.accessibility.D2AccessibilityService.isConnected()
                                 }
                                 setTextColor(Appearance.text(this@MainActivity))
                                 background=android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
@@ -1405,20 +1429,27 @@ class MainActivity : Activity() {
                         addView(integrationRow("LSPosed integration (minimal systemReady)",Prefs.xposedMaster(this@MainActivity)) { checked ->
                             Prefs.setXposedMaster(this@MainActivity,checked)
                         })
-                        addView(integrationRow("Galaxy Island • Xposed",Prefs.xposedGalaxyIsland(this@MainActivity)) { checked ->
+                        addView(integrationRow("Galaxy Island • Xposed (optional)",Prefs.xposedGalaxyIsland(this@MainActivity)) { checked ->
                             Prefs.setXposedGalaxyIsland(this@MainActivity,checked)
                         })
-                        addView(integrationRow("Automatic fallback",Prefs.xposedAutomaticFallback(this@MainActivity)) { checked ->
-                            Prefs.setXposedAutomaticFallback(this@MainActivity,checked)
+                        addView(integrationRow("Accessibility screen-off fallback",app.d2lock.accessibility.D2AccessibilityService.fallbackEnabled(this@MainActivity)) { checked ->
+                            app.d2lock.accessibility.D2AccessibilityService.setFallbackEnabled(this@MainActivity,checked)
                         })
+                        addView(screenOffFallbackCard(), LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(10) })
 
                     }
+                    integrationDialog?.dismiss()
                     val dialog=AlertDialog.Builder(this@MainActivity)
                         .setTitle("System integrations")
-                        .setView(panel)
+                        .setView(ScrollView(this@MainActivity).apply { addView(panel) })
                         .setPositiveButton("Done") { _,_ -> setContentView(buildSettings()) }
                         .create()
-                    dialog.setOnShowListener { dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,30f,76,true)) }
+                    integrationDialog = dialog
+                    dialog.setOnDismissListener { if (integrationDialog === dialog) integrationDialog = null }
+                    dialog.setOnShowListener {
+                        dialog.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity,30f,76,true))
+                        dialog.window?.setLayout(resources.displayMetrics.widthPixels-dp(32), (resources.displayMetrics.heightPixels*.80f).toInt())
+                    }
                     dialog.show()
                 }
             })
@@ -1456,11 +1487,12 @@ class MainActivity : Activity() {
                     if(rootReady) "Root available" else "Root unavailable",
                     if(adb) "ADB recovery configured" else "ADB recovery off",
                     if(Prefs.kiosk(this@MainActivity)) "Kiosk protection on" else "Kiosk protection off"
-                ).joinToString("  ·  ")
-                textSize=12f
+                ).joinToString("\n")
+                textSize=13f; setLineSpacing(dp(3).toFloat(),1f)
                 setTextColor(Appearance.secondary(this@MainActivity))
                 setPadding(0,dp(5),0,dp(12))
             })
+            addView(screenOffFallbackCard(), LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
             addView(LinearLayout(this@MainActivity).apply {
                 orientation=LinearLayout.HORIZONTAL
                 gravity=Gravity.CENTER_VERTICAL
@@ -1482,7 +1514,7 @@ class MainActivity : Activity() {
                         }
                         val dialog=AlertDialog.Builder(this@MainActivity)
                             .setTitle("System health")
-                            .setView(content)
+                            .setView(ScrollView(this@MainActivity).apply { addView(content) })
                             .setPositiveButton("Done",null)
                             .create()
                         dialog.setOnShowListener {
@@ -2668,7 +2700,7 @@ class MainActivity : Activity() {
                 setPadding(0, dp(5), 0, dp(4))
             })
             addView(TextView(this@MainActivity).apply {
-                text = "Behavior controls below are experimental unless individually verified. Safe diagnostics can remain enabled while testing boot timing."
+                text = "Experimental observers: Screen / wake adds sleep diagnostics; Immediate relock observes Samsung keyguard showing; Native lifecycle observes activity resume. Safe diagnostics only records these signals without relocking. Apply through LSPosed, then soft reboot. Existing boot/wake protection remains separate."
                 textSize = 11f
                 setTextColor(Appearance.secondary(this@MainActivity))
                 setPadding(0, dp(2), 0, dp(8))
@@ -2688,11 +2720,12 @@ class MainActivity : Activity() {
                         text = title; textSize = 11f; maxLines = 2; setTextColor(Appearance.text(this@MainActivity))
                     }, LinearLayout.LayoutParams(0, -2, 1f))
                     addView(guardianSwitch().apply {
-                        // These stored switches have no behavioral hook implementation yet.
-                        isChecked = false; isEnabled = false; contentDescription = "$title: not implemented"
+                        val implemented=title in setOf("Safe diagnostics only","Screen / wake","Immediate relock","Native lifecycle")
+                        isChecked = implemented && checked(); isEnabled = implemented
+                        contentDescription = if(implemented) "$title: experimental observer" else "$title: not implemented"
                         scaleX = .82f; scaleY = .82f
                         setPadding(0, 0, dp(4), 0)
-                        setOnCheckedChangeListener { _, value -> changed(value) }
+                        setOnCheckedChangeListener { _, value -> changed(value); }
                     }, LinearLayout.LayoutParams(dp(60), dp(48)))
                 }
             fun compactGrid(items: List<Triple<String, () -> Boolean, (Boolean) -> Unit>>) {
@@ -2710,7 +2743,7 @@ class MainActivity : Activity() {
                 }
             }
 
-            masterXposedToggle("Accept framework signals", { Prefs.xposedMaster(this@MainActivity) }) { Prefs.setXposedMaster(this@MainActivity, it) }
+            masterXposedToggle("Accept framework signals", { Prefs.xposedMaster(this@MainActivity) }) { Prefs.setXposedMaster(this@MainActivity, it); }
             addView(compactXposedToggle("Safe diagnostics only", { Prefs.xposedSafeDiagnostics(this@MainActivity) }) { Prefs.setXposedSafeDiagnostics(this@MainActivity, it) },
                 LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(8) })
 
@@ -2725,7 +2758,7 @@ class MainActivity : Activity() {
                 Triple("SystemUI recovery", { Prefs.xposedSystemUiRecovery(this@MainActivity) }, { v:Boolean -> Prefs.setXposedSystemUiRecovery(this@MainActivity,v) }),
                 Triple("QS / status guard", { Prefs.xposedBarsGuard(this@MainActivity) }, { v:Boolean -> Prefs.setXposedBarsGuard(this@MainActivity,v) }),
                 Triple("Native lifecycle", { Prefs.xposedNativeLifecycle(this@MainActivity) }, { v:Boolean -> Prefs.setXposedNativeLifecycle(this@MainActivity,v) }),
-                Triple("Guardian fallback", { Prefs.xposedAutomaticFallback(this@MainActivity) }, { v:Boolean -> Prefs.setXposedAutomaticFallback(this@MainActivity,v) })
+                Triple("Framework recovery (planned)", { Prefs.xposedAutomaticFallback(this@MainActivity) }, { v:Boolean -> Prefs.setXposedAutomaticFallback(this@MainActivity,v) })
             ))
 
             addView(TextView(this@MainActivity).apply {
@@ -2745,7 +2778,7 @@ class MainActivity : Activity() {
             ))
 
             addView(TextView(this@MainActivity).apply {
-                text = "In development: the additional framework and Galaxy Island controls shown above are placeholders and remain disabled until their individual hooks are implemented and tested. Development is deferred to a later update. Current boot/wake observers, D2 SRP and power-menu hooks run separately; these switches do not control them. The separate KernelSU bridge ZIP remains optional."
+                text = "Experimental sleep, keyguard and lifecycle observers are implemented for testing. Remaining Home/Recents, gesture, notification/media/call, QS, recovery and Galaxy Island controls are still planned and disabled. Galaxy Island and the KernelSU bridge ZIP are optional. Current boot/wake protection, D2 SRP and guarded power menu run separately."
                 textSize = 12f
                 setTextColor(Appearance.secondary(this@MainActivity))
                 setPadding(dp(4), dp(8), dp(4), 0)
@@ -2910,7 +2943,8 @@ class MainActivity : Activity() {
                 }
                 fun showLegal() { legalText.text = agreement }
                 fun showLicenses() {
-                    legalText.text = "THIRD-PARTY LICENSES & CREDITS\n\nWeather data and geocoding: Open-Meteo.\n\n$notice"
+                    val agpl = listOf("LICENSE-AGPL-3.0.txt", "LICENSE-APACHE-2.0.txt", "LICENSE-LGPL-3.0.txt", "LICENSE-GPL-3.0.txt").joinToString("\n\n") { name -> assets.open(name).bufferedReader().use { it.readText() } }
+                    legalText.text = "D2 LICENSE & CREDITS\n\nCopyright © 2026 D2 Project and contributors.\nD2 is licensed under AGPL-3.0-only, without warranty. You may modify and redistribute it under that license.\nCorresponding Source: https://github.com/SysopBP/SamsungLockD2-Public\n\n$agpl\n\nTHIRD-PARTY NOTICES\n\n$notice"
                 }
                 fun tab(title: String, action: () -> Unit) = TextView(this@MainActivity).apply {
                     text = title
@@ -2924,6 +2958,9 @@ class MainActivity : Activity() {
                 tabs.addView(tab("Agreement & Privacy") { showLegal() }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(6) })
                 tabs.addView(tab("Licenses & Credits") { showLicenses() }, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(6) })
                 addView(tabs, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+                addView(tab("View D2 source and build instructions") {
+                    startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/SysopBP/SamsungLockD2-Public/blob/main/docs/SOURCE-DISTRIBUTION.md")))
+                }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
 
                 val scroll = ScrollView(this@MainActivity).apply {
                     isVerticalScrollBarEnabled = true
@@ -3249,6 +3286,88 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun shizukuRuntimeSummary(): String {
+        if (!Prefs.shizukuEnabled(this)) return "Shizuku off"
+        if (!runCatching { Shizuku.pingBinder() }.getOrDefault(false)) return "Shizuku disconnected"
+        if (!shizukuAuthorized()) return "Shizuku permission required"
+        val uid = runCatching { Shizuku::class.java.getMethod("getUid").invoke(null) as Int }.getOrDefault(-1)
+        val identity = when (uid) { 2000 -> "UID 2000 · Shell"; 0 -> "UID 0 · Root"; 1000 -> "UID 1000 · System"; -1 -> "Server UID not reported"; else -> "UID $uid" }
+        return "Shizuku authorized · $identity"
+    }
+
+    private fun screenOffFallbackCard(): ViewGroup = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(12), dp(12), dp(12), dp(12))
+        background = Appearance.glass(this@MainActivity, 24f, 30, true)
+        fun detail(value: String, heading: Boolean = false) {
+            addView(TextView(this@MainActivity).apply {
+                text = value; textSize = if (heading) 16f else 13f
+                setTextColor(if (heading) Appearance.text(this@MainActivity) else Appearance.secondary(this@MainActivity))
+                setPadding(0, 0, 0, dp(8)); setLineSpacing(dp(2).toFloat(), 1f)
+            })
+        }
+        val service = app.d2lock.accessibility.D2AccessibilityService
+        detail("Screen-off routes & fallback", true)
+        detail("Root (when enabled) → Shizuku → Accessibility fallback → Device admin")
+        detail("Root · ${if (Prefs.rootMode(this@MainActivity)) { if (RootManager.isAvailable()) "Enabled and available" else "Enabled but unavailable" } else "Off"}")
+        detail(shizukuRuntimeSummary())
+        val adminReady = runCatching {
+            getSystemService(android.app.admin.DevicePolicyManager::class.java).isAdminActive(ComponentName(this@MainActivity, app.d2lock.security.D2DeviceAdminReceiver::class.java))
+        }.getOrDefault(false)
+        detail("Device admin · ${if (adminReady) "Active" else "Not enabled (optional last route)"}")
+        detail("Accessibility · ${service.status(this@MainActivity)}")
+        detail("Last route: ${service.lastRoute(this@MainActivity)}")
+        detail("Watchdog: ${app.d2lock.lockscreen.GuardianWatchdog.snapshot()}")
+        val observed = guidedPrefs().getString("accessibility", null)
+        detail(if (observed == null) "Device test: Not recorded" else "$observed · ${checkTime(guidedPrefs().getLong("accessibility_time", 0L))}")
+        detail("Fallback handles screen-off only. D2 fingerprint and Samsung face/PIN/pattern still perform authentication. Galaxy Island is optional.")
+        addView(TextView(this@MainActivity).apply {
+            text = "Accessibility setup & tests  ›"; textSize = 14f; minimumHeight = dp(48)
+            gravity = Gravity.CENTER; setTextColor(Appearance.text(this@MainActivity))
+            background = Appearance.glass(this@MainActivity, 20f, 28, true)
+            setPadding(dp(10), dp(10), dp(10), dp(10)); isFocusable = true
+            setOnClickListener { integrationDialog?.dismiss(); showAccessibilityLab() }
+        })
+    }
+
+    private fun showAccessibilityLab() {
+        if (!authorized || appStopped) return
+        val service = app.d2lock.accessibility.D2AccessibilityService
+        GuardianDialogs.showChoices(this, "Accessibility experiment · ${service.status(this)}",
+            arrayOf("Open Android Accessibility settings", "Test screen off now", if (service.fallbackEnabled(this)) "Turn OFF accessibility fallback" else "Turn ON accessibility fallback", "Record observed test result", "Disable D2 accessibility service"), -1) { dialog, which ->
+            dialog.dismiss()
+            when (which) {
+                0 -> GuardianDialogs.showInfo(this, "Enable the optional test service",
+                    "Open Installed apps / Downloaded apps in Android Accessibility settings, then select D2 screen-off experiment. Enable it only for this test.\n\nThe service requests a screen-lock action. It does not read screen contents, observe app changes, perform gestures, or unlock/authenticate D2 or Samsung.\n\nAfter enabling it, return to Readiness → Accessibility lab. Shizuku stays primary when Root Mode is off; accessibility is used only if Shizuku is unavailable or fails. First try Test screen off now, then wake the phone and check D2 fingerprint, Samsung face/PIN, and relock. Record what actually happened.",
+                    primary = "Open settings", onPrimary = {
+                        runCatching { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+                            .onFailure { Toast.makeText(this, "Open Android Accessibility settings manually", Toast.LENGTH_LONG).show() }
+                    }, secondary = "Cancel")
+                1 -> {
+                    if (!service.isConnected()) {
+                        GuardianDialogs.showInfo(this, "Service not connected", "Enable D2 screen-off experiment in Android Accessibility settings, return here, and refresh before testing.")
+                    } else {
+                        val accepted = service.requestScreenOff(this, manualTest = true)
+                        if (!accepted) GuardianDialogs.showInfo(this, "Screen-off request rejected", "Android did not accept the accessibility screen-lock action. The existing Root/Shizuku routes have not been changed.")
+                    }
+                }
+                2 -> {
+                    val enable = !service.fallbackEnabled(this)
+                    if (enable && !service.isConnected()) GuardianDialogs.showInfo(this, "Service not connected", "Enable the optional service in Android Accessibility settings before enabling the fallback.")
+                    else {
+                        service.setFallbackEnabled(this, enable)
+                        showReadiness()
+                    }
+                }
+                3 -> showObservedGuidedResult("accessibility")
+                4 -> {
+                    service.disable(this)
+                    GuardianDialogs.showInfo(this, "Accessibility test disabled", "The accessibility fallback is off. If Android still lists the service as enabled, turn it off in Accessibility settings. D2 continues using its existing lock controls.")
+                }
+            }
+        }
+    }
+
     private fun showReadiness() {
         if(!authorized || appStopped) return
         readinessDialog?.dismiss()
@@ -3274,6 +3393,13 @@ class MainActivity : Activity() {
             "After D2 fingerprint, complete Samsung unlock if requested. Samsung face recognition is the easier option when available; PIN / pattern / password remain alternatives.\n" +
                 (if (samsungResult == null) "Face recognition not yet user-tested." else "$samsungResult · ${checkTime(guidedPrefs().getLong("samsung_auth_time", 0L))}") +
                 "\nTap for setup, test steps, or to record your observed result.") { showSamsungAuthenticationGuide() }
+        val accessibility = app.d2lock.accessibility.D2AccessibilityService
+        val accessibilityObserved = guidedPrefs().getString("accessibility", null)
+        row("Accessibility lab · ${accessibility.status(this)}",
+            "Optional experiment · Main baseline: Build 1070.\n${accessibility.lastRequest(this)}.\n" +
+                (if (accessibilityObserved == null) "Observed result: Not tested" else "$accessibilityObserved · ${checkTime(guidedPrefs().getLong("accessibility_time", 0L))}") +
+                "\nRoot (if enabled) → Shizuku → Accessibility fallback → Device admin. Tap for setup, test, or disable.") { showAccessibilityLab() }
+        row("Guardian watchdog", app.d2lock.lockscreen.GuardianWatchdog.snapshot() + "\nService health: every 15s awake / 60s asleep. Kiosk repair: up to 3 requests per minute. Tap to refresh.") { showReadiness() }
         row("Shizuku · ${if(shizukuAuthorized()) "Authorized" else "Needs attention"}", "Tap to connect or authorize") { resolveShizuku() }
         row("Root · ${if(RootManager.isAvailable()) "Available" else "Unavailable"}", "Tap to refresh root availability; grant D2 in KernelSU if required") {
             RootManager.refreshAsync(); Toast.makeText(this,"Root check requested; tap Refresh shortly",Toast.LENGTH_LONG).show()
@@ -3313,12 +3439,35 @@ class MainActivity : Activity() {
             orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(16)); background=Appearance.glass(this@MainActivity,32f,64,true)
             addView(TextView(this@MainActivity).apply { text=if(healthy) "◆  GUARDIAN CONFIGURED" else "◆  GUARDIAN ATTENTION"; textSize=13f; setTextColor(if(healthy) Color.rgb(102,220,132) else Appearance.accent(this@MainActivity)) })
             addView(TextView(this@MainActivity).apply { text="Guardian Core"; textSize=24f; setTextColor(Appearance.text(this@MainActivity)); setPadding(0,dp(3),0,dp(12)) })
-            fun status(title:String,detail:String,ok:Boolean) { addView(TextView(this@MainActivity).apply { text=(if(ok) "●  " else "○  ")+title+"\n    "+detail; textSize=14f; setTextColor(if(ok) Appearance.text(this@MainActivity) else Appearance.accent(this@MainActivity)); setPadding(dp(13),dp(9),dp(13),dp(9)); background=Appearance.glass(this@MainActivity,24f,28,true) },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(6) }) }
+            fun status(title: String, detail: String, ok: Boolean) {
+                val color = if (ok) Appearance.text(this@MainActivity) else Appearance.accent(this@MainActivity)
+                addView(LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.TOP
+                    setPadding(dp(13), dp(10), dp(13), dp(10))
+                    background = Appearance.glass(this@MainActivity, 24f, 28, true)
+                    addView(TextView(this@MainActivity).apply {
+                        text = if (ok) "●" else "○"; textSize = 14f; setTextColor(color)
+                        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                    }, LinearLayout.LayoutParams(dp(22), -2))
+                    addView(LinearLayout(this@MainActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(TextView(this@MainActivity).apply {
+                            text = title; textSize = 14f; setTextColor(color)
+                        })
+                        addView(TextView(this@MainActivity).apply {
+                            text = detail; textSize = 13f; setTextColor(Appearance.secondary(this@MainActivity))
+                            setPadding(0, dp(2), 0, 0)
+                        })
+                    }, LinearLayout.LayoutParams(0, -2, 1f))
+                }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(6) })
+            }
             status("D2 authentication",if(authReady) "Credential configured" else "Create a D2 PIN",authReady)
             status("Lock & wake",if(wakeReady) "Guardian armed for screen wake" else "Show D2 on wake is off",wakeReady)
             status("Root / KernelSU",if(rootAvailable) "Root shell available" else "Root unavailable",!Prefs.rootMode(this@MainActivity)||rootAvailable)
             status("Shizuku",if(shizukuAvailable) "Binder connected" else "Binder unavailable",!Prefs.shizukuEnabled(this@MainActivity)||shizukuAvailable)
-            status("LSPosed / Xposed",if(Prefs.xposedMaster(this@MainActivity)) "SystemUI integration configured" else "Optional integration off",!Prefs.xposedMaster(this@MainActivity)||Prefs.xposedAutomaticFallback(this@MainActivity))
+            status("LSPosed / Xposed",if(Prefs.xposedMaster(this@MainActivity)) "Enabled · verify System Server connection separately" else "Optional integration off", !Prefs.xposedMaster(this@MainActivity) || KeyguardSignalReceiver.systemHealth(this@MainActivity).status == "CONNECTED")
+            status("Accessibility screen-off fallback",app.d2lock.accessibility.D2AccessibilityService.status(this@MainActivity),!app.d2lock.accessibility.D2AccessibilityService.fallbackEnabled(this@MainActivity)||app.d2lock.accessibility.D2AccessibilityService.isConnected())
             status("Galaxy Island",if(islandPaired) "Paired · Guardian sync "+if(islandSync) "ready" else "needs attention" else "Not paired · optional",islandSync)
             status("Kiosk protection",if(Prefs.kiosk(this@MainActivity)) "Kiosk enabled" else "Kiosk currently off",!Prefs.kiosk(this@MainActivity)||rootAvailable)
             status("Recovery path",if(rootAvailable||Prefs.adbRecovery(this@MainActivity)) "Root or ADB recovery available" else "Verify recovery before kiosk use",rootAvailable||Prefs.adbRecovery(this@MainActivity))
@@ -3346,7 +3495,18 @@ class MainActivity : Activity() {
                 addView(quick("System Server") { showSystemServerDashboard() },LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(4) })
             },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(2) })
         }
-        AlertDialog.Builder(this).setView(body).setNegativeButton("Close",null).create().also { d -> d.setOnShowListener { d.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 34f, 84, true)); d.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Appearance.accent(this@MainActivity)) }; d.show() }
+        val scroll = ScrollView(this).apply { addView(body) }
+        AlertDialog.Builder(this).setView(scroll).setNegativeButton("Close", null).create().also { d ->
+            d.setOnShowListener {
+                d.window?.setBackgroundDrawable(Appearance.glass(this@MainActivity, 34f, 84, true))
+                d.window?.setDimAmount(0.82f)
+                d.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                d.window?.setLayout((resources.displayMetrics.widthPixels * .94f).toInt(),
+                    (resources.displayMetrics.heightPixels * .84f).toInt())
+                d.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Appearance.accent(this@MainActivity))
+            }
+            d.show()
+        }
     }
 
     /** Home presentation delegates all security actions to the original controls. */
@@ -3413,14 +3573,6 @@ class MainActivity : Activity() {
             textSize = 13f; setPadding(0, dp(4), 0, dp(12))
         }
         root.setPadding(dp(18), dp(48), dp(18), dp(20))
-        val shortcuts=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
-        listOf("Security" to "security", "SRP" to "tools", "Guardian" to "guardian", "Appearance" to "appearance").forEach { (title,page) ->
-            shortcuts.addView(action(title) {
-                if(title=="SRP") pageNavigator?.invoke("tools|D2 SRP",null) else pageNavigator?.invoke(page,null)
-            },LinearLayout.LayoutParams(dp(if(title=="Appearance") 148 else 112),-2).apply { marginEnd=dp(8) })
-        }
-        root.addView(android.widget.HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled=false; addView(shortcuts) },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(10) })
-        val status = card()
         fun pair(parent: LinearLayout, first: View, second: View) {
             if (resources.configuration.fontScale >= 1.25f || resources.configuration.screenWidthDp < 360) {
                 parent.addView(first, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
@@ -3433,21 +3585,38 @@ class MainActivity : Activity() {
                 addView(second, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dp(4) })
             }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
         }
+        // One chip row instead of a 2x2 grid: same four destinations, half the vertical space.
+        val shortcuts = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val destinations = listOf("Security" to "security", "SRP" to "tools", "Guardian" to "guardian", "Appearance" to "appearance")
+        destinations.forEachIndexed { index, (title, page) ->
+            val chip = action(title) {
+                if (title == "SRP") pageNavigator?.invoke("tools|D2 SRP", null)
+                else pageNavigator?.invoke(page, null)
+            }
+            chip.textSize = 12f
+            chip.setSingleLine(true)
+            chip.ellipsize = android.text.TextUtils.TruncateAt.END
+            chip.gravity = Gravity.CENTER
+            chip.setPadding(dp(3), dp(9), dp(3), dp(9))
+            shortcuts.addView(chip, LinearLayout.LayoutParams(0, -2, 1f).apply {
+                if (index > 0) marginStart = dp(6)
+            })
+        }
+        root.addView(shortcuts, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(4) })
+        val status = card()
         val rootOk = RootManager.isAvailable()
         val shizukuOk = Prefs.shizukuEnabled(this) && runCatching {
             Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
         }.getOrDefault(false)
         val serverOk = KeyguardSignalReceiver.systemHealth(this).status == "CONNECTED"
-        status.addView(label("Protection status",18f))
+        status.addView(label("Protection & connections",18f))
         fun statusRow(text:String, click:()->Unit) = action(text,click).apply {
             gravity=Gravity.START or Gravity.CENTER_VERTICAL
             background=null
         }
-        status.addView(statusRow("Kiosk · ${if(Prefs.kiosk(this)) "Enabled" else "Off"}") { showReadiness() })
         status.addView(statusRow("Root · ${if(rootOk) "Available" else "Unavailable"}") { showReadiness() })
         status.addView(statusRow("Shizuku · ${if(!Prefs.shizukuEnabled(this)) "Off" else if(shizukuOk) "Authorized" else "Needs attention"}") { resolveShizuku() })
         status.addView(statusRow("System Server · ${if(serverOk) "Observed this boot" else "No event this boot"}") { showSystemServerDashboard() })
-        root.addView(status, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         if (Prefs.shizukuEnabled(this) && !shizukuOk) root.addView(action("Shizuku needs attention  ›") { resolveShizuku() },
             LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         if (Prefs.unlockMethod(this) == "fingerprint" && getSystemService(BiometricManager::class.java)
@@ -3455,22 +3624,34 @@ class MainActivity : Activity() {
             root.addView(delegated("Fingerprint unavailable · Review method  ›", "Unlock method"),
                 LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         }
+        val hooksCard = card()
+        hooksCard.addView(label("D2 Hooks", 20f))
+        hooksCard.addView(label("Hook health · ${app.d2lock.lockscreen.HookDiagnostics.health(this)}", 13f))
+        hooksCard.addView(label("Boot ${KeyguardSignalReceiver.diagnosticCount(this, "BOOT_READY")} · Wake ${KeyguardSignalReceiver.diagnosticCount(this, "WAKE")} received this boot", 13f))
+        hooksCard.addView(action("View hook diagnostics  ›") {
+            GuardianDialogs.showInfo(this, "D2 Hooks", app.d2lock.lockscreen.HookDiagnostics.summary(this) +
+                "\n\nTargets: ActivityManagerService#systemReady; PowerManagerService BinderService#wakeUp / wakeUpWithDisplayId.\n\nBoot delivery and launch timeline:\n" + KeyguardSignalReceiver.pipelineMetrics(this).timeline.joinToString("\n"))
+        })
         val srpStatus = app.d2lock.root.DmcRecovery.status(this)
         if (Prefs.xposedMaster(this) && !srpStatus.targetsMet) root.addView(action("D2 SRP needs verification  ›") { showDmcStatus() },
-            LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
-        root.addView(action("Readiness check  ›") { showReadiness() },
             LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         val security = card()
         security.addView(label("Security", 20f))
         val method = Prefs.unlockMethod(this).replaceFirstChar { it.uppercase() }
-        security.addView(label("$method selected  ·  PIN recovery configured", 13f))
-        security.addView(action("Manage security  ›") { pageNavigator?.invoke("security|SECURITY CENTER",null) })
-        root.addView(security, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+        security.addView(label("$method selected  ·  PIN recovery ${if (PinStore(this).configured()) "configured" else "not configured"}", 13f),
+            LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+        security.addView(action("Manage security  \u203a") { pageNavigator?.invoke("security|SECURITY CENTER",null) })
+        security.addView(action("PIN re-verification \u00b7 ${PeriodicCredentialControl.label(this)}  \u203a") { PeriodicCredentialSettings.show(this) })
+        security.addView(label("Samsung may require its PIN after reboot. Keep your fingerprint enrolled.", 12f))
         fun quickSwitch(title: String, original: String): View {
             val source = control(original) as? Switch
-            return card().apply {
+            return LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
                 addView(guardianSwitch().apply {
                     text = title; textSize = 14f; minimumHeight = dp(48)
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(4), dp(4), dp(4), dp(4))
+                    switchPadding = dp(12)
                     setTextColor(Appearance.text(this@MainActivity)); isChecked = source?.isChecked == true
                     isEnabled = source != null && source.isEnabled
                     setOnCheckedChangeListener { _, checked ->
@@ -3478,39 +3659,42 @@ class MainActivity : Activity() {
                         refreshSettingsPreservingPosition()
                         Toast.makeText(this@MainActivity, "$title updated", Toast.LENGTH_SHORT).show()
                     }
-                })
+                }, LinearLayout.LayoutParams(-1, -2))
             }
         }
         val quick = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        pair(quick, quickSwitch("Guardian", "Show D2 when the screen wakes"),
-            quickSwitch("Kiosk", "Require D2 authentication to leave"))
-        root.addView(quick)
+        quick.addView(quickSwitch("Guardian", "Show D2 when the screen wakes"))
+        quick.addView(quickSwitch("Kiosk", "Require D2 authentication to leave"))
+        status.addView(quick, 1)
+        status.addView(action("Readiness check  ›") { showReadiness() })
+        root.addView(status, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+        root.addView(security, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         val bridge = card()
         val bridgeBody = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             visibility = if (Prefs.compactBridge(this@MainActivity)) View.VISIBLE else View.GONE
+            addView(hooksCard)
             val fp = KeyguardSignalReceiver.fingerprintHealth(this@MainActivity)
             val ui = KeyguardSignalReceiver.bridgeHealth(this@MainActivity)
             addView(label("SystemUI telemetry: ${if (ui.status == "CONNECTED") "Observed" else "No event this boot"}", 13f))
             addView(label("Fingerprint: ${fp.event ?: "No event this boot"}", 13f))
             addView(action("Open diagnostics  ›") { showSystemServerDashboard() })
         }
-        val bridgeToggle = action("System bridge · ${if (serverOk) "Observed" else "Waiting"}") {
+        val bridgeToggle = action("Diagnostics · ${if (serverOk) "Observed" else "Waiting"}") {
 
             val open = bridgeBody.visibility != View.VISIBLE
             bridgeBody.visibility = if (open) View.VISIBLE else View.GONE
             Prefs.setCompactBridge(this, open)
             (bridge.getChildAt(0) as? TextView)?.apply {
-                text="System bridge · ${if (serverOk) "Observed" else "Waiting"}  ${if(open) "⌃" else "⌄"}"
-                contentDescription="System bridge, ${if(open) "expanded" else "collapsed"}"
+                text="Diagnostics · ${if (serverOk) "Observed" else "Waiting"}  ${if(open) "⌃" else "⌄"}"
+                contentDescription="Diagnostics, ${if(open) "expanded" else "collapsed"}"
             }
         }
-        bridgeToggle.contentDescription="System bridge, ${if(bridgeBody.visibility == View.VISIBLE) "expanded" else "collapsed"}"
-        bridgeToggle.text="System bridge · ${if (serverOk) "Observed" else "Waiting"}  ${if(bridgeBody.visibility == View.VISIBLE) "⌃" else "⌄"}"
+        bridgeToggle.contentDescription="Diagnostics, ${if(bridgeBody.visibility == View.VISIBLE) "expanded" else "collapsed"}"
+        bridgeToggle.text="Diagnostics · ${if (serverOk) "Observed" else "Waiting"}  ${if(bridgeBody.visibility == View.VISIBLE) "⌃" else "⌄"}"
         bridge.addView(bridgeToggle)
         bridge.addView(bridgeBody)
         root.addView(bridge, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
-        root.addView(label("Samsung may require its PIN after reboot. Keep your fingerprint enrolled.", 12f))
         root.addView(action("Tools & settings  ›") {
             pageNavigator?.invoke("tools", null)
             return@action
@@ -4307,7 +4491,9 @@ class MainActivity : Activity() {
             "D2 WAKE SERVICE" to Prefs.enabled(this),
             // Recovery health is separate from the current USB-debugging toggle.
             "ADB RECOVERY" to (Prefs.adbRecovery(this) && rootReady && adbState != null),
-            "GALAXY ISLAND" to app.d2lock.bridge.IslandBridge.enabled(this)
+            "ACCESSIBILITY SERVICE (OPTIONAL)" to app.d2lock.accessibility.D2AccessibilityService.isConnected(),
+            "ACCESSIBILITY FALLBACK (OPTIONAL)" to (app.d2lock.accessibility.D2AccessibilityService.fallbackEnabled(this) && app.d2lock.accessibility.D2AccessibilityService.isConnected()),
+            "GALAXY ISLAND (OPTIONAL)" to app.d2lock.bridge.IslandBridge.enabled(this)
         )
         val ready = rows.count { it.second }
         return LinearLayout(this).apply {
@@ -4315,7 +4501,7 @@ class MainActivity : Activity() {
             setPadding(dp(18), dp(15), dp(18), dp(15))
             background = Appearance.glass(this@MainActivity, 28f, 34, true)
             addView(TextView(this@MainActivity).apply {
-                text = "D2 Ready — $ready/${rows.size} checks active"
+                text = "System checks · $ready/${rows.size} active"
                 textSize = 18f
                 setTextColor(Appearance.text(this@MainActivity))
                 setPadding(0, 0, 0, dp(8))
@@ -4329,7 +4515,7 @@ class MainActivity : Activity() {
                 })
             }
             addView(TextView(this@MainActivity).apply {
-                text = "Status only. Optional features may remain off by choice; a hollow check does not necessarily indicate an error."
+                text = "${shizukuRuntimeSummary()}\nAccessibility: ${app.d2lock.accessibility.D2AccessibilityService.status(this@MainActivity)}\nLast screen-off route: ${app.d2lock.accessibility.D2AccessibilityService.lastRoute(this@MainActivity)}\n\nStatus only. Optional features may remain off by choice; an unchecked row is not necessarily an error. Accessibility is a screen-off fallback, not a Root/ADB recovery path."
                 textSize = 12f
                 setTextColor(Appearance.secondary(this@MainActivity))
                 setPadding(0, dp(8), 0, 0)

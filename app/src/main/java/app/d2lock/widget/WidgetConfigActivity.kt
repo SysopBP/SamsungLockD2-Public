@@ -104,7 +104,7 @@ class WidgetConfigActivity : Activity() {
         }
         root.addView(showSrp)
         root.addView(TextView(this).apply {
-            text = "Long-press on Home to resize down to one cell. Tap the SRP line to refresh; the title keeps your lock action."
+            text = "Long-press on Home to resize down to one cell. Tap a status line to open SRP and check again; tap the widget background for your lock action."
             textSize = 13f; setTextColor(Appearance.secondary(this@WidgetConfigActivity))
         })
         root.addView(TextView(this).apply {
@@ -116,7 +116,7 @@ class WidgetConfigActivity : Activity() {
                 setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,widgetId)); finish()
             }
         },LinearLayout.LayoutParams(-1,dp(64)).apply{topMargin=dp(18)})
-        setContentView(root)
+        setContentView(android.widget.ScrollView(this).apply { addView(root) })
     }
     private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
 }

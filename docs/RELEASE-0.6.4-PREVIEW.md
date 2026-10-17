@@ -1,5 +1,7 @@
 # D2 Guardian 0.6.4 Preview 2 — Call Hotfix & New UI
 
+> **Development status:** This preview document describes earlier functionality. The current branch intentionally removes the OneUIX port after Actions run 38672204822 while retaining D2's independent power menu. The post-removal build is not declared release-ready until CI and device checks pass.
+
 Published as a preview from successful [Build 1057](https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38462517827), source commit `54ad8616b9b6f1ecd90feeaed5d3cec40a78abdd`. APK version: `0.6.4-srp-fingerprint-login`, versionCode 29. Original signing certificate preserved by the build workflow.
 
 ![D2 Guardian preview and fingerprint setup](https://github.com/SysopBP/SamsungLockD2-Public/releases/download/v0.6.4-preview.2/D2-0.6.4-Preview-Setup-Collage.png)
@@ -180,7 +182,7 @@ Release assets include the D2 APK, optional KernelSU bridge ZIP, source ZIP, ins
 
 ## Credits and acknowledgments
 
-- **@diablOw** — original discovery of the Samsung DMC behavior behind D2 SRP. This discovery credit belongs prominently in the release, README and in-app credits.
+- **@diablOw** — original discovery of the Samsung Samsung recovery behavior behind D2 SRP. This discovery credit belongs prominently in the release, README and in-app credits.
 - **SoClear / OneUIX** — inspiration for Samsung power-menu action integration. D2's implementation is independent, using reflection and libxposed. https://github.com/SoClear/OneUIX
 - **LSPosed and libxposed contributors** — the Xposed framework/API used for System Framework and SystemUI integration.
 - **RikkaApps / Shizuku contributors** — privileged-service API/provider used by D2's Shizuku integration. This is separate from the current SRP System Server execution path.
@@ -189,7 +191,7 @@ Release assets include the D2 APK, optional KernelSU bridge ZIP, source ZIP, ins
 - **Open-Meteo** — weather data, CC BY 4.0. https://open-meteo.com/ and https://creativecommons.org/licenses/by/4.0/
 - **JetBrains, AndroidX, Material and SESL contributors** — libraries/UI dependencies used by the project. Preserve the applicable notices and licenses with the release.
 
-D2 original code: Copyright (c) 2026 D2 Project. All rights reserved. Third-party components retain their own licenses. Retain LICENSE, THIRD_PARTY_NOTICES.txt and in-app Licenses and credits. Acknowledgment does not imply endorsement.
+D2 original code: Copyright (c) 2026 D2 Project and contributors. Current covered revisions are AGPL-3.0-only; see LICENSE. Third-party components retain their own licenses. Retain LICENSE, THIRD_PARTY_NOTICES.txt and in-app Licenses and credits. Acknowledgment does not imply endorsement.
 
 ## Evidence
 
@@ -198,3 +200,9 @@ D2 original code: Copyright (c) 2026 D2 Project. All rights reserved. Third-part
 - Version metadata: https://github.com/SysopBP/SamsungLockD2-Public/blob/main/app/build.gradle.kts
 - Third-party notices: https://github.com/SysopBP/SamsungLockD2-Public/blob/main/THIRD_PARTY_NOTICES.txt
 - Saved October 12 reboot checkpoint and user's October 13 device-test findings.
+
+## October 14, 2026 device observation — native Samsung unlock options
+
+The tester confirmed Samsung's **native face recognition** and **Extend Unlock / Trusted Places** work on the Galaxy S26 Ultra (SM-S948U1, Android 17 / One UI 9) alongside the current D2 setup. These are observations of Samsung functionality, **not new D2 features**. **D2 face recognition is not implemented.** D2 fingerprint and configured PIN/pattern remain the D2 authentication methods; Samsung authentication remains independent and may still require a device credential. Trusted Places does not bypass first unlock or D2 authentication.
+
+The existing D2 readiness text describing Samsung face recognition as not user-tested needs a future UI update; this documentation correction does not modify the APK. The post-OneUIX-removal build remains subject to CI, APK inspection, and device validation. Reference pre-removal Actions run: https://github.com/SysopBP/SamsungLockD2-Public/actions/runs/38672204822.

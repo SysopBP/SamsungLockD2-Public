@@ -51,6 +51,8 @@ jobs:
           echo '7ce7d3e590520bcd54dfd9760f36e5fdc6243b1b062c46cac4670b65efb0f370  '"$RUNNER_TEMP/d2-signer.der" | sha256sum --check
       - name: Build and lint
         run: |
+          python3 scripts/verify_feature_baseline.py
+          printf 'commit=%s\nrun=%s\nrun_id=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_NUMBER" "$GITHUB_RUN_ID" > app/src/main/assets/D2-BUILD.txt
           ./gradlew :app:dependencies --configuration debugRuntimeClasspath > runtime-dependencies.txt
           ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug --stacktrace
       - name: Enable emulator acceleration
@@ -104,7 +106,9 @@ jobs:
           chmod 755 module/*.sh
           (cd module && zip -r ../dist/Kiosk-D2-Guardian-KernelSU-OPTIONAL.zip .)
           unzip -t dist/Kiosk-D2-Guardian-KernelSU-OPTIONAL.zip
-          zip -r dist/Kiosk-D2-Guardian-source.zip app/src app/build.gradle.kts build.gradle.kts settings.gradle.kts gradle.properties gradle gradlew gradlew.bat module README.md LICENSE THIRD_PARTY_NOTICES.txt docs .github
+          python3 scripts/package_corresponding_source.py --output dist
+          python3 scripts/package_dependency_source.py --output dist
+          python3 scripts/verify_deliverables.py dist
           cp runtime-dependencies.txt dist/
           sha256sum dist/*.apk dist/*.zip > dist/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
@@ -119,3 +123,5 @@ jobs:
 
 
 # Verified baseline control build trigger
+
+# Requested rebuild atop Build 1141, run 38963391501, commit 162c7ac5f0d710523fad5bb085250da71d850d58.

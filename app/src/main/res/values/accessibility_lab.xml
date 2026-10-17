@@ -1,0 +1,4 @@
+<resources>
+    <string name="d2_accessibility_lab_label">D2 screen-off experiment</string>
+    <string name="d2_accessibility_lab_description">Optional experimental screen-off action for D2 double-tap and manual testing. Does not read screen contents, monitor other apps, perform gestures, or authenticate/unlock the device. Enable only when testing; disable from D2 Readiness or Android Accessibility settings.</string>
+</resources>
