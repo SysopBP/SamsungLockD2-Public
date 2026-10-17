@@ -100,7 +100,7 @@ internal object PeriodicCredentialHook {
                     alarmHandler = copy.firstOrNull { it is android.os.Handler } as? android.os.Handler
                     alarmManager = manager
                     alarmGuardHits.incrementAndGet()
-                    chain.proceed(copy)
+                    chain.proceed(copy.toTypedArray())
                 }
             }
             alarmGuardStatus = "installed:" + targets.size
