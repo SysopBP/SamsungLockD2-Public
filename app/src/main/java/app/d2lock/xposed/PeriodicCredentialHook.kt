@@ -57,10 +57,74 @@ internal object PeriodicCredentialHook {
     @Volatile private var timeoutMechanism = "none"
     private var timeoutField: java.lang.reflect.Field? = null
     private var timeoutSetter: java.lang.reflect.Method? = null
+    @Volatile private var alarmTag: String? = null
+    @Volatile private var alarmListener: android.app.AlarmManager.OnAlarmListener? = null
+    @Volatile private var alarmHandler: android.os.Handler? = null
+    @Volatile private var alarmType = android.app.AlarmManager.ELAPSED_REALTIME_WAKEUP
+    @Volatile private var alarmManager: android.app.AlarmManager? = null
+    private val rearmingAlarm = AtomicBoolean(false)
+    private val alarmGuardHits = AtomicInteger()
+    @Volatile private var alarmGuardStatus = "not_installed"
     private val reflectionFailures = AtomicInteger()
     @Volatile private var reflectionDiagnostic = "pending"
     @Volatile private var lastSchedulerElapsed = -1L
     @Volatile private var schedulerTargetClass = "not_observed"
+
+    private fun isStrongAuthAlarm(args: Array<Any?>): Boolean =
+        args.any { it is String && it.contains("timeoutForUser") }
+
+    /** Intercepts the listener-based timeout alarm without changing unrelated alarms. */
+    fun installAlarmGuard(module: XposedModule, loader: ClassLoader) {
+        runCatching {
+            val targets = loader.loadClass("android.app.AlarmManager")
+                .declaredMethods.filter { it.name == "setImpl" }
+            check(targets.isNotEmpty()) { "no AlarmManager.setImpl" }
+            targets.forEach { method ->
+                method.isAccessible = true
+                module.hook(method).setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE).intercept { chain ->
+                    if (rearmingAlarm.get() || !isStrongAuthAlarm(chain.args)) return@intercept chain.proceed()
+                    val ms = PeriodicCredentialPolicy.timeoutMs(policyHours)
+                    if (ms <= 0L) return@intercept chain.proceed()
+                    val listener = chain.args.firstOrNull { it is android.app.AlarmManager.OnAlarmListener }
+                        as? android.app.AlarmManager.OnAlarmListener
+                    val manager = chain.thisObject as? android.app.AlarmManager
+                    val longs = chain.args.indices.filter { chain.args[it] is Long }
+                    // setImpl's first long is triggerAtMillis; do not guess if its signature differs.
+                    if (manager == null || listener == null || longs.isEmpty()) return@intercept chain.proceed()
+                    val copy = chain.args.copyOf()
+                    val trigger = SystemClock.elapsedRealtime() + ms
+                    copy[longs.first()] = trigger
+                    alarmType = copy.firstOrNull() as? Int ?: alarmType
+                    alarmTag = copy.firstOrNull { it is String && it.contains("timeoutForUser") } as? String
+                    alarmListener = listener
+                    alarmHandler = copy.firstOrNull { it is android.os.Handler } as? android.os.Handler
+                    alarmManager = manager
+                    alarmGuardHits.incrementAndGet()
+                    chain.proceed(copy)
+                }
+            }
+            alarmGuardStatus = "installed:" + targets.size
+            Log.i(TAG, "D2_STRONG_AUTH_ALARM_GUARD_INSTALLED candidates=" + targets.size)
+        }.onFailure {
+            alarmGuardStatus = "unavailable:" + it.javaClass.simpleName
+            Log.w(TAG, "D2_STRONG_AUTH_ALARM_GUARD_UNAVAILABLE", it)
+        }
+    }
+
+    fun rearmAlarm() {
+        val manager = alarmManager ?: return
+        val tag = alarmTag ?: return
+        val listener = alarmListener ?: return
+        val ms = PeriodicCredentialPolicy.timeoutMs(policyHours)
+        if (ms <= 0L || !rearmingAlarm.compareAndSet(false, true)) return
+        try {
+            manager.set(alarmType, SystemClock.elapsedRealtime() + ms, tag, listener, alarmHandler)
+        } catch (error: Throwable) {
+            Log.w(TAG, "D2_STRONG_AUTH_ALARM_REARM_FAILED", error)
+        } finally {
+            rearmingAlarm.set(false)
+        }
+    }
 
     fun install(module: XposedModule, loader: ClassLoader) {
         // Created at registration, never on a framework callback stack.
@@ -253,6 +317,7 @@ internal object PeriodicCredentialHook {
                     refreshApplied.set(refreshRequests.get())
                     lastRefreshElapsed = SystemClock.elapsedRealtime()
                     Log.i(TAG, "D2_STRONG_AUTH_REFRESH_APPLIED hours=$policyHours count=${refreshApplied.get()}")
+                    rearmAlarm()
                 }
                 record()
             }.onFailure { Log.w(TAG, "D2_STRONG_AUTH_SNAPSHOT_FAILED", it) }
@@ -300,6 +365,8 @@ internal object PeriodicCredentialHook {
             .put("reflectionDiagnostic", reflectionDiagnostic)
             .put("lastSchedulerElapsed", lastSchedulerElapsed)
             .put("schedulerTargetClass", schedulerTargetClass)
+            .put("alarmGuardStatus", alarmGuardStatus)
+            .put("alarmGuardHits", alarmGuardHits.get())
             .put("reasonDowngrades", reasonDowngrades.get())
         Settings.Global.putString(app.contentResolver, STATUS, snapshot.toString())
         // Explicit system-origin signal; widget reads the trusted stored snapshot.
